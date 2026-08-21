@@ -1,0 +1,97 @@
+{
+  "workbench.preferredDarkColorTheme": "Mac Dark Pro Max",
+  "files.eol": "\n",
+  // VS Code 1.134+ chi tai JSON schema tu cac domain nam trong allowlist.
+  // wails.io khong co trong danh sach mac dinh -> them vao day.
+  "json.schemaDownload.trustedDomains": {
+    "https://wails.io/": true
+  },
+  "js/ts.tsdk.path": "node_modules\\typescript\\lib",
+  "oxc.enable": true,
+  // node_modules nam trong frontend/, khong phai goc workspace, nen "Node Modules
+  // Locator" cua extension Biome khong tim thay binary -> format on save khong chay.
+  // Duong dan tuong doi duoc resolve theo goc workspace; key = process.platform-arch[-musl].
+  "biome.lsp.bin": {
+    "win32-x64": "frontend/node_modules/@biomejs/cli-win32-x64/biome.exe",
+    "darwin-arm64": "frontend/node_modules/@biomejs/cli-darwin-arm64/biome",
+    "darwin-x64": "frontend/node_modules/@biomejs/cli-darwin-x64/biome",
+    "linux-x64-musl": "frontend/node_modules/@biomejs/cli-linux-x64-musl/biome",
+    "linux-arm64-musl": "frontend/node_modules/@biomejs/cli-linux-arm64-musl/biome"
+  },
+  "oxc.configPath": ".oxlintrc.json",
+  "oxc.fixKind": "dangerous_fix_or_suggestion",
+  "workbench.iconTheme": "material-icon-theme",
+  "editor.defaultFormatter": "biomejs.biome",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.biome": "explicit",
+    "source.organizeImports.biome": "explicit"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "terminal.integrated.defaultProfile.windows": "Git Bash",
+  "terminal.integrated.profiles.windows": {
+    "Git Bash": {
+      "path": "C:\\Program Files\\Git\\bin\\bash.exe",
+      "args": [
+        "-l"
+      ],
+      "icon": "terminal-bash"
+    }
+  },
+  // Go module
+  "[go]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": false,
+    "editor.defaultFormatter": "golang.go",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    },
+    "editor.rulers": [
+      120
+    ]
+  },
+  "[go.mod]": {
+    "editor.defaultFormatter": "golang.go",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "explicit"
+    }
+  },
+  "go.useLanguageServer": true,
+  "go.formatTool": "custom",
+  "go.alternateTools": {
+    "customFormatter": "golangci-lint-v2"
+  },
+  "go.formatFlags": [
+    "fmt",
+    "--stdin"
+  ],
+  "gopls": {
+    "formatting.local": "src-04-file-service",
+    "ui.diagnostic.staticcheck": false
+  },
+  "go.lintTool": "golangci-lint-v2",
+  "go.lintOnSave": "package",
+  "go.lintFlags": [
+    "--fast-only",
+    "--path-mode=abs",
+    "--config=${workspaceFolder}/.golangci.yml"
+  ],
+  "go.vetOnSave": "off",
+  "go.toolsManagement.autoUpdate": true
+}

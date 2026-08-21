@@ -1,0 +1,67 @@
+version: "2"
+run:
+  tests: true
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - errcheck
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - staticcheck
+    - unconvert
+    - unused
+  settings:
+    lll:
+      line-length: 120
+      tab-width: 4
+    staticcheck:
+      # v2 merged gosimple + stylecheck into staticcheck.
+      # v1 only ran SA* (staticcheck) and S1* (gosimple), so keep ST*/QF* off.
+      checks:
+        - all
+        - -ST*
+        - -QF*
+    errcheck:
+      exclude-functions:
+        - (io.Closer).Close
+        - (*github.com/rabbitmq/amqp091-go.Channel).Close
+        - (*github.com/rabbitmq/amqp091-go.Connection).Close
+        - (*go.mongodb.org/mongo-driver/v2/mongo.Cursor).Close
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - errcheck
+        path: _test\.go
+      # Swagger annotations must stay on one line - swag cannot parse wrapped ones.
+      - linters:
+          - lll
+        source: '^\s*// @'
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - goimports
+    - golines
+  settings:
+    goimports:
+      local-prefixes:
+        - src-04-file-service
+    golines:
+      max-len: 120
+      tab-len: 4
+      reformat-tags: false
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
