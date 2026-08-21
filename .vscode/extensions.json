@@ -1,0 +1,19 @@
+{
+  "recommendations": [
+    "oxc.oxc-vscode",
+    "biomejs.biome",
+    "pkief.material-icon-theme",
+    "zhuangtongfa.material-theme",
+    "golang.go",
+    "ms-azuretools.vscode-docker",
+    "mongodb.mongodb-vscode",
+    "usernamehw.errorlens",
+    "redhat.vscode-yaml",
+    "eamodio.gitlens",
+    "pkief.material-icon-theme",
+    "zhuangtongfa.material-theme"
+  ],
+  "unwantedRecommendations": [
+    "ms-vscode.go"
+  ]
+}

@@ -1,0 +1,42 @@
+# --- Build output ---
+# Root .gitignore co "**/build/" (cho Gradle) khien build/ cua Wails bi nuot.
+# Phai re-include thu muc truoc, roi moi loai tru build/bin ben trong.
+!build/
+build/bin/
+frontend/dist
+
+# --- Dependencies ---
+frontend/node_modules
+frontend/bun.lock
+
+# --- Wails generated ---
+# Hash Wails dung de phat hien package.json thay doi, sinh lai moi may
+frontend/package.json.md5
+
+# --- TypeScript ---
+*.tsbuildinfo
+
+# --- Go binaries ---
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# ffmpeg.exe (~103MB) khong commit vao git: tai ve luc build hoac dung ban he thong
+
+
+# --- Secrets / local env ---
+.env
+.env.*
+!.env.example
+
+# --- Logs ---
+*.log
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini

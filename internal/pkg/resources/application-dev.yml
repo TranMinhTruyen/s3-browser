@@ -1,0 +1,5 @@
+s3:
+  accessKey: wVxJdDfUf9lzGDY03KKo
+  secretKey: dwhUHHvV2kVTvw3iUj8Gc88aOswaZN7JT9v8Q3xC
+  endpoint: http://localhost:9998
+  region: us-east-1

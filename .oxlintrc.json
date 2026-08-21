@@ -1,0 +1,41 @@
+{
+  "$schema": "./frontend/node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "react",
+    "typescript",
+    "unicorn",
+    "oxc"
+  ],
+  "categories": {
+    "correctness": "error"
+  },
+  "env": {
+    "browser": true,
+    "node": true,
+    "builtin": true
+  },
+  "rules": {
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/react-in-jsx-scope": "off",
+    "react/no-unknown-property": "off",
+    "react/display-name": "off",
+    "no-console": "warn",
+    "unicorn/no-thenable": "off",
+    "no-unused-vars": [
+      "warn",
+      {
+        "args": "none",
+        "vars": "all",
+        "varsIgnorePattern": "^_"
+      }
+    ],
+    "typescript/no-explicit-any": "off"
+  },
+  "ignorePatterns": [
+    "dist/**",
+    "*.config.cjs",
+    "*.config.ts",
+    "*.config.mjs"
+  ]
+}
