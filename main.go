@@ -17,7 +17,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:            "S3 Browser",
+		Title:            "S3Browser",
 		MinWidth:         1024,
 		MinHeight:        768,
 		WindowStartState: options.Maximised,

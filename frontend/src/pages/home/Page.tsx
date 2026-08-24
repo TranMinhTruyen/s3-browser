@@ -16,7 +16,7 @@ function Page() {
   return (
     <Stack align="stretch" justify="center" gap="sm">
       Home
-      <Button w="250px" onClick={handleClick}>
+      <Button w="100px" onClick={handleClick}>
         Greet
       </Button>
       {message && <Text>{message}</Text>}

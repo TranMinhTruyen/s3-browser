@@ -12,6 +12,10 @@ export default defineConfig(() => {
 
   return {
     plugins,
+    server: {
+      port: 5173,
+      strictPort: true,
+    },
     define: {
       global: 'window',
     },
