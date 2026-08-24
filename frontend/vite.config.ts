@@ -20,6 +20,7 @@ export default defineConfig(() => {
         '@': path.resolve(import.meta.dirname, './src'),
         '@components': path.resolve(import.meta.dirname, './src/components'),
         '@common': path.resolve(import.meta.dirname, './src/common'),
+        '@wails': path.resolve(import.meta.dirname, './wailsjs'),
       },
     },
   };

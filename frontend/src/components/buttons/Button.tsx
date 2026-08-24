@@ -1,6 +1,6 @@
-import { Button as MButton, ButtonProps as MButtonProps } from '@mantine/core';
+import { type ElementProps, Button as MButton, type ButtonProps as MButtonProps } from '@mantine/core';
 
-type ButtonProps = MButtonProps & {};
+interface ButtonProps extends MButtonProps, ElementProps<'button', keyof MButtonProps> {}
 
 function Button(props: ButtonProps) {
   const { size = 'sm', ...restProps } = props;

@@ -17,9 +17,9 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:            "minio-browser",
-		Width:            1024,
-		Height:           768,
+		Title:            "S3 Browser",
+		MinWidth:         1024,
+		MinHeight:        768,
 		WindowStartState: options.Maximised,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
@@ -29,6 +29,7 @@ func main() {
 		OnShutdown:       app.shutdown,
 		Bind: []interface{}{
 			app,
+			app.transfer.API(),
 		},
 	})
 

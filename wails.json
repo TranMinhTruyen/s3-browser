@@ -1,7 +1,7 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "minio-browser",
-  "outputfilename": "minio-browser",
+  "name": "S3 Browser",
+  "outputfilename": "S3 Browser",
   "frontend:install": "bun install",
   "frontend:build": "bun run build",
   "frontend:dev:watcher": "bun run dev",
