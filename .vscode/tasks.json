@@ -24,6 +24,54 @@
       "problemMatcher": [
         "$go"
       ]
+    },
+    {
+      "label": "vite: dev server",
+      "type": "shell",
+      "command": "bun run dev",
+      "options": {
+        "cwd": "${workspaceFolder}/frontend"
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "wails-dev"
+      },
+      "problemMatcher": {
+        "owner": "vite",
+        "pattern": {
+          "regexp": "^$",
+          "file": 1,
+          "location": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*VITE v.*",
+          "endsPattern": ".*Local:.*"
+        }
+      }
+    },
+    {
+      "label": "wails: build dev (HMR)",
+      "type": "shell",
+      "command": "go build -buildvcs=false -tags dev -gcflags \"all=-N -l\" -o build/bin/S3Browser-dev.exe",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": [
+        "vite: dev server"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "group": "wails-dev"
+      },
+      "problemMatcher": [
+        "$go"
+      ]
     }
   ]
 }
