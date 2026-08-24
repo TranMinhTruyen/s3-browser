@@ -27,11 +27,16 @@
       ],
       "@common/*": [
         "./src/common/*"
+      ],
+      "@wails/*": [
+        "./wailsjs/*"
       ]
-    }
+    },
+    "allowImportingTsExtensions": true
   },
   "include": [
-    "src"
+    "src",
+    "wailsjs"
   ],
   "references": [
     {

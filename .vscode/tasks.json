@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "wails: build debug",
+      "type": "shell",
+      "command": "wails build -debug",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": [
+        "$go"
+      ]
+    },
+    {
+      "label": "wails: build debug (skip frontend)",
+      "type": "shell",
+      "command": "wails build -debug -s",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "problemMatcher": [
+        "$go"
+      ]
+    }
+  ]
+}
