@@ -3,16 +3,20 @@ package transfer
 import (
 	"context"
 	"fmt"
+	"minio-browser/internal/modules/bucket"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 type Module struct {
-	ctx context.Context
+	ctx    context.Context
+	bucket *bucket.Module
 }
 
-func NewModule() *Module {
-	return &Module{}
+func NewModule(bucket *bucket.Module) *Module {
+	return &Module{
+		bucket: bucket,
+	}
 }
 
 func (m *Module) Startup(ctx context.Context) {

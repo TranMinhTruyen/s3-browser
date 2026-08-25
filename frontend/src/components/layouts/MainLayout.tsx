@@ -1,4 +1,4 @@
-import { AppShell, Box, Burger, Group, Paper } from '@mantine/core';
+import { AppShell, Burger, Group, Paper } from '@mantine/core';
 import { useDisclosure, useMediaQuery } from '@mantine/hooks';
 import { Outlet } from 'react-router-dom';
 
@@ -11,7 +11,7 @@ function MainLayout() {
     <AppShell
       header={{ height: '48px' }}
       navbar={{
-        width: !desktopOpened ? '250px' : '80px',
+        width: desktopOpened ? '250px' : '80px',
         breakpoint: 'sm',
         collapsed: { mobile: !mobileOpened },
       }}
@@ -27,7 +27,7 @@ function MainLayout() {
           {/* Burger mobile */}
           <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="sm" size="sm" />
           {/* Burger desktop */}
-          <Burger opened={desktopOpened} onClick={toggleDesktop} visibleFrom="sm" size="sm" />
+          <Burger opened={desktopOpened} onClick={toggleDesktop} visibleFrom="sm" size="sm" lineSize={2} />
           Header has a burger icon below sm breakpoint
         </Group>
       </AppShell.Header>
@@ -41,16 +41,14 @@ function MainLayout() {
         }}
         p={isMobile ? '8px' : '8px 0px 8px 8px'}
       >
-        <Paper shadow="xs" withBorder h="100%">
-          <Box p="8px">Navbar</Box>
+        <Paper shadow="xs" withBorder h="100%" p="8px" style={{ overflowX: 'hidden' }}>
+          Navbar
         </Paper>
       </AppShell.Navbar>
 
       <AppShell.Main>
-        <Paper shadow="xs" withBorder h="100%">
-          <Box p="8px">
-            <Outlet />
-          </Box>
+        <Paper shadow="xs" withBorder h="100%" p="8px" style={{ overflow: 'auto' }}>
+          <Outlet />
         </Paper>
       </AppShell.Main>
     </AppShell>
