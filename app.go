@@ -2,27 +2,31 @@ package main
 
 import (
 	"context"
-	"minio-browser/internal/transfer"
+	"minio-browser/internal/modules/bucket"
+	"minio-browser/internal/modules/transfer"
 )
 
 // App struct
 type App struct {
-	ctx      context.Context
+	bucket   *bucket.Module
 	transfer *transfer.Module
 }
 
 // NewApp creates a new App application struct
 func NewApp() *App {
+	bucket := bucket.NewModule()
+	transfer := transfer.NewModule(bucket)
+
 	return &App{
-		transfer: transfer.NewModule(),
+		transfer: transfer,
+		bucket:   bucket,
 	}
 }
 
 // startup is called when the app starts. The context is saved
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
-	a.ctx = ctx
-
+	a.bucket.Startup(ctx)
 	a.transfer.Startup(ctx)
 }
 

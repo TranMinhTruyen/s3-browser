@@ -17,7 +17,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:            "S3Browser",
+		Title:            "S3 Browser",
 		MinWidth:         1024,
 		MinHeight:        768,
 		WindowStartState: options.Maximised,
@@ -28,7 +28,6 @@ func main() {
 		OnStartup:        app.startup,
 		OnShutdown:       app.shutdown,
 		Bind: []interface{}{
-			app,
 			app.transfer.API(),
 		},
 	})

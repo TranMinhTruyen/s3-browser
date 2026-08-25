@@ -1,16 +1,11 @@
 {
   "workbench.preferredDarkColorTheme": "Mac Dark Pro Max",
   "files.eol": "\n",
-  // VS Code 1.134+ chi tai JSON schema tu cac domain nam trong allowlist.
-  // wails.io khong co trong danh sach mac dinh -> them vao day.
   "json.schemaDownload.trustedDomains": {
     "https://wails.io/": true
   },
   "js/ts.tsdk.path": "node_modules\\typescript\\lib",
   "oxc.enable": true,
-  // node_modules nam trong frontend/, khong phai goc workspace, nen "Node Modules
-  // Locator" cua extension Biome khong tim thay binary -> format on save khong chay.
-  // Duong dan tuong doi duoc resolve theo goc workspace; key = process.platform-arch[-musl].
   "biome.lsp.bin": {
     "win32-x64": "frontend/node_modules/@biomejs/cli-win32-x64/biome.exe",
     "darwin-arm64": "frontend/node_modules/@biomejs/cli-darwin-arm64/biome",
