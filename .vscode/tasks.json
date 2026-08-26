@@ -14,18 +14,6 @@
       ]
     },
     {
-      "label": "wails: build debug (skip frontend)",
-      "type": "shell",
-      "command": "wails build -debug -s",
-      "options": {
-        "cwd": "${workspaceFolder}"
-      },
-      "group": "build",
-      "problemMatcher": [
-        "$go"
-      ]
-    },
-    {
       "label": "vite: dev server",
       "type": "shell",
       "command": "bun run dev",
@@ -56,7 +44,14 @@
     {
       "label": "wails: build dev (HMR)",
       "type": "shell",
-      "command": "go build -buildvcs=false -tags dev -gcflags \"all=-N -l\" -o build/bin/S3Browser-dev.exe",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/build-dev.ps1"
+      ],
       "options": {
         "cwd": "${workspaceFolder}"
       },

@@ -1,9 +1,10 @@
-package transfer
+package handlers
 
 import (
 	"context"
 	"fmt"
 	"minio-browser/internal/modules/bucket"
+	"minio-browser/models"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -27,6 +28,13 @@ type API struct{ m *Module }
 
 func (m *Module) API() *API {
 	return &API{m: m}
+}
+
+func (a *API) ConnectS3(input models.ConnectionInput, isTestConn bool) models.ConnectionOutput {
+	if isTestConn {
+		return a.m.bucket.TestConnection(input)
+	}
+	return a.m.bucket.Connect(input)
 }
 
 // Greet returns a greeting for the given name

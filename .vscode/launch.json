@@ -23,15 +23,6 @@
       "program": "${workspaceFolder}/build/bin/S3Browser.exe",
       "preLaunchTask": "wails: build debug",
       "cwd": "${workspaceFolder}"
-    },
-    {
-      "name": "Wails: Debug Go (skip frontend build)",
-      "type": "go",
-      "request": "launch",
-      "mode": "exec",
-      "program": "${workspaceFolder}/build/bin/S3Browser.exe",
-      "preLaunchTask": "wails: build debug (skip frontend)",
-      "cwd": "${workspaceFolder}"
     }
   ]
 }
