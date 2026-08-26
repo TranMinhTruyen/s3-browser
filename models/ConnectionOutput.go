@@ -1,0 +1,8 @@
+package models
+
+type ConnectionOutput struct {
+	IsConnected  bool   `json:"isConnected"`
+	ConnectionId string `json:"connectionId,omitempty"`
+	Limited      bool   `json:"limited"`
+	Message      string `json:"message,omitempty"`
+}
