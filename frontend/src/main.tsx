@@ -5,11 +5,14 @@ import App from './App';
 
 import './style.css';
 import '@mantine/core/styles.css';
+import NiceModal from '@ebay/nice-modal-react';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MantineProvider>
-      <App />
+      <NiceModal.Provider>
+        <App />
+      </NiceModal.Provider>
     </MantineProvider>
   </StrictMode>
 );

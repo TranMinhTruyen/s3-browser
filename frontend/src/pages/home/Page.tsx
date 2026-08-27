@@ -89,7 +89,7 @@ function Page() {
             Connect
           </Button>
 
-          <Button w="125px" onClick={handleReset}>
+          <Button w="125px" type="button" onClick={handleReset}>
             Reset form
           </Button>
         </Stack>

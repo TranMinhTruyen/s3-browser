@@ -2,14 +2,10 @@ import { AppShell, Group, Paper } from '@mantine/core';
 import { useCallback, useRef, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 
-const MIN_WIDTH = 180;
+const MIN_WIDTH = 240;
 const MAX_WIDTH = 480;
 
 function MainLayout() {
-  // const [mobileOpened, { toggle: toggleMobile }] = useDisclosure();
-  // const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
-  // const isMobile = useMediaQuery('(max-width: 48em)');
-
   const [width, setWidth] = useState(MAX_WIDTH);
   const [resizing, setResizing] = useState(false);
   const navbarRef = useRef<HTMLDivElement>(null);
@@ -46,37 +42,17 @@ function MainLayout() {
   return (
     <AppShell
       header={{ height: '48px' }}
-      navbar={{
-        width: width,
-        breakpoint: 'sm',
-        // collapsed: { mobile: !mobileOpened },
-      }}
+      navbar={{ width: width, breakpoint: 'sm' }}
       padding="4px"
-      styles={{
-        main: {
-          height: '100vh',
-          transition: resizing ? 'none' : undefined,
-        },
-      }}
+      styles={{ main: { height: '100vh' } }}
     >
       <AppShell.Header>
         <Group h="100%" px="sm">
-          {/* <Burger opened={mobileOpened} onClick={toggleMobile} hiddenFrom="sm" size="sm" />
-          <Burger opened={desktopOpened} onClick={toggleDesktop} visibleFrom="sm" size="sm" lineSize={2} /> */}
           Header has a burger icon below sm breakpoint
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar
-        ref={navbarRef}
-        styles={{
-          navbar: {
-            transition: resizing ? 'none' : 'width 300ms ease',
-            border: 'none',
-          },
-        }}
-        p={'4px 0px 4px 4px'}
-      >
+      <AppShell.Navbar ref={navbarRef} styles={{ navbar: { border: 'none' } }} p={'4px 0px 4px 4px'}>
         <Paper shadow="xs" withBorder h="100%" p="8px" style={{ overflowX: 'hidden' }}>
           Navbar
         </Paper>

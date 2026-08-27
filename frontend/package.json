@@ -9,20 +9,20 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ebay/nice-modal-react": "^1.2.13",
     "@mantine/core": "^9.5.2",
     "@mantine/form": "^9.5.2",
     "@mantine/hooks": "^9.5.2",
-    "@reduxjs/toolkit": "^2.12.0",
     "@tanstack/react-virtual": "^3.14.10",
     "i18next": "^26.4.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-i18next": "^17.0.12",
-    "react-redux": "^9.3.0",
     "react-router-dom": "^7.18.2",
     "redux": "^5.0.1",
     "sonner": "^2.0.8",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.10",

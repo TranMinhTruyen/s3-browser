@@ -24,7 +24,7 @@ func (m *Module) Startup(ctx context.Context) {
 }
 
 func (m *Module) TestConnection(input models.ConnectionInput) models.ConnectionOutput {
-	c := buildClient(m.ctx, input)
+	c := buildClient(input)
 	status, err := probe(m.ctx, c)
 
 	if err == nil {
@@ -36,7 +36,7 @@ func (m *Module) TestConnection(input models.ConnectionInput) models.ConnectionO
 }
 
 func (m *Module) Connect(input models.ConnectionInput) models.ConnectionOutput {
-	c := buildClient(m.ctx, input)
+	c := buildClient(input)
 	status, err := probe(m.ctx, c)
 
 	if err != nil {
