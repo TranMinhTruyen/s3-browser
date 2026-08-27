@@ -14,13 +14,28 @@ import (
 	"github.com/aws/smithy-go"
 )
 
+// access key or secret key is not valid for this endpoint
+const S3_ERROR_001 = "S3E001"
+
+// the endpoint rejected
+const S3_ERROR_002 = "S3E002"
+
+// timed out reaching the endpoint, check the address and whether the server is running
+const S3_ERROR_003 = "S3E003"
+
+// error while connect to S3 bucket
+const S3_ERROR_004 = "S3E004"
+
+// Access bucket is limited
+const S3_WARN_001 = "S3W001"
+
 type S3Conn struct {
 	Client    *s3.Client
 	Presign   *s3.PresignClient
 	Transport *http.Transport
 }
 
-func buildClient(ctx context.Context, input models.ConnectionInput) *S3Conn {
+func buildClient(input models.ConnectionInput) *S3Conn {
 	client, transport := newHTTPClient()
 
 	region := input.Region
@@ -69,29 +84,22 @@ func describeConnectStatus(err error) (models.ConnectionOutput, error) {
 	if errors.As(err, &apiErr) {
 		switch apiErr.ErrorCode() {
 		case "InvalidAccessKeyId", "SignatureDoesNotMatch", "InvalidClientTokenId":
-			return models.ConnectionOutput{
-				Message: "access key or secret key is not valid for this endpoint",
-			}, err
+			return models.ConnectionOutput{Message: S3_ERROR_001}, err
 		case "AuthorizationHeaderMalformed", "InvalidRegion":
-			return models.ConnectionOutput{Message: "the endpoint rejected"}, err
+			return models.ConnectionOutput{Message: S3_ERROR_002}, err
 		case "AccessDenied", "AllAccessDisabled", "UnauthorizedAccess":
-			return models.ConnectionOutput{
-				Limited: true,
-				Message: "Access bucket is limited",
-			}, nil
+			return models.ConnectionOutput{Limited: true, Message: S3_WARN_001}, nil
 		default:
 			return models.ConnectionOutput{Message: apiErr.ErrorMessage()}, err
 		}
 	}
 
 	if errors.Is(err, context.DeadlineExceeded) {
-		return models.ConnectionOutput{
-			Message: "timed out reaching the endpoint, check the address and whether the server is running",
-		}, err
+		return models.ConnectionOutput{Message: S3_ERROR_003}, err
 	}
 
 	if err != nil {
-		return models.ConnectionOutput{Message: err.Error()}, err
+		return models.ConnectionOutput{Message: S3_ERROR_004}, err
 	}
 
 	return models.ConnectionOutput{}, nil
