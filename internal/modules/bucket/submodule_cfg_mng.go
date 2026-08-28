@@ -14,6 +14,12 @@ import (
 	"github.com/aws/smithy-go"
 )
 
+// Test connection to S3 success
+const S3_SUCCES_001 = "S3S001"
+
+// S3 is connected
+const S3_SUCCES_002 = "S3S002"
+
 // access key or secret key is not valid for this endpoint
 const S3_ERROR_001 = "S3E001"
 

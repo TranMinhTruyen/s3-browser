@@ -16,6 +16,31 @@ $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
 $syso = Join-Path $root 'wailsdev-res_windows_amd64.syso'
+$exe = Join-Path $root 'build/bin/S3Browser-dev.exe'
+
+# VSCode fires this preLaunchTask before the previous debug session has fully
+# released the binary, so `go build -o` hits "Access is denied" on a restart.
+# Kill whatever still holds it (the app itself and the delve process that
+# launched it), then wait for the handle to actually drop.
+if (Test-Path $exe) {
+    Get-Process -Name 'S3Browser-dev' -ErrorAction SilentlyContinue |
+        Stop-Process -Force -ErrorAction SilentlyContinue
+    # Win32_Process, not Get-Process: the CommandLine property only exists on
+    # System.Diagnostics.Process in PowerShell 7+, and this task runs 5.1.
+    Get-CimInstance Win32_Process -Filter "Name = 'dlv.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -like '*S3Browser-dev*' } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+
+    for ($i = 0; $i -lt 40; $i++) {
+        try {
+            $fs = [IO.File]::Open($exe, 'Open', 'ReadWrite', 'None')
+            $fs.Close()
+            break
+        } catch {
+            Start-Sleep -Milliseconds 100
+        }
+    }
+}
 
 go run github.com/tc-hib/go-winres@v0.3.3 make `
     --in scripts/winres/winres.json `
