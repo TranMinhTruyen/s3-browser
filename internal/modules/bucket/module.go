@@ -32,6 +32,7 @@ func (m *Module) TestConnection(input models.ConnectionInput) models.ConnectionO
 	}
 
 	status.IsConnected = err == nil
+	status.Message = S3_SUCCES_001
 	return status
 }
 
@@ -51,6 +52,7 @@ func (m *Module) Connect(input models.ConnectionInput) models.ConnectionOutput {
 
 	status.ConnectionId = connectionId
 	status.IsConnected = true
+	status.Message = S3_SUCCES_002
 
 	return status
 }
