@@ -13,11 +13,12 @@ var assets embed.FS
 
 func main() {
 	// Create an instance of the app structure
-	app := NewApp()
+	cfg := loadWailsConfig()
+	app := NewApp(cfg)
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:            "S3 Browser",
+		Title:            cfg.Name,
 		MinWidth:         1024,
 		MinHeight:        768,
 		WindowStartState: options.Maximised,
