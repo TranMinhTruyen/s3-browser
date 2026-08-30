@@ -4,6 +4,7 @@ import (
 	"context"
 	"minio-browser/internal/modules/bucket"
 	"minio-browser/internal/modules/handlers"
+	"minio-browser/internal/pkg/db"
 )
 
 // App struct
@@ -13,9 +14,12 @@ type App struct {
 }
 
 // NewApp creates a new App application struct
-func NewApp() *App {
+func NewApp(cfg wailsConfig) *App {
 	bucket := bucket.NewModule()
 	handlers := handlers.NewModule(bucket)
+
+	sqlDb := db.InitDB(cfg.Name)
+	db.RunMigrations(sqlDb)
 
 	return &App{
 		handlers: handlers,

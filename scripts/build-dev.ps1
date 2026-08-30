@@ -16,29 +16,30 @@ $root = Split-Path -Parent $PSScriptRoot
 Set-Location $root
 
 $syso = Join-Path $root 'wailsdev-res_windows_amd64.syso'
-$exe = Join-Path $root 'build/bin/S3Browser-dev.exe'
+$bin = Join-Path $root 'build/bin'
+$exe = Join-Path $bin 'S3Browser-dev.exe'
 
-# VSCode fires this preLaunchTask before the previous debug session has fully
-# released the binary, so `go build -o` hits "Access is denied" on a restart.
-# Kill whatever still holds it (the app itself and the delve process that
-# launched it), then wait for the handle to actually drop.
+# VSCode fires this preLaunchTask before the previous debug session has released
+# the binary, so `go build -o` would hit "Access is denied" on a restart.
+#
+# Do NOT kill the holders. On a Restart the process holding the exe is the very
+# dlv.exe acting as the debug adapter, and killing it is what makes VSCode
+# report "No debugger available, can not send 'restart'".
+#
+# Windows refuses to overwrite a running image but happily *renames* one, so we
+# move the old exe aside instead: the running app keeps its renamed image, dlv
+# stays alive, and its restart re-execs the freshly built path.
+Get-ChildItem $bin -Filter 'S3Browser-dev.old-*.exe' -ErrorAction SilentlyContinue |
+    ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
+
 if (Test-Path $exe) {
-    Get-Process -Name 'S3Browser-dev' -ErrorAction SilentlyContinue |
-        Stop-Process -Force -ErrorAction SilentlyContinue
-    # Win32_Process, not Get-Process: the CommandLine property only exists on
-    # System.Diagnostics.Process in PowerShell 7+, and this task runs 5.1.
-    Get-CimInstance Win32_Process -Filter "Name = 'dlv.exe'" -ErrorAction SilentlyContinue |
-        Where-Object { $_.CommandLine -like '*S3Browser-dev*' } |
-        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-
-    for ($i = 0; $i -lt 40; $i++) {
-        try {
-            $fs = [IO.File]::Open($exe, 'Open', 'ReadWrite', 'None')
-            $fs.Close()
-            break
-        } catch {
-            Start-Sleep -Milliseconds 100
-        }
+    try {
+        # Nothing holds it: plain overwrite is fine.
+        $fs = [IO.File]::Open($exe, 'Open', 'ReadWrite', 'None')
+        $fs.Close()
+    } catch {
+        $aside = 'S3Browser-dev.old-{0}.exe' -f ([guid]::NewGuid().ToString('N'))
+        Rename-Item -LiteralPath $exe -NewName $aside -Force
     }
 }
 
