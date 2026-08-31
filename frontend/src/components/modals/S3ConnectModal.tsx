@@ -48,6 +48,7 @@ export default NiceModal.create(() => {
           ...value,
           region: 'us-east-1',
           pathStyle: true,
+          savePassword: true,
         };
         const output = await ConnectS3(input, isTestConnection);
         const message = t(`toastMessage.${output.message}`);

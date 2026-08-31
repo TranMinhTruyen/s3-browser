@@ -8,7 +8,7 @@
     "#1": {
       "0409": {
         "identity": {
-          "name": "com.wails.S3 Browser",
+          "name": "com.wails.S3Browser",
           "version": "1.0.0.0"
         },
         "minimum-os": "win7",
