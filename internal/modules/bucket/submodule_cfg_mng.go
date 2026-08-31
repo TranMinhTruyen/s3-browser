@@ -14,26 +14,28 @@ import (
 	"github.com/aws/smithy-go"
 )
 
-// Test connection to S3 success
-const S3_SUCCES_001 = "S3S001"
+var (
+	// Test connection to S3 success
+	S3_SUCCES_001 = "S3S001"
 
-// S3 is connected
-const S3_SUCCES_002 = "S3S002"
+	// S3 is connected
+	S3_SUCCES_002 = "S3S002"
 
-// access key or secret key is not valid for this endpoint
-const S3_ERROR_001 = "S3E001"
+	// access key or secret key is not valid for this endpoint
+	S3_ERROR_001 = "S3E001"
 
-// the endpoint rejected
-const S3_ERROR_002 = "S3E002"
+	// the endpoint rejected
+	S3_ERROR_002 = "S3E002"
 
-// timed out reaching the endpoint, check the address and whether the server is running
-const S3_ERROR_003 = "S3E003"
+	// timed out reaching the endpoint, check the address and whether the server is running
+	S3_ERROR_003 = "S3E003"
 
-// error while connect to S3 bucket
-const S3_ERROR_004 = "S3E004"
+	// error while connect to S3 bucket
+	S3_ERROR_004 = "S3E004"
 
-// Access bucket is limited
-const S3_WARN_001 = "S3W001"
+	// Access bucket is limited
+	S3_WARN_001 = "S3W001"
+)
 
 type S3Conn struct {
 	Client    *s3.Client

@@ -9,13 +9,13 @@ import (
 	"strings"
 )
 
-//go:embed all:migrations/*.sql
-var migrationsFS embed.FS
+//go:embed all:schemas/*.sql
+var schemasFS embed.FS
 
 func RunMigrations(db *sql.DB) error {
-	entries, err := fs.ReadDir(migrationsFS, "migrations")
+	entries, err := fs.ReadDir(schemasFS, "schemas")
 	if err != nil {
-		return fmt.Errorf("read migrations dir: %w", err)
+		return fmt.Errorf("read schemas dir: %w", err)
 	}
 
 	var files []string
@@ -27,13 +27,13 @@ func RunMigrations(db *sql.DB) error {
 	sort.Strings(files)
 
 	for _, name := range files {
-		content, err := migrationsFS.ReadFile("migrations/" + name)
+		content, err := schemasFS.ReadFile("schemas/" + name)
 		if err != nil {
-			return fmt.Errorf("read migration %s: %w", name, err)
+			return fmt.Errorf("read schemas %s: %w", name, err)
 		}
 
 		if _, err := db.Exec(string(content)); err != nil {
-			return fmt.Errorf("exec migration %s: %w", name, err)
+			return fmt.Errorf("exec schemas %s: %w", name, err)
 		}
 	}
 
