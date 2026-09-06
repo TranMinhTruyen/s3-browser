@@ -1,4 +1,4 @@
-package models
+package bucket
 
 type ConnectionOutput struct {
 	IsConnected  bool   `json:"isConnected"`

@@ -1,7 +1,7 @@
 import NiceModal, { useModal } from '@ebay/nice-modal-react';
 import { Button, Divider, Group, Modal, Stack, Title } from '@mantine/core';
 import { schemaResolver, useForm } from '@mantine/form';
-import { ConnectS3 } from '@wails/go/handlers/API';
+import { ConnectS3 } from '@wails/go/handlers/BucketIPC';
 import { models } from '@wails/go/models';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';

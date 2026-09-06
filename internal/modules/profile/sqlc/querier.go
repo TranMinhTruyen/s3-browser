@@ -10,7 +10,9 @@ import (
 
 type Querier interface {
 	CreateProfile(ctx context.Context, arg CreateProfileParams) (ConnectionProfile, error)
-	SelectAllProfile(ctx context.Context) ([]SelectAllProfileRow, error)
+	SelectAllConnectionProfile(ctx context.Context) ([]SelectAllConnectionProfileRow, error)
+	SelectConnectionProfileById(ctx context.Context, id string) (ConnectionProfile, error)
+	UpdateConnectionProfileById(ctx context.Context, arg UpdateConnectionProfileByIdParams) (ConnectionProfile, error)
 }
 
 var _ Querier = (*Queries)(nil)
