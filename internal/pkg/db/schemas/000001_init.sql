@@ -1,3 +1,5 @@
+-- internal/db/schemas/00001_init.sql
+-- +goose Up
 CREATE TABLE 
 IF NOT EXISTS connection_profiles( 
     id TEXT PRIMARY KEY
@@ -13,3 +15,9 @@ IF NOT EXISTS connection_profiles(
     , updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     , version INTEGER NOT NULL DEFAULT 1
 );
+
+CREATE INDEX idx_connection_profiles_name ON connection_profiles(name);
+
+-- +goose Down
+DROP INDEX idx_connection_profiles_name;
+DROP TABLE connection_profiles;

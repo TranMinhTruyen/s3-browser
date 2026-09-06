@@ -5,7 +5,6 @@ import (
 	"log"
 	"minio-browser/internal"
 	"minio-browser/internal/pkg/logger"
-	"minio-browser/internal/pkg/utils"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -26,16 +25,11 @@ func main() {
 		AppName: cfg.Name,
 	})
 	if err != nil {
-		log.Fatalf("Create an instance logger error: %v", err)
+		log.Fatalf("create an instance logger error: %v", err)
 	}
 	defer closer.Close()
 
-	km, err := utils.NewKeyManager()
-	if err != nil {
-		log.Fatalf("Generate key manager failed: %v", err)
-	}
-
-	app := internal.NewApp(cfg, appLogger, km)
+	app := internal.NewApp(cfg, appLogger)
 
 	// Create application with options
 	err = wails.Run(&options.App{
@@ -53,9 +47,7 @@ func main() {
 		Debug: options.Debug{
 			OpenInspectorOnStartup: true,
 		},
-		Bind: []any{
-			app.BucketHandler.API(),
-		},
+		Bind: app.GetIPC(),
 	})
 
 	if err != nil {

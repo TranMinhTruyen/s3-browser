@@ -43,8 +43,8 @@
     },
     {
       "label": "wails: build dev (HMR)",
-      "type": "shell",
-      "command": "powershell",
+      "type": "process",
+      "command": "powershell.exe",
       "args": [
         "-NoProfile",
         "-ExecutionPolicy",

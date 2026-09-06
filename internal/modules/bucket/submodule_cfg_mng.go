@@ -3,7 +3,7 @@ package bucket
 import (
 	"context"
 	"errors"
-	"minio-browser/models"
+	models "minio-browser/models/bucket"
 	"net"
 	"net/http"
 	"time"

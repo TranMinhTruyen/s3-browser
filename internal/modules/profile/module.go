@@ -7,7 +7,8 @@ import (
 	"log/slog"
 	"minio-browser/internal/modules/profile/sqlc"
 	"minio-browser/internal/pkg/utils"
-	"minio-browser/models"
+	"minio-browser/models/bucket"
+	"minio-browser/models/profile"
 )
 
 var (
@@ -15,6 +16,8 @@ var (
 	PFE001 = "PFE001"
 	// Encrypted SecretKey failed
 	PFE002 = "PFE002"
+	// Error get all connnection profile
+	PFE003 = "PFE003"
 
 	// Save profile success
 	PFS001 = "PFS001"
@@ -27,28 +30,26 @@ type Module struct {
 	km     *utils.KeyManager
 }
 
-func NewModule(db *sql.DB, logger *slog.Logger, km *utils.KeyManager) *Module {
-	log := logger.With("component", "profiles_module")
-
+func NewModule(logger *slog.Logger) *Module {
 	return &Module{
-		q:      sqlc.New(db),
-		logger: log,
-		km:     km,
+		logger: logger.With("component", "profiles_module"),
 	}
 }
 
-func (m *Module) Startup(ctx context.Context) {
+func (m *Module) Startup(ctx context.Context, db *sql.DB, km *utils.KeyManager) {
 	m.ctx = ctx
+	m.q = sqlc.New(db)
+	m.km = km
 }
 
 func (m *Module) CreateProfile(
 	connectionId string,
-	profileInput models.ConnectionInput,
-) (sqlc.ConnectionProfile, error) {
+	profileInput bucket.ConnectionInput,
+) error {
 	encryptedSecret, err := m.km.Encrypt(profileInput.SecretKey)
 
 	if err != nil {
-		return sqlc.ConnectionProfile{}, errors.New(PFE002)
+		return errors.New(PFE002)
 	}
 
 	params := sqlc.CreateProfileParams{
@@ -63,5 +64,36 @@ func (m *Module) CreateProfile(
 		SavePassword: sql.NullBool{Bool: profileInput.SavePassword, Valid: true},
 	}
 
-	return m.q.CreateProfile(m.ctx, params)
+	_, err = m.q.CreateProfile(m.ctx, params)
+
+	return err
+}
+
+func (m *Module) GetAllConnectionProfile() profile.GetAllConnectionProfileOutput {
+	output := profile.GetAllConnectionProfileOutput{
+		ConnectionProfiles: []profile.ConnectionProfileOutput{},
+	}
+
+	result, err := m.q.SelectAllConnectionProfile(m.ctx)
+
+	if err != nil {
+		output.Message = PFE003
+		m.logger.Error("error get all profile", slog.Any("detail", err))
+		return output
+	}
+
+	outputList := make([]profile.ConnectionProfileOutput, len(result))
+	for i, item := range result {
+		outputList[i] = profile.ConnectionProfileOutput{
+			ID:        item.ConnectionID,
+			Name:      item.ConnectionName.String,
+			Color:     item.Color.String,
+			CreatedAt: item.CreatedAt.Time,
+			UpdatedAt: item.UpdatedAt.Time,
+			Version:   item.Version,
+		}
+	}
+
+	output.ConnectionProfiles = outputList
+	return output
 }

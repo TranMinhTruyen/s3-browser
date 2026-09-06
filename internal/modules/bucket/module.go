@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"minio-browser/internal/modules/profile"
 	"minio-browser/internal/pkg/utils"
-	"minio-browser/models"
+	"minio-browser/models/bucket"
 	"sync"
 )
 
@@ -18,21 +18,19 @@ type Module struct {
 }
 
 func NewModule(logger *slog.Logger, profileModule *profile.Module) *Module {
-	log := logger.With("component", "bucket_module")
-
 	return &Module{
-		conns:   make(map[string]*S3Conn),
-		logger:  log,
+		logger: logger.With("component", "bucket_module"),
+		conns:  make(map[string]*S3Conn),
+
 		profile: profileModule,
 	}
 }
 
 func (m *Module) Startup(ctx context.Context) {
 	m.ctx = ctx
-	m.profile.Startup(ctx)
 }
 
-func (m *Module) TestConnection(input models.ConnectionInput) models.ConnectionOutput {
+func (m *Module) TestConnection(input bucket.ConnectionInput) bucket.ConnectionOutput {
 	c := buildClient(input)
 	status, err := probe(m.ctx, c)
 
@@ -45,7 +43,7 @@ func (m *Module) TestConnection(input models.ConnectionInput) models.ConnectionO
 	return status
 }
 
-func (m *Module) Connect(input models.ConnectionInput) models.ConnectionOutput {
+func (m *Module) Connect(input bucket.ConnectionInput) bucket.ConnectionOutput {
 	c := buildClient(input)
 	status, err := probe(m.ctx, c)
 
@@ -63,7 +61,7 @@ func (m *Module) Connect(input models.ConnectionInput) models.ConnectionOutput {
 	status.IsConnected = true
 	status.Message = S3_SUCCES_002
 
-	if _, err := m.profile.CreateProfile(connectionId, input); err != nil {
+	if err := m.profile.CreateProfile(connectionId, input); err != nil {
 		m.logger.Error("save connection profile failed", "connectionId", connectionId, "error", err)
 	}
 

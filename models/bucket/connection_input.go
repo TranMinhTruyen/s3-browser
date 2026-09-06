@@ -1,4 +1,4 @@
-package models
+package bucket
 
 type ConnectionInput struct {
 	Name         string `json:"name"`

@@ -10,31 +10,46 @@ import (
 	"database/sql"
 )
 
-const selectAllProfile = `-- name: SelectAllProfile :many
+const selectAllConnectionProfile = `-- name: SelectAllConnectionProfile :many
 SELECT
     cp.id AS connection_id
-    , cp.name AS connection_name 
+    , cp.NAME AS connection_name
+    , cp.color
+    , cp.created_at
+    , cp.updated_at
+    , cp.version 
 FROM
     connection_profiles cp 
 ORDER BY
     cp.created_at
 `
 
-type SelectAllProfileRow struct {
+type SelectAllConnectionProfileRow struct {
 	ConnectionID   string         `json:"connection_id"`
 	ConnectionName sql.NullString `json:"connection_name"`
+	Color          sql.NullString `json:"color"`
+	CreatedAt      sql.NullTime   `json:"created_at"`
+	UpdatedAt      sql.NullTime   `json:"updated_at"`
+	Version        int64          `json:"version"`
 }
 
-func (q *Queries) SelectAllProfile(ctx context.Context) ([]SelectAllProfileRow, error) {
-	rows, err := q.db.QueryContext(ctx, selectAllProfile)
+func (q *Queries) SelectAllConnectionProfile(ctx context.Context) ([]SelectAllConnectionProfileRow, error) {
+	rows, err := q.db.QueryContext(ctx, selectAllConnectionProfile)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []SelectAllProfileRow{}
+	items := []SelectAllConnectionProfileRow{}
 	for rows.Next() {
-		var i SelectAllProfileRow
-		if err := rows.Scan(&i.ConnectionID, &i.ConnectionName); err != nil {
+		var i SelectAllConnectionProfileRow
+		if err := rows.Scan(
+			&i.ConnectionID,
+			&i.ConnectionName,
+			&i.Color,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.Version,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
