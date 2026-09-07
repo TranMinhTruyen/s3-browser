@@ -49,7 +49,7 @@ func main() {
 		MinHeight:              768,
 		StartState:             application.WindowStateMaximised,
 		BackgroundColour:       application.NewRGBA(27, 38, 54, 1),
-		OpenInspectorOnStartup: true,
+		OpenInspectorOnStartup: DevMode,
 	})
 
 	if err := mainApp.Run(); err != nil {
