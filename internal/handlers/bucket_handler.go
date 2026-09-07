@@ -1,21 +1,27 @@
 package handlers
 
 import (
+	"S3Browser/internal/modules/bucket"
+	models "S3Browser/models/bucket"
+	"S3Browser/models/common"
 	"context"
 	"log/slog"
-	"minio-browser/internal/modules/bucket"
-	models "minio-browser/models/bucket"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type BucketHandler struct {
 	ctx    context.Context
 	logger *slog.Logger
+	app    *application.App
+
 	bucket *bucket.Module
 }
 
-func NewHandler(logger *slog.Logger, bucket *bucket.Module) *BucketHandler {
+func NewHandler(app *application.App, logger *slog.Logger, bucket *bucket.Module) *BucketHandler {
 	return &BucketHandler{
 		logger: logger.With("component", "bucket_handler"),
+		app:    app,
 
 		bucket: bucket,
 	}
@@ -31,7 +37,7 @@ func (h *BucketHandler) BucketIPC() *BucketIPC {
 	return &BucketIPC{h: h}
 }
 
-func (a *BucketIPC) ConnectS3(input models.ConnectionInput, isTestConn bool) models.ConnectionOutput {
+func (a *BucketIPC) ConnectS3(input models.ConnectionInput, isTestConn bool) common.Output[models.ConnectionOutput] {
 	if isTestConn {
 		return a.h.bucket.TestConnection(input)
 	}

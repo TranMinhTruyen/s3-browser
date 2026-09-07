@@ -9,7 +9,7 @@ here: https://wails.io/docs/reference/project-config
 
 ## Live Development
 
-Run `wails generate module` to update IPC function before start app.
+Run `wails3 generate bindings -ts` to update IPC function before start app.
 
 To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
 server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser

@@ -13,6 +13,10 @@ export default defineConfig(() => {
   return {
     plugins,
     server: {
+      // Bind IPv4 explicitly: with the default 'localhost', Node resolves to
+      // ::1 only, while the Wails asset proxy dials 127.0.0.1 — which would
+      // leave the webview blank in dev mode.
+      host: '127.0.0.1',
       port: 5174,
       strictPort: true,
     },
@@ -24,7 +28,7 @@ export default defineConfig(() => {
         '@': path.resolve(import.meta.dirname, './src'),
         '@components': path.resolve(import.meta.dirname, './src/components'),
         '@common': path.resolve(import.meta.dirname, './src/common'),
-        '@wails': path.resolve(import.meta.dirname, './wailsjs'),
+        '@wails': path.resolve(import.meta.dirname, './bindings'),
       },
     },
   };

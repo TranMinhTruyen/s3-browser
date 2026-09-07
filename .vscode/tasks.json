@@ -4,7 +4,7 @@
     {
       "label": "wails: build debug",
       "type": "shell",
-      "command": "wails build -debug",
+      "command": "wails3 task build",
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -43,15 +43,8 @@
     },
     {
       "label": "wails: build dev (HMR)",
-      "type": "process",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/build-dev.ps1"
-      ],
+      "type": "shell",
+      "command": "wails3 task build:debug",
       "options": {
         "cwd": "${workspaceFolder}"
       },

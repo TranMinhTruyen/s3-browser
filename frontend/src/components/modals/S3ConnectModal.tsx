@@ -1,8 +1,8 @@
 import NiceModal, { useModal } from '@ebay/nice-modal-react';
 import { Button, Divider, Group, Modal, Stack, Title } from '@mantine/core';
 import { schemaResolver, useForm } from '@mantine/form';
-import { ConnectS3 } from '@wails/go/handlers/BucketIPC';
-import { models } from '@wails/go/models';
+import { ConnectS3 } from '@wails/S3Browser/internal/handlers/bucketipc';
+import { ConnectionInput } from '@wails/S3Browser/models/bucket';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -42,7 +42,7 @@ export default NiceModal.create(() => {
   const handleConnect = useCallback(
     (isTestConnection: boolean) => async (value: ConnectionInfoForm) => {
       try {
-        const input: models.ConnectionInput = {
+        const input: ConnectionInput = {
           name: 'Test',
           color: 'white',
           ...value,
@@ -51,8 +51,8 @@ export default NiceModal.create(() => {
           savePassword: true,
         };
         const output = await ConnectS3(input, isTestConnection);
-        const message = t(`toastMessage.${output.message}`);
-        if (output.isConnected) {
+        const message = t(`toastMessage.${output.messageList}`);
+        if (output.body?.isConnected) {
           if (!isTestConnection) {
             toast.success(message);
             modal.hide();
