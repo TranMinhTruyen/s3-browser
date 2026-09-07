@@ -1,14 +1,12 @@
 package main
 
 import (
+	"S3Browser/internal"
+	"S3Browser/internal/pkg/logger"
 	"embed"
 	"log"
-	"minio-browser/internal"
-	"minio-browser/internal/pkg/logger"
 
-	"github.com/wailsapp/wails/v2"
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 //go:embed all:frontend/dist
@@ -29,28 +27,32 @@ func main() {
 	}
 	defer closer.Close()
 
-	app := internal.NewApp(cfg, appLogger)
-
-	// Create application with options
-	err = wails.Run(&options.App{
-		Title:            cfg.Name,
-		MinWidth:         1024,
-		MinHeight:        768,
-		WindowStartState: options.Maximised,
-		AssetServer: &assetserver.Options{
-			Assets: assets,
+	mainApp := application.New(application.Options{
+		Name: cfg.Name,
+		Assets: application.AssetOptions{
+			Handler: application.AssetFileServerFS(assets),
 		},
-		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
-		OnStartup:        app.Startup,
-		Logger:           logger.NewWailsAdapter(appLogger),
-		OnShutdown:       app.Shutdown,
-		Debug: options.Debug{
-			OpenInspectorOnStartup: true,
-		},
-		Bind: app.GetIPC(),
+		Logger: appLogger,
 	})
 
-	if err != nil {
-		println("Error:", err.Error())
+	app := internal.NewApp(mainApp, cfg, appLogger)
+	mainApp.OnShutdown(app.Shutdown)
+	mainApp.RegisterService(application.NewService(app.BucketHandler.BucketIPC()))
+
+	if err := app.Startup(mainApp.Context()); err != nil {
+		log.Fatalf("app startup failed: %v", err)
+	}
+
+	mainApp.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:                  cfg.Name,
+		MinWidth:               1024,
+		MinHeight:              768,
+		StartState:             application.WindowStateMaximised,
+		BackgroundColour:       application.NewRGBA(27, 38, 54, 1),
+		OpenInspectorOnStartup: true,
+	})
+
+	if err := mainApp.Run(); err != nil {
+		println("error:", err.Error())
 	}
 }

@@ -9,7 +9,8 @@ frontend/bun.lock
 
 # --- Wails generated ---
 frontend/package.json.md5
-frontend/wailsjs
+frontend/bindings
+.task
 *.syso
 
 # --- TypeScript ---

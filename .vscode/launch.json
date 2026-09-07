@@ -10,9 +10,7 @@
       "preLaunchTask": "wails: build dev (HMR)",
       "cwd": "${workspaceFolder}",
       "env": {
-        "devserver": "localhost:5173",
-        "frontenddevserverurl": "http://localhost:5174",
-        "loglevel": "Debug"
+        "FRONTEND_DEVSERVER_URL": "http://localhost:5174"
       }
     },
     {

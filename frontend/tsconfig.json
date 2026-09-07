@@ -29,14 +29,14 @@
         "./src/common/*"
       ],
       "@wails/*": [
-        "./wailsjs/*"
+        "./bindings/*"
       ]
     },
     "allowImportingTsExtensions": true
   },
   "include": [
     "src",
-    "wailsjs"
+    "bindings"
   ],
   "references": [
     {

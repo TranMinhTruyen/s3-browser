@@ -1,14 +1,16 @@
 package profile
 
 import (
+	"S3Browser/internal/modules/profile/sqlc"
+	"S3Browser/internal/pkg/utils"
+	"S3Browser/models/bucket"
+	"S3Browser/models/profile"
 	"context"
 	"database/sql"
 	"errors"
 	"log/slog"
-	"minio-browser/internal/modules/profile/sqlc"
-	"minio-browser/internal/pkg/utils"
-	"minio-browser/models/bucket"
-	"minio-browser/models/profile"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 var (
@@ -27,12 +29,14 @@ type Module struct {
 	q      *sqlc.Queries
 	ctx    context.Context
 	logger *slog.Logger
+	app    *application.App
 	km     *utils.KeyManager
 }
 
-func NewModule(logger *slog.Logger) *Module {
+func NewModule(app *application.App, logger *slog.Logger) *Module {
 	return &Module{
 		logger: logger.With("component", "profiles_module"),
+		app:    app,
 	}
 }
 

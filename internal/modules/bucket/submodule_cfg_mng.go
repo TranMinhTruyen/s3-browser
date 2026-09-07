@@ -1,9 +1,12 @@
 package bucket
 
 import (
+	"S3Browser/models/bucket"
+	models "S3Browser/models/bucket"
+	"S3Browser/models/common"
 	"context"
 	"errors"
-	models "minio-browser/models/bucket"
+	"log/slog"
 	"net"
 	"net/http"
 	"time"
@@ -43,7 +46,7 @@ type S3Conn struct {
 	Transport *http.Transport
 }
 
-func buildClient(input models.ConnectionInput) *S3Conn {
+func (m *Module) buildClient(input models.ConnectionInput) *S3Conn {
 	client, transport := newHTTPClient()
 
 	region := input.Region
@@ -72,45 +75,56 @@ func buildClient(input models.ConnectionInput) *S3Conn {
 	}
 }
 
-func probe(ctx context.Context, c *S3Conn) (models.ConnectionOutput, error) {
+func (m *Module) probe(ctx context.Context, c *S3Conn) (common.Output[bucket.ConnectionOutput], error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
+	output := common.Output[bucket.ConnectionOutput]{}
+	output.New()
+
 	if _, err := c.Client.ListBuckets(ctx, &s3.ListBucketsInput{}); err != nil {
-		status, mappedErr := describeConnectStatus(err)
+		mappedErr := describeConnectStatus(err, &output)
 		if mappedErr != nil {
 			c.Transport.CloseIdleConnections()
+			m.logger.Error("connect to S3 failed", slog.Any("detail", mappedErr))
 		}
-		return status, mappedErr
+		return output, mappedErr
 	}
 
-	return models.ConnectionOutput{}, nil
+	return output, nil
 }
 
-func describeConnectStatus(err error) (models.ConnectionOutput, error) {
+func describeConnectStatus(err error, output *common.Output[bucket.ConnectionOutput]) error {
 	var apiErr smithy.APIError
 	if errors.As(err, &apiErr) {
 		switch apiErr.ErrorCode() {
 		case "InvalidAccessKeyId", "SignatureDoesNotMatch", "InvalidClientTokenId":
-			return models.ConnectionOutput{Message: S3_ERROR_001}, err
+			output.MessageList = &[]common.Message{common.ErrorMessage(S3_ERROR_001)}
+			return err
 		case "AuthorizationHeaderMalformed", "InvalidRegion":
-			return models.ConnectionOutput{Message: S3_ERROR_002}, err
+			output.MessageList = &[]common.Message{common.ErrorMessage(S3_ERROR_002)}
+			return err
 		case "AccessDenied", "AllAccessDisabled", "UnauthorizedAccess":
-			return models.ConnectionOutput{Limited: true, Message: S3_WARN_001}, nil
+			output.MessageList = &[]common.Message{common.WarnMessage(S3_WARN_001)}
+			output.Body.Limited = true
+			return nil
 		default:
-			return models.ConnectionOutput{Message: apiErr.ErrorMessage()}, err
+			output.MessageList = &[]common.Message{common.ErrorMessage(S3_ERROR_003)}
+			return err
 		}
 	}
 
 	if errors.Is(err, context.DeadlineExceeded) {
-		return models.ConnectionOutput{Message: S3_ERROR_003}, err
+		output.MessageList = &[]common.Message{common.ErrorMessage(S3_ERROR_003)}
+		return err
 	}
 
 	if err != nil {
-		return models.ConnectionOutput{Message: S3_ERROR_004}, err
+		output.MessageList = &[]common.Message{common.ErrorMessage(S3_ERROR_004)}
+		return err
 	}
 
-	return models.ConnectionOutput{}, nil
+	return nil
 }
 
 func newHTTPClient() (*http.Client, *http.Transport) {
