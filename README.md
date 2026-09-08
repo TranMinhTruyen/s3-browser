@@ -10,6 +10,7 @@ here: https://wails.io/docs/reference/project-config
 ## Live Development
 
 Run `wails3 generate bindings -ts` to update IPC function before start app.
+Run `sqlc generate` to generate queries template.
 
 To run in live development mode, run `wails3 task dev` in the project directory. This will run a Vite development
 server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser

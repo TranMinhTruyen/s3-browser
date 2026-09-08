@@ -7,6 +7,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+PACKAGE_MANAGER="${PACKAGE_MANAGER:-bun}"
+
 cd "$PROJECT_ROOT"
 
 echo "==> Project root: $PROJECT_ROOT"
@@ -29,11 +31,25 @@ echo "==> Update complete. Please review go.mod/go.sum manually."
 echo
 echo "==> Update react dependencies..."
 cd "$PROJECT_ROOT/frontend"
-if ! command -v bun >/dev/null 2>&1; then
-  echo "ERROR: bun not found. Install it first: https://bun.sh"
+if ! command -v "$PACKAGE_MANAGER" >/dev/null 2>&1; then
+  echo "ERROR: $PACKAGE_MANAGER not found. Install it first: https://bun.sh"
   exit 1
 fi
-bun update --latest
+
+case "$PACKAGE_MANAGER" in
+  bun)  bun update --latest ;;
+  pnpm) pnpm update --latest ;;
+  yarn) yarn upgrade --latest ;;
+  npm)  npm update ;;
+  *)    echo "ERROR: unsupported package manager '$PACKAGE_MANAGER'."; exit 1 ;;
+esac
+
+cd "$PROJECT_ROOT"
 
 echo
-echo "==> All packages updated."
+echo "==> Regenerating TypeScript IPC bindings..."
+# The Wails runtime version moves with go.mod, so bindings must be regenerated.
+wails3 generate bindings -clean=true -ts
+
+echo
+echo "==> All packages updated. Run 'wails3 task build' to verify the build."

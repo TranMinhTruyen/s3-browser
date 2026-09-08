@@ -8,38 +8,43 @@ import (
 
 type Message struct {
 	Order       *string         `json:"order"`
+	ModuleName  *string         `json:"moduleName"`
 	MessageType *string         `json:"messageType"`
 	MessageCode *string         `json:"messageCode"`
 	Params      *map[string]any `json:"params"`
 }
 
-func SuccessMessage(code string) Message {
+func SuccessMessage(moduleName string, code string) Message {
 	return Message{
 		Order:       utils.ToPtr(time.Now().Format(cnst.FullDateTimeFormatPattern)),
+		ModuleName:  utils.ToPtr(moduleName),
 		MessageType: utils.ToPtr(cnst.MessageTypeSuccess),
 		MessageCode: utils.ToPtr(code),
 	}
 }
 
-func InfoMessage(code string) Message {
+func InfoMessage(moduleName string, code string) Message {
 	return Message{
 		Order:       utils.ToPtr(time.Now().Format(cnst.FullDateTimeFormatPattern)),
+		ModuleName:  utils.ToPtr(moduleName),
 		MessageType: utils.ToPtr(cnst.MessageTypeInfo),
 		MessageCode: utils.ToPtr(code),
 	}
 }
 
-func ErrorMessage(code string) Message {
+func ErrorMessage(moduleName string, code string) Message {
 	return Message{
 		Order:       utils.ToPtr(time.Now().Format(cnst.FullDateTimeFormatPattern)),
+		ModuleName:  utils.ToPtr(moduleName),
 		MessageType: utils.ToPtr(cnst.MessageTypeError),
 		MessageCode: utils.ToPtr(code),
 	}
 }
 
-func WarnMessage(code string) Message {
+func WarnMessage(moduleName string, code string) Message {
 	return Message{
 		Order:       utils.ToPtr(time.Now().Format(cnst.FullDateTimeFormatPattern)),
+		ModuleName:  utils.ToPtr(moduleName),
 		MessageType: utils.ToPtr(cnst.MessageTypeWarn),
 		MessageCode: utils.ToPtr(code),
 	}

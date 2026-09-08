@@ -1,6 +1,7 @@
 package bucket
 
 import (
+	"S3Browser/internal/pkg/cnst"
 	"S3Browser/models/bucket"
 	models "S3Browser/models/bucket"
 	"S3Browser/models/common"
@@ -99,28 +100,28 @@ func describeConnectStatus(err error, output *common.Output[bucket.ConnectionOut
 	if errors.As(err, &apiErr) {
 		switch apiErr.ErrorCode() {
 		case "InvalidAccessKeyId", "SignatureDoesNotMatch", "InvalidClientTokenId":
-			output.MessageList = &[]common.Message{common.ErrorMessage(S3_ERROR_001)}
+			output.MessageList = &[]common.Message{common.ErrorMessage(cnst.Bucket, S3_ERROR_001)}
 			return err
 		case "AuthorizationHeaderMalformed", "InvalidRegion":
-			output.MessageList = &[]common.Message{common.ErrorMessage(S3_ERROR_002)}
+			output.MessageList = &[]common.Message{common.ErrorMessage(cnst.Bucket, S3_ERROR_002)}
 			return err
 		case "AccessDenied", "AllAccessDisabled", "UnauthorizedAccess":
-			output.MessageList = &[]common.Message{common.WarnMessage(S3_WARN_001)}
+			output.MessageList = &[]common.Message{common.WarnMessage(cnst.Bucket, S3_WARN_001)}
 			output.Body.Limited = true
 			return nil
 		default:
-			output.MessageList = &[]common.Message{common.ErrorMessage(S3_ERROR_003)}
+			output.MessageList = &[]common.Message{common.ErrorMessage(cnst.Bucket, S3_ERROR_003)}
 			return err
 		}
 	}
 
 	if errors.Is(err, context.DeadlineExceeded) {
-		output.MessageList = &[]common.Message{common.ErrorMessage(S3_ERROR_003)}
+		output.MessageList = &[]common.Message{common.ErrorMessage(cnst.Bucket, S3_ERROR_003)}
 		return err
 	}
 
 	if err != nil {
-		output.MessageList = &[]common.Message{common.ErrorMessage(S3_ERROR_004)}
+		output.MessageList = &[]common.Message{common.ErrorMessage(cnst.Bucket, S3_ERROR_004)}
 		return err
 	}
 

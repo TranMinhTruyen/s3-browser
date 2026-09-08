@@ -5,7 +5,6 @@ import (
 	"S3Browser/internal/pkg/utils"
 	"S3Browser/models/bucket"
 	"S3Browser/models/profile"
-	"context"
 	"database/sql"
 	"errors"
 	"log/slog"
@@ -26,24 +25,19 @@ var (
 )
 
 type Module struct {
-	q      *sqlc.Queries
-	ctx    context.Context
 	logger *slog.Logger
 	app    *application.App
+	q      *sqlc.Queries
 	km     *utils.KeyManager
 }
 
-func NewModule(app *application.App, logger *slog.Logger) *Module {
+func NewModule(app *application.App, logger *slog.Logger, db *sql.DB, km *utils.KeyManager) *Module {
 	return &Module{
 		logger: logger.With("component", "profiles_module"),
 		app:    app,
+		q:      sqlc.New(db),
+		km:     km,
 	}
-}
-
-func (m *Module) Startup(ctx context.Context, db *sql.DB, km *utils.KeyManager) {
-	m.ctx = ctx
-	m.q = sqlc.New(db)
-	m.km = km
 }
 
 func (m *Module) CreateProfile(
@@ -68,9 +62,12 @@ func (m *Module) CreateProfile(
 		SavePassword: sql.NullBool{Bool: profileInput.SavePassword, Valid: true},
 	}
 
-	_, err = m.q.CreateProfile(m.ctx, params)
+	if _, err = m.q.CreateProfile(m.app.Context(), params); err != nil {
+		m.logger.Error("save connection profile failed", "connectionId", connectionId, "error", err)
+		return errors.New(PFE001)
+	}
 
-	return err
+	return nil
 }
 
 func (m *Module) GetAllConnectionProfile() profile.GetAllConnectionProfileOutput {
@@ -78,7 +75,7 @@ func (m *Module) GetAllConnectionProfile() profile.GetAllConnectionProfileOutput
 		ConnectionProfiles: []profile.ConnectionProfileOutput{},
 	}
 
-	result, err := m.q.SelectAllConnectionProfile(m.ctx)
+	result, err := m.q.SelectAllConnectionProfile(m.app.Context())
 
 	if err != nil {
 		output.Message = PFE003

@@ -7,6 +7,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Minimum Go version required by go.mod.
+GO_MIN_VERSION="1.27"
+WAILS3_VERSION="${WAILS3_VERSION:-latest}"
+SQLC_VERSION="${SQLC_VERSION:-latest}"
+PACKAGE_MANAGER="${PACKAGE_MANAGER:-bun}"
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -27,9 +33,23 @@ detect_linux_pkg_mgr() {
   fi
 }
 
+# Compare two dotted versions: returns 0 if $1 >= $2.
+version_ge() {
+  [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -n1)" == "$2" ]]
+}
+
 require_go() {
   if ! command -v go >/dev/null 2>&1; then
-    echo "ERROR: Go is not installed. Install Go first: https://go.dev/dl/"
+    echo "ERROR: Go is not installed. Install Go $GO_MIN_VERSION+ first: https://go.dev/dl/"
+    exit 1
+  fi
+
+  local current
+  current="$(go env GOVERSION)"   # e.g. go1.27.0
+  current="${current#go}"
+
+  if ! version_ge "$current" "$GO_MIN_VERSION"; then
+    echo "ERROR: Go $current found, but this project (go.mod) requires Go $GO_MIN_VERSION+."
     exit 1
   fi
 }
@@ -49,59 +69,88 @@ ensure_gobin_path() {
 }
 
 # ---------------------------------------------------------------------------
-# 1. Install Wails CLI (needs Go already installed)
+# 1. Wails v3 CLI (wails3) - also provides the built-in Task runner
 # ---------------------------------------------------------------------------
 install_wails_cli() {
-  if command -v wails >/dev/null 2>&1; then
-    echo "==> Wails CLI already installed: $(wails version)"
+  require_go
+  ensure_gobin_path
+
+  if command -v wails3 >/dev/null 2>&1; then
+    echo "==> wails3 CLI already installed: $(wails3 version 2>/dev/null || echo unknown)"
     return
   fi
 
-  require_go
-
-  echo "==> Installing Wails CLI..."
-  go install github.com/wailsapp/wails/v2/cmd/wails@latest
+  echo "==> Installing wails3 CLI ($WAILS3_VERSION)..."
+  go install "github.com/wailsapp/wails/v3/cmd/wails3@$WAILS3_VERSION"
   ensure_gobin_path
+
+  if ! command -v wails3 >/dev/null 2>&1; then
+    echo "ERROR: wails3 was installed but is not on PATH. Check 'go env GOBIN'."
+    exit 1
+  fi
+  echo "==> wails3 installed: $(wails3 version 2>/dev/null || echo unknown)"
 }
 
 # ---------------------------------------------------------------------------
-# 2. Install sqlc CLI (needs Go already installed)
+# 2. sqlc CLI (generates internal/modules/*/sqlc from queries + schemas)
 # ---------------------------------------------------------------------------
-SQLC_VERSION="${SQLC_VERSION:-latest}"
-
 install_sqlc() {
-  # Pull GOBIN onto PATH first: sqlc may already be installed from an earlier
-  # run but invisible in a fresh shell.
-  if command -v go >/dev/null 2>&1; then
-    ensure_gobin_path
-  fi
+  ensure_gobin_path
 
   if command -v sqlc >/dev/null 2>&1; then
     echo "==> sqlc already installed: $(sqlc version)"
     return
   fi
 
-  require_go
-
   echo "==> Installing sqlc ($SQLC_VERSION)..."
   # CGO-free build works on every OS without a C toolchain.
   CGO_ENABLED=0 go install "github.com/sqlc-dev/sqlc/cmd/sqlc@$SQLC_VERSION"
   ensure_gobin_path
 
-  if command -v sqlc >/dev/null 2>&1; then
-    echo "==> sqlc installed: $(sqlc version)"
-  else
+  if ! command -v sqlc >/dev/null 2>&1; then
     echo "ERROR: sqlc was installed but is not on PATH. Check 'go env GOBIN'."
+    exit 1
+  fi
+  echo "==> sqlc installed: $(sqlc version)"
+}
+
+# ---------------------------------------------------------------------------
+# 3. bun (frontend package manager - see frontend/package.json packageManager)
+# ---------------------------------------------------------------------------
+install_bun() {
+  [[ "$PACKAGE_MANAGER" != "bun" ]] && return 0
+
+  if [[ -x "$HOME/.bun/bin/bun" ]] && ! command -v bun >/dev/null 2>&1; then
+    export PATH="$HOME/.bun/bin:$PATH"
+  fi
+
+  if command -v bun >/dev/null 2>&1; then
+    echo "==> bun already installed: $(bun --version)"
+    return
+  fi
+
+  echo "==> bun not found, installing..."
+  if [[ "$(detect_os)" == "windows" ]] && command -v powershell.exe >/dev/null 2>&1; then
+    powershell.exe -NoProfile -Command "irm bun.sh/install.ps1 | iex"
+    export PATH="${USERPROFILE:-$HOME}/.bun/bin:$HOME/.bun/bin:$PATH"
+  else
+    curl -fsSL https://bun.sh/install | bash
+    export PATH="$HOME/.bun/bin:$PATH"
+  fi
+
+  if ! command -v bun >/dev/null 2>&1; then
+    echo "ERROR: bun installed but not on PATH. Open a new shell and re-run this script."
     exit 1
   fi
 }
 
 # ---------------------------------------------------------------------------
-# 3. Install webview runtime dependency per OS
+# 4. Webview runtime dependency per OS
 # ---------------------------------------------------------------------------
 install_webview_windows() {
   # WebView2 Runtime ships pre-installed on modern Win10/11, but check anyway.
-  local reg_path="HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+  local client_id="{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
+  local reg_path="HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\EdgeUpdate\\Clients\\$client_id"
   local installed="0"
 
   if command -v powershell.exe >/dev/null 2>&1; then
@@ -117,10 +166,9 @@ install_webview_windows() {
   fi
 
   echo "==> WebView2 Runtime not found. Downloading bootstrapper..."
-  local installer="/tmp/MicrosoftEdgeWebview2Setup.exe"
+  local installer="${TEMP:-/tmp}/MicrosoftEdgeWebview2Setup.exe"
   curl -fsSL "https://go.microsoft.com/fwlink/p/?LinkId=2124703" -o "$installer"
   echo "==> Installing WebView2 Runtime (silent)..."
-  # Runs a Windows exe; needs to be executed via cmd/powershell if under WSL/MSYS
   if command -v cmd.exe >/dev/null 2>&1; then
     cmd.exe /c "$(wslpath -w "$installer" 2>/dev/null || echo "$installer")" /silent /install
   else
@@ -129,45 +177,48 @@ install_webview_windows() {
 }
 
 install_webview_linux() {
+  # Wails v3 targets GTK3 + WebKitGTK 4.1 (4.0 only on older distros).
   local pkg_mgr
   pkg_mgr="$(detect_linux_pkg_mgr)"
 
   case "$pkg_mgr" in
     apt)
-      if dpkg -s libwebkit2gtk-4.0-dev >/dev/null 2>&1; then
+      if dpkg -s libwebkit2gtk-4.1-dev >/dev/null 2>&1 || dpkg -s libwebkit2gtk-4.0-dev >/dev/null 2>&1; then
         echo "==> libwebkit2gtk already installed."
       else
         echo "==> Installing webkit2gtk + build deps (apt, needs sudo)..."
         sudo apt-get update
-        sudo apt-get install -y build-essential libgtk-3-dev libwebkit2gtk-4.0-dev pkg-config
+        sudo apt-get install -y build-essential pkg-config libgtk-3-dev
+        sudo apt-get install -y libwebkit2gtk-4.1-dev \
+          || sudo apt-get install -y libwebkit2gtk-4.0-dev
       fi
       ;;
     dnf)
-      if rpm -q webkit2gtk3-devel >/dev/null 2>&1; then
-        echo "==> webkit2gtk3-devel already installed."
+      if rpm -q webkit2gtk4.1-devel >/dev/null 2>&1 || rpm -q webkit2gtk3-devel >/dev/null 2>&1; then
+        echo "==> webkit2gtk devel package already installed."
       else
         echo "==> Installing webkit2gtk + build deps (dnf, needs sudo)..."
-        sudo dnf install -y gtk3-devel webkit2gtk3-devel pkgconf-pkg-config
+        sudo dnf install -y gcc gtk3-devel pkgconf-pkg-config
+        sudo dnf install -y webkit2gtk4.1-devel || sudo dnf install -y webkit2gtk3-devel
       fi
       ;;
     pacman)
-      if pacman -Qi webkit2gtk >/dev/null 2>&1; then
+      if pacman -Qi webkit2gtk-4.1 >/dev/null 2>&1 || pacman -Qi webkit2gtk >/dev/null 2>&1; then
         echo "==> webkit2gtk already installed."
       else
         echo "==> Installing webkit2gtk + build deps (pacman, needs sudo)..."
-        sudo pacman -S --noconfirm gtk3 webkit2gtk pkgconf
+        sudo pacman -S --noconfirm base-devel gtk3 pkgconf
+        sudo pacman -S --noconfirm webkit2gtk-4.1 || sudo pacman -S --noconfirm webkit2gtk
       fi
       ;;
     *)
-      echo "WARNING: unknown Linux package manager. Please install libwebkit2gtk manually."
+      echo "WARNING: unknown Linux package manager. Please install gtk3 + webkit2gtk-4.1 manually."
       ;;
   esac
 }
 
 install_webview() {
-  local os
-  os="$(detect_os)"
-  case "$os" in
+  case "$(detect_os)" in
     windows) install_webview_windows ;;
     linux)   install_webview_linux ;;
     macos)   echo "==> macOS uses built-in WKWebView, nothing to install." ;;
@@ -183,46 +234,42 @@ echo "==> Detected OS: $(detect_os)"
 
 install_wails_cli
 install_sqlc
+install_bun
 install_webview
 
 cd "$PROJECT_ROOT"
 
 echo
-echo "==> Running 'wails doctor' to verify environment..."
-wails doctor || true
+echo "==> Running 'wails3 doctor' to verify environment..."
+wails3 doctor || true
 
 echo
-echo "==> Checking outdated Go modules..."
-go list -u -m all || true
-
-echo
-echo "==> Updating dependencies..."
-go get -u -t ./...
+echo "==> Downloading Go modules..."
+go mod download
 
 echo
 echo "==> Tidying modules..."
 go mod tidy
 
 echo
-echo "==> Update complete. Please review go.mod/go.sum manually."
+echo "==> Generating sqlc queries (sqlc.yaml)..."
+sqlc generate
 
 echo
-echo "==> Build runtime env"
-wails build
+echo "==> Installing frontend dependencies ($PACKAGE_MANAGER)..."
+wails3 task common:install:frontend:deps PACKAGE_MANAGER="$PACKAGE_MANAGER"
 
 echo
-echo "==> Build runtime env complete"
+echo "==> Generating TypeScript IPC bindings..."
+wails3 generate bindings -clean=true -ts
 
 echo
-echo "==> Install and build react dependencies..."
-cd "$PROJECT_ROOT/frontend"
-if ! command -v bun >/dev/null 2>&1; then
-  echo "==> bun not found, installing..."
-  curl -fsSL https://bun.sh/install | bash
-  export PATH="$HOME/.bun/bin:$PATH"
-fi
-bun install
-bun run build
+echo "==> Building the application (frontend + Go binary)..."
+# `wails3 task build` re-runs the frontend build and binding generation as deps.
+wails3 task build PACKAGE_MANAGER="$PACKAGE_MANAGER"
 
 echo
-echo "==> Setup complete"
+echo "==> Setup complete."
+echo "    Dev mode : wails3 task dev"
+echo "    Build    : wails3 task build"
+echo "    Package  : wails3 task package   (add INSTALL_SCOPE=user for non-admin)"

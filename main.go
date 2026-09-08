@@ -37,11 +37,8 @@ func main() {
 
 	app := internal.NewApp(mainApp, cfg, appLogger)
 	mainApp.OnShutdown(app.Shutdown)
-	mainApp.RegisterService(application.NewService(app.BucketHandler.BucketIPC()))
-
-	if err := app.Startup(mainApp.Context()); err != nil {
-		log.Fatalf("app startup failed: %v", err)
-	}
+	mainApp.RegisterService(application.NewService(app.BucketHandler))
+	mainApp.RegisterService(application.NewService(app.MasterHandler))
 
 	mainApp.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:                  cfg.Name,
@@ -50,6 +47,7 @@ func main() {
 		StartState:             application.WindowStateMaximised,
 		BackgroundColour:       application.NewRGBA(27, 38, 54, 1),
 		OpenInspectorOnStartup: DevMode,
+		EnableFileDrop:         true,
 	})
 
 	if err := mainApp.Run(); err != nil {

@@ -22,3 +22,23 @@ type ConnectionProfile struct {
 	UpdatedAt    sql.NullTime   `json:"updated_at"`
 	Version      int64          `json:"version"`
 }
+
+type Master struct {
+	ID        int64          `json:"id"`
+	Code      string         `json:"code"`
+	Name      string         `json:"name"`
+	SortOrder int64          `json:"sort_order"`
+	Value1    string         `json:"value1"`
+	Value2    sql.NullString `json:"value2"`
+	Value3    sql.NullString `json:"value3"`
+	Value4    sql.NullString `json:"value4"`
+	Value5    sql.NullString `json:"value5"`
+	Value6    sql.NullString `json:"value6"`
+	Value7    sql.NullString `json:"value7"`
+	Value8    sql.NullString `json:"value8"`
+	Value9    sql.NullString `json:"value9"`
+	Value10   sql.NullString `json:"value10"`
+	CreatedAt sql.NullTime   `json:"created_at"`
+	UpdatedAt sql.NullTime   `json:"updated_at"`
+	Version   int64          `json:"version"`
+}

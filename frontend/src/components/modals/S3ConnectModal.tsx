@@ -1,13 +1,14 @@
 import NiceModal, { useModal } from '@ebay/nice-modal-react';
 import { Button, Divider, Group, Modal, Stack, Title } from '@mantine/core';
 import { schemaResolver, useForm } from '@mantine/form';
-import { ConnectS3 } from '@wails/S3Browser/internal/handlers/bucketipc';
+import { ConnectS3 } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionInput } from '@wails/S3Browser/models/bucket';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 import z from 'zod';
 import { useMantineModal } from '@/common/hooks/useMantineModal';
+import { useMasterDataStore } from '@/common/stores/masterDataStore';
+import { callIPC } from '@/common/utils/ipcUtils';
 import FieldInput from '@/components/inputs/FieldInput';
 
 const schema = z.object({
@@ -17,12 +18,18 @@ const schema = z.object({
   pathStyle: z.boolean(),
 });
 
-export interface ConnectionInfoForm extends z.infer<typeof schema> {}
+interface ConnectionInfoForm extends z.infer<typeof schema> {}
 
 export default NiceModal.create(() => {
   const { t } = useTranslation('S3ConnectModal');
+  const get = useMasterDataStore(m => m.get);
   const modal = useModal();
   const mantineModalProps = useMantineModal(modal);
+
+  useEffect(() => {
+    const masterData = get('REGION');
+    console.log(masterData);
+  }, [get]);
 
   const defaultValues = schema
     .default({
@@ -41,34 +48,20 @@ export default NiceModal.create(() => {
 
   const handleConnect = useCallback(
     (isTestConnection: boolean) => async (value: ConnectionInfoForm) => {
-      try {
-        const input: ConnectionInput = {
-          name: 'Test',
-          color: 'white',
-          ...value,
-          region: 'us-east-1',
-          pathStyle: true,
-          savePassword: true,
-        };
-        const output = await ConnectS3(input, isTestConnection);
-        const message = t(`toastMessage.${output.messageList}`);
-        if (output.body?.isConnected) {
-          if (!isTestConnection) {
-            toast.success(message);
-            modal.hide();
-          } else {
-            toast.info(message);
-          }
-        } else {
-          toast.error(message);
-        }
-      } catch (err) {
-        toast.error('Connect to S3 error', {
-          description: err instanceof Error ? err.message : String(err),
-        });
+      const input: ConnectionInput = {
+        name: 'Test',
+        color: 'white',
+        ...value,
+        region: 'us-east-1',
+        pathStyle: true,
+        savePassword: true,
+      };
+      const output = await callIPC(() => ConnectS3(input, isTestConnection));
+      if (output && output.isConnected && !isTestConnection) {
+        modal.hide();
       }
     },
-    [modal, t]
+    [modal]
   );
 
   return (

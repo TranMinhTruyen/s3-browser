@@ -3,10 +3,10 @@ package internal
 import (
 	"S3Browser/internal/handlers"
 	"S3Browser/internal/modules/bucket"
+	"S3Browser/internal/modules/master"
 	"S3Browser/internal/modules/profile"
 	"S3Browser/internal/pkg/db"
 	"S3Browser/internal/pkg/utils"
-	"context"
 	"database/sql"
 	"log/slog"
 
@@ -20,58 +20,48 @@ type App struct {
 	sqlDb  *sql.DB
 	app    *application.App
 
-	profileModule *profile.Module
-	bucketModule  *bucket.Module
-
 	BucketHandler *handlers.BucketHandler
+	MasterHandler *handlers.MasterHandler
 }
 
 // NewApp creates a new App application struct
 func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
-	profileModule := profile.NewModule(app, logger)
-	bucketModule := bucket.NewModule(app, logger, profileModule)
+	log := logger.With("component", "app")
 
-	bucketHandler := handlers.NewHandler(app, logger, bucketModule)
-
-	return &App{
-		logger: logger.With("component", "app"),
-		cfg:    cfg,
-		app:    app,
-
-		profileModule: profileModule,
-		bucketModule:  bucketModule,
-
-		BucketHandler: bucketHandler,
+	sqlDb := db.InitDB(app.Context(), cfg.Name)
+	if err := db.RunMigrations(app.Context(), sqlDb); err != nil {
+		sqlDb.Close()
+		log.Error("failed to run migrations", "error", err)
+		panic(err)
 	}
-}
 
-// startup is called when the app starts. The context is saved
-// so we can call the runtime methods
-func (a *App) Startup(ctx context.Context) error {
 	km, err := utils.NewKeyManager()
 	if err != nil {
-		a.logger.Error("generate key manager failed", "error", err)
-		return err
+		log.Error("generate key manager failed", "error", err)
+		panic(err)
 	}
 
-	sqlDb := db.InitDB(ctx, a.cfg.Name)
-	if err := db.RunMigrations(ctx, sqlDb); err != nil {
-		sqlDb.Close()
-		a.logger.Error("failed to run migrations", "error", err)
-		return err
+	profileModule := profile.NewModule(app, logger, sqlDb, km)
+	bucketModule := bucket.NewModule(app, logger, profileModule)
+	masterModule := master.NewModule(app, logger, sqlDb)
+
+	bucketHandler := handlers.NewBucketHandler(app, logger, bucketModule)
+	masterHandler := handlers.NewMasterHandler(app, logger, masterModule)
+
+	return &App{
+		logger: log,
+		cfg:    cfg,
+		app:    app,
+		sqlDb:  sqlDb,
+
+		BucketHandler: bucketHandler,
+		MasterHandler: masterHandler,
 	}
-	a.sqlDb = sqlDb
-
-	a.profileModule.Startup(ctx, sqlDb, km)
-	a.bucketModule.Startup(ctx)
-
-	a.BucketHandler.Startup(ctx)
-	return nil
 }
 
 // Clean up when shutdow app
 func (a *App) Shutdown() {
-	a.bucketModule.DisconnectAll()
+	a.BucketHandler.DisconnectAll()
 	a.app.Event.Reset()
 	if a.sqlDb != nil {
 		if err := a.sqlDb.Close(); err != nil {
