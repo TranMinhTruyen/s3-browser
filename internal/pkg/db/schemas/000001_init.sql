@@ -1,4 +1,4 @@
--- internal/db/schemas/00001_init.sql
+-- internal/db/schemas/000001_init.sql
 -- +goose Up
 CREATE TABLE 
 IF NOT EXISTS connection_profiles( 

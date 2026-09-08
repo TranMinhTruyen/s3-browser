@@ -12,12 +12,6 @@
     }
   },
   "toastMessage": {
-    "S3S001": "Test connection to S3 success",
-    "S3S002": "S3 is connected",
-    "S3E001": "Access key or secret key is not valid for this endpoint",
-    "S3E002": "The endpoint rejected",
-    "S3E003": "Timed out reaching the endpoint, check the address and whether the server is running",
-    "S3E004": "Error while connect to S3 bucket",
-    "S3W001": "Access bucket is limited"
+    "EXAMPLE": "Test message {key.param1}, detail {key.param2}"
   }
 }
