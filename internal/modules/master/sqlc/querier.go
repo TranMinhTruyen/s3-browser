@@ -9,6 +9,7 @@ import (
 )
 
 type Querier interface {
+	SelectAllRegion(ctx context.Context) ([]SelectAllRegionRow, error)
 	SelectMasterByCode(ctx context.Context, code string) ([]SelectMasterByCodeRow, error)
 }
 

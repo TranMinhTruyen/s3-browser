@@ -1,0 +1,12 @@
+{
+  "regionCombobox": {
+    "label": "Region",
+    "placeholder": "Select region",
+    "availabilityZones": {
+      "01": "Asia Pacific",
+      "02": "North America",
+      "03": "Europe",
+      "04": "South America"
+    }
+  }
+}

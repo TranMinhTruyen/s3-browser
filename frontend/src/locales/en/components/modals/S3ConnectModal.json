@@ -1,10 +1,13 @@
 {
-  "title": "S3 Connection",
+  "title": "S3 Connection Profile",
   "form": {
     "label": {
+      "name": "Profile name",
       "endpoint": "Endpoint",
       "accessKey": "Access key",
-      "secretKey": "Secret key"
+      "secretKey": "Secret key",
+      "pathStyle": "Path style",
+      "savePassword": "Save your password"
     },
     "button": {
       "connect": "Connect",

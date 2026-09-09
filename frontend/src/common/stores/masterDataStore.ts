@@ -1,4 +1,4 @@
-import { GetMasterData } from '@wails/S3Browser/internal/handlers/masterhandler';
+import { GetMasterData, GetRegionData } from '@wails/S3Browser/internal/handlers/masterhandler';
 import { MasterOutput } from '@wails/S3Browser/models/master';
 import { createStore } from '@/common/stores/createStore';
 import { callIPC } from '@/common/utils/ipcUtils';
@@ -13,6 +13,8 @@ type MasterData = Partial<Record<MasterCode, MasterOutput[]>>;
 
 interface MasterDataState {
   masterData: MasterData;
+  regionData: Partial<Record<string, MasterOutput[]>>;
+
   /** Replaces the rows held for one master code. */
   set: (key: MasterCode, datas: MasterOutput[]) => void;
   /** Merges a whole `{ code: rows }` payload, keeping codes it does not carry. */
@@ -26,11 +28,16 @@ interface MasterDataState {
   /** Same as `load`, but skips the codes already in the store. */
   loadMissing: (keys: MasterCode[]) => Promise<void>;
   reset: () => boolean;
+
+  /** Region master data */
+  loadRegion: () => Promise<void>;
+  getRegion: () => Partial<Record<string, MasterOutput[]>>;
 }
 
 export const useMasterDataStore = createStore<MasterDataState>(
   (set, get) => ({
     masterData: {},
+    regionData: {},
 
     set: (key, datas) => {
       set(
@@ -52,7 +59,18 @@ export const useMasterDataStore = createStore<MasterDataState>(
       );
     },
 
-    get: key => get().masterData[key] ?? [],
+    get: key => {
+      return get().masterData[key] ?? [];
+    },
+
+    loadAll: async () => {
+      await get().loadRegion();
+    },
+
+    loadMissing: async keys => {
+      const { masterData, load } = get();
+      await load(keys.filter(key => masterData[key] === undefined));
+    },
 
     load: async keys => {
       if (keys.length === 0) {
@@ -67,18 +85,35 @@ export const useMasterDataStore = createStore<MasterDataState>(
       get().setAll(output.masterData as MasterData);
     },
 
-    loadAll: async () => {
-      await get().load(Object.values(MASTER_CODE));
-    },
-
-    loadMissing: async keys => {
-      const { masterData, load } = get();
-      await load(keys.filter(key => masterData[key] === undefined));
-    },
-
     reset: () => {
-      set({ masterData: {} }, undefined, 'masterData/reset');
+      set(
+        {
+          masterData: {},
+          regionData: {},
+        },
+        undefined,
+        'masterData/reset'
+      );
       return true;
+    },
+
+    loadRegion: async () => {
+      const output = await callIPC(() => GetRegionData());
+      if (!output) {
+        return;
+      }
+
+      set(
+        state => ({
+          regionData: { ...state.regionData, ...output.regionData },
+        }),
+        undefined,
+        'regionData/set'
+      );
+    },
+
+    getRegion: () => {
+      return get().regionData;
     },
   }),
   'MasterData'

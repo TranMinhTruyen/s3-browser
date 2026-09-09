@@ -5,11 +5,11 @@ go 1.27
 require (
 	github.com/aws/aws-sdk-go-v2 v1.46.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.3
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.111.0
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.112.0
 	github.com/aws/smithy-go v1.28.1
 	github.com/google/uuid v1.6.0
 	github.com/pressly/goose/v3 v3.28.0
-	github.com/wailsapp/wails/v3 v3.0.0-beta.17
+	github.com/wailsapp/wails/v3 v3.0.0-beta.18
 	github.com/zalando/go-keyring v0.2.8
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	modernc.org/sqlite v1.58.0
@@ -38,8 +38,8 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/sethvargo/go-retry v0.4.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
 	modernc.org/libc v1.75.7 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
