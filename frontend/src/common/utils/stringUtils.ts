@@ -1,4 +1,7 @@
+import { TFunction } from 'i18next';
 import { isEmpty, isNil } from 'lodash';
+import { v7 } from 'uuid';
+import i18n from '@/locales/i18n';
 
 /**
  * Check string is null or empty.
@@ -52,3 +55,23 @@ export function formatStringJson(
     return value ?? match;
   });
 }
+
+export function formatFieldError(rawError: string, label: React.ReactNode, t: TFunction = i18n.t): string {
+  const [code, paramsStr] = rawError.split(':');
+  const template = t(`validateMessage:${code}`, { defaultValue: code });
+  if (typeof template !== 'string') return rawError;
+
+  const params = [String(label), ...(paramsStr ? paramsStr.split(',') : [])];
+  return formatString(template, ...params);
+}
+
+/**
+ * Generates a UUID string (version 7), optionally prefixed.
+ * Uses array filtering to cleanly handle the optional prefix.
+ *
+ * @param prefix - Optional string to prepend to the UUID.
+ * @returns A string in the format "prefix-UUID" or just "UUID".
+ */
+export const createUUID = (prefix?: string) => {
+  return [prefix, v7()].filter(Boolean).join('-');
+};

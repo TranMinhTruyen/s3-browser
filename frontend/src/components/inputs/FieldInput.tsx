@@ -14,9 +14,7 @@ import {
   TextInput,
   type TextInputProps,
 } from '@mantine/core';
-import { TFunction } from 'i18next';
-import { useTranslation } from 'react-i18next';
-import { formatString } from '@/common/utils/stringUtils';
+import { useFieldError } from '@/common/hooks/useFieldError';
 
 type TextFieldProps = Omit<TextInputProps, 'type'> & {
   type?: 'text' | 'email' | 'url' | 'tel' | 'search';
@@ -46,7 +44,7 @@ type PinFieldProps = Omit<PinInputProps, 'type'> & {
   type: 'pin';
 };
 
-type FieldProps =
+type FieldInputProps =
   | TextFieldProps
   | TextareaFieldProps
   | PasswordFieldProps
@@ -55,21 +53,11 @@ type FieldProps =
   | MaskFieldProps
   | PinFieldProps;
 
-function formatFieldError(rawError: string, label: React.ReactNode, t: TFunction): string {
-  const [code, paramsStr] = rawError.split(':');
-  const template = t(code, { defaultValue: code });
-  if (typeof template !== 'string') return rawError;
-
-  const params = [String(label), ...(paramsStr ? paramsStr.split(',') : [])];
-  return formatString(template, ...params);
-}
-
-function FieldInput(props: FieldProps) {
+function FieldInput(props: FieldInputProps) {
   const { size = 'sm' } = props;
 
-  const { t } = useTranslation('validateMessage');
-
-  const translatedError = typeof props.error === 'string' ? formatFieldError(props.error, props.label, t) : props.error;
+  const formatError = useFieldError();
+  const translatedError = formatError(props.error, 'label' in props ? props.label : undefined);
 
   const restBase = { ...props, error: translatedError };
 
