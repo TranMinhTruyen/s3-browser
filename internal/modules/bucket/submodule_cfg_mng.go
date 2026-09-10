@@ -1,6 +1,7 @@
 package bucket
 
 import (
+	"S3Browser/internal/modules/global"
 	"S3Browser/internal/pkg/cnst"
 	"S3Browser/models/bucket"
 	models "S3Browser/models/bucket"
@@ -18,36 +19,7 @@ import (
 	"github.com/aws/smithy-go"
 )
 
-var (
-	// Test connection to S3 success
-	S3_SUCCES_001 = "S3S001"
-
-	// S3 is connected
-	S3_SUCCES_002 = "S3S002"
-
-	// access key or secret key is not valid for this endpoint
-	S3_ERROR_001 = "S3E001"
-
-	// the endpoint rejected
-	S3_ERROR_002 = "S3E002"
-
-	// timed out reaching the endpoint, check the address and whether the server is running
-	S3_ERROR_003 = "S3E003"
-
-	// error while connect to S3 bucket
-	S3_ERROR_004 = "S3E004"
-
-	// Access bucket is limited
-	S3_WARN_001 = "S3W001"
-)
-
-type S3Conn struct {
-	Client    *s3.Client
-	Presign   *s3.PresignClient
-	Transport *http.Transport
-}
-
-func (m *Module) buildClient(input models.ConnectionInput) *S3Conn {
+func (m *Module) buildClient(input models.ConnectionInput) *global.S3Conn {
 	client, transport := newHTTPClient()
 
 	region := input.Region
@@ -69,14 +41,14 @@ func (m *Module) buildClient(input models.ConnectionInput) *S3Conn {
 
 	s3Presigner := s3.NewPresignClient(s3Client)
 
-	return &S3Conn{
+	return &global.S3Conn{
 		Client:    s3Client,
 		Presign:   s3Presigner,
 		Transport: transport,
 	}
 }
 
-func (m *Module) probe(ctx context.Context, c *S3Conn) (common.Output[bucket.ConnectionOutput], error) {
+func (m *Module) probe(ctx context.Context, c *global.S3Conn) (common.Output[bucket.ConnectionOutput], error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 

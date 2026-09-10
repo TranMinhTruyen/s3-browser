@@ -27,6 +27,7 @@ interface ConnectionInfoForm extends z.infer<typeof schema> {}
 
 export default NiceModal.create(() => {
   const { t } = useTranslation('S3ConnectModal');
+
   const modal = useModal();
   const mantineModalProps = useMantineModal(modal);
 

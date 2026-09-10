@@ -1,6 +1,7 @@
 import { AppShell, Group, Paper } from '@mantine/core';
 import { useCallback, useRef, useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import ConnectionProfiles from '@/components/layouts/navbar/ConnectionProfiles';
 
 const MIN_WIDTH = 240;
 const MAX_WIDTH = 480;
@@ -48,13 +49,13 @@ function MainLayout() {
     >
       <AppShell.Header>
         <Group h="100%" px="sm">
-          Header has a burger icon below sm breakpoint
+          Header
         </Group>
       </AppShell.Header>
 
       <AppShell.Navbar ref={navbarRef} styles={{ navbar: { border: 'none' } }} p={'4px 0px 4px 4px'}>
         <Paper shadow="xs" withBorder h="100%" p="8px" style={{ overflowX: 'hidden' }}>
-          Navbar
+          <ConnectionProfiles />
         </Paper>
 
         <div

@@ -3,6 +3,7 @@ package internal
 import (
 	"S3Browser/internal/handlers"
 	"S3Browser/internal/modules/bucket"
+	"S3Browser/internal/modules/global"
 	"S3Browser/internal/modules/master"
 	"S3Browser/internal/modules/profile"
 	"S3Browser/internal/pkg/db"
@@ -20,8 +21,9 @@ type App struct {
 	sqlDb  *sql.DB
 	app    *application.App
 
-	BucketHandler *handlers.BucketHandler
-	MasterHandler *handlers.MasterHandler
+	BucketHandler  *handlers.BucketHandler
+	MasterHandler  *handlers.MasterHandler
+	ProfileHandler *handlers.ProfileHandler
 }
 
 // NewApp creates a new App application struct
@@ -41,10 +43,13 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 		panic(err)
 	}
 
-	profileModule := profile.NewModule(app, logger, sqlDb, km)
-	bucketModule := bucket.NewModule(app, logger, profileModule)
-	masterModule := master.NewModule(app, logger, sqlDb)
+	globalModule := global.NewModule()
 
+	profileModule := profile.NewModule(app, logger, globalModule, sqlDb, km)
+	bucketModule := bucket.NewModule(app, logger, globalModule, profileModule)
+	masterModule := master.NewModule(app, logger, globalModule, sqlDb)
+
+	profileHandler := handlers.NewProfileHandler(app, logger, profileModule)
 	bucketHandler := handlers.NewBucketHandler(app, logger, bucketModule)
 	masterHandler := handlers.NewMasterHandler(app, logger, masterModule)
 
@@ -54,8 +59,9 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 		app:    app,
 		sqlDb:  sqlDb,
 
-		BucketHandler: bucketHandler,
-		MasterHandler: masterHandler,
+		BucketHandler:  bucketHandler,
+		MasterHandler:  masterHandler,
+		ProfileHandler: profileHandler,
 	}
 }
 

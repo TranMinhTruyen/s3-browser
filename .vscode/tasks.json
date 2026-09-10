@@ -60,6 +60,29 @@
       "problemMatcher": [
         "$go"
       ]
+    },
+    {
+      "label": "vite: stop dev server",
+      "detail": "Kills whatever holds the Vite dev port, so the server does not outlive the debug session.",
+      "type": "shell",
+      "command": "$ids = Get-NetTCPConnection -LocalPort 5174 -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; if ($ids) { $ids | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }; Write-Host 'vite dev server stopped' } else { Write-Host 'vite dev server not running' }",
+      "options": {
+        "shell": {
+          "executable": "powershell.exe",
+          "args": [
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command"
+          ]
+        }
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "group": "wails-dev",
+        "close": true
+      },
+      "problemMatcher": []
     }
   ]
 }

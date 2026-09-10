@@ -39,6 +39,7 @@ func main() {
 	mainApp.OnShutdown(app.Shutdown)
 	mainApp.RegisterService(application.NewService(app.BucketHandler))
 	mainApp.RegisterService(application.NewService(app.MasterHandler))
+	mainApp.RegisterService(application.NewService(app.ProfileHandler))
 
 	mainApp.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:                  cfg.Name,
