@@ -1,6 +1,7 @@
 package master
 
 import (
+	"S3Browser/internal/modules/global"
 	"S3Browser/internal/modules/master/sqlc"
 	"S3Browser/internal/pkg/cnst"
 	"S3Browser/models/common"
@@ -19,13 +20,15 @@ var (
 type Module struct {
 	logger *slog.Logger
 	app    *application.App
+	global *global.Module
 	q      *sqlc.Queries
 }
 
-func NewModule(app *application.App, logger *slog.Logger, db *sql.DB) *Module {
+func NewModule(app *application.App, logger *slog.Logger, global *global.Module, db *sql.DB) *Module {
 	return &Module{
 		logger: logger.With("component", "master_module"),
 		app:    app,
+		global: global,
 		q:      sqlc.New(db),
 	}
 }

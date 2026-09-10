@@ -23,20 +23,24 @@ func NewBucketHandler(app *application.App, logger *slog.Logger, bucket *bucket.
 	}
 }
 
-func (a *BucketHandler) ConnectS3(
+func (h *BucketHandler) ConnectS3(
 	input models.ConnectionInput,
 	isTestConn bool,
 ) common.Output[models.ConnectionOutput] {
 	if isTestConn {
-		return a.bucket.TestConnection(input)
+		return h.bucket.TestConnection(input)
 	}
-	return a.bucket.Connect(input)
+	return h.bucket.Connect(input)
 }
 
-func (a *BucketHandler) DisconnectAll() {
-	a.bucket.DisconnectAll()
+func (h *BucketHandler) ConnectS3ByProfile(connectionId string) common.Output[models.ConnectionOutput] {
+	return h.bucket.ConnectByProfile(connectionId)
 }
 
-func (a *BucketHandler) Disconnect(connectionId string) bool {
-	return a.bucket.Disconnect(connectionId)
+func (h *BucketHandler) DisconnectAll() {
+	h.bucket.DisconnectAll()
+}
+
+func (h *BucketHandler) Disconnect(connectionId string) common.Output[bool] {
+	return h.bucket.Disconnect(connectionId)
 }

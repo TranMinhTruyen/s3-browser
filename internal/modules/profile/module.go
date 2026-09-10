@@ -1,9 +1,12 @@
 package profile
 
 import (
+	"S3Browser/internal/modules/global"
 	"S3Browser/internal/modules/profile/sqlc"
+	"S3Browser/internal/pkg/cnst"
 	"S3Browser/internal/pkg/utils"
 	"S3Browser/models/bucket"
+	"S3Browser/models/common"
 	"S3Browser/models/profile"
 	"database/sql"
 	"errors"
@@ -27,14 +30,22 @@ var (
 type Module struct {
 	logger *slog.Logger
 	app    *application.App
+	global *global.Module
 	q      *sqlc.Queries
 	km     *utils.KeyManager
 }
 
-func NewModule(app *application.App, logger *slog.Logger, db *sql.DB, km *utils.KeyManager) *Module {
+func NewModule(
+	app *application.App,
+	logger *slog.Logger,
+	global *global.Module,
+	db *sql.DB,
+	km *utils.KeyManager,
+) *Module {
 	return &Module{
 		logger: logger.With("component", "profiles_module"),
 		app:    app,
+		global: global,
 		q:      sqlc.New(db),
 		km:     km,
 	}
@@ -44,10 +55,16 @@ func (m *Module) CreateProfile(
 	connectionId string,
 	profileInput bucket.ConnectionInput,
 ) error {
-	encryptedSecret, err := m.km.Encrypt(profileInput.SecretKey)
+	encryptedSecret := ""
 
-	if err != nil {
-		return errors.New(PFE002)
+	if profileInput.SavePassword {
+		encrypted, err := m.km.Encrypt(profileInput.SecretKey)
+
+		if err != nil {
+			return errors.New(PFE002)
+		}
+
+		encryptedSecret = encrypted
 	}
 
 	params := sqlc.CreateProfileParams{
@@ -62,39 +79,78 @@ func (m *Module) CreateProfile(
 		SavePassword: sql.NullBool{Bool: profileInput.SavePassword, Valid: true},
 	}
 
-	if _, err = m.q.CreateProfile(m.app.Context(), params); err != nil {
+	if _, err := m.q.CreateProfile(m.app.Context(), params); err != nil {
 		m.logger.Error("save connection profile failed", "connectionId", connectionId, "error", err)
 		return errors.New(PFE001)
 	}
 
+	m.app.Event.Emit("profile:reload-connection-profiles")
+
 	return nil
 }
 
-func (m *Module) GetAllConnectionProfile() profile.GetAllConnectionProfileOutput {
-	output := profile.GetAllConnectionProfileOutput{
-		ConnectionProfiles: []profile.ConnectionProfileOutput{},
+func (m *Module) GetConnectionProfileById(connectionID string) common.Output[profile.ConnectionProfileOutput] {
+	output := common.Output[profile.ConnectionProfileOutput]{}
+	output.New()
+
+	result, err := m.q.SelectConnectionProfileById(m.app.Context(), connectionID)
+
+	if err != nil {
+		output.AddMessage(common.ErrorMessage(cnst.Profile, PFE003))
+		m.logger.Error("error white get profile", slog.Any("error", err))
+		return output
 	}
+
+	decrypted, err := m.km.Decrypt(result.SecretKey)
+
+	if err != nil {
+		output.AddMessage(common.ErrorMessage(cnst.Profile, PFE002))
+		return output
+	}
+
+	output.Body = &profile.ConnectionProfileOutput{
+		ID:        result.ID,
+		Name:      result.Name.String,
+		Color:     result.Color.String,
+		Endpoint:  result.Endpoint,
+		Region:    result.Region,
+		AccessKey: result.AccessKey,
+		SecretKey: decrypted,
+		PathStyle: result.PathStyle.Bool,
+		CreatedAt: result.CreatedAt.Time,
+		UpdatedAt: result.UpdatedAt.Time,
+		Version:   result.Version,
+	}
+
+	return output
+}
+
+func (m *Module) GetAllConnectionProfile() common.Output[profile.GetAllConnectionProfileOutput] {
+	output := common.Output[profile.GetAllConnectionProfileOutput]{}
+	output.New()
 
 	result, err := m.q.SelectAllConnectionProfile(m.app.Context())
 
 	if err != nil {
-		output.Message = PFE003
+		output.AddMessage(common.ErrorMessage(cnst.Profile, PFE003))
 		m.logger.Error("error get all profile", slog.Any("detail", err))
 		return output
 	}
 
-	outputList := make([]profile.ConnectionProfileOutput, len(result))
-	for i, item := range result {
-		outputList[i] = profile.ConnectionProfileOutput{
-			ID:        item.ConnectionID,
-			Name:      item.ConnectionName.String,
-			Color:     item.Color.String,
-			CreatedAt: item.CreatedAt.Time,
-			UpdatedAt: item.UpdatedAt.Time,
-			Version:   item.Version,
+	output.Body.ConnectionProfiles = make(map[string]profile.ConnectionProfileOutput)
+	for _, item := range result {
+		isConnected := m.global.HasConn(item.ConnectionID)
+
+		output.Body.ConnectionProfiles[item.ConnectionID] = profile.ConnectionProfileOutput{
+			ID:          item.ConnectionID,
+			Name:        item.ConnectionName.String,
+			Color:       item.Color.String,
+			IsConnected: isConnected,
+			CreatedAt:   item.CreatedAt.Time,
+			UpdatedAt:   item.UpdatedAt.Time,
+			Version:     item.Version,
 		}
 	}
 
-	output.ConnectionProfiles = outputList
 	return output
 }

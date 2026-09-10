@@ -11,7 +11,8 @@
       "cwd": "${workspaceFolder}",
       "env": {
         "FRONTEND_DEVSERVER_URL": "http://localhost:5174"
-      }
+      },
+      "postDebugTask": "vite: stop dev server"
     },
     {
       "name": "Wails: Debug Go",

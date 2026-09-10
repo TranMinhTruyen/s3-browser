@@ -58,7 +58,7 @@ export function formatStringJson(
 
 export function formatFieldError(rawError: string, label: React.ReactNode, t: TFunction = i18n.t): string {
   const [code, paramsStr] = rawError.split(':');
-  const template = t(`validateMessage:${code}`, { defaultValue: code });
+  const template = t(`${code}`, { defaultValue: code });
   if (typeof template !== 'string') return rawError;
 
   const params = [String(label), ...(paramsStr ? paramsStr.split(',') : [])];

@@ -34,6 +34,8 @@ interface MasterDataState {
   getRegion: () => Partial<Record<string, MasterOutput[]>>;
 }
 
+const SCOPE = 'MasterData';
+
 export const useMasterDataStore = createStore<MasterDataState>(
   (set, get) => ({
     masterData: {},
@@ -45,7 +47,7 @@ export const useMasterDataStore = createStore<MasterDataState>(
           masterData: { ...state.masterData, [key]: datas },
         }),
         undefined,
-        'masterData/set'
+        `${SCOPE}/set`
       );
     },
 
@@ -55,7 +57,7 @@ export const useMasterDataStore = createStore<MasterDataState>(
           masterData: { ...state.masterData, ...datas },
         }),
         undefined,
-        'masterData/setAll'
+        `${SCOPE}/setAll`
       );
     },
 
@@ -77,7 +79,7 @@ export const useMasterDataStore = createStore<MasterDataState>(
         return;
       }
 
-      const output = await callIPC(() => GetMasterData(keys));
+      const output = await callIPC(() => GetMasterData(keys), `${SCOPE}/load`);
       if (!output) {
         return;
       }
@@ -92,13 +94,13 @@ export const useMasterDataStore = createStore<MasterDataState>(
           regionData: {},
         },
         undefined,
-        'masterData/reset'
+        `${SCOPE}/reset`
       );
       return true;
     },
 
     loadRegion: async () => {
-      const output = await callIPC(() => GetRegionData());
+      const output = await callIPC(() => GetRegionData(), `${SCOPE}/loadRegion`);
       if (!output) {
         return;
       }
@@ -108,7 +110,7 @@ export const useMasterDataStore = createStore<MasterDataState>(
           regionData: { ...state.regionData, ...output.regionData },
         }),
         undefined,
-        'regionData/set'
+        `${SCOPE}/loadRegion`
       );
     },
 
@@ -116,5 +118,5 @@ export const useMasterDataStore = createStore<MasterDataState>(
       return get().regionData;
     },
   }),
-  'MasterData'
+  SCOPE
 );

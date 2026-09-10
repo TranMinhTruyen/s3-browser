@@ -23,10 +23,10 @@ func NewMasterHandler(app *application.App, logger *slog.Logger, master *master.
 	}
 }
 
-func (a *MasterHandler) GetMasterData(codes []string) common.Output[models.GetMasterDataOutput] {
-	return a.master.GetMasterData(codes)
+func (h *MasterHandler) GetMasterData(codes []string) common.Output[models.GetMasterDataOutput] {
+	return h.master.GetMasterData(codes)
 }
 
-func (a *MasterHandler) GetRegionData() common.Output[models.RegionOutput] {
-	return a.master.GetRegion()
+func (h *MasterHandler) GetRegionData() common.Output[models.RegionOutput] {
+	return h.master.GetRegion()
 }
