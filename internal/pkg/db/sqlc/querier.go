@@ -11,7 +11,9 @@ import (
 type Querier interface {
 	CreateProfile(ctx context.Context, arg CreateProfileParams) (ConnectionProfile, error)
 	SelectAllConnectionProfile(ctx context.Context) ([]SelectAllConnectionProfileRow, error)
+	SelectAllRegion(ctx context.Context) ([]SelectAllRegionRow, error)
 	SelectConnectionProfileById(ctx context.Context, id string) (ConnectionProfile, error)
+	SelectMasterByCode(ctx context.Context, code string) ([]SelectMasterByCodeRow, error)
 	UpdateConnectionProfileById(ctx context.Context, arg UpdateConnectionProfileByIdParams) (ConnectionProfile, error)
 }
 

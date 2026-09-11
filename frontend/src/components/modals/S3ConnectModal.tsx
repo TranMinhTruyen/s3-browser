@@ -21,6 +21,7 @@ const schema = z.object({
   secretKey: z.string().trim().nonempty('V000001'),
   pathStyle: z.boolean(),
   savePassword: z.boolean(),
+  autoConnect: z.boolean(),
 });
 
 interface ConnectionInfoForm extends z.infer<typeof schema> {}
@@ -40,6 +41,7 @@ export default NiceModal.create(() => {
       secretKey: '',
       pathStyle: false,
       savePassword: false,
+      autoConnect: false,
     })
     .parse(undefined);
 
@@ -49,13 +51,21 @@ export default NiceModal.create(() => {
     validate: schemaResolver(schema, { sync: true }),
   });
 
+  const savePassword = form.useWatchValue('savePassword');
+
+  form.watch('savePassword', ({ value }) => {
+    if (!value) {
+      form.setFieldValue('autoConnect', false);
+    }
+  });
+
   const handleConnect = useCallback(
     (isTestConnection: boolean) => async (value: ConnectionInfoForm) => {
       const input: ConnectionInput = {
-        color: 'white',
+        color: '#FFFFFF',
         ...value,
       };
-      const output = await callIPC(() => ConnectS3(input, isTestConnection));
+      const output = await callIPC(ConnectS3, [input, isTestConnection]);
       if (output && output.isConnected && !isTestConnection) {
         modal.hide();
       }
@@ -133,13 +143,20 @@ export default NiceModal.create(() => {
                 <CheckBoxInput
                   label={t('form.label.pathStyle')}
                   key={form.key('pathStyle')}
-                  {...form.getInputProps('pathStyle')}
+                  {...form.getInputProps('pathStyle', { type: 'checkbox' })}
                 />
 
                 <CheckBoxInput
                   label={t('form.label.savePassword')}
                   key={form.key('savePassword')}
-                  {...form.getInputProps('savePassword')}
+                  {...form.getInputProps('savePassword', { type: 'checkbox' })}
+                />
+
+                <CheckBoxInput
+                  label={t('form.label.autoConnect')}
+                  key={form.key('autoConnect')}
+                  disabled={!savePassword}
+                  {...form.getInputProps('autoConnect', { type: 'checkbox' })}
                 />
               </Group>
             </Stack>

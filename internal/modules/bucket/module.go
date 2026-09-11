@@ -15,11 +15,14 @@ import (
 )
 
 var (
-	// Test connection to S3 success
+	// Test connection profile {name} to S3 success
 	S3_SUCCES_001 = "S3S001"
 
-	// S3 is connected
+	// Profile: {name} is connected
 	S3_SUCCES_002 = "S3S002"
+
+	// Profile: {name} disconnect success
+	S3_SUCCES_003 = "S3S003"
 
 	// access key or secret key is not valid for this endpoint
 	S3_ERROR_001 = "S3E001"
@@ -75,7 +78,11 @@ func (m *Module) TestConnection(input bucket.ConnectionInput) common.Output[buck
 	}
 
 	status.Body.IsConnected = true
-	status.AddMessage(common.SuccessMessage(cnst.Bucket, S3_SUCCES_001))
+	status.AddMessage(
+		common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3_SUCCES_001, map[string]any{
+			"name": input.Name,
+		}),
+	)
 	return status
 }
 
@@ -97,10 +104,14 @@ func (m *Module) Connect(input bucket.ConnectionInput) common.Output[bucket.Conn
 
 	status.Body.ConnectionId = connectionId
 	status.Body.IsConnected = true
-	status.AddMessage(common.SuccessMessage(cnst.Bucket, S3_SUCCES_002))
+	status.AddMessage(
+		common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3_SUCCES_002, map[string]any{
+			"name": input.Name,
+		}),
+	)
 
 	if err := m.profile.CreateProfile(connectionId, input); err != nil {
-		status.AddMessage(common.ErrorMessage(cnst.Profile, err.Error()))
+		status.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, err.Error()))
 	}
 
 	return status
@@ -109,7 +120,20 @@ func (m *Module) Connect(input bucket.ConnectionInput) common.Output[bucket.Conn
 func (m *Module) ConnectByProfile(connectionId string) common.Output[bucket.ConnectionOutput] {
 	profile := m.profile.GetConnectionProfileById(connectionId)
 
+	// The profile lookup owns the reason it failed, so pass its messages through
+	// instead of letting an empty endpoint fail later as a generic S3 error.
+	if profile.Body == nil {
+		output := common.Output[bucket.ConnectionOutput]{}
+		output.New()
+		output.Body = &bucket.ConnectionOutput{}
+		if profile.MessageList != nil {
+			output.AddMessage(*profile.MessageList...)
+		}
+		return output
+	}
+
 	connectInput := bucket.ConnectionInput{
+		Name:      profile.Body.Name,
 		Endpoint:  profile.Body.Endpoint,
 		AccessKey: profile.Body.AccessKey,
 		SecretKey: profile.Body.SecretKey,
@@ -133,7 +157,11 @@ func (m *Module) ConnectByProfile(connectionId string) common.Output[bucket.Conn
 
 	status.Body.ConnectionId = connectionId
 	status.Body.IsConnected = true
-	status.AddMessage(common.SuccessMessage(cnst.Bucket, S3_SUCCES_002))
+	status.AddMessage(
+		common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3_SUCCES_002, map[string]any{
+			"name": profile.Body.Name,
+		}),
+	)
 
 	return status
 }
@@ -141,14 +169,18 @@ func (m *Module) ConnectByProfile(connectionId string) common.Output[bucket.Conn
 func (m *Module) Disconnect(connectionId string) common.Output[bool] {
 	output := common.Output[bool]{}
 	output.New()
-	output.Body = utils.ToPtr(false)
 
 	if conn, ok := m.global.RemoveConn(connectionId); ok {
 		conn.Transport.CloseIdleConnections()
 		output.Body = utils.ToPtr(true)
+		output.AddMessage(
+			common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3_SUCCES_003, map[string]any{
+				"name": conn.ProfileName,
+			}),
+		)
 		return output
 	} else {
-		output.AddMessage(common.ErrorMessage(cnst.Bucket, S3_ERROR_005))
+		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3_ERROR_005))
 	}
 
 	return output

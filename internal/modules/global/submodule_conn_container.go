@@ -7,9 +7,10 @@ import (
 )
 
 type S3Conn struct {
-	Client    *s3.Client
-	Presign   *s3.PresignClient
-	Transport *http.Transport
+	ProfileName string
+	Client      *s3.Client
+	Presign     *s3.PresignClient
+	Transport   *http.Transport
 }
 
 // PutConnContainer registers a connection under the given id, replacing any previous one.

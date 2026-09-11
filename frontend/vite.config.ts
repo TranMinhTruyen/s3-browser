@@ -1,17 +1,13 @@
 import path from 'node:path';
-import babel from '@rolldown/plugin-babel';
-import react, { reactCompilerPreset } from '@vitejs/plugin-react';
-import { defineConfig, type PluginOption } from 'vite';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
 import svgr from 'vite-plugin-svgr';
 
 // https://vitejs.dev/config/
 export default defineConfig(() => {
-  const plugins: PluginOption[] = [react(), svgr()];
-
-  plugins.push(babel({ presets: [reactCompilerPreset()] }));
-
   return {
-    plugins,
+    // React Compiler runs through oxc-transform-react, so no Babel pass is needed.
+    plugins: [react({ compiler: { logDiagnostics: true } }), svgr()],
     server: {
       // Bind IPv4 explicitly: with the default 'localhost', Node resolves to
       // ::1 only, while the Wails asset proxy dials 127.0.0.1 — which would

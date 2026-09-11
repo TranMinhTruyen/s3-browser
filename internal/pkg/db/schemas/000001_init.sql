@@ -11,6 +11,7 @@ IF NOT EXISTS connection_profiles(
     , secret_key TEXT NOT NULL
     , path_style BOOLEAN DEFAULT 1
     , save_password BOOLEAN DEFAULT 1
+    , auto_connect BOOLEAN DEFAULT 0
     , created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     , updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     , version INTEGER NOT NULL DEFAULT 1

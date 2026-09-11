@@ -4,7 +4,7 @@
     {
       "label": "wails: build debug",
       "type": "shell",
-      "command": "wails3 task build",
+      "command": "go tool wails3 task build",
       "options": {
         "cwd": "${workspaceFolder}"
       },
@@ -44,7 +44,7 @@
     {
       "label": "wails: build dev (HMR)",
       "type": "shell",
-      "command": "wails3 task build:debug",
+      "command": "go tool wails3 task build:debug",
       "options": {
         "cwd": "${workspaceFolder}"
       },

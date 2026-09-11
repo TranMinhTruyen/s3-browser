@@ -79,7 +79,7 @@ export const useMasterDataStore = createStore<MasterDataState>(
         return;
       }
 
-      const output = await callIPC(() => GetMasterData(keys), `${SCOPE}/load`);
+      const output = await callIPC(GetMasterData, [keys], { scope: `${SCOPE}/load` });
       if (!output) {
         return;
       }
@@ -100,7 +100,7 @@ export const useMasterDataStore = createStore<MasterDataState>(
     },
 
     loadRegion: async () => {
-      const output = await callIPC(() => GetRegionData(), `${SCOPE}/loadRegion`);
+      const output = await callIPC(GetRegionData, [], { scope: `${SCOPE}/loadRegion` });
       if (!output) {
         return;
       }
