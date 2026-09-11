@@ -22,6 +22,8 @@ var (
 	PFE002 = "PFE002"
 	// Error get all connnection profile
 	PFE003 = "PFE003"
+	// Error while update profile
+	PFE004 = "PFE004"
 
 	// Save profile success
 	PFS001 = "PFS001"
@@ -82,6 +84,45 @@ func (m *Module) CreateProfile(
 
 	if _, err := m.q.CreateProfile(m.app.Context(), params); err != nil {
 		m.logger.Error("save connection profile failed", "connectionId", connectionId, "error", err)
+		return errors.New(PFE004)
+	}
+
+	m.app.Event.Emit("profile:reload-connection-profiles")
+
+	return nil
+}
+
+func (m *Module) UpdateProfile(
+	profileInput bucket.ConnectionInput,
+) error {
+	encryptedSecret := ""
+
+	if profileInput.SavePassword {
+		encrypted, err := m.km.Encrypt(profileInput.SecretKey)
+
+		if err != nil {
+			return errors.New(PFE002)
+		}
+
+		encryptedSecret = encrypted
+	}
+
+	params := sqlc.UpdateConnectionProfileByIdParams{
+		ID:           profileInput.Id,
+		Name:         sql.NullString{String: profileInput.Name, Valid: profileInput.Name != ""},
+		Color:        sql.NullString{String: profileInput.Color, Valid: profileInput.Color != ""},
+		Endpoint:     profileInput.Endpoint,
+		Region:       profileInput.Region,
+		AccessKey:    profileInput.AccessKey,
+		SecretKey:    encryptedSecret,
+		PathStyle:    sql.NullBool{Bool: profileInput.PathStyle, Valid: true},
+		SavePassword: sql.NullBool{Bool: profileInput.SavePassword, Valid: true},
+		AutoConnect:  sql.NullBool{Bool: profileInput.AutoConnect, Valid: true},
+		Version:      profileInput.Version,
+	}
+
+	if _, err := m.q.UpdateConnectionProfileById(m.app.Context(), params); err != nil {
+		m.logger.Error("update connection profile failed", "connectionId", profileInput.Id, "error", err)
 		return errors.New(PFE001)
 	}
 
@@ -145,14 +186,19 @@ func (m *Module) GetAllConnectionProfile() common.Output[profile.GetAllConnectio
 		isConnected := m.global.HasConn(item.ConnectionID)
 
 		profiles[item.ConnectionID] = profile.ConnectionProfileOutput{
-			ID:          item.ConnectionID,
-			Name:        item.ConnectionName.String,
-			Color:       item.Color.String,
-			AutoConnect: item.AutoConnect.Bool,
-			IsConnected: isConnected,
-			CreatedAt:   item.CreatedAt.Time,
-			UpdatedAt:   item.UpdatedAt.Time,
-			Version:     item.Version,
+			ID:           item.ConnectionID,
+			Name:         item.ConnectionName.String,
+			Color:        item.Color.String,
+			Endpoint:     item.Endpoint,
+			Region:       item.Region,
+			AccessKey:    item.AccessKey,
+			PathStyle:    item.PathStyle.Bool,
+			SavePassword: item.SavePassword.Bool,
+			AutoConnect:  item.AutoConnect.Bool,
+			IsConnected:  isConnected,
+			CreatedAt:    item.CreatedAt.Time,
+			UpdatedAt:    item.UpdatedAt.Time,
+			Version:      item.Version,
 		}
 	}
 

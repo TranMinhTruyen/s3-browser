@@ -5,6 +5,7 @@ import i18n from '@/locales/i18n';
 
 interface Optionals {
   scope?: string;
+  showMessage?: boolean;
 }
 
 interface InFlightCall {
@@ -82,7 +83,7 @@ export function callIPC<A extends unknown[], T>(
 
   const scope = options?.scope;
   const sequence = scope ? nextSequence(scope) : '';
-  const task = run(binding, args, scope, sequence);
+  const task = run(binding, args, scope, options?.showMessage, sequence);
 
   inFlight.set(dedupeKey, { task, scope, sequence });
   void task.finally(() => inFlight.delete(dedupeKey));
@@ -94,6 +95,7 @@ async function run<A extends unknown[], T>(
   binding: (...args: A) => Promise<Output<T>>,
   args: A,
   scope: string | undefined,
+  showMessage: boolean = true,
   sequence: string
 ): Promise<T | null> {
   try {
@@ -103,25 +105,27 @@ async function run<A extends unknown[], T>(
       return null;
     }
 
-    [...(output.messageList ?? [])]
-      .sort((a, b) => (a.order ?? '').localeCompare(b.order ?? ''))
-      .forEach(item => {
-        const message = formatStringJson(i18n.t(`ipcMessage:${item.moduleName}.${item.messageCode}`), item?.params);
-        switch (item.messageType) {
-          case 'E':
-            toast.error(message);
-            break;
-          case 'W':
-            toast.warning(message);
-            break;
-          case 'I':
-            toast.info(message);
-            break;
-          default:
-            toast.success(message);
-            break;
-        }
-      });
+    if (showMessage) {
+      [...(output.messageList ?? [])]
+        .sort((a, b) => (a.order ?? '').localeCompare(b.order ?? ''))
+        .forEach(item => {
+          const message = formatStringJson(i18n.t(`ipcMessage:${item.moduleName}.${item.messageCode}`), item?.params);
+          switch (item.messageType) {
+            case 'E':
+              toast.error(message);
+              break;
+            case 'W':
+              toast.warning(message);
+              break;
+            case 'I':
+              toast.info(message);
+              break;
+            default:
+              toast.success(message);
+              break;
+          }
+        });
+    }
 
     return output.body;
   } catch (err) {

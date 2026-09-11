@@ -1,4 +1,6 @@
 import {
+  ColorInput,
+  ColorInputProps,
   JsonInput,
   type JsonInputProps,
   MaskInput,
@@ -44,6 +46,10 @@ type PinFieldProps = Omit<PinInputProps, 'type'> & {
   type: 'pin';
 };
 
+type ColorFieldProps = Omit<ColorInputProps, 'type'> & {
+  type: 'color';
+};
+
 type FieldInputProps =
   | TextFieldProps
   | TextareaFieldProps
@@ -51,7 +57,8 @@ type FieldInputProps =
   | NumberFieldProps
   | JsonFieldProps
   | MaskFieldProps
-  | PinFieldProps;
+  | PinFieldProps
+  | ColorFieldProps;
 
 function FieldInput(props: FieldInputProps) {
   const { size = 'sm' } = props;
@@ -85,6 +92,10 @@ function FieldInput(props: FieldInputProps) {
     case 'pin': {
       const { type: _type, error: _error, ...rest } = restBase;
       return <PinInput {...rest} />;
+    }
+    case 'color': {
+      const { type: _type, error: _error, ...rest } = restBase;
+      return <ColorInput {...rest} />;
     }
     default:
       return <TextInput size={size} {...restBase} />;
