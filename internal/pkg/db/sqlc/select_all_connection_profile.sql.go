@@ -15,6 +15,12 @@ SELECT
     cp.id AS connection_id
     , cp.NAME AS connection_name
     , cp.color
+    , cp.endpoint
+    , cp.access_key
+    , cp.secret_key
+    , cp.region
+    , cp.path_style
+    , cp.save_password
     , cp.auto_connect
     , cp.created_at
     , cp.updated_at
@@ -29,6 +35,12 @@ type SelectAllConnectionProfileRow struct {
 	ConnectionID   string         `json:"connection_id"`
 	ConnectionName sql.NullString `json:"connection_name"`
 	Color          sql.NullString `json:"color"`
+	Endpoint       string         `json:"endpoint"`
+	AccessKey      string         `json:"access_key"`
+	SecretKey      string         `json:"secret_key"`
+	Region         string         `json:"region"`
+	PathStyle      sql.NullBool   `json:"path_style"`
+	SavePassword   sql.NullBool   `json:"save_password"`
 	AutoConnect    sql.NullBool   `json:"auto_connect"`
 	CreatedAt      sql.NullTime   `json:"created_at"`
 	UpdatedAt      sql.NullTime   `json:"updated_at"`
@@ -48,6 +60,12 @@ func (q *Queries) SelectAllConnectionProfile(ctx context.Context) ([]SelectAllCo
 			&i.ConnectionID,
 			&i.ConnectionName,
 			&i.Color,
+			&i.Endpoint,
+			&i.AccessKey,
+			&i.SecretKey,
+			&i.Region,
+			&i.PathStyle,
+			&i.SavePassword,
 			&i.AutoConnect,
 			&i.CreatedAt,
 			&i.UpdatedAt,

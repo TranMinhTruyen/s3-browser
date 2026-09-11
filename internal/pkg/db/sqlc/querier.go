@@ -13,6 +13,7 @@ type Querier interface {
 	SelectAllConnectionProfile(ctx context.Context) ([]SelectAllConnectionProfileRow, error)
 	SelectAllRegion(ctx context.Context) ([]SelectAllRegionRow, error)
 	SelectConnectionProfileById(ctx context.Context, id string) (ConnectionProfile, error)
+	SelectConnectionProfileForUpdate(ctx context.Context, arg SelectConnectionProfileForUpdateParams) (ConnectionProfile, error)
 	SelectMasterByCode(ctx context.Context, code string) ([]SelectMasterByCodeRow, error)
 	UpdateConnectionProfileById(ctx context.Context, arg UpdateConnectionProfileByIdParams) (ConnectionProfile, error)
 }

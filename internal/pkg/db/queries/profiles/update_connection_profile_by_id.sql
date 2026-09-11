@@ -7,8 +7,9 @@ SET
     , region = ? 
     , access_key = ? 
     , secret_key = ? 
-    , path_style = ? 
     , save_password = ? 
+    , path_style = ? 
+    , auto_connect = ? 
     , updated_at = ?
     , version = version + 1 
 WHERE

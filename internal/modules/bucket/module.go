@@ -86,7 +86,7 @@ func (m *Module) TestConnection(input bucket.ConnectionInput) common.Output[buck
 	return status
 }
 
-func (m *Module) Connect(input bucket.ConnectionInput) common.Output[bucket.ConnectionOutput] {
+func (m *Module) Connect(input bucket.ConnectionInput, isNewConnection bool) common.Output[bucket.ConnectionOutput] {
 	// Don't use app.Context for I/O because this context is cancelled only when the app shuts down.
 	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
 	defer cancel()
@@ -110,8 +110,14 @@ func (m *Module) Connect(input bucket.ConnectionInput) common.Output[bucket.Conn
 		}),
 	)
 
-	if err := m.profile.CreateProfile(connectionId, input); err != nil {
-		status.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, err.Error()))
+	if isNewConnection {
+		if err := m.profile.CreateProfile(connectionId, input); err != nil {
+			status.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, err.Error()))
+		}
+	} else {
+		if err := m.profile.UpdateProfile(input); err != nil {
+			status.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, err.Error()))
+		}
 	}
 
 	return status

@@ -19,8 +19,9 @@ SET
     , region = ? 
     , access_key = ? 
     , secret_key = ? 
-    , path_style = ? 
     , save_password = ? 
+    , path_style = ? 
+    , auto_connect = ? 
     , updated_at = ?
     , version = version + 1 
 WHERE
@@ -35,8 +36,9 @@ type UpdateConnectionProfileByIdParams struct {
 	Region       string         `json:"region"`
 	AccessKey    string         `json:"access_key"`
 	SecretKey    string         `json:"secret_key"`
-	PathStyle    sql.NullBool   `json:"path_style"`
 	SavePassword sql.NullBool   `json:"save_password"`
+	PathStyle    sql.NullBool   `json:"path_style"`
+	AutoConnect  sql.NullBool   `json:"auto_connect"`
 	UpdatedAt    sql.NullTime   `json:"updated_at"`
 	ID           string         `json:"id"`
 	Version      int64          `json:"version"`
@@ -50,8 +52,9 @@ func (q *Queries) UpdateConnectionProfileById(ctx context.Context, arg UpdateCon
 		arg.Region,
 		arg.AccessKey,
 		arg.SecretKey,
-		arg.PathStyle,
 		arg.SavePassword,
+		arg.PathStyle,
+		arg.AutoConnect,
 		arg.UpdatedAt,
 		arg.ID,
 		arg.Version,

@@ -1,6 +1,7 @@
 package bucket
 
 type ConnectionInput struct {
+	Id           string `json:"id"`
 	Name         string `json:"name"`
 	Color        string `json:"color"`
 	Endpoint     string `json:"endpoint"`
@@ -10,4 +11,5 @@ type ConnectionInput struct {
 	PathStyle    bool   `json:"pathStyle"`
 	SavePassword bool   `json:"savePassword"`
 	AutoConnect  bool   `json:"autoConnect"`
+	Version      int64  `json:"version"`
 }

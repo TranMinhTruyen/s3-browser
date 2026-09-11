@@ -3,7 +3,6 @@ import { Button, Divider, Group, Modal, Stack, Title } from '@mantine/core';
 import { schemaResolver, useForm } from '@mantine/form';
 import { ConnectS3 } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionInput } from '@wails/S3Browser/models/bucket';
-import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import z from 'zod';
 import { useMantineModal } from '@/common/hooks/useMantineModal';
@@ -15,6 +14,7 @@ import FieldInput from '@/components/inputs/FieldInput';
 
 const schema = z.object({
   name: z.string().trim(),
+  color: z.string().trim(),
   endpoint: z.string().trim().nonempty('V000001'),
   region: z.string().trim().nonempty('V000001'),
   accessKey: z.string().trim().nonempty('V000001'),
@@ -24,9 +24,17 @@ const schema = z.object({
   autoConnect: z.boolean(),
 });
 
-interface ConnectionInfoForm extends z.infer<typeof schema> {}
+export interface ConnectionInfo extends z.infer<typeof schema> {}
 
-export default NiceModal.create(() => {
+interface S3ConnectModalProps {
+  mode?: 'add' | 'edit';
+  id?: string;
+  version?: number;
+  connectionInfo?: ConnectionInfo;
+}
+
+export default NiceModal.create((props: S3ConnectModalProps) => {
+  const { mode = 'add', id, version, connectionInfo } = props;
   const { t } = useTranslation('S3ConnectModal');
 
   const modal = useModal();
@@ -35,6 +43,7 @@ export default NiceModal.create(() => {
   const defaultValues = schema
     .default({
       name: `Connection No.${createUUID()}`,
+      color: '#177cff',
       endpoint: '',
       region: '',
       accessKey: '',
@@ -45,9 +54,9 @@ export default NiceModal.create(() => {
     })
     .parse(undefined);
 
-  const form = useForm<ConnectionInfoForm>({
+  const form = useForm<ConnectionInfo>({
     mode: 'uncontrolled',
-    initialValues: defaultValues,
+    initialValues: mode === 'add' ? defaultValues : connectionInfo,
     validate: schemaResolver(schema, { sync: true }),
   });
 
@@ -59,19 +68,17 @@ export default NiceModal.create(() => {
     }
   });
 
-  const handleConnect = useCallback(
-    (isTestConnection: boolean) => async (value: ConnectionInfoForm) => {
-      const input: ConnectionInput = {
-        color: '#FFFFFF',
-        ...value,
-      };
-      const output = await callIPC(ConnectS3, [input, isTestConnection]);
-      if (output && output.isConnected && !isTestConnection) {
-        modal.hide();
-      }
-    },
-    [modal]
-  );
+  const handleConnect = (isTestConnection: boolean) => async (value: ConnectionInfo) => {
+    const input: ConnectionInput = {
+      id: mode === 'add' ? '' : (id ?? ''),
+      version: mode === 'add' ? 1 : (version ?? 1),
+      ...value,
+    };
+    const output = await callIPC(ConnectS3, [input, isTestConnection, mode === 'add'], { showMessage: mode === 'add' });
+    if (output && output.isConnected && !isTestConnection) {
+      modal.hide();
+    }
+  };
 
   return (
     <Modal.Root {...mantineModalProps} centered size="lg">
@@ -103,6 +110,14 @@ export default NiceModal.create(() => {
                 placeholder={t('form.label.name')}
                 key={form.key('name')}
                 {...form.getInputProps('name')}
+              />
+
+              <FieldInput
+                type="color"
+                label={t('form.label.color')}
+                placeholder={t('form.label.color')}
+                key={form.key('color')}
+                {...form.getInputProps('color')}
               />
 
               <FieldInput

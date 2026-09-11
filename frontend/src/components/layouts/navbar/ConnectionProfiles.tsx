@@ -1,3 +1,4 @@
+import NiceModal from '@ebay/nice-modal-react';
 import { Card, isLightColor, Loader, Menu, Stack, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { ConnectS3ByProfile, Disconnect } from '@wails/S3Browser/internal/handlers/buckethandler';
@@ -7,6 +8,7 @@ import { Cable, Unplug } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useNavBarStore } from '@/common/stores/navBarStore';
 import { callIPC } from '@/common/utils/ipcUtils';
+import S3ConnectModal from '@/components/modals/S3ConnectModal';
 
 function ConnectionProfiles() {
   const loadConnectionProfiles = useNavBarStore(s => s.loadConnectionProfiles);
@@ -27,6 +29,7 @@ function ConnectionProfiles() {
 
   useEffect(() => {
     const unsubscribe = Events.On('profile:reload-connection-profiles', () => {
+      autoConnectDoneRef.current = false;
       loadConnectionProfiles();
     });
 
@@ -35,8 +38,21 @@ function ConnectionProfiles() {
     };
   }, [loadConnectionProfiles]);
 
+  const handleOpenConnectToS3Modal = (value: ConnectionProfileOutput) => {
+    NiceModal.show(S3ConnectModal, {
+      mode: 'edit',
+      id: value.id,
+      version: value.version,
+      connectionInfo: { ...value },
+    });
+  };
+
   const handleConnect = (key: string, value: ConnectionProfileOutput) => async () => {
     if (!value || value.isConnected) return;
+    if (autoConnectDoneRef.current && !value.savePassword) {
+      handleOpenConnectToS3Modal(value);
+      return;
+    }
     openConnectLoading();
     try {
       const output = await callIPC(ConnectS3ByProfile, [key]);
@@ -103,7 +119,7 @@ function ConnectionProfiles() {
                   alignItems: 'center',
                   minWidth: '56px',
                   justifyContent: 'center',
-                  backgroundColor: value.isConnected ? 'blue' : '',
+                  backgroundColor: value.isConnected ? '#1ae300' : '',
                 }}
               >
                 {connectLoading ? <Loader color="blue" size="sm" /> : value.isConnected ? <Cable /> : <Unplug />}
