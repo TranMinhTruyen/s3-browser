@@ -22,8 +22,9 @@ INTO connection_profiles(
     , secret_key
     , path_style
     , save_password
+    , auto_connect
 ) 
-VALUES (? , ? , ? , ? , ? , ? , ? , ? , ? ) RETURNING id, name, color, endpoint, region, access_key, secret_key, path_style, save_password, created_at, updated_at, version
+VALUES (? , ? , ? , ? , ? , ? , ? , ? , ? , ? ) RETURNING id, name, color, endpoint, region, access_key, secret_key, path_style, save_password, auto_connect, created_at, updated_at, version
 `
 
 type CreateProfileParams struct {
@@ -36,6 +37,7 @@ type CreateProfileParams struct {
 	SecretKey    string         `json:"secret_key"`
 	PathStyle    sql.NullBool   `json:"path_style"`
 	SavePassword sql.NullBool   `json:"save_password"`
+	AutoConnect  sql.NullBool   `json:"auto_connect"`
 }
 
 func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) (ConnectionProfile, error) {
@@ -49,6 +51,7 @@ func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) (C
 		arg.SecretKey,
 		arg.PathStyle,
 		arg.SavePassword,
+		arg.AutoConnect,
 	)
 	var i ConnectionProfile
 	err := row.Scan(
@@ -61,6 +64,7 @@ func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) (C
 		&i.SecretKey,
 		&i.PathStyle,
 		&i.SavePassword,
+		&i.AutoConnect,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Version,

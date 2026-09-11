@@ -25,7 +25,7 @@ SET
     , version = version + 1 
 WHERE
     id = ? 
-    AND version = ? RETURNING id, name, color, endpoint, region, access_key, secret_key, path_style, save_password, created_at, updated_at, version
+    AND version = ? RETURNING id, name, color, endpoint, region, access_key, secret_key, path_style, save_password, auto_connect, created_at, updated_at, version
 `
 
 type UpdateConnectionProfileByIdParams struct {
@@ -67,6 +67,7 @@ func (q *Queries) UpdateConnectionProfileById(ctx context.Context, arg UpdateCon
 		&i.SecretKey,
 		&i.PathStyle,
 		&i.SavePassword,
+		&i.AutoConnect,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Version,

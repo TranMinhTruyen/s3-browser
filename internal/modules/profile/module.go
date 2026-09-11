@@ -2,8 +2,8 @@ package profile
 
 import (
 	"S3Browser/internal/modules/global"
-	"S3Browser/internal/modules/profile/sqlc"
 	"S3Browser/internal/pkg/cnst"
+	"S3Browser/internal/pkg/db/sqlc"
 	"S3Browser/internal/pkg/utils"
 	"S3Browser/models/bucket"
 	"S3Browser/models/common"
@@ -77,6 +77,7 @@ func (m *Module) CreateProfile(
 		SecretKey:    encryptedSecret,
 		PathStyle:    sql.NullBool{Bool: profileInput.PathStyle, Valid: true},
 		SavePassword: sql.NullBool{Bool: profileInput.SavePassword, Valid: true},
+		AutoConnect:  sql.NullBool{Bool: profileInput.AutoConnect, Valid: true},
 	}
 
 	if _, err := m.q.CreateProfile(m.app.Context(), params); err != nil {
@@ -96,7 +97,8 @@ func (m *Module) GetConnectionProfileById(connectionID string) common.Output[pro
 	result, err := m.q.SelectConnectionProfileById(m.app.Context(), connectionID)
 
 	if err != nil {
-		output.AddMessage(common.ErrorMessage(cnst.Profile, PFE003))
+		output.Body = nil
+		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE003))
 		m.logger.Error("error white get profile", slog.Any("error", err))
 		return output
 	}
@@ -104,7 +106,7 @@ func (m *Module) GetConnectionProfileById(connectionID string) common.Output[pro
 	decrypted, err := m.km.Decrypt(result.SecretKey)
 
 	if err != nil {
-		output.AddMessage(common.ErrorMessage(cnst.Profile, PFE002))
+		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE002))
 		return output
 	}
 
@@ -132,25 +134,29 @@ func (m *Module) GetAllConnectionProfile() common.Output[profile.GetAllConnectio
 	result, err := m.q.SelectAllConnectionProfile(m.app.Context())
 
 	if err != nil {
-		output.AddMessage(common.ErrorMessage(cnst.Profile, PFE003))
-		m.logger.Error("error get all profile", slog.Any("detail", err))
+		output.Body = nil
+		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE003))
+		m.logger.Error("error get all profile", slog.Any("error", err))
 		return output
 	}
 
-	output.Body.ConnectionProfiles = make(map[string]profile.ConnectionProfileOutput)
+	profiles := make(map[string]profile.ConnectionProfileOutput, len(result))
 	for _, item := range result {
 		isConnected := m.global.HasConn(item.ConnectionID)
 
-		output.Body.ConnectionProfiles[item.ConnectionID] = profile.ConnectionProfileOutput{
+		profiles[item.ConnectionID] = profile.ConnectionProfileOutput{
 			ID:          item.ConnectionID,
 			Name:        item.ConnectionName.String,
 			Color:       item.Color.String,
+			AutoConnect: item.AutoConnect.Bool,
 			IsConnected: isConnected,
 			CreatedAt:   item.CreatedAt.Time,
 			UpdatedAt:   item.UpdatedAt.Time,
 			Version:     item.Version,
 		}
 	}
+
+	output.Body = &profile.GetAllConnectionProfileOutput{ConnectionProfiles: profiles}
 
 	return output
 }

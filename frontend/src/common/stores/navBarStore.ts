@@ -25,7 +25,7 @@ export const useNavBarStore = createStore<NavBarState>(
     },
 
     loadConnectionProfiles: async () => {
-      const output = await callIPC(() => GetAllConnectionProfile(), `${SCOPE}/loadConnectionProfiles`);
+      const output = await callIPC(GetAllConnectionProfile, [], { scope: `${SCOPE}/loadConnectionProfiles` });
       if (!output) {
         return;
       }

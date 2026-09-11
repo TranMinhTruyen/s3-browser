@@ -9,4 +9,5 @@ type ConnectionInput struct {
 	SecretKey    string `json:"secretKey"`
 	PathStyle    bool   `json:"pathStyle"`
 	SavePassword bool   `json:"savePassword"`
+	AutoConnect  bool   `json:"autoConnect"`
 }

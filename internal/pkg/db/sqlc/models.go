@@ -18,6 +18,7 @@ type ConnectionProfile struct {
 	SecretKey    string         `json:"secret_key"`
 	PathStyle    sql.NullBool   `json:"path_style"`
 	SavePassword sql.NullBool   `json:"save_password"`
+	AutoConnect  sql.NullBool   `json:"auto_connect"`
 	CreatedAt    sql.NullTime   `json:"created_at"`
 	UpdatedAt    sql.NullTime   `json:"updated_at"`
 	Version      int64          `json:"version"`

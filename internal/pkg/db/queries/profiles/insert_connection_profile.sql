@@ -10,5 +10,6 @@ INTO connection_profiles(
     , secret_key
     , path_style
     , save_password
+    , auto_connect
 ) 
-VALUES (? , ? , ? , ? , ? , ? , ? , ? , ? ) RETURNING *;
+VALUES (? , ? , ? , ? , ? , ? , ? , ? , ? , ? ) RETURNING *;

@@ -2,8 +2,8 @@ package master
 
 import (
 	"S3Browser/internal/modules/global"
-	"S3Browser/internal/modules/master/sqlc"
 	"S3Browser/internal/pkg/cnst"
+	"S3Browser/internal/pkg/db/sqlc"
 	"S3Browser/models/common"
 	"S3Browser/models/master"
 	"database/sql"
@@ -46,7 +46,7 @@ func (m *Module) GetMasterData(codes []string) common.Output[master.GetMasterDat
 		rows, err := m.q.SelectMasterByCode(m.app.Context(), code)
 		if err != nil {
 			m.logger.Error("get master data failed", "code", code, "error", err)
-			output.AddMessage(common.ErrorMessage(cnst.Master, MTE001))
+			output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Master, MTE001))
 			continue
 		}
 
@@ -82,8 +82,9 @@ func (m *Module) GetRegion() common.Output[master.RegionOutput] {
 	rows, err := m.q.SelectAllRegion(m.app.Context())
 
 	if err != nil {
+		output.Body = nil
 		m.logger.Error("get region data failed", "error", err)
-		output.AddMessage(common.ErrorMessage(cnst.Master, MTE001))
+		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Master, MTE001))
 		return output
 	}
 

@@ -15,11 +15,12 @@ SELECT
     cp.id AS connection_id
     , cp.NAME AS connection_name
     , cp.color
+    , cp.auto_connect
     , cp.created_at
     , cp.updated_at
-    , cp.version 
+    , cp.version
 FROM
-    connection_profiles cp 
+    connection_profiles cp
 ORDER BY
     cp.created_at
 `
@@ -28,6 +29,7 @@ type SelectAllConnectionProfileRow struct {
 	ConnectionID   string         `json:"connection_id"`
 	ConnectionName sql.NullString `json:"connection_name"`
 	Color          sql.NullString `json:"color"`
+	AutoConnect    sql.NullBool   `json:"auto_connect"`
 	CreatedAt      sql.NullTime   `json:"created_at"`
 	UpdatedAt      sql.NullTime   `json:"updated_at"`
 	Version        int64          `json:"version"`
@@ -46,6 +48,7 @@ func (q *Queries) SelectAllConnectionProfile(ctx context.Context) ([]SelectAllCo
 			&i.ConnectionID,
 			&i.ConnectionName,
 			&i.Color,
+			&i.AutoConnect,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Version,

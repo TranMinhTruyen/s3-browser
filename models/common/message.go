@@ -15,6 +15,7 @@ type Message struct {
 }
 
 func SuccessMessage(moduleName string, code string) Message {
+
 	return Message{
 		Order:       utils.ToPtr(time.Now().Format(cnst.FullDateTimeFormatPattern)),
 		ModuleName:  utils.ToPtr(moduleName),
@@ -23,29 +24,17 @@ func SuccessMessage(moduleName string, code string) Message {
 	}
 }
 
-func InfoMessage(moduleName string, code string) Message {
+func CreateMessage(messageType string, moduleName string, code string) Message {
 	return Message{
 		Order:       utils.ToPtr(time.Now().Format(cnst.FullDateTimeFormatPattern)),
 		ModuleName:  utils.ToPtr(moduleName),
-		MessageType: utils.ToPtr(cnst.MessageTypeInfo),
+		MessageType: utils.ToPtr(messageType),
 		MessageCode: utils.ToPtr(code),
 	}
 }
 
-func ErrorMessage(moduleName string, code string) Message {
-	return Message{
-		Order:       utils.ToPtr(time.Now().Format(cnst.FullDateTimeFormatPattern)),
-		ModuleName:  utils.ToPtr(moduleName),
-		MessageType: utils.ToPtr(cnst.MessageTypeError),
-		MessageCode: utils.ToPtr(code),
-	}
-}
-
-func WarnMessage(moduleName string, code string) Message {
-	return Message{
-		Order:       utils.ToPtr(time.Now().Format(cnst.FullDateTimeFormatPattern)),
-		ModuleName:  utils.ToPtr(moduleName),
-		MessageType: utils.ToPtr(cnst.MessageTypeWarn),
-		MessageCode: utils.ToPtr(code),
-	}
+func CreateMessageWithParams(messageType string, moduleName string, code string, params map[string]any) Message {
+	message := CreateMessage(messageType, moduleName, code)
+	message.Params = &params
+	return message
 }

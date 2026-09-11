@@ -1,17 +1,31 @@
 import { Output } from '@wails/S3Browser/models/common';
 import { toast } from 'sonner';
-import { formatStringJson } from '@/common/utils/stringUtils';
+import { createUUID, formatStringJson } from '@/common/utils/stringUtils';
 import i18n from '@/locales/i18n';
 
-const keys = new Map<string, number>();
+interface Optionals {
+  scope?: string;
+}
 
-function nextSequence(key: string): number {
-  const sequence = (keys.get(key) ?? 0) + 1;
+interface InFlightCall {
+  task: Promise<unknown>;
+  scope?: string;
+  sequence: string;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Stale-result guard                                                         */
+/* -------------------------------------------------------------------------- */
+
+const keys = new Map<string, string>();
+
+function nextSequence(key: string): string {
+  const sequence = createUUID();
   keys.set(key, sequence);
   return sequence;
 }
 
-function isStaleKey(key: string, sequence: number): boolean {
+function isStaleKey(key: string, sequence: string): boolean {
   return keys.get(key) !== sequence;
 }
 
@@ -23,11 +37,71 @@ export function invalidateLoads(scope: string): void {
   }
 }
 
-export async function callIPC<T>(callback: () => Promise<Output<T>>, scope?: string): Promise<T | null> {
-  const sequence = scope ? nextSequence(scope) : 0;
+/* -------------------------------------------------------------------------- */
+/* In-flight registry                                                         */
+/* -------------------------------------------------------------------------- */
 
+const inFlight = new Map<string, InFlightCall>();
+
+// Identify a binding by reference, not by name: the production bundle may
+// rename functions, and two mangled names could then collide.
+const bindingIds = new WeakMap<object, number>();
+let nextBindingId = 0;
+
+function dedupeKeyOf(binding: object, args: unknown[]): string {
+  let id = bindingIds.get(binding);
+  if (id === undefined) {
+    id = nextBindingId++;
+    bindingIds.set(binding, id);
+  }
+  // Arguments always cross the bridge as JSON, so they are serialisable here.
+  return `${id}:${JSON.stringify(args)}`;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Call                                                                       */
+/* -------------------------------------------------------------------------- */
+
+export function callIPC<A extends unknown[], T>(
+  binding: (...args: A) => Promise<Output<T>>,
+  args: A,
+  options?: Optionals
+): Promise<T | null> {
+  const dedupeKey = dedupeKeyOf(binding, args);
+
+  const pending = inFlight.get(dedupeKey);
+  if (pending) {
+    // This caller wants the very reply already on the wire, so hand its token
+    // back to the scope: an `invalidateLoads` that ran in between must not
+    // discard a result somebody is still waiting for.
+    if (pending.scope) {
+      keys.set(pending.scope, pending.sequence);
+    }
+    return pending.task as Promise<T | null>;
+  }
+
+  const scope = options?.scope;
+  const sequence = scope ? nextSequence(scope) : '';
+  const task = run(binding, args, scope, sequence);
+
+  inFlight.set(dedupeKey, { task, scope, sequence });
+  void task.finally(() => inFlight.delete(dedupeKey));
+
+  return task;
+}
+
+async function run<A extends unknown[], T>(
+  binding: (...args: A) => Promise<Output<T>>,
+  args: A,
+  scope: string | undefined,
+  sequence: string
+): Promise<T | null> {
   try {
-    const output = await callback();
+    const output = await binding(...args);
+
+    if (scope && isStaleKey(scope, sequence)) {
+      return null;
+    }
 
     [...(output.messageList ?? [])]
       .sort((a, b) => (a.order ?? '').localeCompare(b.order ?? ''))
@@ -48,10 +122,6 @@ export async function callIPC<T>(callback: () => Promise<Output<T>>, scope?: str
             break;
         }
       });
-
-    if (scope && isStaleKey(scope, sequence)) {
-      return null;
-    }
 
     return output.body;
   } catch (err) {

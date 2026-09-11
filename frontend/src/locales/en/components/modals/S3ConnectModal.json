@@ -7,7 +7,8 @@
       "accessKey": "Access key",
       "secretKey": "Secret key",
       "pathStyle": "Path style",
-      "savePassword": "Save your password"
+      "savePassword": "Save your password",
+      "autoConnect": "Auto connect"
     },
     "button": {
       "connect": "Connect",
