@@ -5,11 +5,11 @@ go 1.27
 require (
 	github.com/aws/aws-sdk-go-v2 v1.47.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.4
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.113.0
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.113.1
 	github.com/aws/smithy-go v1.28.1
 	github.com/google/uuid v1.6.0
 	github.com/pressly/goose/v3 v3.28.0
-	github.com/wailsapp/wails/v3 v3.0.0-beta.20
+	github.com/wailsapp/wails/v3 v3.0.0-beta.21
 	github.com/zalando/go-keyring v0.2.8
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	modernc.org/sqlite v1.58.0
