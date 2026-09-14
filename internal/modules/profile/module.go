@@ -9,7 +9,6 @@ import (
 	"S3Browser/models/common"
 	"S3Browser/models/profile"
 	"database/sql"
-	"errors"
 	"log/slog"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -18,15 +17,30 @@ import (
 var (
 	// Error while save profile
 	PFE001 = "PFE001"
+
 	// Encrypted SecretKey failed
 	PFE002 = "PFE002"
+
 	// Error get all connnection profile
 	PFE003 = "PFE003"
+
 	// Error while update profile
 	PFE004 = "PFE004"
 
-	// Save profile success
+	// Update profile [{name}] error
+	PFE005 = "PFE005"
+
+	// Delete profile [{name}] error
+	PFE006 = "PFE006"
+
+	// Save profile [{name}] success
 	PFS001 = "PFS001"
+
+	// Update profile [{name}] success
+	PFS002 = "PFS002"
+
+	// Delete profile [{name}] success
+	PFS003 = "PFS003"
 )
 
 type Module struct {
@@ -56,14 +70,19 @@ func NewModule(
 func (m *Module) CreateProfile(
 	connectionId string,
 	profileInput bucket.ConnectionInput,
-) error {
+) common.Output[profile.ConnectionProfileOutput] {
+	output := common.Output[profile.ConnectionProfileOutput]{}
+	output.New()
+	output.Body = nil
 	encryptedSecret := ""
 
 	if profileInput.SavePassword {
 		encrypted, err := m.km.Encrypt(profileInput.SecretKey)
 
 		if err != nil {
-			return errors.New(PFE002)
+			output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
+			m.logger.Error("encrypted SecretKey failed", slog.Any("error", err))
+			return output
 		}
 
 		encryptedSecret = encrypted
@@ -82,53 +101,124 @@ func (m *Module) CreateProfile(
 		AutoConnect:  sql.NullBool{Bool: profileInput.AutoConnect, Valid: true},
 	}
 
-	if _, err := m.q.CreateProfile(m.app.Context(), params); err != nil {
+	result, err := m.q.CreateProfile(m.app.Context(), params)
+
+	if err != nil {
 		m.logger.Error("save connection profile failed", "connectionId", connectionId, "error", err)
-		return errors.New(PFE004)
+		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE001, err.Error()))
+		return output
 	}
 
-	m.app.Event.Emit("profile:reload-connection-profiles")
+	output.Body = &profile.ConnectionProfileOutput{
+		ID:           result.ID,
+		Name:         result.Name.String,
+		Color:        result.Color.String,
+		Endpoint:     result.Endpoint,
+		Region:       result.Region,
+		AccessKey:    result.AccessKey,
+		SecretKey:    result.SecretKey,
+		PathStyle:    result.PathStyle.Bool,
+		SavePassword: result.SavePassword.Bool,
+		AutoConnect:  result.AutoConnect.Bool,
+		CreatedAt:    result.CreatedAt.Time,
+		UpdatedAt:    result.UpdatedAt.Time,
+		Version:      result.Version,
+	}
 
-	return nil
+	output.AddMessage(common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Profile, PFE001, map[string]any{
+		"name": result.Name.String,
+	}, ""))
+
+	return output
 }
 
-func (m *Module) UpdateProfile(
-	profileInput bucket.ConnectionInput,
-) error {
+func (m *Module) UpdateProfileById(input bucket.ConnectionInput) common.Output[profile.ConnectionProfileOutput] {
+	output := common.Output[profile.ConnectionProfileOutput]{}
+	output.New()
 	encryptedSecret := ""
 
-	if profileInput.SavePassword {
-		encrypted, err := m.km.Encrypt(profileInput.SecretKey)
+	if input.SavePassword {
+		encrypted, err := m.km.Encrypt(input.SecretKey)
 
 		if err != nil {
-			return errors.New(PFE002)
+			output.Body = nil
+			output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
+			m.logger.Error("encrypted SecretKey failed", slog.Any("error", err))
+			return output
 		}
 
 		encryptedSecret = encrypted
 	}
 
 	params := sqlc.UpdateConnectionProfileByIdParams{
-		ID:           profileInput.Id,
-		Name:         sql.NullString{String: profileInput.Name, Valid: profileInput.Name != ""},
-		Color:        sql.NullString{String: profileInput.Color, Valid: profileInput.Color != ""},
-		Endpoint:     profileInput.Endpoint,
-		Region:       profileInput.Region,
-		AccessKey:    profileInput.AccessKey,
+		ID:           input.Id,
+		Name:         sql.NullString{String: input.Name, Valid: input.Name != ""},
+		Color:        sql.NullString{String: input.Color, Valid: input.Color != ""},
+		Endpoint:     input.Endpoint,
+		Region:       input.Region,
+		AccessKey:    input.AccessKey,
 		SecretKey:    encryptedSecret,
-		PathStyle:    sql.NullBool{Bool: profileInput.PathStyle, Valid: true},
-		SavePassword: sql.NullBool{Bool: profileInput.SavePassword, Valid: true},
-		AutoConnect:  sql.NullBool{Bool: profileInput.AutoConnect, Valid: true},
-		Version:      profileInput.Version,
+		PathStyle:    sql.NullBool{Bool: input.PathStyle, Valid: true},
+		SavePassword: sql.NullBool{Bool: input.SavePassword, Valid: true},
+		AutoConnect:  sql.NullBool{Bool: input.AutoConnect, Valid: true},
+		Version:      input.Version,
 	}
 
-	if _, err := m.q.UpdateConnectionProfileById(m.app.Context(), params); err != nil {
-		m.logger.Error("update connection profile failed", "connectionId", profileInput.Id, "error", err)
-		return errors.New(PFE001)
+	result, err := m.q.UpdateConnectionProfileById(m.app.Context(), params)
+
+	if err != nil {
+		m.logger.Error("update connection profile failed", "connectionId", input.Id, "error", err)
+		output.Body = nil
+		output.AddMessage(common.CreateMessageWithParams(cnst.MessageTypeError, cnst.Profile, PFE005, map[string]any{
+			"name": result.Name.String,
+		}, err.Error()))
+		return output
 	}
 
-	m.app.Event.Emit("profile:reload-connection-profiles")
+	output.Body = &profile.ConnectionProfileOutput{
+		ID:           result.ID,
+		Name:         result.Name.String,
+		Color:        result.Color.String,
+		Endpoint:     result.Endpoint,
+		Region:       result.Region,
+		AccessKey:    result.AccessKey,
+		SecretKey:    result.SecretKey,
+		PathStyle:    result.PathStyle.Bool,
+		SavePassword: result.SavePassword.Bool,
+		AutoConnect:  result.AutoConnect.Bool,
+		CreatedAt:    result.CreatedAt.Time,
+		UpdatedAt:    result.UpdatedAt.Time,
+		Version:      result.Version,
+	}
 
-	return nil
+	output.AddMessage(common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, PFS002, map[string]any{
+		"name": result.Name.String,
+	}, ""))
+
+	return output
+}
+
+func (m *Module) DeleteProfileById(input bucket.ConnectionInput) common.Output[bool] {
+	output := common.Output[bool]{}
+	output.New()
+	output.Body = utils.ToPtr(true)
+
+	err := m.q.DeleteConnectionProfileById(m.app.Context(), input.Id)
+
+	if err != nil {
+		m.logger.Error("delete connection profile failed", "connectionId", input.Id, "error", err)
+		output.Body = utils.ToPtr(false)
+		output.AddMessage(common.CreateMessageWithParams(cnst.MessageTypeError, cnst.Profile, PFE006, map[string]any{
+			"name": input.Name,
+		}, err.Error()))
+		return output
+	}
+
+	output.AddMessage(common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Profile, PFS003, map[string]any{
+		"name": input.Name,
+	}, ""))
+
+	return output
 }
 
 func (m *Module) GetConnectionProfileById(connectionID string) common.Output[profile.ConnectionProfileOutput] {
@@ -139,16 +229,17 @@ func (m *Module) GetConnectionProfileById(connectionID string) common.Output[pro
 
 	if err != nil {
 		output.Body = nil
-		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE003))
-		m.logger.Error("error white get profile", slog.Any("error", err))
+		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE003, err.Error()))
+		m.logger.Error("error while get profile", slog.Any("error", err))
 		return output
 	}
 
-	decrypted, err := m.km.Decrypt(result.SecretKey)
-
-	if err != nil {
-		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE002))
-		return output
+	decrypted := ""
+	if result.SecretKey != "" {
+		if decrypted, err = m.km.Decrypt(result.SecretKey); err != nil {
+			output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
+			return output
+		}
 	}
 
 	output.Body = &profile.ConnectionProfileOutput{
@@ -176,7 +267,7 @@ func (m *Module) GetAllConnectionProfile() common.Output[profile.GetAllConnectio
 
 	if err != nil {
 		output.Body = nil
-		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE003))
+		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE003, err.Error()))
 		m.logger.Error("error get all profile", slog.Any("error", err))
 		return output
 	}
@@ -185,6 +276,13 @@ func (m *Module) GetAllConnectionProfile() common.Output[profile.GetAllConnectio
 	for _, item := range result {
 		isConnected := m.global.HasConn(item.ConnectionID)
 
+		decrypted := ""
+		if item.SecretKey != "" {
+			if decrypted, err = m.km.Decrypt(item.SecretKey); err != nil {
+				output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
+			}
+		}
+
 		profiles[item.ConnectionID] = profile.ConnectionProfileOutput{
 			ID:           item.ConnectionID,
 			Name:         item.ConnectionName.String,
@@ -192,6 +290,7 @@ func (m *Module) GetAllConnectionProfile() common.Output[profile.GetAllConnectio
 			Endpoint:     item.Endpoint,
 			Region:       item.Region,
 			AccessKey:    item.AccessKey,
+			SecretKey:    decrypted,
 			PathStyle:    item.PathStyle.Bool,
 			SavePassword: item.SavePassword.Bool,
 			AutoConnect:  item.AutoConnect.Bool,

@@ -1,6 +1,6 @@
 import { Output } from '@wails/S3Browser/models/common';
 import { toast } from 'sonner';
-import { createUUID, formatStringJson } from '@/common/utils/stringUtils';
+import { createUUID, formatStringJson, isNullOrEmpty } from '@/common/utils/stringUtils';
 import i18n from '@/locales/i18n';
 
 interface Optionals {
@@ -110,18 +110,19 @@ async function run<A extends unknown[], T>(
         .sort((a, b) => (a.order ?? '').localeCompare(b.order ?? ''))
         .forEach(item => {
           const message = formatStringJson(i18n.t(`ipcMessage:${item.moduleName}.${item.messageCode}`), item?.params);
+          const description = !isNullOrEmpty(item.errorDetail) ? item.errorDetail : '';
           switch (item.messageType) {
             case 'E':
-              toast.error(message);
+              toast.error(message, { description: description });
               break;
             case 'W':
-              toast.warning(message);
+              toast.warning(message, { description: description });
               break;
             case 'I':
-              toast.info(message);
+              toast.info(message, { description: description });
               break;
             default:
-              toast.success(message);
+              toast.success(message, { description: description });
               break;
           }
         });
@@ -129,7 +130,7 @@ async function run<A extends unknown[], T>(
 
     return output.body;
   } catch (err) {
-    toast.error('Error while call IPC', {
+    toast.error(i18n.t('ipcMessage:common.CME001'), {
       description: err instanceof Error ? err.message : String(err),
     });
     return null;

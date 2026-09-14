@@ -16,31 +16,31 @@ import (
 
 var (
 	// Test connection profile {name} to S3 success
-	S3_SUCCES_001 = "S3S001"
+	S3S001 = "S3S001"
 
 	// Profile: {name} is connected
-	S3_SUCCES_002 = "S3S002"
+	S3S002 = "S3S002"
 
 	// Profile: {name} disconnect success
-	S3_SUCCES_003 = "S3S003"
+	S3S003 = "S3S003"
 
 	// access key or secret key is not valid for this endpoint
-	S3_ERROR_001 = "S3E001"
+	S3E001 = "S3E001"
 
 	// the endpoint rejected
-	S3_ERROR_002 = "S3E002"
+	S3E002 = "S3E002"
 
 	// timed out reaching the endpoint, check the address and whether the server is running
-	S3_ERROR_003 = "S3E003"
+	S3E003 = "S3E003"
 
 	// error while connect to S3 bucket
-	S3_ERROR_004 = "S3E004"
+	S3E004 = "S3E004"
 
 	// error while disconnect S3 bucket
-	S3_ERROR_005 = "S3E005"
+	S3E005 = "S3E005"
 
 	// Access bucket is limited
-	S3_WARN_001 = "S3W001"
+	S3W001 = "S3W001"
 )
 
 type Module struct {
@@ -79,14 +79,14 @@ func (m *Module) TestConnection(input bucket.ConnectionInput) common.Output[buck
 
 	status.Body.IsConnected = true
 	status.AddMessage(
-		common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3_SUCCES_001, map[string]any{
+		common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S001, map[string]any{
 			"name": input.Name,
-		}),
+		}, ""),
 	)
 	return status
 }
 
-func (m *Module) Connect(input bucket.ConnectionInput, isNewConnection bool) common.Output[bucket.ConnectionOutput] {
+func (m *Module) Connect(input bucket.ConnectionInput, saveProfile bool) common.Output[bucket.ConnectionOutput] {
 	// Don't use app.Context for I/O because this context is cancelled only when the app shuts down.
 	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
 	defer cancel()
@@ -105,18 +105,18 @@ func (m *Module) Connect(input bucket.ConnectionInput, isNewConnection bool) com
 	status.Body.ConnectionId = connectionId
 	status.Body.IsConnected = true
 	status.AddMessage(
-		common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3_SUCCES_002, map[string]any{
+		common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S002, map[string]any{
 			"name": input.Name,
-		}),
+		}, ""),
 	)
 
-	if isNewConnection {
-		if err := m.profile.CreateProfile(connectionId, input); err != nil {
-			status.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, err.Error()))
+	if saveProfile {
+		createResult := m.profile.CreateProfile(connectionId, input)
+		if createResult.MessageList != nil {
+			*status.MessageList = append(*status.MessageList, *createResult.MessageList...)
 		}
-	} else {
-		if err := m.profile.UpdateProfile(input); err != nil {
-			status.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, err.Error()))
+		if createResult.Body != nil {
+			m.app.Event.Emit(EventConnectSaveProfile, *createResult.Body)
 		}
 	}
 
@@ -164,9 +164,9 @@ func (m *Module) ConnectByProfile(connectionId string) common.Output[bucket.Conn
 	status.Body.ConnectionId = connectionId
 	status.Body.IsConnected = true
 	status.AddMessage(
-		common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3_SUCCES_002, map[string]any{
+		common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S002, map[string]any{
 			"name": profile.Body.Name,
-		}),
+		}, ""),
 	)
 
 	return status
@@ -180,13 +180,15 @@ func (m *Module) Disconnect(connectionId string) common.Output[bool] {
 		conn.Transport.CloseIdleConnections()
 		output.Body = utils.ToPtr(true)
 		output.AddMessage(
-			common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3_SUCCES_003, map[string]any{
+			common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S003, map[string]any{
 				"name": conn.ProfileName,
-			}),
+			}, ""),
 		)
 		return output
 	} else {
-		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3_ERROR_005))
+		output.AddMessage(
+			common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E005, "Connection not found"),
+		)
 	}
 
 	return output

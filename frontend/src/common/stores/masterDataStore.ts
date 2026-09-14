@@ -43,9 +43,9 @@ export const useMasterDataStore = createStore<MasterDataState>(
 
     set: (key, datas) => {
       set(
-        state => ({
-          masterData: { ...state.masterData, [key]: datas },
-        }),
+        state => {
+          state.masterData[key] = datas;
+        },
         undefined,
         `${SCOPE}/set`
       );
@@ -53,9 +53,9 @@ export const useMasterDataStore = createStore<MasterDataState>(
 
     setAll: datas => {
       set(
-        state => ({
-          masterData: { ...state.masterData, ...datas },
-        }),
+        state => {
+          Object.assign(state.masterData, datas);
+        },
         undefined,
         `${SCOPE}/setAll`
       );
@@ -106,9 +106,9 @@ export const useMasterDataStore = createStore<MasterDataState>(
       }
 
       set(
-        state => ({
-          regionData: { ...state.regionData, ...output.regionData },
-        }),
+        state => {
+          Object.assign(state.regionData, output.regionData);
+        },
         undefined,
         `${SCOPE}/loadRegion`
       );

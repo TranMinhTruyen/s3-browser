@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"S3Browser/internal/modules/profile"
+	"S3Browser/models/bucket"
 	"S3Browser/models/common"
 	models "S3Browser/models/profile"
 	"log/slog"
@@ -21,6 +22,21 @@ func NewProfileHandler(app *application.App, logger *slog.Logger, profile *profi
 		app:     app,
 		profile: profile,
 	}
+}
+
+func (h *ProfileHandler) CreateProfile(
+	connectionId string,
+	profileInput bucket.ConnectionInput,
+) common.Output[models.ConnectionProfileOutput] {
+	return h.profile.CreateProfile(connectionId, profileInput)
+}
+
+func (h *ProfileHandler) UpdateProfileById(input bucket.ConnectionInput) common.Output[models.ConnectionProfileOutput] {
+	return h.profile.UpdateProfileById(input)
+}
+
+func (h *ProfileHandler) DeleteProfileById(input bucket.ConnectionInput) common.Output[bool] {
+	return h.profile.DeleteProfileById(input)
 }
 
 func (h *ProfileHandler) GetAllConnectionProfile() common.Output[models.GetAllConnectionProfileOutput] {

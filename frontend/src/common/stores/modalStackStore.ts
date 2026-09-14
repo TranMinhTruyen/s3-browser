@@ -13,9 +13,11 @@ export const useModalStackStore = createStore<ModalStackState>(
 
     push: id => {
       set(
-        state => ({
-          stack: state.stack.includes(id) ? state.stack : [...state.stack, id],
-        }),
+        state => {
+          if (!state.stack.includes(id)) {
+            state.stack.push(id);
+          }
+        },
         undefined,
         'modalStack/push'
       );

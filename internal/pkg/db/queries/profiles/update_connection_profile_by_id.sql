@@ -10,7 +10,7 @@ SET
     , save_password = ? 
     , path_style = ? 
     , auto_connect = ? 
-    , updated_at = ?
+    , updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') 
     , version = version + 1 
 WHERE
     id = ? 

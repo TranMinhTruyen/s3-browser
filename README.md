@@ -9,7 +9,7 @@ here: https://wails.io/docs/reference/project-config
 
 ## Live Development
 
-Run `go tool wails3 generate bindings -ts` to update IPC function before start app.
+Run `go tool wails3 generate bindings -clean=true -ts` to update IPC function before start app.
 Run `sqlc generate` to generate queries template.
 
 To run in live development mode, run `go tool wails3 task dev` in the project directory. This will run a Vite development

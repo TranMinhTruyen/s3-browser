@@ -22,7 +22,7 @@ SET
     , save_password = ? 
     , path_style = ? 
     , auto_connect = ? 
-    , updated_at = ?
+    , updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') 
     , version = version + 1 
 WHERE
     id = ? 
@@ -39,7 +39,6 @@ type UpdateConnectionProfileByIdParams struct {
 	SavePassword sql.NullBool   `json:"save_password"`
 	PathStyle    sql.NullBool   `json:"path_style"`
 	AutoConnect  sql.NullBool   `json:"auto_connect"`
-	UpdatedAt    sql.NullTime   `json:"updated_at"`
 	ID           string         `json:"id"`
 	Version      int64          `json:"version"`
 }
@@ -55,7 +54,6 @@ func (q *Queries) UpdateConnectionProfileById(ctx context.Context, arg UpdateCon
 		arg.SavePassword,
 		arg.PathStyle,
 		arg.AutoConnect,
-		arg.UpdatedAt,
 		arg.ID,
 		arg.Version,
 	)

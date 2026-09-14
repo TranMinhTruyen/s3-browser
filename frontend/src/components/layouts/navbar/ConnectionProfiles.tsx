@@ -1,18 +1,19 @@
-import NiceModal from '@ebay/nice-modal-react';
 import { Card, isLightColor, Loader, Menu, Stack, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { ConnectS3ByProfile, Disconnect } from '@wails/S3Browser/internal/handlers/buckethandler';
+import { DeleteProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models/profile/models';
 import { Events } from '@wailsio/runtime';
 import { Cable, Unplug } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useNavBarStore } from '@/common/stores/navBarStore';
 import { callIPC } from '@/common/utils/ipcUtils';
-import S3ConnectModal from '@/components/modals/S3ConnectModal';
+import ConnectModal from '@/components/modals/ConnectModal';
 
 function ConnectionProfiles() {
   const loadConnectionProfiles = useNavBarStore(s => s.loadConnectionProfiles);
   const updateConnectionProfiles = useNavBarStore(s => s.updateConnectionProfiles);
+  const deleteConnectionProfiles = useNavBarStore(s => s.deleteConnectionProfiles);
   const reset = useNavBarStore(s => s.reset);
   const connectionProfiles = useNavBarStore(s => s.connectionProfiles);
   const autoConnectDoneRef = useRef(false);
@@ -28,19 +29,19 @@ function ConnectionProfiles() {
   }, [loadConnectionProfiles, reset]);
 
   useEffect(() => {
-    const unsubscribe = Events.On('profile:reload-connection-profiles', () => {
+    const unsubscribe = Events.On('bucket:connect-save-profile', e => {
       autoConnectDoneRef.current = false;
-      loadConnectionProfiles();
+      updateConnectionProfiles(e.data.id, { ...e.data });
     });
 
     return () => {
       unsubscribe();
     };
-  }, [loadConnectionProfiles]);
+  }, [updateConnectionProfiles]);
 
-  const handleOpenConnectToS3Modal = (value: ConnectionProfileOutput) => {
-    NiceModal.show(S3ConnectModal, {
-      mode: 'edit',
+  const handleOpenConnectModal = (value: ConnectionProfileOutput, mode: 'manualconnect' | 'editProfile') => {
+    ConnectModal.show({
+      mode: mode,
       id: value.id,
       version: value.version,
       connectionInfo: { ...value },
@@ -50,7 +51,7 @@ function ConnectionProfiles() {
   const handleConnect = (key: string, value: ConnectionProfileOutput) => async () => {
     if (!value || value.isConnected) return;
     if (autoConnectDoneRef.current && !value.savePassword) {
-      handleOpenConnectToS3Modal(value);
+      handleOpenConnectModal(value, 'manualconnect');
       return;
     }
     openConnectLoading();
@@ -74,6 +75,17 @@ function ConnectionProfiles() {
       }
     } finally {
       closeConnectLoading();
+    }
+  };
+
+  const handleEditProfile = (value: ConnectionProfileOutput) => () => {
+    handleOpenConnectModal(value, 'editProfile');
+  };
+
+  const handleDeleteProfile = (value: ConnectionProfileOutput) => async () => {
+    const output = await callIPC(DeleteProfileById, [value]);
+    if (output) {
+      deleteConnectionProfiles(value.id);
     }
   };
 
@@ -103,23 +115,20 @@ function ConnectionProfiles() {
               withBorder
               orientation="horizontal"
               onDoubleClick={handleConnect(key, value)}
-              bg={value.color ?? 'indigo'}
-              c={isLightColor(value.color ?? 'indigo') ? 'black' : 'white'}
-              style={{
-                cursor: 'pointer',
-              }}
+              c={isLightColor(value.color ?? 'indigo') ? '#000000' : '#FFFFFF'}
+              style={{ cursor: 'pointer' }}
             >
               <Card.Section
+                withBorder
                 inheritPadding
                 px="xs"
-                withBorder
                 style={{
                   flexShrink: 0,
                   display: 'flex',
                   alignItems: 'center',
                   minWidth: '56px',
                   justifyContent: 'center',
-                  backgroundColor: value.isConnected ? '#1ae300' : '',
+                  backgroundColor: value.isConnected ? '#83f175' : '#FFFFFF',
                 }}
               >
                 {connectLoading ? <Loader color="blue" size="sm" /> : value.isConnected ? <Cable /> : <Unplug />}
@@ -127,7 +136,13 @@ function ConnectionProfiles() {
               <Card.Section
                 inheritPadding
                 px="xs"
-                style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' }}
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  backgroundColor: value.color ?? '#FFFFFF',
+                }}
               >
                 <Text c="inherit" truncate="end">
                   {value.name}
@@ -143,9 +158,11 @@ function ConnectionProfiles() {
                 Disconnect
               </Menu.Item>
             )}
-            <Menu.Item>Edit</Menu.Item>
+            <Menu.Item onClick={handleEditProfile(value)}>Edit</Menu.Item>
             <Menu.Divider />
-            <Menu.Item color="red">Delete</Menu.Item>
+            <Menu.Item color="red" onClick={handleDeleteProfile(value)}>
+              Delete
+            </Menu.Item>
           </Menu.Dropdown>
         </Menu>
       );
