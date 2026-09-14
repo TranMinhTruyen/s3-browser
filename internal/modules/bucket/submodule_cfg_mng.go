@@ -74,33 +74,39 @@ func describeConnectStatus(err error, output *common.Output[bucket.ConnectionOut
 		switch apiErr.ErrorCode() {
 		case "InvalidAccessKeyId", "SignatureDoesNotMatch", "InvalidClientTokenId":
 			output.MessageList = &[]common.Message{
-				common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3_ERROR_001),
+				common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E001, err.Error()),
 			}
 			return err
 		case "AuthorizationHeaderMalformed", "InvalidRegion":
 			output.MessageList = &[]common.Message{
-				common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3_ERROR_002),
+				common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E002, err.Error()),
 			}
 			return err
 		case "AccessDenied", "AllAccessDisabled", "UnauthorizedAccess":
-			output.MessageList = &[]common.Message{common.CreateMessage(cnst.MessageTypeWarn, cnst.Bucket, S3_WARN_001)}
+			output.MessageList = &[]common.Message{
+				common.CreateMessage(cnst.MessageTypeWarn, cnst.Bucket, S3W001, err.Error()),
+			}
 			output.Body.Limited = true
 			return nil
 		default:
 			output.MessageList = &[]common.Message{
-				common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3_ERROR_003),
+				common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E003, err.Error()),
 			}
 			return err
 		}
 	}
 
 	if errors.Is(err, context.DeadlineExceeded) {
-		output.MessageList = &[]common.Message{common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3_ERROR_003)}
+		output.MessageList = &[]common.Message{
+			common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E003, err.Error()),
+		}
 		return err
 	}
 
 	if err != nil {
-		output.MessageList = &[]common.Message{common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3_ERROR_004)}
+		output.MessageList = &[]common.Message{
+			common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E004, err.Error()),
+		}
 		return err
 	}
 

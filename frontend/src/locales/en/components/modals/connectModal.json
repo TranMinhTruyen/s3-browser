@@ -1,5 +1,8 @@
 {
-  "title": "S3 Connection Profile",
+  "title": "Connection Profile",
+  "label": {
+    "saveProfileLabel": "Save profile"
+  },
   "form": {
     "label": {
       "name": "Profile name",
@@ -7,15 +10,14 @@
       "accessKey": "Access key",
       "secretKey": "Secret key",
       "pathStyle": "Path style",
-      "savePassword": "Save your password",
+      "savePassword": "Save secret key",
       "autoConnect": "Auto connect"
     },
     "button": {
       "connect": "Connect",
-      "testConnection": "Test connection"
+      "testConnection": "Test connection",
+      "createProfile": "Create",
+      "editProfile": "Update"
     }
-  },
-  "toastMessage": {
-    "EXAMPLE": "Test message {key.param1}, detail {key.param2}"
   }
 }

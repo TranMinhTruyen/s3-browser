@@ -10,6 +10,7 @@ interface NavBarState {
   loadConnectionProfiles: () => Promise<void>;
   getConnectionProfiles: () => Partial<Record<string, ConnectionProfileOutput>>;
   updateConnectionProfiles: (key: string, data: ConnectionProfileOutput) => void;
+  deleteConnectionProfiles: (key: string) => void;
 
   reset: () => void;
 }
@@ -39,11 +40,21 @@ export const useNavBarStore = createStore<NavBarState>(
 
     updateConnectionProfiles: (key, data) => {
       set(
-        state => ({
-          connectionProfiles: { ...state.connectionProfiles, [key]: data },
-        }),
+        state => {
+          state.connectionProfiles[key] = data;
+        },
         undefined,
         `${SCOPE}/updateConnectionProfiles`
+      );
+    },
+
+    deleteConnectionProfiles: key => {
+      set(
+        state => {
+          delete state.connectionProfiles[key];
+        },
+        undefined,
+        `${SCOPE}/deleteConnectionProfiles`
       );
     },
 

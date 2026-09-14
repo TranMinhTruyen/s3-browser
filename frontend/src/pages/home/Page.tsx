@@ -1,12 +1,11 @@
-import NiceModal from '@ebay/nice-modal-react';
 import { Title } from '@mantine/core';
 import { useCallback } from 'react';
 import Button from '@/components/buttons/Button';
-import S3ConnectModal from '@/components/modals/S3ConnectModal';
+import ConnectModal from '@/components/modals/ConnectModal';
 
 function Page() {
   const handleOpenConnectToS3Modal = useCallback(() => {
-    NiceModal.show(S3ConnectModal);
+    ConnectModal.show();
   }, []);
 
   return (

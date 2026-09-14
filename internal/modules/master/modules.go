@@ -46,7 +46,7 @@ func (m *Module) GetMasterData(codes []string) common.Output[master.GetMasterDat
 		rows, err := m.q.SelectMasterByCode(m.app.Context(), code)
 		if err != nil {
 			m.logger.Error("get master data failed", "code", code, "error", err)
-			output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Master, MTE001))
+			output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Master, MTE001, err.Error()))
 			continue
 		}
 
@@ -84,7 +84,7 @@ func (m *Module) GetRegion() common.Output[master.RegionOutput] {
 	if err != nil {
 		output.Body = nil
 		m.logger.Error("get region data failed", "error", err)
-		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Master, MTE001))
+		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Master, MTE001, err.Error()))
 		return output
 	}
 

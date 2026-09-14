@@ -1,49 +1,59 @@
-import NiceModal, { useModal } from '@ebay/nice-modal-react';
-import { Button, Divider, Group, Modal, Stack, Title } from '@mantine/core';
+import { Divider, Group, Modal, Stack, Title } from '@mantine/core';
 import { schemaResolver, useForm } from '@mantine/form';
+import { useDisclosure } from '@mantine/hooks';
 import { ConnectS3 } from '@wails/S3Browser/internal/handlers/buckethandler';
+import { UpdateProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
 import { ConnectionInput } from '@wails/S3Browser/models/bucket';
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import z from 'zod';
 import { useMantineModal } from '@/common/hooks/useMantineModal';
 import { callIPC } from '@/common/utils/ipcUtils';
+import { createModal } from '@/common/utils/modalUtils';
 import { createUUID } from '@/common/utils/stringUtils';
+import Button from '@/components/buttons/Button';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import RegionCombobox from '@/components/inputs/combobox/RegionCombobox';
 import FieldInput from '@/components/inputs/FieldInput';
 
-const schema = z.object({
+const baseSchema = z.object({
   name: z.string().trim(),
   color: z.string().trim(),
   endpoint: z.string().trim().nonempty('V000001'),
   region: z.string().trim().nonempty('V000001'),
   accessKey: z.string().trim().nonempty('V000001'),
-  secretKey: z.string().trim().nonempty('V000001'),
+  secretKey: z.string().trim(), // không bắt buộc
   pathStyle: z.boolean(),
   savePassword: z.boolean(),
   autoConnect: z.boolean(),
 });
 
-export interface ConnectionInfo extends z.infer<typeof schema> {}
+const connectSchema = baseSchema.extend({
+  secretKey: z.string().trim().nonempty('V000001'),
+});
 
-interface S3ConnectModalProps {
-  mode?: 'add' | 'edit';
+export interface ConnectionInfo extends z.infer<typeof connectSchema> {}
+
+interface ConnectModalProps {
+  mode?: 'connect' | 'manualconnect' | 'createProfile' | 'editProfile';
   id?: string;
   version?: number;
   connectionInfo?: ConnectionInfo;
 }
 
-export default NiceModal.create((props: S3ConnectModalProps) => {
-  const { mode = 'add', id, version, connectionInfo } = props;
-  const { t } = useTranslation('S3ConnectModal');
+export default createModal<ConnectModalProps, false>(props => {
+  const { mode = 'connect', id, version, connectionInfo } = props;
+  const { t } = useTranslation('connectModal');
 
-  const modal = useModal();
-  const mantineModalProps = useMantineModal(modal);
+  const [saveProfile, { toggle: toggleSaveProfile }] = useDisclosure(true);
 
-  const defaultValues = schema
+  const mantineModal = useMantineModal(false);
+  const actionRef = useRef<'connect' | 'updateProfile'>('connect');
+
+  const defaultValues = connectSchema
     .default({
       name: `Connection No.${createUUID()}`,
-      color: '#177cff',
+      color: '#d0ebff',
       endpoint: '',
       region: '',
       accessKey: '',
@@ -56,9 +66,19 @@ export default NiceModal.create((props: S3ConnectModalProps) => {
 
   const form = useForm<ConnectionInfo>({
     mode: 'uncontrolled',
-    initialValues: mode === 'add' ? defaultValues : connectionInfo,
-    validate: schemaResolver(schema, { sync: true }),
+    initialValues: mode === 'connect' ? defaultValues : connectionInfo,
+    validate: values => {
+      const resolver = schemaResolver(actionRef.current === 'updateProfile' ? baseSchema : connectSchema, {
+        sync: true,
+      });
+      return resolver(values);
+    },
   });
+
+  const submitAs = (action: 'connect' | 'updateProfile', handler: (values: ConnectionInfo) => Promise<void>) => () => {
+    actionRef.current = action;
+    form.onSubmit(handler)();
+  };
 
   const savePassword = form.useWatchValue('savePassword');
 
@@ -70,20 +90,39 @@ export default NiceModal.create((props: S3ConnectModalProps) => {
 
   const handleConnect = (isTestConnection: boolean) => async (value: ConnectionInfo) => {
     const input: ConnectionInput = {
-      id: mode === 'add' ? '' : (id ?? ''),
-      version: mode === 'add' ? 1 : (version ?? 1),
+      id: id ?? '',
+      version: version ?? 1,
       ...value,
     };
-    const output = await callIPC(ConnectS3, [input, isTestConnection, mode === 'add'], { showMessage: mode === 'add' });
+    const output = await callIPC(ConnectS3, [input, isTestConnection, saveProfile], {
+      showMessage: mode === 'connect',
+    });
     if (output && output.isConnected && !isTestConnection) {
-      modal.hide();
+      mantineModal.handler.hide();
     }
   };
 
+  const handleUpdateProfile = () => async (value: ConnectionInfo) => {
+    const input: ConnectionInput = {
+      id: id ?? '',
+      version: version ?? 1,
+      ...value,
+    };
+    const output = await callIPC(UpdateProfileById, [input]);
+    if (output) {
+      form.setValues({ ...output });
+    }
+  };
+
+  const defaultSubmit =
+    mode === 'editProfile'
+      ? submitAs('updateProfile', handleUpdateProfile())
+      : submitAs('connect', handleConnect(false));
+
   return (
-    <Modal.Root {...mantineModalProps} centered size="lg">
+    <Modal.Root {...mantineModal.props} centered size="lg">
       <Modal.Overlay />
-      <form onSubmit={form.onSubmit(handleConnect(false))}>
+      <form onSubmit={defaultSubmit}>
         <Modal.Content>
           <Modal.Header pos="relative" p="16px" mih="0px" style={{ justifyContent: 'flex-end' }}>
             <Title
@@ -149,12 +188,12 @@ export default NiceModal.create((props: S3ConnectModalProps) => {
                 type="password"
                 label={t('form.label.secretKey')}
                 placeholder={t('form.label.secretKey')}
-                withAsterisk
+                withAsterisk={mode === 'connect'}
                 key={form.key('secretKey')}
                 {...form.getInputProps('secretKey')}
               />
 
-              <Group justify="flex-end" gap="xl">
+              <Group justify="space-between">
                 <CheckBoxInput
                   label={t('form.label.pathStyle')}
                   key={form.key('pathStyle')}
@@ -173,6 +212,14 @@ export default NiceModal.create((props: S3ConnectModalProps) => {
                   disabled={!savePassword}
                   {...form.getInputProps('autoConnect', { type: 'checkbox' })}
                 />
+
+                {mode === 'connect' && (
+                  <CheckBoxInput
+                    checked={saveProfile}
+                    label={t('label.saveProfileLabel')}
+                    onChange={toggleSaveProfile}
+                  />
+                )}
               </Group>
             </Stack>
           </Modal.Body>
@@ -180,13 +227,21 @@ export default NiceModal.create((props: S3ConnectModalProps) => {
           <Divider />
 
           <Group p="16px" justify="space-between">
-            <Button type="button" loading={form.submitting} onClick={() => form.onSubmit(handleConnect(true))()}>
+            <Button type="button" loading={form.submitting} onClick={submitAs('connect', handleConnect(true))}>
               {t('form.button.testConnection')}
             </Button>
 
-            <Button type="submit" loading={form.submitting}>
-              {t('form.button.connect')}
-            </Button>
+            {mode === 'connect' && (
+              <Button type="submit" loading={form.submitting}>
+                {t('form.button.connect')}
+              </Button>
+            )}
+
+            {mode === 'createProfile' || mode === 'editProfile' ? (
+              <Button type="submit" loading={form.submitting}>
+                {t(`form.button.${mode}`)}
+              </Button>
+            ) : null}
           </Group>
         </Modal.Content>
       </form>

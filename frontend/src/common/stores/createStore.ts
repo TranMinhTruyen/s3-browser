@@ -1,6 +1,7 @@
 // common/stores/createStore.ts
 import { create, StateCreator, StoreApi, UseBoundStore } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
 
 type AnyStore = UseBoundStore<StoreApi<unknown>>;
 
@@ -13,9 +14,12 @@ declare global {
   }
 }
 
-export function createStore<T>(storeCreator: StateCreator<T, [['zustand/devtools', never]], [], T>, name: string) {
+export function createStore<T>(
+  storeCreator: StateCreator<T, [['zustand/devtools', never], ['zustand/immer', never]], [], T>,
+  name: string
+) {
   const store = create<T>()(
-    devtools(storeCreator, {
+    devtools(immer(storeCreator), {
       name,
       enabled: import.meta.env.DEV,
     })

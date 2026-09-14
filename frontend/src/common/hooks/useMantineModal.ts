@@ -1,9 +1,14 @@
-import { useModal } from '@ebay/nice-modal-react';
+import { NiceModalHandler, useModal } from '@ebay/nice-modal-react';
 import { useCallback, useLayoutEffect } from 'react';
 import { useModalStackStore } from '@/common/stores/modalStackStore';
 
 const BASE_Z_INDEX = 200;
 const STEP = 10;
+
+/** A nice-modal handler whose `resolve` is typed with the modal's result. */
+export type ModalHandler<R> = Omit<NiceModalHandler, 'resolve'> & {
+  resolve: (value: R) => void;
+};
 
 /**
  * Connects a nice-modal-react modal instance to the app's global modal stack,
@@ -14,10 +19,14 @@ const STEP = 10;
  *   and determine which modal is currently on top.
  * - Only allow the topmost modal in the stack to be closed via Escape/click-outside
  *   (prevents accidentally closing an underlying modal when multiple modals are stacked).
+ *
+ * @param cancelValue - the value the modal resolves with when the user dismisses it.
  */
-export function useMantineModal(modal: ReturnType<typeof useModal>) {
+export function useMantineModal<R>(cancelValue?: R) {
   const push = useModalStackStore(s => s.push);
   const remove = useModalStackStore(s => s.remove);
+
+  const modal = useModal();
 
   const index = useModalStackStore(s => s.stack.indexOf(modal.id));
   const isTopmost = useModalStackStore(s => s.stack.length > 0 && s.stack[s.stack.length - 1] === modal.id);
@@ -33,9 +42,9 @@ export function useMantineModal(modal: ReturnType<typeof useModal>) {
   // when the user presses Escape or clicks outside while multiple modals are open
   const guardedClose = useCallback(() => {
     if (!isTopmost) return;
-    modal.resolve(false);
+    modal.resolve(cancelValue);
     modal.hide();
-  }, [isTopmost, modal]);
+  }, [cancelValue, isTopmost, modal]);
 
   const handleExitTransitionEnd = useCallback(() => {
     modal.remove();
@@ -44,11 +53,14 @@ export function useMantineModal(modal: ReturnType<typeof useModal>) {
   const zIndex = index === -1 ? BASE_Z_INDEX : BASE_Z_INDEX + index * STEP;
 
   return {
-    opened: modal.visible,
-    zIndex,
-    onClose: guardedClose,
-    closeOnEscape: isTopmost,
-    closeOnClickOutside: isTopmost,
-    onExitTransitionEnd: handleExitTransitionEnd,
+    props: {
+      opened: modal.visible,
+      zIndex,
+      onClose: guardedClose,
+      closeOnEscape: isTopmost,
+      closeOnClickOutside: isTopmost,
+      onExitTransitionEnd: handleExitTransitionEnd,
+    },
+    handler: modal as ModalHandler<R>,
   };
 }

@@ -8,7 +8,7 @@ IF NOT EXISTS connection_profiles(
     , endpoint TEXT NOT NULL
     , region TEXT NOT NULL
     , access_key TEXT NOT NULL
-    , secret_key TEXT NOT NULL
+    , secret_key TEXT
     , path_style BOOLEAN DEFAULT 1
     , save_password BOOLEAN DEFAULT 1
     , auto_connect BOOLEAN DEFAULT 0
