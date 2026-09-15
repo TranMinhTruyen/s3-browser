@@ -1,0 +1,8 @@
+{
+  "contextMenu": {
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "edit": "Edit",
+    "delete": "Delete"
+  }
+}

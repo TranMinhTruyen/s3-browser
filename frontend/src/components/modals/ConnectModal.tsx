@@ -2,19 +2,20 @@ import { Divider, Group, Modal, Stack, Title } from '@mantine/core';
 import { schemaResolver, useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import { ConnectS3 } from '@wails/S3Browser/internal/handlers/buckethandler';
-import { UpdateProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
+import { CreateProfile, UpdateProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
 import { ConnectionInput } from '@wails/S3Browser/models/bucket';
-import { useRef } from 'react';
+import { SyntheticEvent, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import z from 'zod';
-import { useMantineModal } from '@/common/hooks/useMantineModal';
+import { useNavBarStore } from '@/common/stores/navBarStore';
 import { callIPC } from '@/common/utils/ipcUtils';
-import { createModal } from '@/common/utils/modalUtils';
-import { createUUID } from '@/common/utils/stringUtils';
+import { createMantineModal } from '@/common/utils/modalUtils';
+import { createUUID, isNullOrEmpty } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import RegionCombobox from '@/components/inputs/combobox/RegionCombobox';
 import FieldInput from '@/components/inputs/FieldInput';
+import ConfirmModal from '@/components/modals/ConfirmModal';
 
 const baseSchema = z.object({
   name: z.string().trim(),
@@ -34,217 +35,253 @@ const connectSchema = baseSchema.extend({
 
 export interface ConnectionInfo extends z.infer<typeof connectSchema> {}
 
-interface ConnectModalProps {
+type ConnectModalProps = {
   mode?: 'connect' | 'manualconnect' | 'createProfile' | 'editProfile';
   id?: string;
   version?: number;
   connectionInfo?: ConnectionInfo;
-}
+};
 
-export default createModal<ConnectModalProps, false>(props => {
-  const { mode = 'connect', id, version, connectionInfo } = props;
-  const { t } = useTranslation('connectModal');
+export default createMantineModal<ConnectModalProps, false>(
+  props => {
+    const { mode = 'connect', id, version, connectionInfo, mantine } = props;
+    const { t } = useTranslation('connectModal');
 
-  const [saveProfile, { toggle: toggleSaveProfile }] = useDisclosure(true);
+    const [saveProfile, { toggle: toggleSaveProfile }] = useDisclosure(true);
 
-  const mantineModal = useMantineModal(false);
-  const actionRef = useRef<'connect' | 'updateProfile'>('connect');
+    const actionRef = useRef<'connect' | 'profile'>('connect');
+    const updateConnectionProfiles = useNavBarStore(s => s.updateConnectionProfiles);
 
-  const defaultValues = connectSchema
-    .default({
-      name: `Connection No.${createUUID()}`,
-      color: '#d0ebff',
-      endpoint: '',
-      region: '',
-      accessKey: '',
-      secretKey: '',
-      pathStyle: false,
-      savePassword: false,
-      autoConnect: false,
-    })
-    .parse(undefined);
+    const defaultValues = connectSchema
+      .default({
+        name: `Connection No.${createUUID()}`,
+        color: '#d0ebff',
+        endpoint: '',
+        region: '',
+        accessKey: '',
+        secretKey: '',
+        pathStyle: false,
+        savePassword: false,
+        autoConnect: false,
+      })
+      .parse(undefined);
 
-  const form = useForm<ConnectionInfo>({
-    mode: 'uncontrolled',
-    initialValues: mode === 'connect' ? defaultValues : connectionInfo,
-    validate: values => {
-      const resolver = schemaResolver(actionRef.current === 'updateProfile' ? baseSchema : connectSchema, {
-        sync: true,
-      });
-      return resolver(values);
-    },
-  });
-
-  const submitAs = (action: 'connect' | 'updateProfile', handler: (values: ConnectionInfo) => Promise<void>) => () => {
-    actionRef.current = action;
-    form.onSubmit(handler)();
-  };
-
-  const savePassword = form.useWatchValue('savePassword');
-
-  form.watch('savePassword', ({ value }) => {
-    if (!value) {
-      form.setFieldValue('autoConnect', false);
-    }
-  });
-
-  const handleConnect = (isTestConnection: boolean) => async (value: ConnectionInfo) => {
-    const input: ConnectionInput = {
-      id: id ?? '',
-      version: version ?? 1,
-      ...value,
-    };
-    const output = await callIPC(ConnectS3, [input, isTestConnection, saveProfile], {
-      showMessage: mode === 'connect',
+    const form = useForm<ConnectionInfo>({
+      mode: 'uncontrolled',
+      initialValues: mode === 'connect' || mode === 'createProfile' ? defaultValues : connectionInfo,
+      validate: values => {
+        const resolver = schemaResolver(actionRef.current === 'profile' ? baseSchema : connectSchema, {
+          sync: true,
+        });
+        return resolver(values);
+      },
     });
-    if (output && output.isConnected && !isTestConnection) {
-      mantineModal.handler.hide();
-    }
-  };
 
-  const handleUpdateProfile = () => async (value: ConnectionInfo) => {
-    const input: ConnectionInput = {
-      id: id ?? '',
-      version: version ?? 1,
-      ...value,
+    const savePassword = form.useWatchValue('savePassword');
+    const secretKey = form.useWatchValue('secretKey');
+
+    form.watch('savePassword', ({ value }) => {
+      if (!value) {
+        form.setFieldValue('autoConnect', false);
+      }
+    });
+
+    const handleConnect =
+      (isTestConnection: boolean = false) =>
+      async (value: ConnectionInfo) => {
+        const input: ConnectionInput = {
+          id: id ?? '',
+          version: version ?? 1,
+          ...value,
+        };
+        const output = await callIPC(ConnectS3, [input, isTestConnection, saveProfile], {
+          showMessage: mode === 'connect',
+        });
+        if (output && output.isConnected && !isTestConnection) {
+          mantine.handler.hide();
+        }
+      };
+
+    const handleUpdateProfile = () => async (value: ConnectionInfo) => {
+      const confirmModal = await ConfirmModal.show({
+        type: 'info',
+        confirmCode: 'CFPF000001',
+      });
+      if (confirmModal) {
+        const input: ConnectionInput = {
+          id: id ?? '',
+          version: version ?? 1,
+          ...value,
+        };
+        const output = await callIPC(UpdateProfileById, [input]);
+        if (output) {
+          form.setValues({ ...output });
+          updateConnectionProfiles(output.id, { ...output });
+        }
+      }
     };
-    const output = await callIPC(UpdateProfileById, [input]);
-    if (output) {
-      form.setValues({ ...output });
-    }
-  };
 
-  const defaultSubmit =
-    mode === 'editProfile'
-      ? submitAs('updateProfile', handleUpdateProfile())
-      : submitAs('connect', handleConnect(false));
+    const handleCreateProfile = () => async (value: ConnectionInfo) => {
+      const input: ConnectionInput = {
+        id: createUUID(),
+        version: 1,
+        ...value,
+      };
+      const output = await callIPC(CreateProfile, [input], {
+        showMessage: true,
+      });
+      if (output) {
+        updateConnectionProfiles(output.id, { ...output });
+        mantine.handler.hide();
+      }
+    };
 
-  return (
-    <Modal.Root {...mantineModal.props} centered size="lg">
-      <Modal.Overlay />
-      <form onSubmit={defaultSubmit}>
-        <Modal.Content>
-          <Modal.Header pos="relative" p="16px" mih="0px" style={{ justifyContent: 'flex-end' }}>
-            <Title
-              order={4}
-              style={{
-                position: 'absolute',
-                left: '50%',
-                top: '50%',
-                transform: 'translate(-50%, -50%)',
-              }}
+    const submitAs =
+      (action: 'connect' | 'profile', handler: (values: ConnectionInfo) => Promise<void>) =>
+      (event?: SyntheticEvent) => {
+        event?.preventDefault();
+        actionRef.current = action;
+        form.onSubmit(handler)();
+      };
+
+    const defaultSubmit =
+      mode === 'editProfile' || mode === 'createProfile'
+        ? submitAs('profile', mode === 'editProfile' ? handleUpdateProfile() : handleCreateProfile())
+        : submitAs('connect', handleConnect());
+
+    return (
+      <Modal.Root {...mantine.props} centered size="lg">
+        <Modal.Overlay />
+        <form onSubmit={defaultSubmit}>
+          <Modal.Content>
+            <Modal.Header
+              pos="relative"
+              p="16px"
+              mih="0px"
+              style={{ justifyContent: 'flex-end', backgroundColor: '#d0ebff' }}
             >
-              {t('title')}
-            </Title>
-            <Modal.CloseButton size="md" />
-          </Modal.Header>
+              <Title
+                order={4}
+                style={{
+                  position: 'absolute',
+                  left: '50%',
+                  top: '50%',
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                {t('title')}
+              </Title>
+              <Modal.CloseButton size="md" />
+            </Modal.Header>
 
-          <Divider />
+            <Divider />
 
-          <Modal.Body p="16px">
-            <Stack gap="sm">
-              <FieldInput
-                type="text"
-                label={t('form.label.name')}
-                placeholder={t('form.label.name')}
-                key={form.key('name')}
-                {...form.getInputProps('name')}
-              />
-
-              <FieldInput
-                type="color"
-                label={t('form.label.color')}
-                placeholder={t('form.label.color')}
-                key={form.key('color')}
-                {...form.getInputProps('color')}
-              />
-
-              <FieldInput
-                type="text"
-                label={t('form.label.endpoint')}
-                placeholder={t('form.label.endpoint')}
-                withAsterisk
-                key={form.key('endpoint')}
-                {...form.getInputProps('endpoint')}
-              />
-
-              <RegionCombobox
-                withAsterisk
-                defaultValue={null}
-                key={form.key('region')}
-                {...form.getInputProps('region')}
-              />
-
-              <FieldInput
-                type="text"
-                label={t('form.label.accessKey')}
-                placeholder={t('form.label.accessKey')}
-                withAsterisk
-                key={form.key('accessKey')}
-                {...form.getInputProps('accessKey')}
-              />
-
-              <FieldInput
-                type="password"
-                label={t('form.label.secretKey')}
-                placeholder={t('form.label.secretKey')}
-                withAsterisk={mode === 'connect'}
-                key={form.key('secretKey')}
-                {...form.getInputProps('secretKey')}
-              />
-
-              <Group justify="space-between">
-                <CheckBoxInput
-                  label={t('form.label.pathStyle')}
-                  key={form.key('pathStyle')}
-                  {...form.getInputProps('pathStyle', { type: 'checkbox' })}
+            <Modal.Body p="16px">
+              <Stack gap="sm">
+                <FieldInput
+                  type="text"
+                  label={t('form.label.name')}
+                  placeholder={t('form.label.name')}
+                  key={form.key('name')}
+                  {...form.getInputProps('name')}
                 />
 
-                <CheckBoxInput
-                  label={t('form.label.savePassword')}
-                  key={form.key('savePassword')}
-                  {...form.getInputProps('savePassword', { type: 'checkbox' })}
+                <FieldInput
+                  type="color"
+                  label={t('form.label.color')}
+                  placeholder={t('form.label.color')}
+                  key={form.key('color')}
+                  {...form.getInputProps('color')}
                 />
 
-                <CheckBoxInput
-                  label={t('form.label.autoConnect')}
-                  key={form.key('autoConnect')}
-                  disabled={!savePassword}
-                  {...form.getInputProps('autoConnect', { type: 'checkbox' })}
+                <FieldInput
+                  type="text"
+                  label={t('form.label.endpoint')}
+                  placeholder={t('form.label.endpoint')}
+                  withAsterisk
+                  key={form.key('endpoint')}
+                  {...form.getInputProps('endpoint')}
                 />
 
-                {mode === 'connect' && (
+                <RegionCombobox
+                  withAsterisk
+                  defaultValue={null}
+                  key={form.key('region')}
+                  {...form.getInputProps('region')}
+                />
+
+                <FieldInput
+                  type="text"
+                  label={t('form.label.accessKey')}
+                  placeholder={t('form.label.accessKey')}
+                  withAsterisk
+                  key={form.key('accessKey')}
+                  {...form.getInputProps('accessKey')}
+                />
+
+                <FieldInput
+                  type="password"
+                  label={t('form.label.secretKey')}
+                  placeholder={t('form.label.secretKey')}
+                  withAsterisk={mode === 'connect'}
+                  key={form.key('secretKey')}
+                  {...form.getInputProps('secretKey')}
+                />
+
+                <Group justify="space-between">
                   <CheckBoxInput
-                    checked={saveProfile}
-                    label={t('label.saveProfileLabel')}
-                    onChange={toggleSaveProfile}
+                    label={t('form.label.pathStyle')}
+                    key={form.key('pathStyle')}
+                    {...form.getInputProps('pathStyle', { type: 'checkbox' })}
                   />
-                )}
-              </Group>
-            </Stack>
-          </Modal.Body>
 
-          <Divider />
+                  <CheckBoxInput
+                    label={t('form.label.savePassword')}
+                    key={form.key('savePassword')}
+                    {...form.getInputProps('savePassword', { type: 'checkbox' })}
+                  />
 
-          <Group p="16px" justify="space-between">
-            <Button type="button" loading={form.submitting} onClick={submitAs('connect', handleConnect(true))}>
-              {t('form.button.testConnection')}
-            </Button>
+                  <CheckBoxInput
+                    label={t('form.label.autoConnect')}
+                    key={form.key('autoConnect')}
+                    disabled={!savePassword || isNullOrEmpty(secretKey)}
+                    {...form.getInputProps('autoConnect', { type: 'checkbox' })}
+                  />
 
-            {mode === 'connect' && (
-              <Button type="submit" loading={form.submitting}>
-                {t('form.button.connect')}
+                  {mode === 'connect' && (
+                    <CheckBoxInput
+                      checked={saveProfile}
+                      label={t('label.saveProfileLabel')}
+                      onChange={toggleSaveProfile}
+                    />
+                  )}
+                </Group>
+              </Stack>
+            </Modal.Body>
+
+            <Divider />
+
+            <Group p="16px" justify="space-between">
+              <Button type="button" loading={form.submitting} onClick={submitAs('connect', handleConnect(true))}>
+                {t('form.button.testConnection')}
               </Button>
-            )}
 
-            {mode === 'createProfile' || mode === 'editProfile' ? (
-              <Button type="submit" loading={form.submitting}>
-                {t(`form.button.${mode}`)}
-              </Button>
-            ) : null}
-          </Group>
-        </Modal.Content>
-      </form>
-    </Modal.Root>
-  );
-});
+              {mode === 'connect' && (
+                <Button type="submit" loading={form.submitting}>
+                  {t('form.button.connect')}
+                </Button>
+              )}
+
+              {mode === 'createProfile' || mode === 'editProfile' ? (
+                <Button type="submit" loading={form.submitting}>
+                  {t(`form.button.${mode}`)}
+                </Button>
+              ) : null}
+            </Group>
+          </Modal.Content>
+        </form>
+      </Modal.Root>
+    );
+  },
+  { cancelValue: false }
+);

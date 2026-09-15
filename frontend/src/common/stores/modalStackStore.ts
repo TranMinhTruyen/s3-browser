@@ -2,16 +2,27 @@ import { createStore } from '@/common/stores/createStore';
 
 interface ModalStackState {
   stack: string[];
-  push: (id: string) => void;
-  remove: (id: string) => void;
+  /** Registers a visible modal. Keeps its existing position if it is already in the stack. */
+  acquire: (id: string) => void;
+  /** Releases a modal. It leaves the stack only if nothing re-acquires it in the same tick. */
+  release: (id: string) => void;
   reset: () => boolean;
 }
+
+/**
+ * Active acquisitions per modal id. Kept outside the state because it never drives rendering.
+ *
+ * Lives in this module (not in `modalUtils`) on purpose: when a modal or `modalUtils` is
+ * hot-reloaded, the old effect cleanup and the new effect setup must share the same counter.
+ */
+const refCounts = new Map<string, number>();
 
 export const useModalStackStore = createStore<ModalStackState>(
   set => ({
     stack: [],
 
-    push: id => {
+    acquire: id => {
+      refCounts.set(id, (refCounts.get(id) ?? 0) + 1);
       set(
         state => {
           if (!state.stack.includes(id)) {
@@ -19,21 +30,21 @@ export const useModalStackStore = createStore<ModalStackState>(
           }
         },
         undefined,
-        'modalStack/push'
+        'modalStack/acquire'
       );
     },
 
-    remove: id => {
-      set(
-        state => ({
-          stack: state.stack.filter(x => x !== id),
-        }),
-        undefined,
-        'modalStack/remove'
-      );
+    release: id => {
+      refCounts.set(id, (refCounts.get(id) ?? 0) - 1);
+      queueMicrotask(() => {
+        if ((refCounts.get(id) ?? 0) > 0) return;
+        refCounts.delete(id);
+        set(state => ({ stack: state.stack.filter(x => x !== id) }), undefined, 'modalStack/release');
+      });
     },
 
     reset: () => {
+      refCounts.clear();
       set({ stack: [] }, undefined, 'modalStack/reset');
       return true;
     },

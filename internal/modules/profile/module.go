@@ -68,7 +68,6 @@ func NewModule(
 }
 
 func (m *Module) CreateProfile(
-	connectionId string,
 	profileInput bucket.ConnectionInput,
 ) common.Output[profile.ConnectionProfileOutput] {
 	output := common.Output[profile.ConnectionProfileOutput]{}
@@ -89,7 +88,7 @@ func (m *Module) CreateProfile(
 	}
 
 	params := sqlc.CreateProfileParams{
-		ID:           connectionId,
+		ID:           utils.GenerateUUID(),
 		Name:         sql.NullString{String: profileInput.Name, Valid: profileInput.Name != ""},
 		Color:        sql.NullString{String: profileInput.Color, Valid: profileInput.Color != ""},
 		Endpoint:     profileInput.Endpoint,
@@ -104,7 +103,7 @@ func (m *Module) CreateProfile(
 	result, err := m.q.CreateProfile(m.app.Context(), params)
 
 	if err != nil {
-		m.logger.Error("save connection profile failed", "connectionId", connectionId, "error", err)
+		m.logger.Error("save connection profile failed", "connectionId", profileInput.Id, "error", err)
 		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE001, err.Error()))
 		return output
 	}
