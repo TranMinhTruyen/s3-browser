@@ -4,6 +4,7 @@ import { createStore } from '@/common/stores/createStore';
 import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
 
 interface NavBarState {
+  leftNavbarWidth: number;
   connectionProfiles: Partial<Record<string, ConnectionProfileOutput>>;
 
   setConnectionProfiles: (datas: Partial<Record<string, ConnectionProfileOutput>>) => void;
@@ -12,13 +13,19 @@ interface NavBarState {
   updateConnectionProfiles: (key: string, data: ConnectionProfileOutput) => void;
   deleteConnectionProfiles: (key: string) => void;
 
+  setLeftNavbarWidth: (width: number) => void;
+  getLeftNavbarWidth: () => number;
+
   reset: () => void;
 }
 
 const SCOPE = 'NavBar';
+export const MIN_WIDTH = 240;
+export const MAX_WIDTH = 480;
 
 export const useNavBarStore = createStore<NavBarState>(
   (set, get) => ({
+    leftNavbarWidth: MAX_WIDTH,
     connectionProfiles: {},
 
     setConnectionProfiles: datas => {
@@ -56,6 +63,20 @@ export const useNavBarStore = createStore<NavBarState>(
         undefined,
         `${SCOPE}/deleteConnectionProfiles`
       );
+    },
+
+    setLeftNavbarWidth: (width: number) => {
+      set(
+        state => {
+          state.leftNavbarWidth = width;
+        },
+        undefined,
+        `${SCOPE}/setLeftNavbarWidth`
+      );
+    },
+
+    getLeftNavbarWidth: () => {
+      return get().leftNavbarWidth;
     },
 
     reset: () => {

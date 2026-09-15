@@ -1,0 +1,14 @@
+{
+  "title": {
+    "info": "Info",
+    "warning": "Warning"
+  },
+  "button": {
+    "OK": "OK",
+    "cancel": "Cancel"
+  },
+  "confirmText": {
+    "CFPF000001": "Please confirm that you want to update this connection profile ?",
+    "CFPF000002": "Please confirm that you want to delete this connection profile ?"
+  }
+}

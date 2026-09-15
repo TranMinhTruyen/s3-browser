@@ -1,5 +1,5 @@
 import { type ElementProps, Button as MButton, type ButtonProps as MButtonProps } from '@mantine/core';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 
 interface ButtonProps extends MButtonProps, ElementProps<'button', keyof MButtonProps> {}
 
@@ -11,18 +11,15 @@ function Button(props: ButtonProps) {
   /**
    *  Auto-manages loading state when onClick returns a Promise (async handler)
    */
-  const handleClick = useCallback(
-    (event: React.MouseEvent<HTMLButtonElement>) => {
-      const result = onClick?.(event) as unknown;
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    const result = onClick?.(event) as unknown;
 
-      // Return early if onClick didn't return a Promise (i.e. it ran synchronously)
-      if (!result || typeof (result as Promise<unknown>).then !== 'function') return;
+    // Return early if onClick didn't return a Promise (i.e. it ran synchronously)
+    if (!result || typeof (result as Promise<unknown>).then !== 'function') return;
 
-      setAutoLoading(true);
-      void (result as Promise<unknown>).finally(() => setAutoLoading(false));
-    },
-    [onClick]
-  );
+    setAutoLoading(true);
+    void (result as Promise<unknown>).finally(() => setAutoLoading(false));
+  };
 
   // Prefer explicit `loading` prop if provided; otherwise fall back to auto-tracked state
   const isLoading = loading ?? autoLoading;
@@ -38,4 +35,8 @@ function Button(props: ButtonProps) {
     />
   );
 }
+
+Button.Group = MButton.Group;
+Button.GroupSection = MButton.GroupSection;
+
 export default Button;

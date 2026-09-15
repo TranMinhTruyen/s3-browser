@@ -102,6 +102,17 @@ func (m *Module) Connect(input bucket.ConnectionInput, saveProfile bool) common.
 	connectionId := utils.GenerateUUID()
 	m.global.PutConnContainer(connectionId, c)
 
+	if saveProfile {
+		createResult := m.profile.CreateProfile(input)
+		if createResult.MessageList != nil {
+			*status.MessageList = append(*status.MessageList, *createResult.MessageList...)
+		}
+		if createResult.Body != nil {
+			connectionId = createResult.Body.ID
+			m.app.Event.Emit(EventConnectSaveProfile, *createResult.Body)
+		}
+	}
+
 	status.Body.ConnectionId = connectionId
 	status.Body.IsConnected = true
 	status.AddMessage(
@@ -109,16 +120,6 @@ func (m *Module) Connect(input bucket.ConnectionInput, saveProfile bool) common.
 			"name": input.Name,
 		}, ""),
 	)
-
-	if saveProfile {
-		createResult := m.profile.CreateProfile(connectionId, input)
-		if createResult.MessageList != nil {
-			*status.MessageList = append(*status.MessageList, *createResult.MessageList...)
-		}
-		if createResult.Body != nil {
-			m.app.Event.Emit(EventConnectSaveProfile, *createResult.Body)
-		}
-	}
 
 	return status
 }

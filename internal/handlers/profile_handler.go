@@ -25,10 +25,9 @@ func NewProfileHandler(app *application.App, logger *slog.Logger, profile *profi
 }
 
 func (h *ProfileHandler) CreateProfile(
-	connectionId string,
 	profileInput bucket.ConnectionInput,
 ) common.Output[models.ConnectionProfileOutput] {
-	return h.profile.CreateProfile(connectionId, profileInput)
+	return h.profile.CreateProfile(profileInput)
 }
 
 func (h *ProfileHandler) UpdateProfileById(input bucket.ConnectionInput) common.Output[models.ConnectionProfileOutput] {

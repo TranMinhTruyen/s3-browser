@@ -1,15 +1,15 @@
 import { AppShell, Group, Paper } from '@mantine/core';
 import { useCallback, useRef, useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import ConnectionProfiles from '@/components/layouts/navbar/ConnectionProfiles';
-
-const MIN_WIDTH = 240;
-const MAX_WIDTH = 480;
+import { MAX_WIDTH, MIN_WIDTH, useNavBarStore } from '@/common/stores/navBarStore';
+import LeftNavbar from '@/components/layouts/navbar/LeftNavbar';
 
 function MainLayout() {
-  const [width, setWidth] = useState(MAX_WIDTH);
   const [resizing, setResizing] = useState(false);
+
   const navbarRef = useRef<HTMLDivElement>(null);
+  const setLeftNavbarWidth = useNavBarStore(s => s.setLeftNavbarWidth);
+  const leftNavbarWidth = useNavBarStore(s => s.leftNavbarWidth);
 
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -24,9 +24,9 @@ function MainLayout() {
       if (!resizing) return;
       const left = navbarRef.current?.getBoundingClientRect().left ?? 0;
       const next = Math.min(Math.max(event.clientX - left, MIN_WIDTH), MAX_WIDTH);
-      setWidth(next);
+      setLeftNavbarWidth(next);
     },
-    [resizing]
+    [resizing, setLeftNavbarWidth]
   );
 
   const handlePointerUp = useCallback(
@@ -43,7 +43,7 @@ function MainLayout() {
   return (
     <AppShell
       header={{ height: '48px' }}
-      navbar={{ width: width, breakpoint: 'sm' }}
+      navbar={{ width: leftNavbarWidth, breakpoint: 'sm' }}
       padding="4px"
       styles={{ main: { height: '100vh' } }}
     >
@@ -54,16 +54,13 @@ function MainLayout() {
       </AppShell.Header>
 
       <AppShell.Navbar ref={navbarRef} styles={{ navbar: { border: 'none' } }} p={'4px 0px 4px 4px'}>
-        <Paper shadow="xs" withBorder h="100%" p="8px" style={{ overflowX: 'hidden' }}>
-          <ConnectionProfiles />
-        </Paper>
-
+        <LeftNavbar />
         <div
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
-          onDoubleClick={() => setWidth(250)}
+          onDoubleClick={() => setLeftNavbarWidth(MAX_WIDTH)}
           style={{
             position: 'absolute',
             top: 0,
