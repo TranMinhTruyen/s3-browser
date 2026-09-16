@@ -2,9 +2,7 @@ package handlers
 
 import (
 	"S3Browser/internal/modules/profile"
-	"S3Browser/models/bucket"
-	"S3Browser/models/common"
-	models "S3Browser/models/profile"
+	"S3Browser/models"
 	"log/slog"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -25,19 +23,19 @@ func NewProfileHandler(app *application.App, logger *slog.Logger, profile *profi
 }
 
 func (h *ProfileHandler) CreateProfile(
-	profileInput bucket.ConnectionInput,
-) common.Output[models.ConnectionProfileOutput] {
+	profileInput models.ConnectionInput,
+) models.Output[models.ConnectionProfileOutput] {
 	return h.profile.CreateProfile(profileInput)
 }
 
-func (h *ProfileHandler) UpdateProfileById(input bucket.ConnectionInput) common.Output[models.ConnectionProfileOutput] {
+func (h *ProfileHandler) UpdateProfileById(input models.ConnectionInput) models.Output[models.ConnectionProfileOutput] {
 	return h.profile.UpdateProfileById(input)
 }
 
-func (h *ProfileHandler) DeleteProfileById(input bucket.ConnectionInput) common.Output[bool] {
+func (h *ProfileHandler) DeleteProfileById(input models.ConnectionInput) models.Output[bool] {
 	return h.profile.DeleteProfileById(input)
 }
 
-func (h *ProfileHandler) GetAllConnectionProfile() common.Output[models.GetAllConnectionProfileOutput] {
+func (h *ProfileHandler) GetAllConnectionProfile() models.Output[models.GetAllConnectionProfileOutput] {
 	return h.profile.GetAllConnectionProfile()
 }

@@ -2,8 +2,7 @@ package handlers
 
 import (
 	"S3Browser/internal/modules/master"
-	"S3Browser/models/common"
-	models "S3Browser/models/master"
+	"S3Browser/models"
 	"log/slog"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -23,10 +22,10 @@ func NewMasterHandler(app *application.App, logger *slog.Logger, master *master.
 	}
 }
 
-func (h *MasterHandler) GetMasterData(codes []string) common.Output[models.GetMasterDataOutput] {
+func (h *MasterHandler) GetMasterData(codes []string) models.Output[models.GetMasterDataOutput] {
 	return h.master.GetMasterData(codes)
 }
 
-func (h *MasterHandler) GetRegionData() common.Output[models.RegionOutput] {
+func (h *MasterHandler) GetRegionData() models.Output[models.RegionOutput] {
 	return h.master.GetRegion()
 }

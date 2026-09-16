@@ -7,7 +7,7 @@ import { ConnectionInput } from '@wails/S3Browser/models/bucket';
 import { SyntheticEvent, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import z from 'zod';
-import { useNavBarStore } from '@/common/stores/navBarStore';
+import { useProfileStore } from '@/common/stores/profileStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal } from '@/common/utils/modalUtils';
 import { createUUID, isNullOrEmpty } from '@/common/utils/stringUtils';
@@ -50,7 +50,7 @@ export default createMantineModal<ConnectModalProps, false>(
     const [saveProfile, { toggle: toggleSaveProfile }] = useDisclosure(true);
 
     const actionRef = useRef<'connect' | 'profile'>('connect');
-    const updateConnectionProfiles = useNavBarStore(s => s.updateConnectionProfiles);
+    const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
 
     const defaultValues = connectSchema
       .default({

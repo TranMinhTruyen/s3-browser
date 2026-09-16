@@ -4,8 +4,7 @@ import (
 	"S3Browser/internal/modules/global"
 	"S3Browser/internal/pkg/cnst"
 	"S3Browser/internal/pkg/db/sqlc"
-	"S3Browser/models/common"
-	"S3Browser/models/master"
+	"S3Browser/models"
 	"database/sql"
 	"log/slog"
 
@@ -33,10 +32,10 @@ func NewModule(app *application.App, logger *slog.Logger, global *global.Module,
 	}
 }
 
-func (m *Module) GetMasterData(codes []string) common.Output[master.GetMasterDataOutput] {
-	output := common.Output[master.GetMasterDataOutput]{}
+func (m *Module) GetMasterData(codes []string) models.Output[models.GetMasterDataOutput] {
+	output := models.Output[models.GetMasterDataOutput]{}
 	output.New()
-	output.Body.MasterData = make(map[string][]master.MasterOutput, len(codes))
+	output.Body.MasterData = make(map[string][]models.MasterOutput, len(codes))
 
 	for _, code := range codes {
 		if code == "" {
@@ -46,13 +45,13 @@ func (m *Module) GetMasterData(codes []string) common.Output[master.GetMasterDat
 		rows, err := m.q.SelectMasterByCode(m.app.Context(), code)
 		if err != nil {
 			m.logger.Error("get master data failed", "code", code, "error", err)
-			output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Master, MTE001, err.Error()))
+			output.AddMessage(models.CreateMessage(cnst.MessageTypeError, cnst.Master, MTE001, err.Error()))
 			continue
 		}
 
-		items := make([]master.MasterOutput, 0, len(rows))
+		items := make([]models.MasterOutput, 0, len(rows))
 		for _, row := range rows {
-			items = append(items, master.MasterOutput{
+			items = append(items, models.MasterOutput{
 				Code:      row.Code,
 				Name:      row.Name,
 				SortOrder: row.SortOrder,
@@ -75,8 +74,8 @@ func (m *Module) GetMasterData(codes []string) common.Output[master.GetMasterDat
 	return output
 }
 
-func (m *Module) GetRegion() common.Output[master.RegionOutput] {
-	output := common.Output[master.RegionOutput]{}
+func (m *Module) GetRegion() models.Output[models.RegionOutput] {
+	output := models.Output[models.RegionOutput]{}
 	output.New()
 
 	rows, err := m.q.SelectAllRegion(m.app.Context())
@@ -84,15 +83,15 @@ func (m *Module) GetRegion() common.Output[master.RegionOutput] {
 	if err != nil {
 		output.Body = nil
 		m.logger.Error("get region data failed", "error", err)
-		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Master, MTE001, err.Error()))
+		output.AddMessage(models.CreateMessage(cnst.MessageTypeError, cnst.Master, MTE001, err.Error()))
 		return output
 	}
 
-	output.Body.RegionData = make(map[string][]master.MasterOutput)
+	output.Body.RegionData = make(map[string][]models.MasterOutput)
 	for _, row := range rows {
 		output.Body.RegionData[row.Value2.String] = append(
 			output.Body.RegionData[row.Value2.String],
-			master.MasterOutput{
+			models.MasterOutput{
 				Code:      row.Code,
 				Name:      row.Name,
 				SortOrder: row.SortOrder,

@@ -1,11 +1,11 @@
 import { Group, Stack, Tooltip } from '@mantine/core';
 import { ListPlus, PlugZap, RefreshCw } from 'lucide-react';
-import { useNavBarStore } from '@/common/stores/navBarStore';
+import { useProfileStore } from '@/common/stores/profileStore';
 import ActionIcon from '@/components/buttons/AcctionIcon';
 import ConnectModal from '@/components/modals/ConnectModal';
 
 function HeaderButtonGroup() {
-  const loadConnectionProfiles = useNavBarStore(s => s.loadConnectionProfiles);
+  const loadConnectionProfiles = useProfileStore(s => s.loadConnectionProfiles);
 
   const handleAddConnectionProfile = (mode: 'connect' | 'createProfile') => () => {
     ConnectModal.show({ mode: mode });

@@ -5,9 +5,7 @@ import (
 	"S3Browser/internal/pkg/cnst"
 	"S3Browser/internal/pkg/db/sqlc"
 	"S3Browser/internal/pkg/utils"
-	"S3Browser/models/bucket"
-	"S3Browser/models/common"
-	"S3Browser/models/profile"
+	"S3Browser/models"
 	"database/sql"
 	"log/slog"
 
@@ -68,9 +66,9 @@ func NewModule(
 }
 
 func (m *Module) CreateProfile(
-	profileInput bucket.ConnectionInput,
-) common.Output[profile.ConnectionProfileOutput] {
-	output := common.Output[profile.ConnectionProfileOutput]{}
+	profileInput models.ConnectionInput,
+) models.Output[models.ConnectionProfileOutput] {
+	output := models.Output[models.ConnectionProfileOutput]{}
 	output.New()
 	output.Body = nil
 	encryptedSecret := ""
@@ -79,7 +77,7 @@ func (m *Module) CreateProfile(
 		encrypted, err := m.km.Encrypt(profileInput.SecretKey)
 
 		if err != nil {
-			output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
+			output.AddMessage(models.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
 			m.logger.Error("encrypted SecretKey failed", slog.Any("error", err))
 			return output
 		}
@@ -104,11 +102,11 @@ func (m *Module) CreateProfile(
 
 	if err != nil {
 		m.logger.Error("save connection profile failed", "connectionId", profileInput.Id, "error", err)
-		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE001, err.Error()))
+		output.AddMessage(models.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE001, err.Error()))
 		return output
 	}
 
-	output.Body = &profile.ConnectionProfileOutput{
+	output.Body = &models.ConnectionProfileOutput{
 		ID:           result.ID,
 		Name:         result.Name.String,
 		Color:        result.Color.String,
@@ -124,15 +122,15 @@ func (m *Module) CreateProfile(
 		Version:      result.Version,
 	}
 
-	output.AddMessage(common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Profile, PFE001, map[string]any{
+	output.AddMessage(models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Profile, PFE001, "", map[string]any{
 		"name": result.Name.String,
-	}, ""))
+	}))
 
 	return output
 }
 
-func (m *Module) UpdateProfileById(input bucket.ConnectionInput) common.Output[profile.ConnectionProfileOutput] {
-	output := common.Output[profile.ConnectionProfileOutput]{}
+func (m *Module) UpdateProfileById(input models.ConnectionInput) models.Output[models.ConnectionProfileOutput] {
+	output := models.Output[models.ConnectionProfileOutput]{}
 	output.New()
 	encryptedSecret := ""
 
@@ -141,7 +139,7 @@ func (m *Module) UpdateProfileById(input bucket.ConnectionInput) common.Output[p
 
 		if err != nil {
 			output.Body = nil
-			output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
+			output.AddMessage(models.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
 			m.logger.Error("encrypted SecretKey failed", slog.Any("error", err))
 			return output
 		}
@@ -168,13 +166,15 @@ func (m *Module) UpdateProfileById(input bucket.ConnectionInput) common.Output[p
 	if err != nil {
 		m.logger.Error("update connection profile failed", "connectionId", input.Id, "error", err)
 		output.Body = nil
-		output.AddMessage(common.CreateMessageWithParams(cnst.MessageTypeError, cnst.Profile, PFE005, map[string]any{
-			"name": result.Name.String,
-		}, err.Error()))
+		output.AddMessage(
+			models.CreateMessageWithParams(cnst.MessageTypeError, cnst.Profile, PFE005, err.Error(), map[string]any{
+				"name": result.Name.String,
+			}),
+		)
 		return output
 	}
 
-	output.Body = &profile.ConnectionProfileOutput{
+	output.Body = &models.ConnectionProfileOutput{
 		ID:           result.ID,
 		Name:         result.Name.String,
 		Color:        result.Color.String,
@@ -190,15 +190,15 @@ func (m *Module) UpdateProfileById(input bucket.ConnectionInput) common.Output[p
 		Version:      result.Version,
 	}
 
-	output.AddMessage(common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, PFS002, map[string]any{
+	output.AddMessage(models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, PFS002, "", map[string]any{
 		"name": result.Name.String,
-	}, ""))
+	}))
 
 	return output
 }
 
-func (m *Module) DeleteProfileById(input bucket.ConnectionInput) common.Output[bool] {
-	output := common.Output[bool]{}
+func (m *Module) DeleteProfileById(input models.ConnectionInput) models.Output[bool] {
+	output := models.Output[bool]{}
 	output.New()
 	output.Body = utils.ToPtr(true)
 
@@ -207,28 +207,30 @@ func (m *Module) DeleteProfileById(input bucket.ConnectionInput) common.Output[b
 	if err != nil {
 		m.logger.Error("delete connection profile failed", "connectionId", input.Id, "error", err)
 		output.Body = utils.ToPtr(false)
-		output.AddMessage(common.CreateMessageWithParams(cnst.MessageTypeError, cnst.Profile, PFE006, map[string]any{
-			"name": input.Name,
-		}, err.Error()))
+		output.AddMessage(
+			models.CreateMessageWithParams(cnst.MessageTypeError, cnst.Profile, PFE006, err.Error(), map[string]any{
+				"name": input.Name,
+			}),
+		)
 		return output
 	}
 
-	output.AddMessage(common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Profile, PFS003, map[string]any{
+	output.AddMessage(models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Profile, PFS003, "", map[string]any{
 		"name": input.Name,
-	}, ""))
+	}))
 
 	return output
 }
 
-func (m *Module) GetConnectionProfileById(connectionID string) common.Output[profile.ConnectionProfileOutput] {
-	output := common.Output[profile.ConnectionProfileOutput]{}
+func (m *Module) GetConnectionProfileById(connectionID string) models.Output[models.ConnectionProfileOutput] {
+	output := models.Output[models.ConnectionProfileOutput]{}
 	output.New()
 
 	result, err := m.q.SelectConnectionProfileById(m.app.Context(), connectionID)
 
 	if err != nil {
 		output.Body = nil
-		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE003, err.Error()))
+		output.AddMessage(models.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE003, err.Error()))
 		m.logger.Error("error while get profile", slog.Any("error", err))
 		return output
 	}
@@ -236,12 +238,12 @@ func (m *Module) GetConnectionProfileById(connectionID string) common.Output[pro
 	decrypted := ""
 	if result.SecretKey != "" {
 		if decrypted, err = m.km.Decrypt(result.SecretKey); err != nil {
-			output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
+			output.AddMessage(models.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
 			return output
 		}
 	}
 
-	output.Body = &profile.ConnectionProfileOutput{
+	output.Body = &models.ConnectionProfileOutput{
 		ID:        result.ID,
 		Name:      result.Name.String,
 		Color:     result.Color.String,
@@ -258,31 +260,31 @@ func (m *Module) GetConnectionProfileById(connectionID string) common.Output[pro
 	return output
 }
 
-func (m *Module) GetAllConnectionProfile() common.Output[profile.GetAllConnectionProfileOutput] {
-	output := common.Output[profile.GetAllConnectionProfileOutput]{}
+func (m *Module) GetAllConnectionProfile() models.Output[models.GetAllConnectionProfileOutput] {
+	output := models.Output[models.GetAllConnectionProfileOutput]{}
 	output.New()
 
 	result, err := m.q.SelectAllConnectionProfile(m.app.Context())
 
 	if err != nil {
 		output.Body = nil
-		output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE003, err.Error()))
+		output.AddMessage(models.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE003, err.Error()))
 		m.logger.Error("error get all profile", slog.Any("error", err))
 		return output
 	}
 
-	profiles := make(map[string]profile.ConnectionProfileOutput, len(result))
+	profiles := make(map[string]models.ConnectionProfileOutput, len(result))
 	for _, item := range result {
 		isConnected := m.global.HasConn(item.ConnectionID)
 
 		decrypted := ""
 		if item.SecretKey != "" {
 			if decrypted, err = m.km.Decrypt(item.SecretKey); err != nil {
-				output.AddMessage(common.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
+				output.AddMessage(models.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
 			}
 		}
 
-		profiles[item.ConnectionID] = profile.ConnectionProfileOutput{
+		profiles[item.ConnectionID] = models.ConnectionProfileOutput{
 			ID:           item.ConnectionID,
 			Name:         item.ConnectionName.String,
 			Color:        item.Color.String,
@@ -300,7 +302,7 @@ func (m *Module) GetAllConnectionProfile() common.Output[profile.GetAllConnectio
 		}
 	}
 
-	output.Body = &profile.GetAllConnectionProfileOutput{ConnectionProfiles: profiles}
+	output.Body = &models.GetAllConnectionProfileOutput{ConnectionProfiles: profiles}
 
 	return output
 }

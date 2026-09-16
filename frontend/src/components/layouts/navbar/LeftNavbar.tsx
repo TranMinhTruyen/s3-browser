@@ -4,7 +4,7 @@ import HeaderButtonGroup from '@/components/layouts/navbar/components/HeaderButt
 
 function LeftNavbar() {
   return (
-    <Paper shadow="xs" withBorder h="100%" style={{ overflowX: 'hidden' }}>
+    <Paper withBorder h="100%" style={{ overflowX: 'hidden' }}>
       <HeaderButtonGroup />
       <Divider />
       <Stack p="8px">

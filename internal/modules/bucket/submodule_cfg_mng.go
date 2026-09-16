@@ -3,9 +3,7 @@ package bucket
 import (
 	"S3Browser/internal/modules/global"
 	"S3Browser/internal/pkg/cnst"
-	"S3Browser/models/bucket"
-	models "S3Browser/models/bucket"
-	"S3Browser/models/common"
+	"S3Browser/models"
 	"context"
 	"errors"
 	"log/slog"
@@ -22,14 +20,9 @@ import (
 func (m *Module) buildClient(input models.ConnectionInput) *global.S3Conn {
 	client, transport := newHTTPClient()
 
-	region := input.Region
-	if region == "" {
-		region = "us-east-1"
-	}
-
 	cfg := aws.Config{
 		Credentials:      credentials.NewStaticCredentialsProvider(input.AccessKey, input.SecretKey, ""),
-		Region:           region,
+		Region:           input.Region,
 		HTTPClient:       client,
 		RetryMaxAttempts: 3,
 	}
@@ -49,11 +42,8 @@ func (m *Module) buildClient(input models.ConnectionInput) *global.S3Conn {
 	}
 }
 
-func (m *Module) probe(ctx context.Context, c *global.S3Conn) (common.Output[bucket.ConnectionOutput], error) {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	output := common.Output[bucket.ConnectionOutput]{}
+func (m *Module) probe(ctx context.Context, c *global.S3Conn) (models.Output[models.ConnectionOutput], error) {
+	output := models.Output[models.ConnectionOutput]{}
 	output.New()
 
 	if _, err := c.Client.ListBuckets(ctx, &s3.ListBucketsInput{}); err != nil {
@@ -68,44 +58,44 @@ func (m *Module) probe(ctx context.Context, c *global.S3Conn) (common.Output[buc
 	return output, nil
 }
 
-func describeConnectStatus(err error, output *common.Output[bucket.ConnectionOutput]) error {
+func describeConnectStatus(err error, output *models.Output[models.ConnectionOutput]) error {
 	var apiErr smithy.APIError
 	if errors.As(err, &apiErr) {
 		switch apiErr.ErrorCode() {
 		case "InvalidAccessKeyId", "SignatureDoesNotMatch", "InvalidClientTokenId":
-			output.MessageList = &[]common.Message{
-				common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E001, err.Error()),
+			output.MessageList = &[]models.Message{
+				models.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E001, err.Error()),
 			}
 			return err
 		case "AuthorizationHeaderMalformed", "InvalidRegion":
-			output.MessageList = &[]common.Message{
-				common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E002, err.Error()),
+			output.MessageList = &[]models.Message{
+				models.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E002, err.Error()),
 			}
 			return err
 		case "AccessDenied", "AllAccessDisabled", "UnauthorizedAccess":
-			output.MessageList = &[]common.Message{
-				common.CreateMessage(cnst.MessageTypeWarn, cnst.Bucket, S3W001, err.Error()),
+			output.MessageList = &[]models.Message{
+				models.CreateMessage(cnst.MessageTypeWarn, cnst.Bucket, S3W001, err.Error()),
 			}
 			output.Body.Limited = true
 			return nil
 		default:
-			output.MessageList = &[]common.Message{
-				common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E003, err.Error()),
+			output.MessageList = &[]models.Message{
+				models.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E003, err.Error()),
 			}
 			return err
 		}
 	}
 
 	if errors.Is(err, context.DeadlineExceeded) {
-		output.MessageList = &[]common.Message{
-			common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E003, err.Error()),
+		output.MessageList = &[]models.Message{
+			models.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E003, err.Error()),
 		}
 		return err
 	}
 
 	if err != nil {
-		output.MessageList = &[]common.Message{
-			common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E004, err.Error()),
+		output.MessageList = &[]models.Message{
+			models.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E004, err.Error()),
 		}
 		return err
 	}
