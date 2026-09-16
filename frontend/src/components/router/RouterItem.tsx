@@ -1,7 +1,7 @@
 import { lazy, ReactNode } from 'react';
 import { RouteObject } from 'react-router-dom';
 
-const Home = lazy(() => import('@/pages/home/Page'));
+const BucketPage = lazy(() => import('@/pages/bucket/Page'));
 
 export type IRouterItem = RouteObject & {
   page: ReactNode;
@@ -10,7 +10,7 @@ export type IRouterItem = RouteObject & {
 };
 const RouterItems: Array<IRouterItem> = [
   {
-    page: <Home />,
+    page: <BucketPage />,
     prefix: '',
     path: '/',
   },

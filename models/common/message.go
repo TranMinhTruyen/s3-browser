@@ -15,16 +15,6 @@ type Message struct {
 	ErrorDetail *string         `json:"errorDetail"`
 }
 
-func SuccessMessage(moduleName string, code string) Message {
-
-	return Message{
-		Order:       utils.ToPtr(time.Now().Format(cnst.FullDateTimeFormatPattern)),
-		ModuleName:  utils.ToPtr(moduleName),
-		MessageType: utils.ToPtr(cnst.MessageTypeSuccess),
-		MessageCode: utils.ToPtr(code),
-	}
-}
-
 func CreateMessage(messageType string, moduleName string, code string, errorDetail string) Message {
 	return Message{
 		Order:       utils.ToPtr(time.Now().Format(cnst.FullDateTimeFormatPattern)),
@@ -39,8 +29,8 @@ func CreateMessageWithParams(
 	messageType string,
 	moduleName string,
 	code string,
-	params map[string]any,
 	errorDetail string,
+	params map[string]any,
 ) Message {
 	message := CreateMessage(messageType, moduleName, code, errorDetail)
 	message.Params = &params

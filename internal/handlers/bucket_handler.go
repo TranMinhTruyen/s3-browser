@@ -2,8 +2,7 @@ package handlers
 
 import (
 	"S3Browser/internal/modules/bucket"
-	models "S3Browser/models/bucket"
-	"S3Browser/models/common"
+	"S3Browser/models"
 	"log/slog"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -27,14 +26,14 @@ func (h *BucketHandler) ConnectS3(
 	input models.ConnectionInput,
 	isTestConn bool,
 	saveProfile bool,
-) common.Output[models.ConnectionOutput] {
+) models.Output[models.ConnectionOutput] {
 	if isTestConn {
 		return h.bucket.TestConnection(input)
 	}
 	return h.bucket.Connect(input, saveProfile)
 }
 
-func (h *BucketHandler) ConnectS3ByProfile(connectionId string) common.Output[models.ConnectionOutput] {
+func (h *BucketHandler) ConnectS3ByProfile(connectionId string) models.Output[models.ConnectionOutput] {
 	return h.bucket.ConnectByProfile(connectionId)
 }
 
@@ -42,6 +41,10 @@ func (h *BucketHandler) DisconnectAll() {
 	h.bucket.DisconnectAll()
 }
 
-func (h *BucketHandler) Disconnect(connectionId string) common.Output[bool] {
+func (h *BucketHandler) Disconnect(connectionId string) models.Output[bool] {
 	return h.bucket.Disconnect(connectionId)
+}
+
+func (h *BucketHandler) GetListBucket(input models.ListBucketInput) models.Output[models.ListBucketOutput] {
+	return h.bucket.GetListBucket(input)
 }

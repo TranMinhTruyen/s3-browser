@@ -5,8 +5,7 @@ import (
 	"S3Browser/internal/modules/profile"
 	"S3Browser/internal/pkg/cnst"
 	"S3Browser/internal/pkg/utils"
-	"S3Browser/models/bucket"
-	"S3Browser/models/common"
+	"S3Browser/models"
 	"context"
 	"log/slog"
 	"time"
@@ -39,6 +38,12 @@ var (
 	// error while disconnect S3 bucket
 	S3E005 = "S3E005"
 
+	// Profile: {name} is not connected
+	S3E006 = "S3E006"
+
+	// Get list bucket error, profile: {name}
+	S3E007 = "S3E007"
+
 	// Access bucket is limited
 	S3W001 = "S3W001"
 )
@@ -64,7 +69,7 @@ func NewModule(
 	}
 }
 
-func (m *Module) TestConnection(input bucket.ConnectionInput) common.Output[bucket.ConnectionOutput] {
+func (m *Module) TestConnection(input models.ConnectionInput) models.Output[models.ConnectionOutput] {
 	// Don't use app.Context for I/O because this context is cancelled only when the app shuts down.
 	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
 	defer cancel()
@@ -79,14 +84,14 @@ func (m *Module) TestConnection(input bucket.ConnectionInput) common.Output[buck
 
 	status.Body.IsConnected = true
 	status.AddMessage(
-		common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S001, map[string]any{
+		models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S001, "", map[string]any{
 			"name": input.Name,
-		}, ""),
+		}),
 	)
 	return status
 }
 
-func (m *Module) Connect(input bucket.ConnectionInput, saveProfile bool) common.Output[bucket.ConnectionOutput] {
+func (m *Module) Connect(input models.ConnectionInput, saveProfile bool) models.Output[models.ConnectionOutput] {
 	// Don't use app.Context for I/O because this context is cancelled only when the app shuts down.
 	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
 	defer cancel()
@@ -116,30 +121,30 @@ func (m *Module) Connect(input bucket.ConnectionInput, saveProfile bool) common.
 	status.Body.ConnectionId = connectionId
 	status.Body.IsConnected = true
 	status.AddMessage(
-		common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S002, map[string]any{
+		models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S002, "", map[string]any{
 			"name": input.Name,
-		}, ""),
+		}),
 	)
 
 	return status
 }
 
-func (m *Module) ConnectByProfile(connectionId string) common.Output[bucket.ConnectionOutput] {
+func (m *Module) ConnectByProfile(connectionId string) models.Output[models.ConnectionOutput] {
 	profile := m.profile.GetConnectionProfileById(connectionId)
 
 	// The profile lookup owns the reason it failed, so pass its messages through
 	// instead of letting an empty endpoint fail later as a generic S3 error.
 	if profile.Body == nil {
-		output := common.Output[bucket.ConnectionOutput]{}
+		output := models.Output[models.ConnectionOutput]{}
 		output.New()
-		output.Body = &bucket.ConnectionOutput{}
+		output.Body = &models.ConnectionOutput{}
 		if profile.MessageList != nil {
 			output.AddMessage(*profile.MessageList...)
 		}
 		return output
 	}
 
-	connectInput := bucket.ConnectionInput{
+	connectInput := models.ConnectionInput{
 		Name:      profile.Body.Name,
 		Endpoint:  profile.Body.Endpoint,
 		AccessKey: profile.Body.AccessKey,
@@ -165,30 +170,30 @@ func (m *Module) ConnectByProfile(connectionId string) common.Output[bucket.Conn
 	status.Body.ConnectionId = connectionId
 	status.Body.IsConnected = true
 	status.AddMessage(
-		common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S002, map[string]any{
+		models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S002, "", map[string]any{
 			"name": profile.Body.Name,
-		}, ""),
+		}),
 	)
 
 	return status
 }
 
-func (m *Module) Disconnect(connectionId string) common.Output[bool] {
-	output := common.Output[bool]{}
+func (m *Module) Disconnect(connectionId string) models.Output[bool] {
+	output := models.Output[bool]{}
 	output.New()
 
 	if conn, ok := m.global.RemoveConn(connectionId); ok {
 		conn.Transport.CloseIdleConnections()
 		output.Body = utils.ToPtr(true)
 		output.AddMessage(
-			common.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S003, map[string]any{
+			models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S003, "", map[string]any{
 				"name": conn.ProfileName,
-			}, ""),
+			}),
 		)
 		return output
 	} else {
 		output.AddMessage(
-			common.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E005, "Connection not found"),
+			models.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E005, "Connection not found"),
 		)
 	}
 

@@ -7,7 +7,7 @@ import { Events } from '@wailsio/runtime';
 import { Cable, Unplug } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavBarStore } from '@/common/stores/navBarStore';
+import { useProfileStore } from '@/common/stores/profileStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ConfirmModal from '@/components/modals/ConfirmModal';
 import ConnectModal from '@/components/modals/ConnectModal';
@@ -15,11 +15,11 @@ import ConnectModal from '@/components/modals/ConnectModal';
 function ConnectionProfiles() {
   const { t } = useTranslation('connectionProfiles');
 
-  const loadConnectionProfiles = useNavBarStore(s => s.loadConnectionProfiles);
-  const updateConnectionProfiles = useNavBarStore(s => s.updateConnectionProfiles);
-  const deleteConnectionProfiles = useNavBarStore(s => s.deleteConnectionProfiles);
-  const reset = useNavBarStore(s => s.reset);
-  const connectionProfiles = useNavBarStore(s => s.connectionProfiles);
+  const loadConnectionProfiles = useProfileStore(s => s.loadConnectionProfiles);
+  const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
+  const deleteConnectionProfiles = useProfileStore(s => s.deleteConnectionProfiles);
+  const reset = useProfileStore(s => s.reset);
+  const connectionProfiles = useProfileStore(s => s.connectionProfiles);
   const autoConnectDoneRef = useRef(false);
 
   const [connectLoading, { open: openConnectLoading, close: closeConnectLoading }] = useDisclosure();
@@ -127,10 +127,10 @@ function ConnectionProfiles() {
     .filter((entry): entry is [string, ConnectionProfileOutput] => entry[1] !== undefined)
     .map(([key, value]) => {
       return (
-        <Menu key={key} shadow="md" width={200} opened={openedMenuKey === key} onChange={handleMenuChange(key)}>
+        <Menu key={key} width={200} opened={openedMenuKey === key} onChange={handleMenuChange(key)}>
           <Menu.ContextMenu>
             <Card
-              padding="xs"
+              padding="8px"
               withBorder
               orientation="horizontal"
               onMouseEnter={() => setHoveredKey(key)}
@@ -144,14 +144,12 @@ function ConnectionProfiles() {
               }}
             >
               <Card.Section
-                withBorder
                 inheritPadding
-                px="xs"
                 style={{
                   flexShrink: 0,
                   display: 'flex',
                   alignItems: 'center',
-                  minWidth: '56px',
+                  minWidth: '40px',
                   justifyContent: 'center',
                   backgroundColor: value.isConnected ? '#83f175' : '#FFFFFF',
                 }}
@@ -159,8 +157,8 @@ function ConnectionProfiles() {
                 {connectLoading ? <Loader color="blue" size="sm" /> : value.isConnected ? <Cable /> : <Unplug />}
               </Card.Section>
               <Card.Section
-                inheritPadding
                 px="xs"
+                inheritPadding
                 style={{
                   flex: 1,
                   minWidth: 0,

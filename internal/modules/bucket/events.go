@@ -1,7 +1,7 @@
 package bucket
 
 import (
-	profileModel "S3Browser/models/profile"
+	"S3Browser/models"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -14,5 +14,5 @@ const (
 // RegisterEvent must be called directly from init so the binding generator can
 // emit the TypeScript payload type for Events.On / Events.Emit on the frontend.
 func init() {
-	application.RegisterEvent[profileModel.ConnectionProfileOutput](EventConnectSaveProfile)
+	application.RegisterEvent[models.ConnectionProfileOutput](EventConnectSaveProfile)
 }

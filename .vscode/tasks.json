@@ -62,6 +62,27 @@
       ]
     },
     {
+      "label": "wails: build dev server (HMR)",
+      "detail": "Builds with -tags server so the app is reachable in a real browser, where the Redux DevTools extension works. WebView2 cannot load that extension.",
+      "type": "shell",
+      "command": "go tool wails3 task common:build:server DEV=true",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": [
+        "vite: dev server"
+      ],
+      "group": "build",
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "group": "wails-dev"
+      },
+      "problemMatcher": [
+        "$go"
+      ]
+    },
+    {
       "label": "vite: stop dev server",
       "detail": "Kills whatever holds the Vite dev port, so the server does not outlive the debug session.",
       "type": "shell",
