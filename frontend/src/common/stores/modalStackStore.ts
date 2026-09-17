@@ -1,7 +1,10 @@
-import { createStore } from '@/common/stores/createStore';
+import { createAppStore } from '@/common/stores/createStore';
 
 interface ModalStackState {
   stack: string[];
+}
+
+interface ModalStackAction {
   /** Registers a visible modal. Keeps its existing position if it is already in the stack. */
   acquire: (id: string) => void;
   /** Releases a modal. It leaves the stack only if nothing re-acquires it in the same tick. */
@@ -17,7 +20,7 @@ interface ModalStackState {
  */
 const refCounts = new Map<string, number>();
 
-export const useModalStackStore = createStore<ModalStackState>(
+export const useModalStackStore = createAppStore<ModalStackState & ModalStackAction>(
   set => ({
     stack: [],
 

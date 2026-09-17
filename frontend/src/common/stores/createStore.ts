@@ -7,14 +7,14 @@ type AnyStore = UseBoundStore<StoreApi<unknown>>;
 
 declare global {
   interface Window {
-    /** Dev-only registry of every store created through {@link createStore}, keyed by store name. */
+    /** Dev-only registry of every store created through {@link createAppStore}, keyed by store name. */
     __stores?: Record<string, AnyStore>;
     /** Dev-only snapshot of every registered store, keyed by store name. */
     __storeState?: () => Record<string, unknown>;
   }
 }
 
-export function createStore<T>(
+export function createAppStore<T>(
   storeCreator: StateCreator<T, [['zustand/devtools', never], ['zustand/immer', never]], [], T>,
   name: string
 ) {

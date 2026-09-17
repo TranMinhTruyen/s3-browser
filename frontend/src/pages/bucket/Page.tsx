@@ -1,37 +1,81 @@
-import { Paper, Scroller, Tabs } from '@mantine/core';
+import { CloseButton, Group, Paper, Scroller, Tabs, Text } from '@mantine/core';
 import { Plus } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { useProfileStore } from '@/common/stores/profileStore';
 import ActionIcon from '@/components/buttons/AcctionIcon';
+import PanelDetail from '@/pages/bucket/components/PanelDetail';
+import { useTabListStore } from '@/pages/bucket/tabListStore';
 
 function Page() {
+  const activeTab = useTabListStore(s => s.activeTab);
+  const tabList = useTabListStore(s => s.tabList);
+  const connectionProfiles = useProfileStore(s => s.connectionProfiles);
+  const addTab = useTabListStore(s => s.addTab);
+  const closeTab = useTabListStore(s => s.closeTab);
+  const setActiveTab = useTabListStore(s => s.setActiveTab);
+
+  const handleCloseTab = (tabId: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    closeTab(tabId);
+  };
+
+  const tabEntries = Object.entries(tabList);
+
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const container = scrollerRef.current?.querySelector<HTMLElement>('.mantine-Scroller-container');
+    if (!container) return;
+
+    container.querySelector('[data-active]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    container.dispatchEvent(new Event('scroll'));
+  }, [tabList, activeTab]);
+
   return (
-    <Tabs variant="outline" defaultValue="tab-1" h="100%" style={{ display: 'flex', flexDirection: 'column' }}>
+    <Tabs
+      variant="outline"
+      value={activeTab}
+      onChange={setActiveTab}
+      h="100%"
+      style={{ display: 'flex', flexDirection: 'column' }}
+    >
       <Tabs.List style={{ flexWrap: 'nowrap', alignItems: 'center' }}>
-        <Scroller style={{ flexShrink: 1, minWidth: 0 }}>
-          <Tabs.Tab value="tab-1">First tab</Tabs.Tab>
-          <Tabs.Tab value="tab-2">Second tab</Tabs.Tab>
-          <Tabs.Tab value="tab-3">Third tab</Tabs.Tab>
-          <Tabs.Tab value="tab-4">Fourth tab</Tabs.Tab>
-          <Tabs.Tab value="tab-5">Fifth tab</Tabs.Tab>
-          <Tabs.Tab value="tab-6">Sixth tab</Tabs.Tab>
-          <Tabs.Tab value="tab-7">Seventh tab</Tabs.Tab>
-          <Tabs.Tab value="tab-8">Eighth tab</Tabs.Tab>
-          <Tabs.Tab value="tab-9">Ninth tab</Tabs.Tab>
-          <Tabs.Tab value="tab-10">Tenth tab</Tabs.Tab>
+        <Scroller ref={scrollerRef} style={{ flexShrink: 1, minWidth: 0 }}>
+          {tabEntries.map(([key, value]) => (
+            <Tabs.Tab
+              key={key}
+              value={key}
+              p="8px"
+              h="38px"
+              miw="200px"
+              maw="200px"
+              styles={{ tabLabel: { minWidth: 0, flex: 1 } }}
+            >
+              <Group gap="xs" wrap="nowrap" p="0" justify="space-between">
+                <Text truncate="end" style={{ minWidth: 0, flex: 1 }}>
+                  {connectionProfiles[value]?.name || 'New connection'}
+                </Text>
+                <CloseButton size="xs" onClick={handleCloseTab(key)} style={{ flexShrink: 0 }} />
+              </Group>
+            </Tabs.Tab>
+          ))}
         </Scroller>
-        <ActionIcon style={{ flexShrink: 0 }}>
+        <ActionIcon style={{ flexShrink: 0, marginLeft: '2px' }} onClick={addTab}>
           <Plus />
         </ActionIcon>
       </Tabs.List>
 
-      <Tabs.Panel value="tab-1" style={{ flex: 1, minHeight: 0 }}>
-        <Paper
-          withBorder
-          h="100%"
-          style={{ overflow: 'auto', borderTop: 'none', borderTopLeftRadius: 0, borderTopRightRadius: 0 }}
-        >
-          First
-        </Paper>
-      </Tabs.Panel>
+      {tabEntries.map(([key, value]) => (
+        <Tabs.Panel key={key} value={key} style={{ flex: 1, minHeight: 0 }}>
+          <Paper
+            withBorder
+            h="100%"
+            p="4px"
+            style={{ overflow: 'auto', borderTop: 'none', borderTopLeftRadius: 0, borderTopRightRadius: 0 }}
+          >
+            <PanelDetail tabId={key} profileId={value} />
+          </Paper>
+        </Tabs.Panel>
+      ))}
     </Tabs>
   );
 }

@@ -1,7 +1,7 @@
 import { GetMasterData, GetRegionData } from '@wails/S3Browser/internal/handlers/masterhandler';
 import { MasterOutput } from '@wails/S3Browser/models/master';
-import { createStore } from '@/common/stores/createStore';
-import { callIPC } from '@/common/utils/ipcUtils';
+import { createAppStore } from '@/common/stores/createStore';
+import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
 
 const MASTER_CODE = {
   REGION: 'REGION',
@@ -14,7 +14,9 @@ type MasterData = Partial<Record<MasterCode, MasterOutput[]>>;
 interface MasterDataState {
   masterData: MasterData;
   regionData: Partial<Record<string, MasterOutput[]>>;
+}
 
+interface MasterDataAction {
   /** Replaces the rows held for one master code. */
   set: (key: MasterCode, datas: MasterOutput[]) => void;
   /** Merges a whole `{ code: rows }` payload, keeping codes it does not carry. */
@@ -36,7 +38,7 @@ interface MasterDataState {
 
 const SCOPE = 'MasterData';
 
-export const useMasterDataStore = createStore<MasterDataState>(
+export const useMasterDataStore = createAppStore<MasterDataState & MasterDataAction>(
   (set, get) => ({
     masterData: {},
     regionData: {},
@@ -88,6 +90,7 @@ export const useMasterDataStore = createStore<MasterDataState>(
     },
 
     reset: () => {
+      invalidateLoads(SCOPE);
       set(
         {
           masterData: {},

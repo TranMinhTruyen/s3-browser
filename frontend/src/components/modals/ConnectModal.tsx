@@ -3,6 +3,7 @@ import { schemaResolver, useForm } from '@mantine/form';
 import { useDisclosure } from '@mantine/hooks';
 import { ConnectS3 } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { CreateProfile, UpdateProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
+import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { ConnectionInput } from '@wails/S3Browser/models/bucket';
 import { SyntheticEvent, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -39,15 +40,15 @@ type ConnectModalProps = {
   mode?: 'connect' | 'manualconnect' | 'createProfile' | 'editProfile';
   id?: string;
   version?: number;
-  connectionInfo?: ConnectionInfo;
+  connectionProfileOutput?: ConnectionProfileOutput;
 };
 
 export default createMantineModal<ConnectModalProps, false>(
   props => {
-    const { mode = 'connect', id, version, connectionInfo, mantine } = props;
+    const { mode = 'connect', id, version, connectionProfileOutput, mantine } = props;
     const { t } = useTranslation('connectModal');
 
-    const [saveProfile, { toggle: toggleSaveProfile }] = useDisclosure(true);
+    const [saveProfile, { toggle: toggleSaveProfile }] = useDisclosure(mode === 'connect');
 
     const actionRef = useRef<'connect' | 'profile'>('connect');
     const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
@@ -68,7 +69,7 @@ export default createMantineModal<ConnectModalProps, false>(
 
     const form = useForm<ConnectionInfo>({
       mode: 'uncontrolled',
-      initialValues: mode === 'connect' || mode === 'createProfile' ? defaultValues : connectionInfo,
+      initialValues: mode === 'connect' || mode === 'createProfile' ? defaultValues : connectionProfileOutput,
       validate: values => {
         const resolver = schemaResolver(actionRef.current === 'profile' ? baseSchema : connectSchema, {
           sync: true,
@@ -94,10 +95,15 @@ export default createMantineModal<ConnectModalProps, false>(
           version: version ?? 1,
           ...value,
         };
-        const output = await callIPC(ConnectS3, [input, isTestConnection, saveProfile], {
-          showMessage: mode === 'connect',
+
+        const output = await callIPC(ConnectS3, [input, isTestConnection, saveProfile, mode === 'manualconnect'], {
+          showMessage: mode === 'connect' || mode === 'manualconnect',
         });
+
         if (output && output.isConnected && !isTestConnection) {
+          if (mode === 'manualconnect' && connectionProfileOutput) {
+            updateConnectionProfiles(connectionProfileOutput.id, { ...connectionProfileOutput, isConnected: true });
+          }
           mantine.handler.hide();
         }
       };
@@ -223,7 +229,7 @@ export default createMantineModal<ConnectModalProps, false>(
                   type="password"
                   label={t('form.label.secretKey')}
                   placeholder={t('form.label.secretKey')}
-                  withAsterisk={mode === 'connect'}
+                  withAsterisk={mode === 'connect' || mode === 'manualconnect'}
                   key={form.key('secretKey')}
                   {...form.getInputProps('secretKey')}
                 />
@@ -266,11 +272,11 @@ export default createMantineModal<ConnectModalProps, false>(
                 {t('form.button.testConnection')}
               </Button>
 
-              {mode === 'connect' && (
+              {mode === 'connect' || mode === 'manualconnect' ? (
                 <Button type="submit" loading={form.submitting}>
                   {t('form.button.connect')}
                 </Button>
-              )}
+              ) : null}
 
               {mode === 'createProfile' || mode === 'editProfile' ? (
                 <Button type="submit" loading={form.submitting}>

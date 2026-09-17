@@ -91,7 +91,11 @@ func (m *Module) TestConnection(input models.ConnectionInput) models.Output[mode
 	return status
 }
 
-func (m *Module) Connect(input models.ConnectionInput, saveProfile bool) models.Output[models.ConnectionOutput] {
+func (m *Module) Connect(
+	input models.ConnectionInput,
+	isSaveProfile bool,
+	isManualConnect bool,
+) models.Output[models.ConnectionOutput] {
 	// Don't use app.Context for I/O because this context is cancelled only when the app shuts down.
 	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
 	defer cancel()
@@ -105,9 +109,12 @@ func (m *Module) Connect(input models.ConnectionInput, saveProfile bool) models.
 	}
 
 	connectionId := utils.GenerateUUID()
-	m.global.PutConnContainer(connectionId, c)
 
-	if saveProfile {
+	if isManualConnect == true {
+		connectionId = input.Id
+	}
+
+	if isSaveProfile == true && isManualConnect == false {
 		createResult := m.profile.CreateProfile(input)
 		if createResult.MessageList != nil {
 			*status.MessageList = append(*status.MessageList, *createResult.MessageList...)
@@ -118,6 +125,7 @@ func (m *Module) Connect(input models.ConnectionInput, saveProfile bool) models.
 		}
 	}
 
+	m.global.PutConnContainer(connectionId, c)
 	status.Body.ConnectionId = connectionId
 	status.Body.IsConnected = true
 	status.AddMessage(

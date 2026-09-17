@@ -1,23 +1,24 @@
 import { GetAllConnectionProfile } from '@wails/S3Browser/internal/handlers/profilehandler';
-import { ConnectionProfileOutput } from '@wails/S3Browser/models/profile/models';
-import { createStore } from '@/common/stores/createStore';
+import { ConnectionProfileOutput } from '@wails/S3Browser/models';
+import { createAppStore } from '@/common/stores/createStore';
 import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
 
 interface ProfileState {
   connectionProfiles: Partial<Record<string, ConnectionProfileOutput>>;
+}
 
+interface ProfileAction {
   setConnectionProfiles: (datas: Partial<Record<string, ConnectionProfileOutput>>) => void;
   loadConnectionProfiles: () => Promise<void>;
   getConnectionProfiles: () => Partial<Record<string, ConnectionProfileOutput>>;
   updateConnectionProfiles: (key: string, data: ConnectionProfileOutput) => void;
   deleteConnectionProfiles: (key: string) => void;
-
   reset: () => void;
 }
 
 const SCOPE = 'profile';
 
-export const useProfileStore = createStore<ProfileState>(
+export const useProfileStore = createAppStore<ProfileState & ProfileAction>(
   (set, get) => ({
     connectionProfiles: {},
 
