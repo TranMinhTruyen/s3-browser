@@ -13,10 +13,10 @@ function MainLayout() {
 
       <AppShell.Main>
         <Splitter h="100%">
-          <Splitter.Pane defaultSize="15%" min="10%" max="100%" p={'8px 4px 8px 8px'}>
+          <Splitter.Pane defaultSize="15%" min="10%" p={'4px 4px 4px 4px'}>
             <LeftNavbar />
           </Splitter.Pane>
-          <Splitter.Pane defaultSize="85%" p={'8px 8px 8px 4px'}>
+          <Splitter.Pane defaultSize="85%" min="50%" p={'4px 4px 4px 4px'}>
             <Outlet />
           </Splitter.Pane>
         </Splitter>

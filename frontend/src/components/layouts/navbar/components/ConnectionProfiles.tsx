@@ -50,7 +50,7 @@ function ConnectionProfiles() {
       mode: mode,
       id: value.id,
       version: value.version,
-      connectionInfo: { ...value },
+      connectionProfileOutput: { ...value },
     });
   };
 
