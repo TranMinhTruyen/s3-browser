@@ -9,7 +9,7 @@ require (
 	github.com/aws/smithy-go v1.28.1
 	github.com/google/uuid v1.6.0
 	github.com/pressly/goose/v3 v3.28.0
-	github.com/wailsapp/wails/v3 v3.0.0-beta.22
+	github.com/wailsapp/wails/v3 v3.0.0-beta.23
 	github.com/zalando/go-keyring v0.2.8
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	modernc.org/sqlite v1.59.0
@@ -155,19 +155,19 @@ require (
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20260112195511-716be5621a96 // indirect
 	golang.org/x/image v0.41.0 // indirect
-	golang.org/x/mod v0.38.0 // indirect
+	golang.org/x/mod v0.40.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/term v0.45.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
-	golang.org/x/tools v0.48.0 // indirect
+	golang.org/x/tools v0.49.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	howett.net/plist v1.0.2-0.20250314012144-ee69052608d9 // indirect
-	modernc.org/libc v1.75.7 // indirect
+	modernc.org/libc v1.76.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 	mvdan.cc/sh/v3 v3.12.0 // indirect

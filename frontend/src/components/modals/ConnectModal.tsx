@@ -38,14 +38,12 @@ export interface ConnectionInfo extends z.infer<typeof connectSchema> {}
 
 type ConnectModalProps = {
   mode?: 'connect' | 'manualconnect' | 'createProfile' | 'editProfile';
-  id?: string;
-  version?: number;
-  connectionProfileOutput?: ConnectionProfileOutput;
+  connectionProfile?: ConnectionProfileOutput;
 };
 
 export default createMantineModal<ConnectModalProps, false>(
   props => {
-    const { mode = 'connect', id, version, connectionProfileOutput, mantine } = props;
+    const { mode = 'connect', connectionProfile, mantine } = props;
     const { t } = useTranslation('connectModal');
 
     const [saveProfile, { toggle: toggleSaveProfile }] = useDisclosure(mode === 'connect');
@@ -67,9 +65,12 @@ export default createMantineModal<ConnectModalProps, false>(
       })
       .parse(undefined);
 
+    const initialValues =
+      mode === 'connect' || mode === 'createProfile' ? defaultValues : { ...defaultValues, ...connectionProfile };
+
     const form = useForm<ConnectionInfo>({
       mode: 'uncontrolled',
-      initialValues: mode === 'connect' || mode === 'createProfile' ? defaultValues : connectionProfileOutput,
+      initialValues: initialValues,
       validate: values => {
         const resolver = schemaResolver(actionRef.current === 'profile' ? baseSchema : connectSchema, {
           sync: true,
@@ -91,9 +92,9 @@ export default createMantineModal<ConnectModalProps, false>(
       (isTestConnection: boolean = false) =>
       async (value: ConnectionInfo) => {
         const input: ConnectionInput = {
-          id: id ?? '',
-          version: version ?? 1,
           ...value,
+          id: connectionProfile?.id ?? '',
+          version: connectionProfile?.version ?? 1,
         };
 
         const output = await callIPC(ConnectS3, [input, isTestConnection, saveProfile, mode === 'manualconnect'], {
@@ -101,8 +102,16 @@ export default createMantineModal<ConnectModalProps, false>(
         });
 
         if (output && output.isConnected && !isTestConnection) {
-          if (mode === 'manualconnect' && connectionProfileOutput) {
-            updateConnectionProfiles(connectionProfileOutput.id, { ...connectionProfileOutput, isConnected: true });
+          if (mode === 'manualconnect' && connectionProfile?.id) {
+            updateConnectionProfiles(connectionProfile.id, { ...connectionProfile, isConnected: output.isConnected });
+          }
+          if (output.isTemp) {
+            updateConnectionProfiles(output.connectionId, {
+              ...value,
+              id: output.connectionId,
+              isTemp: true,
+              isConnected: output.isConnected,
+            });
           }
           mantine.handler.hide();
         }
@@ -113,14 +122,14 @@ export default createMantineModal<ConnectModalProps, false>(
         type: 'info',
         confirmCode: 'CFPF000001',
       });
-      if (confirmModal) {
+      if (confirmModal && connectionProfile) {
         const input: ConnectionInput = {
-          id: id ?? '',
-          version: version ?? 1,
           ...value,
+          id: connectionProfile.id ?? '',
+          version: connectionProfile.version ?? 1,
         };
         const output = await callIPC(UpdateProfileById, [input]);
-        if (output) {
+        if (output?.id) {
           form.setValues({ ...output });
           updateConnectionProfiles(output.id, { ...output });
         }
@@ -129,14 +138,14 @@ export default createMantineModal<ConnectModalProps, false>(
 
     const handleCreateProfile = () => async (value: ConnectionInfo) => {
       const input: ConnectionInput = {
+        ...value,
         id: createUUID(),
         version: 1,
-        ...value,
       };
       const output = await callIPC(CreateProfile, [input], {
         showMessage: true,
       });
-      if (output) {
+      if (output?.id) {
         updateConnectionProfiles(output.id, { ...output });
         mantine.handler.hide();
       }

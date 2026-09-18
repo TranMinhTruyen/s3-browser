@@ -3,15 +3,20 @@ import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { createAppStore } from '@/common/stores/createStore';
 import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
 
+export type ConnectionProfile = ConnectionProfileOutput & {
+  isTemp?: boolean;
+};
+
 interface ProfileState {
-  connectionProfiles: Partial<Record<string, ConnectionProfileOutput>>;
+  connectionProfiles: Partial<Record<string, ConnectionProfile>>;
 }
 
 interface ProfileAction {
-  setConnectionProfiles: (datas: Partial<Record<string, ConnectionProfileOutput>>) => void;
+  setConnectionProfiles: (datas: Partial<Record<string, ConnectionProfile>>) => void;
   loadConnectionProfiles: () => Promise<void>;
-  getConnectionProfiles: () => Partial<Record<string, ConnectionProfileOutput>>;
-  updateConnectionProfiles: (key: string, data: ConnectionProfileOutput) => void;
+  getAllConnectionProfiles: () => Partial<Record<string, ConnectionProfile>>;
+  getConnectionProfileById: (key?: string | null) => ConnectionProfile | null | undefined;
+  updateConnectionProfiles: (key: string, data: ConnectionProfile) => void;
   deleteConnectionProfiles: (key: string) => void;
   reset: () => void;
 }
@@ -32,11 +37,18 @@ export const useProfileStore = createAppStore<ProfileState & ProfileAction>(
         return;
       }
 
-      get().setConnectionProfiles(output.connectionProfiles);
+      get().setConnectionProfiles(output.connectionProfiles ?? {});
     },
 
-    getConnectionProfiles: () => {
+    getAllConnectionProfiles: () => {
       return get().connectionProfiles;
+    },
+
+    getConnectionProfileById: (key?: string | null) => {
+      if (key) {
+        return get().connectionProfiles[key];
+      }
+      return null;
     },
 
     updateConnectionProfiles: (key, data) => {

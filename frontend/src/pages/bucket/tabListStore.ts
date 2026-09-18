@@ -5,13 +5,13 @@ import { createUUID } from '@/common/utils/stringUtils';
 
 interface TabListState {
   activeTab: string;
-  tabList: Record<string, string>;
+  tabList: Record<string, string | null | undefined>;
 }
 
 interface TabListAction {
   setActiveTab: (tabId: string | null) => void;
   addTab: () => void;
-  updateTab: (tabId: string, profileId: string) => void;
+  updateTab: (tabId: string, profileId?: string | null) => void;
   closeTab: (tabId: string) => void;
   reset: () => void;
 }
@@ -44,7 +44,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       );
     },
 
-    updateTab: (tabId: string, profileId: string) => {
+    updateTab: (tabId: string, profileId?: string | null) => {
       set(
         state => {
           state.tabList[tabId] = profileId;

@@ -1,7 +1,8 @@
 package bucket
 
 type ConnectionOutput struct {
-	IsConnected  bool   `json:"isConnected"`
-	ConnectionId string `json:"connectionId,omitempty"`
-	Limited      bool   `json:"limited"`
+	IsConnected  bool   `json:"isConnected,omitempty"`
+	ConnectionId string `json:"connectionId"`
+	Limited      bool   `json:"limited,omitempty"`
+	IsTemp       bool   `json:"isTemp,omitempty"`
 }
