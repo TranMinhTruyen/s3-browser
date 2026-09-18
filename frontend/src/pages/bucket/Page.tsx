@@ -52,7 +52,7 @@ function Page() {
             >
               <Group gap="xs" wrap="nowrap" p="0" justify="space-between">
                 <Text truncate="end" style={{ minWidth: 0, flex: 1 }}>
-                  {connectionProfiles[value]?.name || 'New connection'}
+                  {value ? connectionProfiles[value]?.name : 'New connection'}
                 </Text>
                 <CloseButton size="xs" onClick={handleCloseTab(key)} style={{ flexShrink: 0 }} />
               </Group>

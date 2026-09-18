@@ -7,12 +7,12 @@ import (
 )
 
 type Message struct {
-	Order       *string         `json:"order"`
-	ModuleName  *string         `json:"moduleName"`
-	MessageType *string         `json:"messageType"`
-	MessageCode *string         `json:"messageCode"`
-	Params      *map[string]any `json:"params"`
-	ErrorDetail *string         `json:"errorDetail"`
+	Order       *string         `json:"order,omitempty"`
+	ModuleName  *string         `json:"moduleName,omitempty"`
+	MessageType *string         `json:"messageType,omitempty"`
+	MessageCode *string         `json:"messageCode,omitempty"`
+	Params      *map[string]any `json:"params,omitempty"`
+	ErrorDetail *string         `json:"errorDetail,omitempty"`
 }
 
 func CreateMessage(messageType string, moduleName string, code string, errorDetail string) Message {

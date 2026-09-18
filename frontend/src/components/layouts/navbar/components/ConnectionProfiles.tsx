@@ -1,13 +1,12 @@
-import { Card, isLightColor, Loader, Menu, Stack, Text } from '@mantine/core';
+import { Card, Indicator, isLightColor, Loader, Menu, Stack, Text, Tooltip } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { ConnectS3ByProfile, Disconnect } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { DeleteProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
-import { ConnectionProfileOutput } from '@wails/S3Browser/models/profile/models';
 import { Events } from '@wailsio/runtime';
 import { Cable, Unplug } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useProfileStore } from '@/common/stores/profileStore';
+import { ConnectionProfile, useProfileStore } from '@/common/stores/profileStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ConfirmModal from '@/components/modals/ConfirmModal';
 import ConnectModal from '@/components/modals/ConnectModal';
@@ -36,6 +35,7 @@ function ConnectionProfiles() {
 
   useEffect(() => {
     const unsubscribe = Events.On('bucket:connect-save-profile', e => {
+      if (!e.data.id) return;
       autoConnectDoneRef.current = false;
       updateConnectionProfiles(e.data.id, { ...e.data });
     });
@@ -45,16 +45,14 @@ function ConnectionProfiles() {
     };
   }, [updateConnectionProfiles]);
 
-  const handleOpenConnectModal = (value: ConnectionProfileOutput, mode: 'manualconnect' | 'editProfile') => {
+  const handleOpenConnectModal = (value: ConnectionProfile, mode: 'manualconnect' | 'editProfile') => {
     ConnectModal.show({
       mode: mode,
-      id: value.id,
-      version: value.version,
-      connectionProfileOutput: { ...value },
+      connectionProfile: { ...value },
     });
   };
 
-  const handleConnect = (key: string, value: ConnectionProfileOutput) => async () => {
+  const handleConnect = (key: string, value: ConnectionProfile) => async () => {
     if (!value || value.isConnected) return;
     if (autoConnectDoneRef.current && !value.savePassword) {
       handleOpenConnectModal(value, 'manualconnect');
@@ -71,7 +69,7 @@ function ConnectionProfiles() {
     }
   };
 
-  const handleDisconnect = (key: string, value: ConnectionProfileOutput) => async () => {
+  const handleDisconnect = (key: string, value: ConnectionProfile) => async () => {
     if (!value || !value.isConnected) return;
     openConnectLoading();
     try {
@@ -84,17 +82,21 @@ function ConnectionProfiles() {
     }
   };
 
-  const handleEditProfile = (value: ConnectionProfileOutput) => () => {
+  const handleEditProfile = (value: ConnectionProfile) => () => {
     handleOpenConnectModal(value, 'editProfile');
   };
 
-  const handleDeleteProfile = (value: ConnectionProfileOutput) => async () => {
+  const handleDeleteProfile = (value: ConnectionProfile) => async () => {
     const confirmModal = await ConfirmModal.show({
       type: 'warning',
       confirmCode: 'CFPF000002',
     });
-    if (confirmModal) {
-      const output = await callIPC(DeleteProfileById, [value]);
+    if (value.isTemp && value.id) {
+      deleteConnectionProfiles(value.id);
+      return;
+    }
+    if (confirmModal && value.id) {
+      const output = await callIPC(DeleteProfileById, [{ ...value }]);
       if (output) {
         deleteConnectionProfiles(value.id);
       }
@@ -124,55 +126,59 @@ function ConnectionProfiles() {
   }, [connectionProfiles]);
 
   const connectionProfilesComponent = Object.entries(connectionProfiles)
-    .filter((entry): entry is [string, ConnectionProfileOutput] => entry[1] !== undefined)
+    .filter((entry): entry is [string, ConnectionProfile] => entry[1] !== undefined)
     .map(([key, value]) => {
       return (
         <Menu key={key} width={200} opened={openedMenuKey === key} onChange={handleMenuChange(key)}>
-          <Menu.ContextMenu>
-            <Card
-              padding="8px"
-              withBorder
-              orientation="horizontal"
-              onMouseEnter={() => setHoveredKey(key)}
-              onMouseLeave={() => setHoveredKey(prev => (prev === key ? null : prev))}
-              onDoubleClick={handleConnect(key, value)}
-              c={isLightColor(value.color ?? '#d0ebff') ? '#000000' : '#FFFFFF'}
-              style={{
-                cursor: 'pointer',
-                transition: 'border-color 150ms ease',
-                borderColor: openedMenuKey === key || hoveredKey === key ? '#000000' : undefined,
-              }}
-            >
-              <Card.Section
-                inheritPadding
-                style={{
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  minWidth: '40px',
-                  justifyContent: 'center',
-                  backgroundColor: value.isConnected ? '#83f175' : '#FFFFFF',
-                }}
-              >
-                {connectLoading ? <Loader color="blue" size="sm" /> : value.isConnected ? <Cable /> : <Unplug />}
-              </Card.Section>
-              <Card.Section
-                px="xs"
-                inheritPadding
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  backgroundColor: value.color ?? '#FFFFFF',
-                }}
-              >
-                <Text c="inherit" truncate="end">
-                  {value.name}
-                </Text>
-              </Card.Section>
-            </Card>
-          </Menu.ContextMenu>
+          <Tooltip multiline withArrow disabled={!value.isTemp} label="This connection will remove when close app">
+            <Indicator disabled={!value.isTemp} color="red">
+              <Menu.ContextMenu>
+                <Card
+                  padding="8px"
+                  withBorder
+                  orientation="horizontal"
+                  onMouseEnter={() => setHoveredKey(key)}
+                  onMouseLeave={() => setHoveredKey(prev => (prev === key ? null : prev))}
+                  onDoubleClick={handleConnect(key, value)}
+                  c={isLightColor(value.color ?? '#d0ebff') ? '#000000' : '#FFFFFF'}
+                  style={{
+                    cursor: 'pointer',
+                    transition: 'border-color 150ms ease',
+                    borderColor: openedMenuKey === key || hoveredKey === key ? '#000000' : undefined,
+                  }}
+                >
+                  <Card.Section
+                    inheritPadding
+                    style={{
+                      flexShrink: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      minWidth: '40px',
+                      justifyContent: 'center',
+                      backgroundColor: value.isConnected ? '#83f175' : '#FFFFFF',
+                    }}
+                  >
+                    {connectLoading ? <Loader color="blue" size="sm" /> : value.isConnected ? <Cable /> : <Unplug />}
+                  </Card.Section>
+                  <Card.Section
+                    px="xs"
+                    inheritPadding
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      backgroundColor: value.color ?? '#FFFFFF',
+                    }}
+                  >
+                    <Text c="inherit" truncate="end">
+                      {value.name}
+                    </Text>
+                  </Card.Section>
+                </Card>
+              </Menu.ContextMenu>
+            </Indicator>
+          </Tooltip>
 
           <Menu.Dropdown>
             {!value.isConnected && (

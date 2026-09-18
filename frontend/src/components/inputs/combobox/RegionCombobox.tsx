@@ -15,7 +15,7 @@ type RegionOptionProps = {
 
 const RegionOption = memo(function RegionOption({ item, active }: RegionOptionProps) {
   return (
-    <Combobox.Option value={item.value1} active={active}>
+    <Combobox.Option value={item.value1 ?? ''} active={active}>
       <Group gap="xs">
         {active && <CheckIcon size={12} />}
         <span>{item.name}</span>
@@ -52,7 +52,13 @@ function RegionCombobox(props: RegionComboboxProps) {
   const regionData = useMasterDataStore(m => m.regionData);
   const itemsByValue = useMemo(() => {
     const map = new Map<string, MasterOutput>();
-    Object.values(regionData).forEach(items => items?.forEach(item => map.set(item.value1, item)));
+    Object.values(regionData).forEach(items =>
+      items?.forEach(item => {
+        if (item.value1) {
+          map.set(item.value1, item);
+        }
+      })
+    );
     return map;
   }, [regionData]);
 
