@@ -24,7 +24,7 @@ const baseSchema = z.object({
   endpoint: z.string().trim().nonempty('V000001'),
   region: z.string().trim().nonempty('V000001'),
   accessKey: z.string().trim().nonempty('V000001'),
-  secretKey: z.string().trim(), // không bắt buộc
+  secretKey: z.string().trim(),
   pathStyle: z.boolean(),
   savePassword: z.boolean(),
   autoConnect: z.boolean(),
@@ -66,7 +66,9 @@ export default createMantineModal<ConnectModalProps, false>(
       .parse(undefined);
 
     const initialValues =
-      mode === 'connect' || mode === 'createProfile' ? defaultValues : { ...defaultValues, ...connectionProfile };
+      mode === 'connect' || mode === 'createProfile'
+        ? defaultValues
+        : { ...defaultValues, ...connectionProfile, pathStyle: false, savePassword: false, autoConnect: false };
 
     const form = useForm<ConnectionInfo>({
       mode: 'uncontrolled',
@@ -103,13 +105,8 @@ export default createMantineModal<ConnectModalProps, false>(
 
         if (output && output.isConnected && !isTestConnection) {
           if (mode === 'manualconnect' && connectionProfile?.id) {
-            updateConnectionProfiles(connectionProfile.id, { ...connectionProfile, isConnected: output.isConnected });
-          }
-          if (output.isTemp) {
-            updateConnectionProfiles(output.connectionId, {
-              ...value,
-              id: output.connectionId,
-              isTemp: true,
+            updateConnectionProfiles(connectionProfile.id, {
+              ...connectionProfile,
               isConnected: output.isConnected,
             });
           }

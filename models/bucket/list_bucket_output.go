@@ -8,6 +8,6 @@ type Bucket struct {
 }
 
 type ListBucketOutput struct {
-	BucketList []Bucket
-	NextCursor *string
+	BucketList []Bucket `json:"bucketList,omitempty"`
+	NextCursor *string  `json:"nextCursor,omitempty"`
 }

@@ -128,7 +128,6 @@ func (m *Module) Connect(
 	m.global.PutConnContainer(connectionId, c)
 	status.Body.ConnectionId = connectionId
 	status.Body.IsConnected = true
-	status.Body.IsTemp = isSaveProfile != true
 	status.AddMessage(
 		models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S002, "", map[string]any{
 			"name": input.Name,

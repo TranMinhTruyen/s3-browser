@@ -54,7 +54,14 @@ function Page() {
                 <Text truncate="end" style={{ minWidth: 0, flex: 1 }}>
                   {value ? connectionProfiles[value]?.name : 'New connection'}
                 </Text>
-                <CloseButton size="xs" onClick={handleCloseTab(key)} style={{ flexShrink: 0 }} />
+                <CloseButton
+                  component="span"
+                  role="button"
+                  aria-label="Close tab"
+                  size="xs"
+                  onClick={handleCloseTab(key)}
+                  style={{ flexShrink: 0 }}
+                />
               </Group>
             </Tabs.Tab>
           ))}

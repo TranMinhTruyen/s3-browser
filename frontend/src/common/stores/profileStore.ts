@@ -3,9 +3,7 @@ import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { createAppStore } from '@/common/stores/createStore';
 import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
 
-export type ConnectionProfile = ConnectionProfileOutput & {
-  isTemp?: boolean;
-};
+export type ConnectionProfile = ConnectionProfileOutput & {};
 
 interface ProfileState {
   connectionProfiles: Partial<Record<string, ConnectionProfile>>;
