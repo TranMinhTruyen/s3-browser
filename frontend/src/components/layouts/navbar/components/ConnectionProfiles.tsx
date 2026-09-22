@@ -1,4 +1,4 @@
-import { Card, Indicator, isLightColor, Loader, Menu, Stack, Text, Tooltip } from '@mantine/core';
+import { Card, isLightColor, Loader, Menu, Stack, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { ConnectS3ByProfile, Disconnect } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { DeleteProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
@@ -91,10 +91,6 @@ function ConnectionProfiles() {
       type: 'warning',
       confirmCode: 'CFPF000002',
     });
-    if (value.isTemp && value.id) {
-      deleteConnectionProfiles(value.id);
-      return;
-    }
     if (confirmModal && value.id) {
       const output = await callIPC(DeleteProfileById, [{ ...value }]);
       if (output) {
@@ -130,55 +126,51 @@ function ConnectionProfiles() {
     .map(([key, value]) => {
       return (
         <Menu key={key} width={200} opened={openedMenuKey === key} onChange={handleMenuChange(key)}>
-          <Tooltip multiline withArrow disabled={!value.isTemp} label="This connection will remove when close app">
-            <Indicator disabled={!value.isTemp} color="red">
-              <Menu.ContextMenu>
-                <Card
-                  padding="8px"
-                  withBorder
-                  orientation="horizontal"
-                  onMouseEnter={() => setHoveredKey(key)}
-                  onMouseLeave={() => setHoveredKey(prev => (prev === key ? null : prev))}
-                  onDoubleClick={handleConnect(key, value)}
-                  c={isLightColor(value.color ?? '#d0ebff') ? '#000000' : '#FFFFFF'}
-                  style={{
-                    cursor: 'pointer',
-                    transition: 'border-color 150ms ease',
-                    borderColor: openedMenuKey === key || hoveredKey === key ? '#000000' : undefined,
-                  }}
-                >
-                  <Card.Section
-                    inheritPadding
-                    style={{
-                      flexShrink: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      minWidth: '40px',
-                      justifyContent: 'center',
-                      backgroundColor: value.isConnected ? '#83f175' : '#FFFFFF',
-                    }}
-                  >
-                    {connectLoading ? <Loader color="blue" size="sm" /> : value.isConnected ? <Cable /> : <Unplug />}
-                  </Card.Section>
-                  <Card.Section
-                    px="xs"
-                    inheritPadding
-                    style={{
-                      flex: 1,
-                      minWidth: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      backgroundColor: value.color ?? '#FFFFFF',
-                    }}
-                  >
-                    <Text c="inherit" truncate="end">
-                      {value.name}
-                    </Text>
-                  </Card.Section>
-                </Card>
-              </Menu.ContextMenu>
-            </Indicator>
-          </Tooltip>
+          <Menu.ContextMenu>
+            <Card
+              padding="8px"
+              withBorder
+              orientation="horizontal"
+              onMouseEnter={() => setHoveredKey(key)}
+              onMouseLeave={() => setHoveredKey(prev => (prev === key ? null : prev))}
+              onDoubleClick={handleConnect(key, value)}
+              c={isLightColor(value.color ?? '#d0ebff') ? '#000000' : '#FFFFFF'}
+              style={{
+                cursor: 'pointer',
+                transition: 'border-color 150ms ease',
+                borderColor: openedMenuKey === key || hoveredKey === key ? '#000000' : undefined,
+              }}
+            >
+              <Card.Section
+                inheritPadding
+                style={{
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  minWidth: '40px',
+                  justifyContent: 'center',
+                  backgroundColor: value.isConnected ? '#83f175' : '#FFFFFF',
+                }}
+              >
+                {connectLoading ? <Loader color="blue" size="sm" /> : value.isConnected ? <Cable /> : <Unplug />}
+              </Card.Section>
+              <Card.Section
+                px="xs"
+                inheritPadding
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  backgroundColor: value.color ?? '#FFFFFF',
+                }}
+              >
+                <Text c="inherit" truncate="end">
+                  {value.name}
+                </Text>
+              </Card.Section>
+            </Card>
+          </Menu.ContextMenu>
 
           <Menu.Dropdown>
             {!value.isConnected && (
