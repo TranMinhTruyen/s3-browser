@@ -67,7 +67,7 @@ export function callIPC<A extends unknown[], T>(
   binding: (...args: A) => Promise<Output<T>>,
   args: A,
   options?: Optionals
-): Promise<T | null> {
+): Promise<T | null | undefined> {
   const dedupeKey = dedupeKeyOf(binding, args);
 
   const pending = inFlight.get(dedupeKey);
@@ -97,7 +97,7 @@ async function run<A extends unknown[], T>(
   scope: string | undefined,
   showMessage: boolean = true,
   sequence: string
-): Promise<T | null> {
+): Promise<T | null | undefined> {
   try {
     const output = await binding(...args);
 

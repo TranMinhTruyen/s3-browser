@@ -20,6 +20,9 @@ type (
 	Bucket           = bucket.Bucket
 	ListBucketInput  = bucket.ListBucketInput
 	ListBucketOutput = bucket.ListBucketOutput
+	ListObjectInput  = bucket.ListObjectInput
+	ListObjectOutput = bucket.ListObjectOutput
+	ObjectItem       = bucket.ObjectItem
 )
 
 // master
