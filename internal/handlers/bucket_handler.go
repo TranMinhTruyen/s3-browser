@@ -49,3 +49,7 @@ func (h *BucketHandler) Disconnect(connectionId string) models.Output[bool] {
 func (h *BucketHandler) GetListBucket(input models.ListBucketInput) models.Output[models.ListBucketOutput] {
 	return h.bucket.GetListBucket(input)
 }
+
+func (h *BucketHandler) GetListObject(input models.ListObjectInput) models.Output[models.ListObjectOutput] {
+	return h.bucket.GetListObject(input)
+}

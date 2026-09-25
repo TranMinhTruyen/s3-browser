@@ -1,14 +1,16 @@
-import { Box, Card, Divider, Group, Paper, Stack, Text } from '@mantine/core';
-import { ConnectS3ByProfile, GetListBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
-import { ListBucketOutput } from '@wails/S3Browser/models/bucket';
-import { Folder, PlugZap } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { Divider, Group, Paper, Stack } from '@mantine/core';
+import { ConnectS3ByProfile } from '@wails/S3Browser/internal/handlers/buckethandler';
+import { PlugZap } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/AcctionIcon';
+import Button from '@/components/buttons/Button';
 import Combobox from '@/components/inputs/combobox/Combobox';
 import ConnectModal from '@/components/modals/ConnectModal';
+import BucketListView from '@/pages/bucket/components/views/BucketListView';
+import ObjectListView from '@/pages/bucket/components/views/ObjectListView';
 import { useTabListStore } from '@/pages/bucket/tabListStore';
 
 type PanelDetailProps = {
@@ -19,8 +21,9 @@ type PanelDetailProps = {
 function PanelDetail(props: PanelDetailProps) {
   const { tabId, profileId } = props;
 
-  const [selectProfile, setSelectProfile] = useState<string | null>(profileId ?? null);
-  const [bucketDatas, setBucketDatas] = useState<ListBucketOutput | null>({ bucketList: [], nextCursor: '' });
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(profileId ?? null);
+  const [selectedBucket, setSelectedBucket] = useState<string | undefined>(undefined);
+  const [currentView, setCurrentView] = useState<'bucketList' | 'objectList'>('bucketList');
 
   const connectionProfiles = useProfileStore(s => s.connectionProfiles);
   const updateTab = useTabListStore(s => s.updateTab);
@@ -30,35 +33,18 @@ function PanelDetail(props: PanelDetailProps) {
     value: key,
   }));
 
-  const isConnected = !!selectProfile && !!connectionProfiles[selectProfile]?.isConnected;
+  const isConnected = !!selectedProfileId && !!connectionProfiles[selectedProfileId]?.isConnected;
 
   useEffect(() => {
-    if (selectProfile) {
-      updateTab(tabId, isConnected ? selectProfile : null);
+    if (selectedProfileId) {
+      updateTab(tabId, isConnected ? selectedProfileId : null);
     }
-  }, [isConnected, selectProfile, tabId, updateTab]);
-
-  const handleGetBucketList = async (nextCursor: string) => {
-    if (selectProfile && connectionProfiles[selectProfile]) {
-      const profile = connectionProfiles[selectProfile];
-      const output = await callIPC(GetListBucket, [
-        {
-          connectionId: selectProfile,
-          profileName: profile.name,
-          nextCursor,
-          limit: 10,
-        },
-      ]);
-      if (output) {
-        setBucketDatas({ ...output });
-      }
-    }
-  };
+  }, [isConnected, selectedProfileId, tabId, updateTab]);
 
   const handleConnect = async () => {
-    if (isNullOrEmpty(selectProfile)) return;
+    if (isNullOrEmpty(selectedProfileId)) return;
 
-    const profile = connectionProfiles[selectProfile];
+    const profile = connectionProfiles[selectedProfileId];
 
     if (!profile || profile.isConnected) return;
     if (!profile.savePassword) {
@@ -69,15 +55,14 @@ function PanelDetail(props: PanelDetailProps) {
       return;
     }
 
-    const output = await callIPC(ConnectS3ByProfile, [selectProfile]);
+    const output = await callIPC(ConnectS3ByProfile, [selectedProfileId]);
     if (output?.isConnected) {
-      handleGetBucketList('');
-      updateConnectionProfiles(selectProfile, { ...profile, isConnected: true });
+      updateConnectionProfiles(selectedProfileId, { ...profile, isConnected: true });
     }
   };
 
   const handleChangeSelectProfile = (value: string | null) => {
-    setSelectProfile(value);
+    setSelectedProfileId(value);
     if (value && connectionProfiles[value]?.isConnected) {
       updateTab(tabId, value);
     } else {
@@ -85,53 +70,38 @@ function PanelDetail(props: PanelDetailProps) {
     }
   };
 
-  const bucketDetail = useMemo(() => {
-    if (!isConnected) return [];
-    return (bucketDatas?.bucketList || []).map((item, idx) => (
-      <Card key={idx} padding="sm" orientation="horizontal" style={{ border: '1px solid black' }}>
-        <Card.Section
-          inheritPadding
-          px="xs"
-          withBorder
-          style={{
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            minWidth: '56px',
-            justifyContent: 'center',
-          }}
-        >
-          <Folder />
-        </Card.Section>
-        <Card.Section
-          inheritPadding
-          px="md"
-          style={{
-            flex: 1,
-            minWidth: 0,
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          <Stack>
-            <Text size="xl" fw="bold">
-              {item.name}
-            </Text>
-            <Box mt="xs">
-              <Text>Create date</Text>
-              <Text>{item.creationDate}</Text>
-            </Box>
-          </Stack>
-        </Card.Section>
-      </Card>
-    ));
-  }, [bucketDatas, isConnected]);
+  const handleSelectBucket = (bucketName: string | undefined) => {
+    if (bucketName) {
+      setCurrentView('objectList');
+      setSelectedBucket(bucketName);
+    }
+  };
+
+  const renderView = (
+    <>
+      <Stack gap="8px" display={currentView === 'bucketList' ? undefined : 'none'}>
+        <BucketListView
+          profile={isConnected ? connectionProfiles[selectedProfileId] : null}
+          onSelectBucket={handleSelectBucket}
+        />
+      </Stack>
+      {currentView === 'objectList' ? (
+        <Stack gap="8px">
+          <Button onClick={() => setCurrentView('bucketList')}>Back</Button>
+          <ObjectListView
+            profile={isConnected ? connectionProfiles[selectedProfileId] : null}
+            bucket={selectedBucket}
+          />
+        </Stack>
+      ) : null}
+    </>
+  );
 
   return (
     <Paper withBorder h="100%">
       <Group gap="xs" p="4px">
         <Combobox
-          value={selectProfile}
+          value={selectedProfileId}
           onChange={handleChangeSelectProfile}
           data={optionsData}
           style={{ width: '200px' }}
@@ -145,8 +115,7 @@ function PanelDetail(props: PanelDetailProps) {
       <Divider />
 
       <Paper p="8px">
-        {profileId ? connectionProfiles[profileId]?.name : 'New connection'}
-        <Stack gap="8px">{bucketDetail}</Stack>
+        <Stack gap="8px">{renderView}</Stack>
       </Paper>
     </Paper>
   );

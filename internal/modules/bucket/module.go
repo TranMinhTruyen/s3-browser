@@ -44,6 +44,9 @@ var (
 	// Get list bucket error, profile: {name}
 	S3E007 = "S3E007"
 
+	// Get list object error, profile: {name}, bucket: {bucket}
+	S3E008 = "S3E008"
+
 	// Access bucket is limited
 	S3W001 = "S3W001"
 )
