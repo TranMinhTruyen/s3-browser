@@ -9,7 +9,7 @@ require (
 	github.com/aws/smithy-go v1.28.2
 	github.com/google/uuid v1.6.0
 	github.com/pressly/goose/v3 v3.28.0
-	github.com/wailsapp/wails/v3 v3.0.0-beta.25
+	github.com/wailsapp/wails/v3 v3.0.0-beta.26
 	github.com/zalando/go-keyring v0.2.8
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	modernc.org/sqlite v1.59.0
@@ -31,7 +31,7 @@ require (
 	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/alecthomas/chroma/v2 v2.23.1 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
-	github.com/atterpac/refresh v1.1.3 // indirect
+	github.com/atterpac/refresh v1.1.4 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.20 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.4 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.4 // indirect

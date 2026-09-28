@@ -3,16 +3,14 @@ package bucket
 import (
 	"S3Browser/internal/modules/global"
 	"S3Browser/internal/modules/profile"
-	"S3Browser/internal/pkg/cnst"
-	"S3Browser/internal/pkg/utils"
 	"S3Browser/models"
-	"context"
 	"log/slog"
-	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+// Message codes returned to the frontend by the bucket module.
+// Naming convention: S3S = success, S3E = error, S3W = warning.
 var (
 	// Test connection profile {name} to S3 success
 	S3S001 = "S3S001"
@@ -56,6 +54,11 @@ type Module struct {
 	app     *application.App
 	global  *global.Module
 	profile *profile.Module
+
+	submoduleCfgMng     *submoduleCfgMng
+	submoduleConnAction *submoduleConnAction
+	submoduleBucketMng  *submoduleBucketMng
+	submoduleObjMng     *submoduleObjMng
 }
 
 func NewModule(
@@ -64,155 +67,70 @@ func NewModule(
 	global *global.Module,
 	profileModule *profile.Module,
 ) *Module {
+	submoduleCfgMng := newSubmoduleCfgMng(logger)
+	submoduleConnAction := newSubmoduleConnAction(app, logger, global, profileModule, submoduleCfgMng)
+	submoduleBucketMng := newSubmoduleBucketMng(app, logger, global)
+	submoduleObjMng := newSubmoduleObjMng(app, logger, global)
+
 	return &Module{
-		logger:  logger.With("component", "bucket_module"),
+		logger:  logger.With("modules", "bucket"),
 		app:     app,
 		global:  global,
 		profile: profileModule,
+
+		submoduleCfgMng:     submoduleCfgMng,
+		submoduleConnAction: submoduleConnAction,
+		submoduleObjMng:     submoduleObjMng,
+		submoduleBucketMng:  submoduleBucketMng,
 	}
 }
 
-func (m *Module) TestConnection(input models.ConnectionInput) models.Output[models.ConnectionOutput] {
-	// Don't use app.Context for I/O because this context is cancelled only when the app shuts down.
-	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
-	defer cancel()
-
-	c := m.buildClient(input)
-	status, err := m.probe(ctx, c)
-
-	if err != nil {
-		status.Body.IsConnected = false
-		return status
-	}
-
-	status.Body.IsConnected = true
-	status.AddMessage(
-		models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S001, "", map[string]any{
-			"name": input.Name,
-		}),
-	)
-	return status
-}
-
-func (m *Module) Connect(
-	input models.ConnectionInput,
-	isSaveProfile bool,
-	isManualConnect bool,
+// Connect opens a connection to an S3-compatible endpoint using the given input.
+// isManualConnect indicates whether the connection was triggered directly by
+// the user (true) or by an automatic flow (false).
+// On success, the connection is kept for subsequent bucket/object operations.
+func (m *Module) Connect(input models.ConnectionInput, isManualConnect bool,
 ) models.Output[models.ConnectionOutput] {
-	// Don't use app.Context for I/O because this context is cancelled only when the app shuts down.
-	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
-	defer cancel()
-
-	c := m.buildClient(input)
-	status, err := m.probe(ctx, c)
-
-	if err != nil {
-		status.Body.IsConnected = false
-		return status
-	}
-
-	connectionId := utils.GenerateUUID()
-
-	if isManualConnect == true {
-		connectionId = input.Id
-	}
-
-	if isSaveProfile == true && isManualConnect == false {
-		createResult := m.profile.CreateProfile(input)
-		if createResult.MessageList != nil {
-			*status.MessageList = append(*status.MessageList, *createResult.MessageList...)
-		}
-		if createResult.Body != nil {
-			connectionId = createResult.Body.ID
-			m.app.Event.Emit(EventConnectSaveProfile, *createResult.Body)
-		}
-	}
-
-	m.global.PutConnContainer(connectionId, c)
-	status.Body.ConnectionId = connectionId
-	status.Body.IsConnected = true
-	status.AddMessage(
-		models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S002, "", map[string]any{
-			"name": input.Name,
-		}),
-	)
-
-	return status
+	return m.submoduleConnAction.connectAction(input, isManualConnect)
 }
 
+// TestConnection checks whether the given credentials and endpoint are valid
+// without keeping the connection open. Useful for validating a profile
+// before saving it.
+func (m *Module) TestConnection(input models.ConnectionInput) models.Output[models.ConnectionOutput] {
+	return m.submoduleConnAction.testAction(input)
+}
+
+// ConnectByProfile connects using a saved profile identified by connectionId,
+// loading its connection settings from the profile module.
 func (m *Module) ConnectByProfile(connectionId string) models.Output[models.ConnectionOutput] {
-	profile := m.profile.GetConnectionProfileById(connectionId)
-
-	// The profile lookup owns the reason it failed, so pass its messages through
-	// instead of letting an empty endpoint fail later as a generic S3 error.
-	if profile.Body == nil {
-		output := models.Output[models.ConnectionOutput]{}
-		output.New()
-		output.Body = &models.ConnectionOutput{}
-		if profile.MessageList != nil {
-			output.AddMessage(*profile.MessageList...)
-		}
-		return output
-	}
-
-	connectInput := models.ConnectionInput{
-		Name:      profile.Body.Name,
-		Endpoint:  profile.Body.Endpoint,
-		AccessKey: profile.Body.AccessKey,
-		SecretKey: profile.Body.SecretKey,
-		Region:    profile.Body.Region,
-		PathStyle: profile.Body.PathStyle,
-	}
-
-	// Don't use app.Context for I/O because this context is cancelled only when the app shuts down.
-	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
-	defer cancel()
-
-	c := m.buildClient(connectInput)
-	status, err := m.probe(ctx, c)
-
-	if err != nil {
-		status.Body.IsConnected = false
-		return status
-	}
-
-	m.global.PutConnContainer(connectionId, c)
-
-	status.Body.ConnectionId = connectionId
-	status.Body.IsConnected = true
-	status.AddMessage(
-		models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S002, "", map[string]any{
-			"name": profile.Body.Name,
-		}),
-	)
-
-	return status
+	return m.submoduleConnAction.profileConnectAction(connectionId)
 }
 
+// Disconnect closes the active connection identified by connectionId
+// and removes it from the shared connection store.
+// Returns true in if the disconnect succeeded.
 func (m *Module) Disconnect(connectionId string) models.Output[bool] {
-	output := models.Output[bool]{}
-	output.New()
-
-	if conn, ok := m.global.RemoveConn(connectionId); ok {
-		conn.Transport.CloseIdleConnections()
-		output.Body = utils.ToPtr(true)
-		output.AddMessage(
-			models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S003, "", map[string]any{
-				"name": conn.ProfileName,
-			}),
-		)
-		return output
-	} else {
-		output.AddMessage(
-			models.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E005, "Connection not found"),
-		)
-	}
-
-	return output
+	return m.submoduleConnAction.disconnectAction(connectionId)
 }
 
+// DisconnectAll removes every active connection from the shared store and
+// closes their idle HTTP connections. Intended to be called on application
+// shutdown to release network resources.
 func (m *Module) DisconnectAll() {
 	for _, conn := range m.global.RemoveAllConn() {
 		conn.Transport.CloseIdleConnections()
 	}
+}
+
+// GetListBucket returns the buckets accessible from the connection
+// specified in input. The connection must already be established.
+func (m *Module) GetListBucket(input models.ListBucketInput) models.Output[models.ListBucketOutput] {
+	return m.submoduleBucketMng.listBucket(input)
+}
+
+// GetListObject returns the objects in the bucket specified in input,
+// using an already-established connection.
+func (m *Module) GetListObject(input models.ListObjectInput) models.Output[models.ListObjectOutput] {
+	return m.submoduleObjMng.listObject(input)
 }
