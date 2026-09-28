@@ -17,7 +17,19 @@ import (
 	"github.com/aws/smithy-go"
 )
 
-func (m *Module) buildClient(input models.ConnectionInput) *global.S3Conn {
+type submoduleCfgMng struct {
+	logger *slog.Logger
+}
+
+func newSubmoduleCfgMng(
+	logger *slog.Logger,
+) *submoduleCfgMng {
+	return &submoduleCfgMng{
+		logger: logger.With("submodules", "cfg_mng"),
+	}
+}
+
+func (m *submoduleCfgMng) buildClient(input models.ConnectionInput) *global.S3Conn {
 	client, transport := newHTTPClient()
 
 	cfg := aws.Config{
@@ -43,7 +55,7 @@ func (m *Module) buildClient(input models.ConnectionInput) *global.S3Conn {
 	}
 }
 
-func (m *Module) probe(ctx context.Context, c *global.S3Conn) (models.Output[models.ConnectionOutput], error) {
+func (m *submoduleCfgMng) probe(ctx context.Context, c *global.S3Conn) (models.Output[models.ConnectionOutput], error) {
 	output := models.Output[models.ConnectionOutput]{}
 	output.New()
 

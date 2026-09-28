@@ -1,17 +1,38 @@
 package bucket
 
 import (
+	"S3Browser/internal/modules/global"
 	"S3Browser/internal/pkg/cnst"
 	"S3Browser/internal/pkg/utils"
 	"S3Browser/models"
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-func (m *Module) GetListObject(input models.ListObjectInput) models.Output[models.ListObjectOutput] {
+type submoduleObjMng struct {
+	logger *slog.Logger
+	app    *application.App
+	global *global.Module
+}
+
+func newSubmoduleObjMng(
+	app *application.App,
+	logger *slog.Logger,
+	global *global.Module,
+) *submoduleObjMng {
+	return &submoduleObjMng{
+		logger: logger.With("submodules", "object_mng"),
+		app:    app,
+		global: global,
+	}
+}
+
+func (m *submoduleObjMng) listObject(input models.ListObjectInput) models.Output[models.ListObjectOutput] {
 	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
 	defer cancel()
 
