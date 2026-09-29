@@ -1,9 +1,12 @@
 import { Box, Card, Stack, Text } from '@mantine/core';
 import { GetListBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput, ListBucketOutput } from '@wails/S3Browser/models';
+import dayjs from 'dayjs';
 import { Folder } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
 import { callIPC } from '@/common/utils/ipcUtils';
+import classes from '@/pages/bucket/page.module.css';
 
 type BucketListViewProps = {
   profile?: ConnectionProfileOutput | null;
@@ -23,7 +26,6 @@ function BucketListView(props: BucketListViewProps) {
     nextCursor: '',
     connectionId: '',
   });
-  const [hoveredKey, setHoveredKey] = useState<number | null>(null);
 
   const profileId = profile?.id;
   const profileName = profile?.name;
@@ -51,19 +53,13 @@ function BucketListView(props: BucketListViewProps) {
         padding="sm"
         orientation="horizontal"
         onClick={() => onSelectBucket?.(item.name)}
-        onMouseEnter={() => setHoveredKey(idx)}
-        onMouseLeave={() => setHoveredKey(prev => (prev === idx ? null : prev))}
-        style={{
-          cursor: 'pointer',
-          transition: 'border-color 150ms ease',
-          border: '1px solid #000000',
-          borderColor: hoveredKey === idx ? '#606af5' : '#000000',
-        }}
+        className={classes.card}
       >
         <Card.Section
           inheritPadding
           px="xs"
           withBorder
+          className={classes.iconSection}
           style={{
             flexShrink: 0,
             display: 'flex',
@@ -76,7 +72,7 @@ function BucketListView(props: BucketListViewProps) {
         </Card.Section>
         <Card.Section
           inheritPadding
-          px="md"
+          px="xs"
           style={{
             flex: 1,
             minWidth: 0,
@@ -88,15 +84,19 @@ function BucketListView(props: BucketListViewProps) {
             <Text size="xl" fw="bold">
               {item.name}
             </Text>
-            <Box mt="xs">
-              <Text>Create date</Text>
-              <Text>{item.creationDate}</Text>
+            <Box>
+              <Text>
+                <Text span fw={500}>
+                  Create date:
+                </Text>{' '}
+                {dayjs(item.creationDate).format(FULL_DATE_TIME_FORMAT)}
+              </Text>
             </Box>
           </Stack>
         </Card.Section>
       </Card>
     ));
-  }, [bucketDatas, profileId, onSelectBucket, hoveredKey]);
+  }, [bucketDatas, profileId, onSelectBucket]);
 
   return <>{bucketDetail}</>;
 }
