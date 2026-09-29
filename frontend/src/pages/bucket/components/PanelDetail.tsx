@@ -1,12 +1,11 @@
-import { Divider, Group, Paper, Stack } from '@mantine/core';
+import { Divider, Group, Paper, Stack, Tooltip } from '@mantine/core';
 import { ConnectS3ByProfile } from '@wails/S3Browser/internal/handlers/buckethandler';
-import { PlugZap } from 'lucide-react';
+import { ArrowLeft, PlugZap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/AcctionIcon';
-import Button from '@/components/buttons/Button';
 import Combobox from '@/components/inputs/combobox/Combobox';
 import ConnectModal from '@/components/modals/ConnectModal';
 import BucketListView from '@/pages/bucket/components/views/BucketListView';
@@ -87,7 +86,6 @@ function PanelDetail(props: PanelDetailProps) {
       </Stack>
       {currentView === 'objectList' ? (
         <Stack gap="8px">
-          <Button onClick={() => setCurrentView('bucketList')}>Back</Button>
           <ObjectListView
             profile={isConnected ? connectionProfiles[selectedProfileId] : null}
             bucket={selectedBucket}
@@ -107,9 +105,17 @@ function PanelDetail(props: PanelDetailProps) {
           style={{ width: '200px' }}
         />
 
-        <ActionIcon onClick={handleConnect}>
+        <ActionIcon onClick={handleConnect} disabled={isConnected}>
           <PlugZap />
         </ActionIcon>
+
+        {currentView === 'objectList' ? (
+          <Tooltip withArrow label="Back to bucket">
+            <ActionIcon onClick={() => setCurrentView('bucketList')}>
+              <ArrowLeft />
+            </ActionIcon>
+          </Tooltip>
+        ) : null}
       </Group>
 
       <Divider />

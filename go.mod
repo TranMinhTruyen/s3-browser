@@ -12,7 +12,7 @@ require (
 	github.com/wailsapp/wails/v3 v3.0.0-beta.26
 	github.com/zalando/go-keyring v0.2.8
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	modernc.org/sqlite v1.59.0
+	modernc.org/sqlite v1.60.0
 )
 
 require (

@@ -3,9 +3,11 @@ import { toast } from 'sonner';
 import { createUUID, formatStringJson, isNullOrEmpty } from '@/common/utils/stringUtils';
 import i18n from '@/locales/i18n';
 
-interface Optionals {
+interface Optionals<T> {
   scope?: string;
   showMessage?: boolean;
+  resolveAction?: (output?: Output<T>) => void;
+  rejectAction?: (output?: Output<T>) => void;
 }
 
 interface InFlightCall {
@@ -66,7 +68,7 @@ function dedupeKeyOf(binding: object, args: unknown[]): string {
 export function callIPC<A extends unknown[], T>(
   binding: (...args: A) => Promise<Output<T>>,
   args: A,
-  options?: Optionals
+  options?: Optionals<T>
 ): Promise<T | null | undefined> {
   const dedupeKey = dedupeKeyOf(binding, args);
 
@@ -83,7 +85,7 @@ export function callIPC<A extends unknown[], T>(
 
   const scope = options?.scope;
   const sequence = scope ? nextSequence(scope) : '';
-  const task = run(binding, args, scope, options?.showMessage, sequence);
+  const task = run(binding, args, scope, options?.showMessage, sequence, options?.resolveAction, options?.rejectAction);
 
   inFlight.set(dedupeKey, { task, scope, sequence });
   void task.finally(() => inFlight.delete(dedupeKey));
@@ -96,13 +98,21 @@ async function run<A extends unknown[], T>(
   args: A,
   scope: string | undefined,
   showMessage: boolean = true,
-  sequence: string
+  sequence: string,
+  resolveAction?: (output?: Output<T>) => void,
+  rejectAction?: (output?: Output<T>) => void
 ): Promise<T | null | undefined> {
   try {
     const output = await binding(...args);
 
     if (scope && isStaleKey(scope, sequence)) {
       return null;
+    }
+
+    if (output.result) {
+      resolveAction?.(output);
+    } else {
+      rejectAction?.(output);
     }
 
     if (showMessage) {
@@ -133,6 +143,7 @@ async function run<A extends unknown[], T>(
     toast.error(i18n.t('ipcMessage:common.CME001'), {
       description: err instanceof Error ? err.message : String(err),
     });
+    rejectAction?.(undefined);
     return null;
   }
 }

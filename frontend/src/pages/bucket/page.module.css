@@ -1,0 +1,21 @@
+.card {
+  cursor: pointer;
+  border: 1px solid #000000;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.iconSection {
+  border-color: #000000;
+  transition: border-color 150ms ease;
+}
+
+.card:hover {
+  border-color: #3b48ff;
+  color: #3b48ff;
+}
+
+.card:hover .iconSection {
+  border-color: #3b48ff;
+}
