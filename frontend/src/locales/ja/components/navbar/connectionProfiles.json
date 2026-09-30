@@ -1,0 +1,8 @@
+{
+  "contextMenu": {
+    "connect": "接続",
+    "disconnect": "切断",
+    "edit": "編集",
+    "delete": "削除"
+  }
+}

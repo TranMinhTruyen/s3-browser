@@ -15,6 +15,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/smithy-go"
+	"github.com/minio/madmin-go/v4"
+	miniocredentials "github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 type submoduleCfgMng struct {
@@ -29,7 +31,7 @@ func newSubmoduleCfgMng(
 	}
 }
 
-func (m *submoduleCfgMng) buildClient(input models.ConnectionInput) *global.S3Conn {
+func (m *submoduleCfgMng) buildClient(input models.ConnectionProfileInput) *global.S3Conn {
 	client, transport := newHTTPClient()
 
 	cfg := aws.Config{
@@ -37,7 +39,6 @@ func (m *submoduleCfgMng) buildClient(input models.ConnectionInput) *global.S3Co
 		Region:           input.Region,
 		HTTPClient:       client,
 		RetryMaxAttempts: 3,
-		ClientLogMode:    aws.LogRequest | aws.LogResponseWithBody | aws.LogSigning,
 	}
 
 	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
@@ -47,16 +48,32 @@ func (m *submoduleCfgMng) buildClient(input models.ConnectionInput) *global.S3Co
 
 	s3Presigner := s3.NewPresignClient(s3Client)
 
-	return &global.S3Conn{
+	conn := &global.S3Conn{
 		ProfileName: input.Name,
+		Provider:    input.Provider,
 		Client:      s3Client,
 		Presign:     s3Presigner,
 		Transport:   transport,
 	}
+
+	if input.Provider == "minio" {
+		admin, err := madmin.NewWithOptions(input.Endpoint, &madmin.Options{
+			Creds:     miniocredentials.NewStaticV4(input.AccessKey, input.SecretKey, ""),
+			Secure:    true,
+			Transport: transport,
+		})
+		if err != nil {
+			m.logger.Error("create madmin failed", slog.Any("error", err.Error()))
+		} else {
+			conn.MinioAdmin = admin
+		}
+	}
+
+	return conn
 }
 
-func (m *submoduleCfgMng) probe(ctx context.Context, c *global.S3Conn) (models.Output[models.ConnectionOutput], error) {
-	output := models.Output[models.ConnectionOutput]{}
+func (m *submoduleCfgMng) probe(ctx context.Context, c *global.S3Conn) (models.Output[models.ConnectOutput], error) {
+	output := models.Output[models.ConnectOutput]{}
 	output.New()
 
 	if _, err := c.Client.ListBuckets(ctx, &s3.ListBucketsInput{}); err != nil {
@@ -71,7 +88,7 @@ func (m *submoduleCfgMng) probe(ctx context.Context, c *global.S3Conn) (models.O
 	return output, nil
 }
 
-func describeConnectStatus(err error, output *models.Output[models.ConnectionOutput]) error {
+func describeConnectStatus(err error, output *models.Output[models.ConnectOutput]) error {
 	if errors.Is(err, context.DeadlineExceeded) {
 		output.MessageList = &[]models.Message{
 			models.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E003, err.Error()),

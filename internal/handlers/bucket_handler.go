@@ -23,17 +23,17 @@ func NewBucketHandler(app *application.App, logger *slog.Logger, bucket *bucket.
 }
 
 func (h *BucketHandler) ConnectS3(
-	input models.ConnectionInput,
+	input models.ConnectionProfileInput,
 	isTestConn bool,
 	isManualConnect bool,
-) models.Output[models.ConnectionOutput] {
+) models.Output[models.ConnectOutput] {
 	if isTestConn {
 		return h.bucket.TestConnection(input)
 	}
 	return h.bucket.Connect(input, isManualConnect)
 }
 
-func (h *BucketHandler) ConnectS3ByProfile(connectionId string) models.Output[models.ConnectionOutput] {
+func (h *BucketHandler) ConnectS3ByProfile(connectionId string) models.Output[models.ConnectOutput] {
 	return h.bucket.ConnectByProfile(connectionId)
 }
 

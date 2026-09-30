@@ -15,8 +15,7 @@ type (
 
 // bucket
 type (
-	ConnectionInput  = bucket.ConnectionInput
-	ConnectionOutput = bucket.ConnectionOutput
+	ConnectOutput    = bucket.ConnectOutput
 	Bucket           = bucket.Bucket
 	ListBucketInput  = bucket.ListBucketInput
 	ListBucketOutput = bucket.ListBucketOutput
@@ -34,6 +33,7 @@ type (
 
 // profile
 type (
+	ConnectionProfileInput        = profile.ConnectionProfileInput
 	ConnectionProfileOutput       = profile.ConnectionProfileOutput
 	GetAllConnectionProfileOutput = profile.GetAllConnectionProfileOutput
 )

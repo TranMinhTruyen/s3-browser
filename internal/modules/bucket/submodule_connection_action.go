@@ -39,7 +39,7 @@ func newSubmoduleConnAction(
 	}
 }
 
-func (m *submoduleConnAction) testAction(input models.ConnectionInput) models.Output[models.ConnectionOutput] {
+func (m *submoduleConnAction) testAction(input models.ConnectionProfileInput) models.Output[models.ConnectOutput] {
 	// Don't use app.Context for I/O because this context is cancelled only when the app shuts down.
 	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
 	defer cancel()
@@ -62,9 +62,9 @@ func (m *submoduleConnAction) testAction(input models.ConnectionInput) models.Ou
 }
 
 func (m *submoduleConnAction) connectAction(
-	input models.ConnectionInput,
+	input models.ConnectionProfileInput,
 	isManualConnect bool,
-) models.Output[models.ConnectionOutput] {
+) models.Output[models.ConnectOutput] {
 	// Don't use app.Context for I/O because this context is cancelled only when the app shuts down.
 	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
 	defer cancel()
@@ -106,22 +106,22 @@ func (m *submoduleConnAction) connectAction(
 	return status
 }
 
-func (m *submoduleConnAction) profileConnectAction(connectionId string) models.Output[models.ConnectionOutput] {
+func (m *submoduleConnAction) profileConnectAction(connectionId string) models.Output[models.ConnectOutput] {
 	profile := m.profile.GetConnectionProfileById(connectionId)
 
 	// The profile lookup owns the reason it failed, so pass its messages through
 	// instead of letting an empty endpoint fail later as a generic S3 error.
 	if profile.Body == nil {
-		output := models.Output[models.ConnectionOutput]{}
+		output := models.Output[models.ConnectOutput]{}
 		output.New()
-		output.Body = &models.ConnectionOutput{}
+		output.Body = &models.ConnectOutput{}
 		if profile.MessageList != nil {
 			output.AddMessage(*profile.MessageList...)
 		}
 		return output
 	}
 
-	connectInput := models.ConnectionInput{
+	connectInput := models.ConnectionProfileInput{
 		Name:      profile.Body.Name,
 		Endpoint:  profile.Body.Endpoint,
 		AccessKey: profile.Body.AccessKey,

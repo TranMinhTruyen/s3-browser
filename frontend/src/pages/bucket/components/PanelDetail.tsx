@@ -46,7 +46,7 @@ function PanelDetail(props: PanelDetailProps) {
     const profile = connectionProfiles[selectedProfileId];
 
     if (!profile || profile.isConnected) return;
-    if (!profile.savePassword) {
+    if (!profile.accessKey) {
       ConnectModal.show({
         mode: 'manualconnect',
         connectionProfile: { ...profile },

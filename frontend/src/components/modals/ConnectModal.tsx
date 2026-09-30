@@ -1,13 +1,13 @@
-import { Divider, Group, Modal, Stack, Title } from '@mantine/core';
+import { Center, Divider, Group, Modal, Stack, Title } from '@mantine/core';
 import { schemaResolver, useForm } from '@mantine/form';
-import { useDisclosure } from '@mantine/hooks';
 import { ConnectS3 } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { CreateProfile, UpdateProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
-import { ConnectionProfileOutput } from '@wails/S3Browser/models';
-import { ConnectionInput } from '@wails/S3Browser/models/bucket';
+import { ConnectionProfileInput, ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { SyntheticEvent, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import z from 'zod';
+import awsLogo from '@/assets/images/aws.svg';
+import minioLogo from '@/assets/images/minio.svg';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal } from '@/common/utils/modalUtils';
@@ -16,11 +16,13 @@ import Button from '@/components/buttons/Button';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import RegionCombobox from '@/components/inputs/combobox/RegionCombobox';
 import FieldInput from '@/components/inputs/FieldInput';
+import SegmentedControl from '@/components/inputs/SegmentedControl';
 import ConfirmModal from '@/components/modals/ConfirmModal';
 
 const baseSchema = z.object({
   name: z.string().trim(),
   color: z.string().trim(),
+  provider: z.string().trim(),
   endpoint: z.string().trim().nonempty('V000001'),
   region: z.string().trim().nonempty('V000001'),
   accessKey: z.string().trim().nonempty('V000001'),
@@ -46,8 +48,6 @@ export default createMantineModal<ConnectModalProps, false>(
     const { mode = 'connect', connectionProfile, mantine } = props;
     const { t } = useTranslation('connectModal');
 
-    const [saveProfile, { toggle: toggleSaveProfile }] = useDisclosure(mode === 'connect');
-
     const actionRef = useRef<'connect' | 'profile'>('connect');
     const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
 
@@ -55,6 +55,7 @@ export default createMantineModal<ConnectModalProps, false>(
       .default({
         name: `Connection No.${createUUID()}`,
         color: '#d0ebff',
+        provider: 'aws',
         endpoint: '',
         region: '',
         accessKey: '',
@@ -66,9 +67,7 @@ export default createMantineModal<ConnectModalProps, false>(
       .parse(undefined);
 
     const initialValues =
-      mode === 'connect' || mode === 'createProfile'
-        ? defaultValues
-        : { ...defaultValues, ...connectionProfile, pathStyle: false, savePassword: false, autoConnect: false };
+      mode === 'connect' || mode === 'createProfile' ? defaultValues : { ...defaultValues, ...connectionProfile };
 
     const form = useForm<ConnectionInfo>({
       mode: 'uncontrolled',
@@ -82,6 +81,7 @@ export default createMantineModal<ConnectModalProps, false>(
     });
 
     const savePassword = form.useWatchValue('savePassword');
+    const provider = form.useWatchValue('provider');
     const secretKey = form.useWatchValue('secretKey');
 
     form.watch('savePassword', ({ value }) => {
@@ -90,18 +90,22 @@ export default createMantineModal<ConnectModalProps, false>(
       }
     });
 
+    form.watch('provider', ({ value }) => {
+      if (value) {
+        form.setFieldValue('pathStyle', value === 'minio');
+      }
+    });
+
     const handleConnect =
       (isTestConnection: boolean = false) =>
       async (value: ConnectionInfo) => {
-        const input: ConnectionInput = {
+        const input: ConnectionProfileInput = {
           ...value,
           id: connectionProfile?.id ?? '',
           version: connectionProfile?.version ?? 1,
         };
 
-        const output = await callIPC(ConnectS3, [input, isTestConnection, saveProfile, mode === 'manualconnect'], {
-          showMessage: mode === 'connect' || mode === 'manualconnect',
-        });
+        const output = await callIPC(ConnectS3, [input, isTestConnection, mode === 'manualconnect']);
 
         if (output && output.isConnected && !isTestConnection) {
           if (mode === 'manualconnect' && connectionProfile?.id) {
@@ -120,7 +124,7 @@ export default createMantineModal<ConnectModalProps, false>(
         confirmCode: 'CFPF000001',
       });
       if (confirmModal && connectionProfile) {
-        const input: ConnectionInput = {
+        const input: ConnectionProfileInput = {
           ...value,
           id: connectionProfile.id ?? '',
           version: connectionProfile.version ?? 1,
@@ -134,7 +138,7 @@ export default createMantineModal<ConnectModalProps, false>(
     };
 
     const handleCreateProfile = () => async (value: ConnectionInfo) => {
-      const input: ConnectionInput = {
+      const input: ConnectionProfileInput = {
         ...value,
         id: createUUID(),
         version: 1,
@@ -190,6 +194,31 @@ export default createMantineModal<ConnectModalProps, false>(
 
             <Modal.Body p="16px">
               <Stack gap="sm">
+                <SegmentedControl
+                  data={[
+                    {
+                      label: (
+                        <Center style={{ gap: '16px' }}>
+                          <img src={awsLogo} alt="" width={18} height={18} />
+                          <span>AWS</span>
+                        </Center>
+                      ),
+                      value: 'aws',
+                    },
+                    {
+                      label: (
+                        <Center style={{ gap: '16px' }}>
+                          <img src={minioLogo} alt="" width={18} height={18} />
+                          <span>MinIO</span>
+                        </Center>
+                      ),
+                      value: 'minio',
+                    },
+                  ]}
+                  key={form.key('provider')}
+                  {...form.getInputProps('provider')}
+                />
+
                 <FieldInput
                   type="text"
                   label={t('form.label.name')}
@@ -244,6 +273,7 @@ export default createMantineModal<ConnectModalProps, false>(
                   <CheckBoxInput
                     label={t('form.label.pathStyle')}
                     key={form.key('pathStyle')}
+                    disabled={provider === 'minio'}
                     {...form.getInputProps('pathStyle', { type: 'checkbox' })}
                   />
 
@@ -259,14 +289,6 @@ export default createMantineModal<ConnectModalProps, false>(
                     disabled={!savePassword || isNullOrEmpty(secretKey)}
                     {...form.getInputProps('autoConnect', { type: 'checkbox' })}
                   />
-
-                  {mode === 'connect' && (
-                    <CheckBoxInput
-                      checked={saveProfile}
-                      label={t('label.saveProfileLabel')}
-                      onChange={toggleSaveProfile}
-                    />
-                  )}
                 </Group>
               </Stack>
             </Modal.Body>

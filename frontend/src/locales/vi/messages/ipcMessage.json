@@ -1,0 +1,33 @@
+{
+  "common": {
+    "CME001": "Lỗi khi gọi IPC"
+  },
+  "bucket": {
+    "S3S001": "Kiểm tra kết nối hồ sơ {name} tới S3 thành công",
+    "S3S002": "Hồ sơ: {name} đã kết nối",
+    "S3S003": "Hồ sơ: {name} ngắt kết nối thành công",
+    "S3E001": "Access key hoặc secret key không hợp lệ với endpoint này",
+    "S3E002": "Endpoint từ chối kết nối",
+    "S3E003": "Hết thời gian chờ khi kết nối tới endpoint, hãy kiểm tra địa chỉ và máy chủ có đang chạy hay không",
+    "S3E004": "Lỗi khi kết nối hồ sơ {name} tới S3 bucket",
+    "S3E005": "Lỗi khi ngắt kết nối S3 bucket",
+    "S3E006": "Hồ sơ: {name} chưa được kết nối",
+    "S3E007": "Lỗi khi lấy danh sách bucket, hồ sơ: {name}",
+    "S3E008": "Lỗi khi lấy danh sách object, hồ sơ: {name}, bucket: {bucket}",
+    "S3W001": "Quyền truy cập bucket bị giới hạn"
+  },
+  "master": {
+    "MTE001": "Lỗi khi tải dữ liệu master"
+  },
+  "profile": {
+    "PFE001": "Lỗi khi lưu hồ sơ",
+    "PFE002": "Mã hóa SecretKey thất bại",
+    "PFE003": "Lỗi khi lấy danh sách hồ sơ kết nối",
+    "PFE004": "Lỗi khi cập nhật hồ sơ",
+    "PFE005": "Cập nhật hồ sơ [{name}] thất bại",
+    "PFE006": "Xóa hồ sơ [{name}] thất bại",
+    "PFS001": "Thêm hồ sơ [{name}] thành công",
+    "PFS002": "Cập nhật hồ sơ [{name}] thành công",
+    "PFS003": "Xóa hồ sơ [{name}] thành công"
+  }
+}

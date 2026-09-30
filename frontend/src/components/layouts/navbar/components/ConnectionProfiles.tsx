@@ -54,7 +54,7 @@ function ConnectionProfiles() {
 
   const handleConnect = (key: string, value: ConnectionProfile) => async () => {
     if (!value || value.isConnected) return;
-    if (autoConnectDoneRef.current && !value.savePassword) {
+    if (autoConnectDoneRef.current && !value.secretKey) {
       handleOpenConnectModal(value, 'manualconnect');
       return;
     }

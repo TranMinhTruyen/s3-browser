@@ -1,9 +1,10 @@
-package bucket
+package profile
 
-type ConnectionInput struct {
+type ConnectionProfileInput struct {
 	Id           string `json:"id,omitempty"`
 	Name         string `json:"name,omitempty"`
 	Color        string `json:"color,omitempty"`
+	Provider     string `json:"provider,omitempty"`
 	Endpoint     string `json:"endpoint,omitempty"`
 	Region       string `json:"region,omitempty"`
 	AccessKey    string `json:"accessKey,omitempty"`
