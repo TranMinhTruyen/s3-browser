@@ -9,19 +9,19 @@ import (
 )
 
 type ConnectionProfile struct {
-	ID           string         `json:"id"`
-	Name         sql.NullString `json:"name"`
-	Color        sql.NullString `json:"color"`
-	Endpoint     string         `json:"endpoint"`
-	Region       string         `json:"region"`
-	AccessKey    string         `json:"access_key"`
-	SecretKey    string         `json:"secret_key"`
-	PathStyle    sql.NullBool   `json:"path_style"`
-	SavePassword sql.NullBool   `json:"save_password"`
-	AutoConnect  sql.NullBool   `json:"auto_connect"`
-	CreatedAt    sql.NullTime   `json:"created_at"`
-	UpdatedAt    sql.NullTime   `json:"updated_at"`
-	Version      int64          `json:"version"`
+	ID          string         `json:"id"`
+	Name        sql.NullString `json:"name"`
+	Color       sql.NullString `json:"color"`
+	Provider    string         `json:"provider"`
+	Endpoint    string         `json:"endpoint"`
+	Region      string         `json:"region"`
+	AccessKey   string         `json:"access_key"`
+	SecretKey   sql.NullString `json:"secret_key"`
+	PathStyle   sql.NullBool   `json:"path_style"`
+	AutoConnect sql.NullBool   `json:"auto_connect"`
+	CreatedAt   sql.NullTime   `json:"created_at"`
+	UpdatedAt   sql.NullTime   `json:"updated_at"`
+	Version     int64          `json:"version"`
 }
 
 type Master struct {

@@ -1,0 +1,12 @@
+{
+  "regionCombobox": {
+    "label": "リージョン",
+    "placeholder": "リージョンを選択",
+    "availabilityZones": {
+      "01": "アジアパシフィック",
+      "02": "北米",
+      "03": "欧州",
+      "04": "南米"
+    }
+  }
+}

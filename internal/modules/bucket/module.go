@@ -89,21 +89,21 @@ func NewModule(
 // isManualConnect indicates whether the connection was triggered directly by
 // the user (true) or by an automatic flow (false).
 // On success, the connection is kept for subsequent bucket/object operations.
-func (m *Module) Connect(input models.ConnectionInput, isManualConnect bool,
-) models.Output[models.ConnectionOutput] {
+func (m *Module) Connect(input models.ConnectionProfileInput, isManualConnect bool,
+) models.Output[models.ConnectOutput] {
 	return m.submoduleConnAction.connectAction(input, isManualConnect)
 }
 
 // TestConnection checks whether the given credentials and endpoint are valid
 // without keeping the connection open. Useful for validating a profile
 // before saving it.
-func (m *Module) TestConnection(input models.ConnectionInput) models.Output[models.ConnectionOutput] {
+func (m *Module) TestConnection(input models.ConnectionProfileInput) models.Output[models.ConnectOutput] {
 	return m.submoduleConnAction.testAction(input)
 }
 
 // ConnectByProfile connects using a saved profile identified by connectionId,
 // loading its connection settings from the profile module.
-func (m *Module) ConnectByProfile(connectionId string) models.Output[models.ConnectionOutput] {
+func (m *Module) ConnectByProfile(connectionId string) models.Output[models.ConnectOutput] {
 	return m.submoduleConnAction.profileConnectAction(connectionId)
 }
 

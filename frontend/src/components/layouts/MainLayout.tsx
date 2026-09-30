@@ -1,13 +1,34 @@
-import { AppShell, Group, Splitter } from '@mantine/core';
+import { AppShell, Group, SegmentedControl, Splitter } from '@mantine/core';
 import { Outlet } from 'react-router-dom';
 import LeftNavbar from '@/components/layouts/navbar/LeftNavbar';
+import i18n from '@/locales/i18n';
 
 function MainLayout() {
   return (
     <AppShell header={{ height: '48px' }} styles={{ main: { height: '100vh' } }}>
       <AppShell.Header>
-        <Group h="100%" px="sm">
-          Header
+        <Group h="100%" px="sm" style={{ backgroundColor: '#d0ebff' }}>
+          <Group gap="xs"></Group>
+          <Group gap="xs" ml="auto">
+            <SegmentedControl
+              defaultValue={'en'}
+              onChange={(value: 'en' | 'ja' | 'vi') => i18n.changeLanguage(value)}
+              data={[
+                {
+                  label: 'EN',
+                  value: 'en',
+                },
+                {
+                  label: 'VI',
+                  value: 'vi',
+                },
+                {
+                  label: 'JA',
+                  value: 'ja',
+                },
+              ]}
+            />
+          </Group>
         </Group>
       </AppShell.Header>
 

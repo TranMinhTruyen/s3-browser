@@ -23,16 +23,16 @@ func NewProfileHandler(app *application.App, logger *slog.Logger, profile *profi
 }
 
 func (h *ProfileHandler) CreateProfile(
-	profileInput models.ConnectionInput,
+	profileInput models.ConnectionProfileInput,
 ) models.Output[models.ConnectionProfileOutput] {
 	return h.profile.CreateProfile(profileInput)
 }
 
-func (h *ProfileHandler) UpdateProfileById(input models.ConnectionInput) models.Output[models.ConnectionProfileOutput] {
+func (h *ProfileHandler) UpdateProfileById(input models.ConnectionProfileInput) models.Output[models.ConnectionProfileOutput] {
 	return h.profile.UpdateProfileById(input)
 }
 
-func (h *ProfileHandler) DeleteProfileById(input models.ConnectionInput) models.Output[bool] {
+func (h *ProfileHandler) DeleteProfileById(input models.ConnectionProfileInput) models.Output[bool] {
 	return h.profile.DeleteProfileById(input)
 }
 

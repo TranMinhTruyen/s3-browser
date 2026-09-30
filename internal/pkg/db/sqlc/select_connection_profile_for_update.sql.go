@@ -11,7 +11,7 @@ import (
 
 const selectConnectionProfileForUpdate = `-- name: SelectConnectionProfileForUpdate :one
 SELECT
-    cp.id, cp.name, cp.color, cp.endpoint, cp.region, cp.access_key, cp.secret_key, cp.path_style, cp.save_password, cp.auto_connect, cp.created_at, cp.updated_at, cp.version
+    cp.id, cp.name, cp.color, cp.provider, cp.endpoint, cp.region, cp.access_key, cp.secret_key, cp.path_style, cp.auto_connect, cp.created_at, cp.updated_at, cp.version
 FROM
     connection_profiles cp
 WHERE
@@ -31,12 +31,12 @@ func (q *Queries) SelectConnectionProfileForUpdate(ctx context.Context, arg Sele
 		&i.ID,
 		&i.Name,
 		&i.Color,
+		&i.Provider,
 		&i.Endpoint,
 		&i.Region,
 		&i.AccessKey,
 		&i.SecretKey,
 		&i.PathStyle,
-		&i.SavePassword,
 		&i.AutoConnect,
 		&i.CreatedAt,
 		&i.UpdatedAt,

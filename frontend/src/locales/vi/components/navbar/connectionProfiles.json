@@ -1,0 +1,8 @@
+{
+  "contextMenu": {
+    "connect": "Kết nối",
+    "disconnect": "Ngắt kết nối",
+    "edit": "Chỉnh sửa",
+    "delete": "Xóa"
+  }
+}

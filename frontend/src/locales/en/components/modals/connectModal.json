@@ -6,6 +6,7 @@
   "form": {
     "label": {
       "name": "Profile name",
+      "color": "Profile color",
       "endpoint": "Endpoint",
       "accessKey": "Access key",
       "secretKey": "Secret key",

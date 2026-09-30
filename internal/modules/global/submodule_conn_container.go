@@ -4,13 +4,19 @@ import (
 	"net/http"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/minio/madmin-go/v4"
 )
 
 type S3Conn struct {
 	ProfileName string
-	Client      *s3.Client
-	Presign     *s3.PresignClient
-	Transport   *http.Transport
+	Provider    string
+
+	Client  *s3.Client
+	Presign *s3.PresignClient
+
+	MinioAdmin *madmin.AdminClient
+
+	Transport *http.Transport
 }
 
 // PutConnContainer registers a connection under the given id, replacing any previous one.

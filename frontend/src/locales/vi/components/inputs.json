@@ -1,0 +1,12 @@
+{
+  "regionCombobox": {
+    "label": "Khu vực",
+    "placeholder": "Chọn khu vực",
+    "availabilityZones": {
+      "01": "Châu Á - Thái Bình Dương",
+      "02": "Bắc Mỹ",
+      "03": "Châu Âu",
+      "04": "Nam Mỹ"
+    }
+  }
+}

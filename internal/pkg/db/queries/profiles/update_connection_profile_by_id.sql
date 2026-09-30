@@ -3,11 +3,11 @@ UPDATE connection_profiles
 SET
     name = ? 
     , color = ? 
+    , provider = ? 
     , endpoint = ? 
     , region = ? 
     , access_key = ? 
     , secret_key = ? 
-    , save_password = ? 
     , path_style = ? 
     , auto_connect = ? 
     , updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') 

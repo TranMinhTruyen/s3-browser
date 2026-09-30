@@ -31,7 +31,7 @@ var (
 	// Delete profile [{name}] error
 	PFE006 = "PFE006"
 
-	// Save profile [{name}] success
+	// Add new profile [{name}] success
 	PFS001 = "PFS001"
 
 	// Update profile [{name}] success
@@ -66,7 +66,7 @@ func NewModule(
 }
 
 func (m *Module) CreateProfile(
-	profileInput models.ConnectionInput,
+	profileInput models.ConnectionProfileInput,
 ) models.Output[models.ConnectionProfileOutput] {
 	output := models.Output[models.ConnectionProfileOutput]{}
 	output.New()
@@ -86,16 +86,16 @@ func (m *Module) CreateProfile(
 	}
 
 	params := sqlc.CreateProfileParams{
-		ID:           utils.GenerateUUID(),
-		Name:         sql.NullString{String: profileInput.Name, Valid: profileInput.Name != ""},
-		Color:        sql.NullString{String: profileInput.Color, Valid: profileInput.Color != ""},
-		Endpoint:     profileInput.Endpoint,
-		Region:       profileInput.Region,
-		AccessKey:    profileInput.AccessKey,
-		SecretKey:    encryptedSecret,
-		PathStyle:    sql.NullBool{Bool: profileInput.PathStyle, Valid: true},
-		SavePassword: sql.NullBool{Bool: profileInput.SavePassword, Valid: true},
-		AutoConnect:  sql.NullBool{Bool: profileInput.AutoConnect, Valid: true},
+		ID:          utils.GenerateUUID(),
+		Name:        sql.NullString{String: profileInput.Name, Valid: true},
+		Color:       sql.NullString{String: profileInput.Color, Valid: true},
+		Provider:    profileInput.Provider,
+		Endpoint:    profileInput.Endpoint,
+		Region:      profileInput.Region,
+		AccessKey:   profileInput.AccessKey,
+		SecretKey:   sql.NullString{String: encryptedSecret, Valid: true},
+		PathStyle:   sql.NullBool{Bool: profileInput.PathStyle, Valid: true},
+		AutoConnect: sql.NullBool{Bool: profileInput.AutoConnect, Valid: true},
 	}
 
 	result, err := m.q.CreateProfile(m.app.Context(), params)
@@ -107,29 +107,29 @@ func (m *Module) CreateProfile(
 	}
 
 	output.Body = &models.ConnectionProfileOutput{
-		ID:           result.ID,
-		Name:         result.Name.String,
-		Color:        result.Color.String,
-		Endpoint:     result.Endpoint,
-		Region:       result.Region,
-		AccessKey:    result.AccessKey,
-		SecretKey:    result.SecretKey,
-		PathStyle:    result.PathStyle.Bool,
-		SavePassword: result.SavePassword.Bool,
-		AutoConnect:  result.AutoConnect.Bool,
-		CreatedAt:    result.CreatedAt.Time,
-		UpdatedAt:    result.UpdatedAt.Time,
-		Version:      result.Version,
+		ID:          result.ID,
+		Name:        result.Name.String,
+		Color:       result.Color.String,
+		Provider:    result.Provider,
+		Endpoint:    result.Endpoint,
+		Region:      result.Region,
+		AccessKey:   result.AccessKey,
+		SecretKey:   result.SecretKey.String,
+		PathStyle:   result.PathStyle.Bool,
+		AutoConnect: result.AutoConnect.Bool,
+		CreatedAt:   result.CreatedAt.Time,
+		UpdatedAt:   result.UpdatedAt.Time,
+		Version:     result.Version,
 	}
 
-	output.AddMessage(models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Profile, PFE001, "", map[string]any{
+	output.AddMessage(models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Profile, PFS001, "", map[string]any{
 		"name": result.Name.String,
 	}))
 
 	return output
 }
 
-func (m *Module) UpdateProfileById(input models.ConnectionInput) models.Output[models.ConnectionProfileOutput] {
+func (m *Module) UpdateProfileById(input models.ConnectionProfileInput) models.Output[models.ConnectionProfileOutput] {
 	output := models.Output[models.ConnectionProfileOutput]{}
 	output.New()
 	encryptedSecret := ""
@@ -148,17 +148,17 @@ func (m *Module) UpdateProfileById(input models.ConnectionInput) models.Output[m
 	}
 
 	params := sqlc.UpdateConnectionProfileByIdParams{
-		ID:           input.Id,
-		Name:         sql.NullString{String: input.Name, Valid: input.Name != ""},
-		Color:        sql.NullString{String: input.Color, Valid: input.Color != ""},
-		Endpoint:     input.Endpoint,
-		Region:       input.Region,
-		AccessKey:    input.AccessKey,
-		SecretKey:    encryptedSecret,
-		PathStyle:    sql.NullBool{Bool: input.PathStyle, Valid: true},
-		SavePassword: sql.NullBool{Bool: input.SavePassword, Valid: true},
-		AutoConnect:  sql.NullBool{Bool: input.AutoConnect, Valid: true},
-		Version:      input.Version,
+		ID:          input.Id,
+		Name:        sql.NullString{String: input.Name, Valid: true},
+		Color:       sql.NullString{String: input.Color, Valid: true},
+		Provider:    input.Provider,
+		Endpoint:    input.Endpoint,
+		Region:      input.Region,
+		AccessKey:   input.AccessKey,
+		SecretKey:   sql.NullString{String: encryptedSecret, Valid: true},
+		PathStyle:   sql.NullBool{Bool: input.PathStyle, Valid: true},
+		AutoConnect: sql.NullBool{Bool: input.AutoConnect, Valid: true},
+		Version:     input.Version,
 	}
 
 	result, err := m.q.UpdateConnectionProfileById(m.app.Context(), params)
@@ -175,19 +175,19 @@ func (m *Module) UpdateProfileById(input models.ConnectionInput) models.Output[m
 	}
 
 	output.Body = &models.ConnectionProfileOutput{
-		ID:           result.ID,
-		Name:         result.Name.String,
-		Color:        result.Color.String,
-		Endpoint:     result.Endpoint,
-		Region:       result.Region,
-		AccessKey:    result.AccessKey,
-		SecretKey:    result.SecretKey,
-		PathStyle:    result.PathStyle.Bool,
-		SavePassword: result.SavePassword.Bool,
-		AutoConnect:  result.AutoConnect.Bool,
-		CreatedAt:    result.CreatedAt.Time,
-		UpdatedAt:    result.UpdatedAt.Time,
-		Version:      result.Version,
+		ID:          result.ID,
+		Name:        result.Name.String,
+		Color:       result.Color.String,
+		Provider:    result.Provider,
+		Endpoint:    result.Endpoint,
+		Region:      result.Region,
+		AccessKey:   result.AccessKey,
+		SecretKey:   encryptedSecret,
+		PathStyle:   result.PathStyle.Bool,
+		AutoConnect: result.AutoConnect.Bool,
+		CreatedAt:   result.CreatedAt.Time,
+		UpdatedAt:   result.UpdatedAt.Time,
+		Version:     result.Version,
 	}
 
 	output.AddMessage(models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, PFS002, "", map[string]any{
@@ -197,7 +197,7 @@ func (m *Module) UpdateProfileById(input models.ConnectionInput) models.Output[m
 	return output
 }
 
-func (m *Module) DeleteProfileById(input models.ConnectionInput) models.Output[bool] {
+func (m *Module) DeleteProfileById(input models.ConnectionProfileInput) models.Output[bool] {
 	output := models.Output[bool]{}
 	output.New()
 	output.Body = utils.ToPtr(true)
@@ -236,8 +236,8 @@ func (m *Module) GetConnectionProfileById(connectionID string) models.Output[mod
 	}
 
 	decrypted := ""
-	if result.SecretKey != "" {
-		if decrypted, err = m.km.Decrypt(result.SecretKey); err != nil {
+	if result.SecretKey.String != "" {
+		if decrypted, err = m.km.Decrypt(result.SecretKey.String); err != nil {
 			output.AddMessage(models.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
 			return output
 		}
@@ -247,6 +247,7 @@ func (m *Module) GetConnectionProfileById(connectionID string) models.Output[mod
 		ID:        result.ID,
 		Name:      result.Name.String,
 		Color:     result.Color.String,
+		Provider:  result.Provider,
 		Endpoint:  result.Endpoint,
 		Region:    result.Region,
 		AccessKey: result.AccessKey,
@@ -278,27 +279,27 @@ func (m *Module) GetAllConnectionProfile() models.Output[models.GetAllConnection
 		isConnected := m.global.HasConn(item.ConnectionID)
 
 		decrypted := ""
-		if item.SecretKey != "" {
-			if decrypted, err = m.km.Decrypt(item.SecretKey); err != nil {
+		if item.SecretKey.String != "" {
+			if decrypted, err = m.km.Decrypt(item.SecretKey.String); err != nil {
 				output.AddMessage(models.CreateMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
 			}
 		}
 
 		profiles[item.ConnectionID] = models.ConnectionProfileOutput{
-			ID:           item.ConnectionID,
-			Name:         item.ConnectionName.String,
-			Color:        item.Color.String,
-			Endpoint:     item.Endpoint,
-			Region:       item.Region,
-			AccessKey:    item.AccessKey,
-			SecretKey:    decrypted,
-			PathStyle:    item.PathStyle.Bool,
-			SavePassword: item.SavePassword.Bool,
-			AutoConnect:  item.AutoConnect.Bool,
-			IsConnected:  isConnected,
-			CreatedAt:    item.CreatedAt.Time,
-			UpdatedAt:    item.UpdatedAt.Time,
-			Version:      item.Version,
+			ID:          item.ConnectionID,
+			Name:        item.ConnectionName.String,
+			Color:       item.Color.String,
+			Provider:    item.Provider,
+			Endpoint:    item.Endpoint,
+			Region:      item.Region,
+			AccessKey:   item.AccessKey,
+			SecretKey:   decrypted,
+			PathStyle:   item.PathStyle.Bool,
+			AutoConnect: item.AutoConnect.Bool,
+			IsConnected: isConnected,
+			CreatedAt:   item.CreatedAt.Time,
+			UpdatedAt:   item.UpdatedAt.Time,
+			Version:     item.Version,
 		}
 	}
 

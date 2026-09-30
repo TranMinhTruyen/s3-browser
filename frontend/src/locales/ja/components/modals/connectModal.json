@@ -1,0 +1,24 @@
+{
+  "title": "接続プロファイル",
+  "label": {
+    "saveProfileLabel": "プロファイルを保存"
+  },
+  "form": {
+    "label": {
+      "name": "プロファイル名",
+      "color": "プロファイルの色",
+      "endpoint": "エンドポイント",
+      "accessKey": "アクセスキー",
+      "secretKey": "シークレットキー",
+      "pathStyle": "パススタイル",
+      "savePassword": "シークレットキーを保存",
+      "autoConnect": "自動接続"
+    },
+    "button": {
+      "connect": "接続",
+      "testConnection": "接続テスト",
+      "createProfile": "作成",
+      "editProfile": "更新"
+    }
+  }
+}

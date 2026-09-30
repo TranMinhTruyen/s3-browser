@@ -10,9 +10,24 @@
     "S3E002": "The endpoint rejected",
     "S3E003": "Timed out reaching the endpoint, check the address and whether the server is running",
     "S3E004": "Error while connect profile {name} to S3 bucket",
+    "S3E005": "Error while disconnect S3 bucket",
+    "S3E006": "Profile: {name} is not connected",
+    "S3E007": "Get list bucket error, profile: {name}",
+    "S3E008": "Get list object error, profile: {name}, bucket: {bucket}",
     "S3W001": "Access bucket is limited"
   },
   "master": {
     "MTE001": "Error while loading master data"
+  },
+  "profile": {
+    "PFE001": "Error while save profile",
+    "PFE002": "Encrypted SecretKey failed",
+    "PFE003": "Error get all connnection profile",
+    "PFE004": "Error while update profile",
+    "PFE005": "Update profile [{name}] error",
+    "PFE006": "Delete profile [{name}] error",
+    "PFS001": "Add new profile [{name}] success",
+    "PFS002": "Update profile [{name}] success",
+    "PFS003": "Delete profile [{name}] success"
   }
 }

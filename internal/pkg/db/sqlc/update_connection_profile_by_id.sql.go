@@ -15,43 +15,43 @@ UPDATE connection_profiles
 SET
     name = ? 
     , color = ? 
+    , provider = ? 
     , endpoint = ? 
     , region = ? 
     , access_key = ? 
     , secret_key = ? 
-    , save_password = ? 
     , path_style = ? 
     , auto_connect = ? 
     , updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') 
     , version = version + 1 
 WHERE
     id = ? 
-    AND version = ? RETURNING id, name, color, endpoint, region, access_key, secret_key, path_style, save_password, auto_connect, created_at, updated_at, version
+    AND version = ? RETURNING id, name, color, provider, endpoint, region, access_key, secret_key, path_style, auto_connect, created_at, updated_at, version
 `
 
 type UpdateConnectionProfileByIdParams struct {
-	Name         sql.NullString `json:"name"`
-	Color        sql.NullString `json:"color"`
-	Endpoint     string         `json:"endpoint"`
-	Region       string         `json:"region"`
-	AccessKey    string         `json:"access_key"`
-	SecretKey    string         `json:"secret_key"`
-	SavePassword sql.NullBool   `json:"save_password"`
-	PathStyle    sql.NullBool   `json:"path_style"`
-	AutoConnect  sql.NullBool   `json:"auto_connect"`
-	ID           string         `json:"id"`
-	Version      int64          `json:"version"`
+	Name        sql.NullString `json:"name"`
+	Color       sql.NullString `json:"color"`
+	Provider    string         `json:"provider"`
+	Endpoint    string         `json:"endpoint"`
+	Region      string         `json:"region"`
+	AccessKey   string         `json:"access_key"`
+	SecretKey   sql.NullString `json:"secret_key"`
+	PathStyle   sql.NullBool   `json:"path_style"`
+	AutoConnect sql.NullBool   `json:"auto_connect"`
+	ID          string         `json:"id"`
+	Version     int64          `json:"version"`
 }
 
 func (q *Queries) UpdateConnectionProfileById(ctx context.Context, arg UpdateConnectionProfileByIdParams) (ConnectionProfile, error) {
 	row := q.db.QueryRowContext(ctx, updateConnectionProfileById,
 		arg.Name,
 		arg.Color,
+		arg.Provider,
 		arg.Endpoint,
 		arg.Region,
 		arg.AccessKey,
 		arg.SecretKey,
-		arg.SavePassword,
 		arg.PathStyle,
 		arg.AutoConnect,
 		arg.ID,
@@ -62,12 +62,12 @@ func (q *Queries) UpdateConnectionProfileById(ctx context.Context, arg UpdateCon
 		&i.ID,
 		&i.Name,
 		&i.Color,
+		&i.Provider,
 		&i.Endpoint,
 		&i.Region,
 		&i.AccessKey,
 		&i.SecretKey,
 		&i.PathStyle,
-		&i.SavePassword,
 		&i.AutoConnect,
 		&i.CreatedAt,
 		&i.UpdatedAt,
