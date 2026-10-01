@@ -15,13 +15,14 @@ type (
 
 // bucket
 type (
-	ConnectOutput    = bucket.ConnectOutput
-	Bucket           = bucket.Bucket
-	ListBucketInput  = bucket.ListBucketInput
-	ListBucketOutput = bucket.ListBucketOutput
-	ListObjectInput  = bucket.ListObjectInput
-	ListObjectOutput = bucket.ListObjectOutput
-	ObjectItem       = bucket.ObjectItem
+	Bucket                 = bucket.Bucket
+	ObjectItem             = bucket.ObjectItem
+	ConnectOutput          = bucket.ConnectOutput
+	ListBucketInput        = bucket.ListBucketInput
+	ListBucketOutput       = bucket.ListBucketOutput
+	ListObjectInput        = bucket.ListObjectInput
+	ListObjectOutput       = bucket.ListObjectOutput
+	DownloadProgressOutput = bucket.DownloadProgressOutput
 )
 
 // master
