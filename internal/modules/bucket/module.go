@@ -45,8 +45,14 @@ var (
 	// Get list object error, profile: {name}, bucket: {bucket}
 	S3E008 = "S3E008"
 
+	// Destination {path} not exists
+	S3E009 = "S3E009"
+
 	// Access bucket is limited
 	S3W001 = "S3W001"
+
+	// Download object: {object} is canceled
+	S3W002 = "S3W002"
 )
 
 type Module struct {

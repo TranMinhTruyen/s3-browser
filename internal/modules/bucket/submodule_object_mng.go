@@ -12,6 +12,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -26,6 +28,7 @@ type submoduleObjMng struct {
 	logger *slog.Logger
 	app    *application.App
 	global *global.Module
+	jobs   sync.Map
 }
 
 func newSubmoduleObjMng(
@@ -50,12 +53,11 @@ func (m *submoduleObjMng) listObject(input models.ListObjectInput) models.Output
 	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
 
 	if ok == false {
-		output.AddMessage(
-			models.CreateMessageWithParams(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
+		return output.ThrowError(
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Object, S3E006, "", map[string]any{
 				"name": input.ProfileName,
 			}),
 		)
-		return output
 	}
 
 	listObjectInput := &s3.ListObjectsV2Input{
@@ -74,7 +76,7 @@ func (m *submoduleObjMng) listObject(input models.ListObjectInput) models.Output
 	if err != nil {
 		apiErr := UnwrapAwsError(err)
 		output.AddMessage(
-			models.CreateMessageWithParams(
+			models.NewParamsMessage(
 				cnst.MessageTypeError,
 				cnst.Bucket,
 				S3E006,
@@ -111,6 +113,64 @@ func (m *submoduleObjMng) listObject(input models.ListObjectInput) models.Output
 	}
 
 	output.Body = &body
+	return output
+}
+
+type job struct {
+	connID string
+	cancel context.CancelFunc
+}
+
+func (m *submoduleObjMng) downloadObject(input models.DownloadObjInput) models.Output[models.DownloadObjOutput] {
+	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
+	defer cancel()
+
+	output := models.NewOutput[models.DownloadObjOutput]()
+
+	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
+
+	if ok == false {
+		return output.ThrowError(
+			models.Message{
+				MessageType: cnst.MessageTypeError,
+			},
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Object, S3E006, "", map[string]any{
+				"name": input.ProfileName,
+			}),
+		)
+	}
+
+	app := application.Get()
+	dest, err := app.Dialog.SaveFile().SetFilename(path.Base(input.Object)).PromptForSingleSelection()
+	if err != nil || dest == "" {
+		return output.ThrowError(
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Object, S3E009, "", map[string]any{
+				"path": dest,
+			}),
+		)
+	}
+
+	id := utils.GenerateUUID()
+
+	m.jobs.Store(id, job{connID: input.ConnectionId, cancel: cancel})
+	defer func() { cancel(); m.jobs.Delete(id) }()
+
+	if ctx.Err() != nil {
+		return output.ThrowError(
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Object, S3W002, "", map[string]any{
+				"object": input.Object,
+			}),
+		)
+	}
+
+	if err != nil {
+		return output.ThrowError(
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Object, S3E009, err.Error(), map[string]any{
+				"name": input.ProfileName,
+			}),
+		)
+	}
+
 	return output
 }
 

@@ -23,6 +23,8 @@ type (
 	ListObjectInput        = bucket.ListObjectInput
 	ListObjectOutput       = bucket.ListObjectOutput
 	DownloadProgressOutput = bucket.DownloadProgressOutput
+	DownloadObjInput       = bucket.DownloadObjInput
+	DownloadObjOutput      = bucket.DownloadObjOutput
 )
 
 // master
@@ -41,6 +43,17 @@ type (
 
 // common functions
 var (
-	CreateMessage           = common.CreateMessage
-	CreateMessageWithParams = common.CreateMessageWithParams
+	NewMessage       = common.NewMessage
+	NewParamsMessage = common.NewParamsMessage
 )
+
+// wraper func
+func NewOutput[T any]() Output[T] {
+	return common.NewOutput[T]()
+}
+
+func NewMessages() *Message {
+	m := &Message{}
+	m.New()
+	return m
+}

@@ -35,14 +35,13 @@ func (m *submoduleBucketMng) listBucket(input models.ListBucketInput) models.Out
 	ctx, cancel := context.WithTimeout(m.app.Context(), 10*time.Second)
 	defer cancel()
 
-	output := models.Output[models.ListBucketOutput]{}
-	output.New()
+	output := models.NewOutput[models.ListBucketOutput]()
 
 	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
 
 	if ok == false {
 		output.AddMessage(
-			models.CreateMessageWithParams(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
 				"name": input.ProfileName,
 			}),
 		)
@@ -60,7 +59,7 @@ func (m *submoduleBucketMng) listBucket(input models.ListBucketInput) models.Out
 
 	if err != nil {
 		output.AddMessage(
-			models.CreateMessageWithParams(cnst.MessageTypeError, cnst.Bucket, S3E007, err.Error(), map[string]any{
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E007, err.Error(), map[string]any{
 				"name": input.ProfileName,
 			}),
 		)

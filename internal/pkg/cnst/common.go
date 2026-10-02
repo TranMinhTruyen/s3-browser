@@ -5,6 +5,7 @@ var (
 	Master  = "master"
 	Profile = "profile"
 	Bucket  = "bucket"
+	Object  = "object"
 )
 
 var (

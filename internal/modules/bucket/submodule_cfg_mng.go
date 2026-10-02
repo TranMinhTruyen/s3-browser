@@ -73,8 +73,7 @@ func (m *submoduleCfgMng) buildClient(input models.ConnectionProfileInput) *glob
 }
 
 func (m *submoduleCfgMng) probe(ctx context.Context, c *global.S3Conn) (models.Output[models.ConnectOutput], error) {
-	output := models.Output[models.ConnectOutput]{}
-	output.New()
+	output := models.NewOutput[models.ConnectOutput]()
 
 	if _, err := c.Client.ListBuckets(ctx, &s3.ListBucketsInput{}); err != nil {
 		mappedErr := describeConnectStatus(err, &output)
@@ -91,14 +90,14 @@ func (m *submoduleCfgMng) probe(ctx context.Context, c *global.S3Conn) (models.O
 func describeConnectStatus(err error, output *models.Output[models.ConnectOutput]) error {
 	if errors.Is(err, context.DeadlineExceeded) {
 		output.MessageList = &[]models.Message{
-			models.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E003, err.Error()),
+			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E003, err.Error()),
 		}
 		return err
 	}
 
 	if err != nil {
 		output.MessageList = &[]models.Message{
-			models.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E004, err.Error()),
+			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E004, err.Error()),
 		}
 		return err
 	}
@@ -108,23 +107,23 @@ func describeConnectStatus(err error, output *models.Output[models.ConnectOutput
 	switch errStr {
 	case "InvalidAccessKeyId", "SignatureDoesNotMatch", "InvalidClientTokenId":
 		output.MessageList = &[]models.Message{
-			models.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E001, errStr),
+			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E001, errStr),
 		}
 		return err
 	case "AuthorizationHeaderMalformed", "InvalidRegion":
 		output.MessageList = &[]models.Message{
-			models.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E002, errStr),
+			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E002, errStr),
 		}
 		return err
 	case "AccessDenied", "AllAccessDisabled", "UnauthorizedAccess":
 		output.MessageList = &[]models.Message{
-			models.CreateMessage(cnst.MessageTypeWarn, cnst.Bucket, S3W001, errStr),
+			models.NewMessage(cnst.MessageTypeWarn, cnst.Bucket, S3W001, errStr),
 		}
 		output.Body.Limited = true
 		return nil
 	default:
 		output.MessageList = &[]models.Message{
-			models.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E003, errStr),
+			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E003, errStr),
 		}
 		return err
 	}
