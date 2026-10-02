@@ -54,7 +54,7 @@ func (m *submoduleConnAction) testAction(input models.ConnectionProfileInput) mo
 
 	status.Body.IsConnected = true
 	status.AddMessage(
-		models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S001, "", map[string]any{
+		models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Bucket, S3S001, "", map[string]any{
 			"name": input.Name,
 		}),
 	)
@@ -98,7 +98,7 @@ func (m *submoduleConnAction) connectAction(
 	status.Body.ConnectionId = connectionId
 	status.Body.IsConnected = true
 	status.AddMessage(
-		models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S002, "", map[string]any{
+		models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Bucket, S3S002, "", map[string]any{
 			"name": input.Name,
 		}),
 	)
@@ -107,13 +107,12 @@ func (m *submoduleConnAction) connectAction(
 }
 
 func (m *submoduleConnAction) profileConnectAction(connectionId string) models.Output[models.ConnectOutput] {
+	output := models.NewOutput[models.ConnectOutput]()
 	profile := m.profile.GetConnectionProfileById(connectionId)
 
 	// The profile lookup owns the reason it failed, so pass its messages through
 	// instead of letting an empty endpoint fail later as a generic S3 error.
 	if profile.Body == nil {
-		output := models.Output[models.ConnectOutput]{}
-		output.New()
 		output.Body = &models.ConnectOutput{}
 		if profile.MessageList != nil {
 			output.AddMessage(*profile.MessageList...)
@@ -135,42 +134,41 @@ func (m *submoduleConnAction) profileConnectAction(connectionId string) models.O
 	defer cancel()
 
 	c := m.submoduleCfgMng.buildClient(connectInput)
-	status, err := m.submoduleCfgMng.probe(ctx, c)
+	_, err := m.submoduleCfgMng.probe(ctx, c)
 
 	if err != nil {
-		status.Body.IsConnected = false
-		return status
+		output.Body.IsConnected = false
+		return output
 	}
 
 	m.global.PutConnContainer(connectionId, c)
 
-	status.Body.ConnectionId = connectionId
-	status.Body.IsConnected = true
-	status.AddMessage(
-		models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S002, "", map[string]any{
+	output.Body.ConnectionId = connectionId
+	output.Body.IsConnected = true
+	output.AddMessage(
+		models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Bucket, S3S002, "", map[string]any{
 			"name": profile.Body.Name,
 		}),
 	)
 
-	return status
+	return output
 }
 
 func (m *submoduleConnAction) disconnectAction(connectionId string) models.Output[bool] {
-	output := models.Output[bool]{}
-	output.New()
+	output := models.NewOutput[bool]()
 
 	if conn, ok := m.global.RemoveConn(connectionId); ok {
 		conn.Transport.CloseIdleConnections()
 		output.Body = utils.ToPtr(true)
 		output.AddMessage(
-			models.CreateMessageWithParams(cnst.MessageTypeSuccess, cnst.Bucket, S3S003, "", map[string]any{
+			models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Bucket, S3S003, "", map[string]any{
 				"name": conn.ProfileName,
 			}),
 		)
 		return output
 	} else {
 		output.AddMessage(
-			models.CreateMessage(cnst.MessageTypeError, cnst.Bucket, S3E005, "Connection not found"),
+			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E005, "Connection not found"),
 		)
 	}
 

@@ -33,8 +33,7 @@ func NewModule(app *application.App, logger *slog.Logger, global *global.Module,
 }
 
 func (m *Module) GetMasterData(codes []string) models.Output[models.GetMasterDataOutput] {
-	output := models.Output[models.GetMasterDataOutput]{}
-	output.New()
+	output := models.NewOutput[models.GetMasterDataOutput]()
 	output.Body.MasterData = make(map[string][]models.MasterOutput, len(codes))
 
 	for _, code := range codes {
@@ -45,7 +44,7 @@ func (m *Module) GetMasterData(codes []string) models.Output[models.GetMasterDat
 		rows, err := m.q.SelectMasterByCode(m.app.Context(), code)
 		if err != nil {
 			m.logger.Error("get master data failed", "code", code, "error", err)
-			output.AddMessage(models.CreateMessage(cnst.MessageTypeError, cnst.Master, MTE001, err.Error()))
+			output.AddMessage(models.NewMessage(cnst.MessageTypeError, cnst.Master, MTE001, err.Error()))
 			continue
 		}
 
@@ -75,15 +74,14 @@ func (m *Module) GetMasterData(codes []string) models.Output[models.GetMasterDat
 }
 
 func (m *Module) GetRegion() models.Output[models.RegionOutput] {
-	output := models.Output[models.RegionOutput]{}
-	output.New()
+	output := models.NewOutput[models.RegionOutput]()
 
 	rows, err := m.q.SelectAllRegion(m.app.Context())
 
 	if err != nil {
 		output.Body = nil
 		m.logger.Error("get region data failed", "error", err)
-		output.AddMessage(models.CreateMessage(cnst.MessageTypeError, cnst.Master, MTE001, err.Error()))
+		output.AddMessage(models.NewMessage(cnst.MessageTypeError, cnst.Master, MTE001, err.Error()))
 		return output
 	}
 
