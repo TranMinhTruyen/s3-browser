@@ -3,9 +3,11 @@ package bucket
 import (
 	"S3Browser/internal/modules/global"
 	"S3Browser/internal/pkg/cnst"
+	"S3Browser/internal/pkg/db/sqlc"
 	"S3Browser/internal/pkg/utils"
 	"S3Browser/models"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -29,17 +31,20 @@ type submoduleObjMng struct {
 	app    *application.App
 	global *global.Module
 	jobs   sync.Map
+	q      *sqlc.Queries
 }
 
 func newSubmoduleObjMng(
 	app *application.App,
 	logger *slog.Logger,
 	global *global.Module,
+	db *sql.DB,
 ) *submoduleObjMng {
 	return &submoduleObjMng{
 		logger: logger.With("submodules", "object_mng"),
 		app:    app,
 		global: global,
+		q:      sqlc.New(db),
 	}
 }
 
@@ -47,8 +52,7 @@ func (m *submoduleObjMng) listObject(input models.ListObjectInput) models.Output
 	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
 	defer cancel()
 
-	output := models.Output[models.ListObjectOutput]{}
-	output.New()
+	output := models.NewOutput[models.ListObjectOutput]()
 
 	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
 
@@ -121,6 +125,16 @@ type job struct {
 	cancel context.CancelFunc
 }
 
+const (
+	chunkSize   = 64 << 20
+	concurrency = 6
+
+	DOWNLOADING    = "DOWNLOADING"
+	DOWNLOADED     = "DOWNLOADED"
+	CANCELED       = "CANCELED"
+	DOWNLOAD_ERROR = "DOWNLOAD_ERROR"
+)
+
 func (m *submoduleObjMng) downloadObject(input models.DownloadObjInput) models.Output[models.DownloadObjOutput] {
 	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
 	defer cancel()
@@ -131,9 +145,6 @@ func (m *submoduleObjMng) downloadObject(input models.DownloadObjInput) models.O
 
 	if ok == false {
 		return output.ThrowError(
-			models.Message{
-				MessageType: cnst.MessageTypeError,
-			},
 			models.NewParamsMessage(cnst.MessageTypeError, cnst.Object, S3E006, "", map[string]any{
 				"name": input.ProfileName,
 			}),
@@ -155,13 +166,19 @@ func (m *submoduleObjMng) downloadObject(input models.DownloadObjInput) models.O
 	m.jobs.Store(id, job{connID: input.ConnectionId, cancel: cancel})
 	defer func() { cancel(); m.jobs.Delete(id) }()
 
-	if ctx.Err() != nil {
-		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Object, S3W002, "", map[string]any{
-				"object": input.Object,
-			}),
+	saveResult, _ := m.q.CreateDownloadHistory(ctx, sqlc.CreateDownloadHistoryParams{
+		ID:       id,
+		FileName: input.Object,
+		DestPath: dest,
+		Status:   DOWNLOADING,
+	})
+
+	err = download(ctx, s3Conn.Client, input.Bucket, input.Object, dest, func(done, total int64) {
+		m.app.Event.Emit(
+			EventConnectSaveProfile,
+			models.DownloadProgressOutput{DownloadId: id, Downloaded: done, Total: total},
 		)
-	}
+	})
 
 	if err != nil {
 		return output.ThrowError(
@@ -171,13 +188,33 @@ func (m *submoduleObjMng) downloadObject(input models.DownloadObjInput) models.O
 		)
 	}
 
+	if ctx.Err() != nil {
+		m.q.UpdateStatusDownloadHistoryById(ctx, sqlc.UpdateStatusDownloadHistoryByIdParams{
+			ID:      id,
+			Status:  CANCELED,
+			Version: saveResult.Version,
+		})
+		return output.ThrowError(
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Object, S3W002, "", map[string]any{
+				"object": input.Object,
+			}),
+		)
+	}
+
+	m.q.UpdateStatusDownloadHistoryById(ctx, sqlc.UpdateStatusDownloadHistoryByIdParams{
+		ID:      id,
+		Status:  DOWNLOADED,
+		Version: saveResult.Version,
+	})
+
+	output.Body.DownloadId = id
+	output.Body.DestPath = dest
+	output.AddMessage(models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Object, S3S004, "", map[string]any{
+		"name": input.Object,
+		"dest": dest,
+	}))
 	return output
 }
-
-const (
-	chunkSize   = 64 << 20
-	concurrency = 6
-)
 
 func download(ctx context.Context, c *s3.Client, bucket, key, dest string, progress func(done, total int64)) error {
 	if progress == nil {

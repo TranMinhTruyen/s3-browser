@@ -4,6 +4,7 @@ import (
 	"S3Browser/internal/modules/global"
 	"S3Browser/internal/modules/profile"
 	"S3Browser/models"
+	"database/sql"
 	"log/slog"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -20,6 +21,9 @@ var (
 
 	// Profile: {name} disconnect success
 	S3S003 = "S3S003"
+
+	// Download file {name} success, destination {dest}
+	S3S004 = "S3S004"
 
 	// access key or secret key is not valid for this endpoint
 	S3E001 = "S3E001"
@@ -71,12 +75,13 @@ func NewModule(
 	app *application.App,
 	logger *slog.Logger,
 	global *global.Module,
+	db *sql.DB,
 	profileModule *profile.Module,
 ) *Module {
 	submoduleCfgMng := newSubmoduleCfgMng(logger)
 	submoduleConnAction := newSubmoduleConnAction(app, logger, global, profileModule, submoduleCfgMng)
 	submoduleBucketMng := newSubmoduleBucketMng(app, logger, global)
-	submoduleObjMng := newSubmoduleObjMng(app, logger, global)
+	submoduleObjMng := newSubmoduleObjMng(app, logger, global, db)
 
 	return &Module{
 		logger:  logger.With("modules", "bucket"),
@@ -139,4 +144,8 @@ func (m *Module) GetListBucket(input models.ListBucketInput) models.Output[model
 // using an already-established connection.
 func (m *Module) GetListObject(input models.ListObjectInput) models.Output[models.ListObjectOutput] {
 	return m.submoduleObjMng.listObject(input)
+}
+
+func (m *Module) DownloadObject(input models.DownloadObjInput) models.Output[models.DownloadObjOutput] {
+	return m.submoduleObjMng.downloadObject(input)
 }

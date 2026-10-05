@@ -4,6 +4,7 @@ sql:
     queries:
       - "internal/pkg/db/queries/master"
       - "internal/pkg/db/queries/profiles"
+      - "internal/pkg/db/queries/bucket"
     schema: "internal/pkg/db/schemas"
     gen:
       go:
