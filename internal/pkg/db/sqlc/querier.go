@@ -9,14 +9,17 @@ import (
 )
 
 type Querier interface {
+	CreateDownloadHistory(ctx context.Context, arg CreateDownloadHistoryParams) (DownloadHistory, error)
 	CreateProfile(ctx context.Context, arg CreateProfileParams) (ConnectionProfile, error)
 	DeleteConnectionProfileById(ctx context.Context, id string) error
 	SelectAllConnectionProfile(ctx context.Context) ([]SelectAllConnectionProfileRow, error)
+	SelectAllDownloadHistory(ctx context.Context) ([]DownloadHistory, error)
 	SelectAllRegion(ctx context.Context) ([]SelectAllRegionRow, error)
 	SelectConnectionProfileById(ctx context.Context, id string) (ConnectionProfile, error)
 	SelectConnectionProfileForUpdate(ctx context.Context, arg SelectConnectionProfileForUpdateParams) (ConnectionProfile, error)
 	SelectMasterByCode(ctx context.Context, code string) ([]SelectMasterByCodeRow, error)
 	UpdateConnectionProfileById(ctx context.Context, arg UpdateConnectionProfileByIdParams) (ConnectionProfile, error)
+	UpdateStatusDownloadHistoryById(ctx context.Context, arg UpdateStatusDownloadHistoryByIdParams) (DownloadHistory, error)
 }
 
 var _ Querier = (*Queries)(nil)

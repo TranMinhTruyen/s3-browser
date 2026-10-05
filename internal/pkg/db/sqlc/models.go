@@ -24,6 +24,16 @@ type ConnectionProfile struct {
 	Version     int64          `json:"version"`
 }
 
+type DownloadHistory struct {
+	ID        string       `json:"id"`
+	FileName  string       `json:"file_name"`
+	DestPath  string       `json:"dest_path"`
+	Status    string       `json:"status"`
+	CreatedAt sql.NullTime `json:"created_at"`
+	UpdatedAt sql.NullTime `json:"updated_at"`
+	Version   int64        `json:"version"`
+}
+
 type Master struct {
 	ID        int64          `json:"id"`
 	Code      string         `json:"code"`

@@ -46,7 +46,7 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 	globalModule := global.NewModule()
 
 	profileModule := profile.NewModule(app, logger, globalModule, sqlDb, km)
-	bucketModule := bucket.NewModule(app, logger, globalModule, profileModule)
+	bucketModule := bucket.NewModule(app, logger, globalModule, sqlDb, profileModule)
 	masterModule := master.NewModule(app, logger, globalModule, sqlDb)
 
 	profileHandler := handlers.NewProfileHandler(app, logger, profileModule)
@@ -54,11 +54,6 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 	masterHandler := handlers.NewMasterHandler(app, logger, masterModule)
 
 	return &App{
-		logger: log,
-		cfg:    cfg,
-		app:    app,
-		sqlDb:  sqlDb,
-
 		BucketHandler:  bucketHandler,
 		MasterHandler:  masterHandler,
 		ProfileHandler: profileHandler,
