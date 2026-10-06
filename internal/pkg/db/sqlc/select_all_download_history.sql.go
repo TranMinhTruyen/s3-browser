@@ -14,12 +14,21 @@ SELECT
     dh.id, dh.file_name, dh.dest_path, dh.status, dh.created_at, dh.updated_at, dh.version
 FROM
     download_history dh
+WHERE
+    dh.id > ?1
 ORDER BY
-    dh.created_at
+    dh.id
+LIMIT
+    ?2
 `
 
-func (q *Queries) SelectAllDownloadHistory(ctx context.Context) ([]DownloadHistory, error) {
-	rows, err := q.db.QueryContext(ctx, selectAllDownloadHistory)
+type SelectAllDownloadHistoryParams struct {
+	AfterID  string `json:"after_id"`
+	PageSize int64  `json:"page_size"`
+}
+
+func (q *Queries) SelectAllDownloadHistory(ctx context.Context, arg SelectAllDownloadHistoryParams) ([]DownloadHistory, error) {
+	rows, err := q.db.QueryContext(ctx, selectAllDownloadHistory, arg.AfterID, arg.PageSize)
 	if err != nil {
 		return nil, err
 	}

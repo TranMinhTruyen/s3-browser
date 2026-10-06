@@ -52,6 +52,12 @@ var (
 	// Destination {path} not exists
 	S3E009 = "S3E009"
 
+	// Create download history of {object} error
+	S3E010 = "S3E010"
+
+	// Get download history error
+	S3E011 = "S3E011"
+
 	// Access bucket is limited
 	S3W001 = "S3W001"
 
@@ -65,10 +71,10 @@ type Module struct {
 	global  *global.Module
 	profile *profile.Module
 
-	submoduleCfgMng     *submoduleCfgMng
-	submoduleConnAction *submoduleConnAction
-	submoduleBucketMng  *submoduleBucketMng
-	submoduleObjMng     *submoduleObjMng
+	submoduleConnMng       *submoduleConnMng
+	submoduleBucketMng     *submoduleBucketMng
+	submoduleObjMng        *submoduleObjMng
+	submoduleDownloaderMng *submoduleDownloaderMng
 }
 
 func NewModule(
@@ -79,9 +85,10 @@ func NewModule(
 	profileModule *profile.Module,
 ) *Module {
 	submoduleCfgMng := newSubmoduleCfgMng(logger)
-	submoduleConnAction := newSubmoduleConnAction(app, logger, global, profileModule, submoduleCfgMng)
+	submoduleConnMng := newSubmoduleConnMng(app, logger, global, profileModule, submoduleCfgMng)
 	submoduleBucketMng := newSubmoduleBucketMng(app, logger, global)
-	submoduleObjMng := newSubmoduleObjMng(app, logger, global, db)
+	submoduleObjMng := newSubmoduleObjMng(app, logger, global)
+	submoduleDownloaderMng := newSubmoduleDownloaderMng(app, logger, global, db)
 
 	return &Module{
 		logger:  logger.With("modules", "bucket"),
@@ -89,10 +96,10 @@ func NewModule(
 		global:  global,
 		profile: profileModule,
 
-		submoduleCfgMng:     submoduleCfgMng,
-		submoduleConnAction: submoduleConnAction,
-		submoduleObjMng:     submoduleObjMng,
-		submoduleBucketMng:  submoduleBucketMng,
+		submoduleConnMng:       submoduleConnMng,
+		submoduleBucketMng:     submoduleBucketMng,
+		submoduleObjMng:        submoduleObjMng,
+		submoduleDownloaderMng: submoduleDownloaderMng,
 	}
 }
 
@@ -102,27 +109,27 @@ func NewModule(
 // On success, the connection is kept for subsequent bucket/object operations.
 func (m *Module) Connect(input models.ConnectionProfileInput, isManualConnect bool,
 ) models.Output[models.ConnectOutput] {
-	return m.submoduleConnAction.connectAction(input, isManualConnect)
+	return m.submoduleConnMng.connectAction(input, isManualConnect)
 }
 
 // TestConnection checks whether the given credentials and endpoint are valid
 // without keeping the connection open. Useful for validating a profile
 // before saving it.
 func (m *Module) TestConnection(input models.ConnectionProfileInput) models.Output[models.ConnectOutput] {
-	return m.submoduleConnAction.testAction(input)
+	return m.submoduleConnMng.testAction(input)
 }
 
 // ConnectByProfile connects using a saved profile identified by connectionId,
 // loading its connection settings from the profile module.
 func (m *Module) ConnectByProfile(connectionId string) models.Output[models.ConnectOutput] {
-	return m.submoduleConnAction.profileConnectAction(connectionId)
+	return m.submoduleConnMng.profileConnectAction(connectionId)
 }
 
 // Disconnect closes the active connection identified by connectionId
 // and removes it from the shared connection store.
 // Returns true in if the disconnect succeeded.
 func (m *Module) Disconnect(connectionId string) models.Output[bool] {
-	return m.submoduleConnAction.disconnectAction(connectionId)
+	return m.submoduleConnMng.disconnectAction(connectionId)
 }
 
 // DisconnectAll removes every active connection from the shared store and
@@ -146,6 +153,6 @@ func (m *Module) GetListObject(input models.ListObjectInput) models.Output[model
 	return m.submoduleObjMng.listObject(input)
 }
 
-func (m *Module) DownloadObject(input models.DownloadObjInput) models.Output[models.DownloadObjOutput] {
-	return m.submoduleObjMng.downloadObject(input)
+func (m *Module) DownloadObject(input models.DownloadObjInput) models.Output[any] {
+	return m.submoduleDownloaderMng.downloadObject(input)
 }

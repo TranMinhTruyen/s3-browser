@@ -9,7 +9,7 @@ import (
 const (
 	// Emitted after a new connection profile is saved; payload is the created profile
 	EventConnectSaveProfile     = "bucket:connect-save-profile"
-	EventDownloadObjectProgress = "bucket:download-progress"
+	EventDownloadObjectProgress = "downloader:download-progress"
 )
 
 // RegisterEvent must be called directly from init so the binding generator can
