@@ -61,7 +61,8 @@ CREATE TABLE IF NOT EXISTS download_history(
     , version INTEGER NOT NULL DEFAULT 1
 );
 
-CREATE INDEX idx_download_file_name ON download_history(file_name); 
+CREATE INDEX idx_download_file_name ON download_history(file_name);
+CREATE INDEX idx_download_history_created ON download_history(created_at, id);
 
 -- +goose Down
 DROP INDEX idx_connection_profiles_name;
@@ -71,4 +72,5 @@ DROP INDEX idx_master_code;
 DROP TABLE master;
 
 DROP INDEX idx_download_file_name;
+DROP INDEX idx_download_history_created;
 DROP TABLE download_history;

@@ -13,7 +13,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-type submoduleConnAction struct {
+type submoduleConnMng struct {
 	logger  *slog.Logger
 	app     *application.App
 	global  *global.Module
@@ -22,14 +22,14 @@ type submoduleConnAction struct {
 	submoduleCfgMng *submoduleCfgMng
 }
 
-func newSubmoduleConnAction(
+func newSubmoduleConnMng(
 	app *application.App,
 	logger *slog.Logger,
 	global *global.Module,
 	profile *profile.Module,
 	submoduleCfgMng *submoduleCfgMng,
-) *submoduleConnAction {
-	return &submoduleConnAction{
+) *submoduleConnMng {
+	return &submoduleConnMng{
 		logger:  logger.With("submodules", "connection_action"),
 		app:     app,
 		global:  global,
@@ -39,7 +39,7 @@ func newSubmoduleConnAction(
 	}
 }
 
-func (m *submoduleConnAction) testAction(input models.ConnectionProfileInput) models.Output[models.ConnectOutput] {
+func (m *submoduleConnMng) testAction(input models.ConnectionProfileInput) models.Output[models.ConnectOutput] {
 	// Don't use app.Context for I/O because this context is cancelled only when the app shuts down.
 	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
 	defer cancel()
@@ -61,7 +61,7 @@ func (m *submoduleConnAction) testAction(input models.ConnectionProfileInput) mo
 	return status
 }
 
-func (m *submoduleConnAction) connectAction(
+func (m *submoduleConnMng) connectAction(
 	input models.ConnectionProfileInput,
 	isManualConnect bool,
 ) models.Output[models.ConnectOutput] {
@@ -106,7 +106,7 @@ func (m *submoduleConnAction) connectAction(
 	return status
 }
 
-func (m *submoduleConnAction) profileConnectAction(connectionId string) models.Output[models.ConnectOutput] {
+func (m *submoduleConnMng) profileConnectAction(connectionId string) models.Output[models.ConnectOutput] {
 	output := models.NewOutput[models.ConnectOutput]()
 	profile := m.profile.GetConnectionProfileById(connectionId)
 
@@ -154,7 +154,7 @@ func (m *submoduleConnAction) profileConnectAction(connectionId string) models.O
 	return output
 }
 
-func (m *submoduleConnAction) disconnectAction(connectionId string) models.Output[bool] {
+func (m *submoduleConnMng) disconnectAction(connectionId string) models.Output[bool] {
 	output := models.NewOutput[bool]()
 
 	if conn, ok := m.global.RemoveConn(connectionId); ok {
