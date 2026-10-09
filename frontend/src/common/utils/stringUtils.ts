@@ -75,3 +75,15 @@ export function formatFieldError(rawError: string, label: React.ReactNode, t: TF
 export const createUUID = (prefix?: string) => {
   return [prefix, v7()].filter(Boolean).join('-');
 };
+
+/**
+ *
+ * @param sizeInBytes
+ * @returns
+ */
+export const formatFileSize = (sizeInBytes: number): string => {
+  if (sizeInBytes < 1024) return `${sizeInBytes} bytes`;
+  else if (sizeInBytes < 1024 * 1024) return `${(sizeInBytes / 1024).toFixed(2)} KB`;
+  else if (sizeInBytes < 1024 * 1024 * 1024) return `${(sizeInBytes / (1024 * 1024)).toFixed(2)} MB`;
+  else return `${(sizeInBytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+};

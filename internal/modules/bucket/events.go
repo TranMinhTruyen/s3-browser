@@ -10,6 +10,7 @@ const (
 	// Emitted after a new connection profile is saved; payload is the created profile
 	EventConnectSaveProfile     = "bucket:connect-save-profile"
 	EventDownloadObjectProgress = "downloader:download-progress"
+	EventLoadDownloadHistory    = "downloader:load-download-history"
 )
 
 // RegisterEvent must be called directly from init so the binding generator can
@@ -17,4 +18,5 @@ const (
 func init() {
 	application.RegisterEvent[models.ConnectionProfileOutput](EventConnectSaveProfile)
 	application.RegisterEvent[models.DownloadProgressOutput](EventDownloadObjectProgress)
+	application.RegisterEvent[models.DownloadHistoryItem](EventLoadDownloadHistory)
 }

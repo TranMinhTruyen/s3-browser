@@ -6,10 +6,10 @@ import (
 
 type DownloadHistoryItem struct {
 	ID        string    `json:"id"`
-	FileName  string    `json:"file_name,omitempty"`
-	DestPath  string    `json:"dest_path,omitempty"`
+	FileName  string    `json:"fileName,omitempty"`
+	DestPath  string    `json:"destPath,omitempty"`
 	Status    string    `json:"status,omitempty"`
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updatedAt"`
 	Version   int64     `json:"version,omitempty"`
 }
 

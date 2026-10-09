@@ -6,6 +6,7 @@ import { Ellipsis, File } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
 import { callIPC } from '@/common/utils/ipcUtils';
+import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/AcctionIcon';
 import classes from '@/pages/bucket/page.module.css';
 
@@ -48,18 +49,6 @@ function ObjectListView(props: ObjectListViewProps) {
       cancelled = true;
     };
   }, [profileId, profileName, bucket]);
-
-  /**
-   *
-   * @param sizeInBytes
-   * @returns
-   */
-  const formatFileSize = (sizeInBytes: number): string => {
-    if (sizeInBytes < 1024) return `${sizeInBytes} bytes`;
-    else if (sizeInBytes < 1024 * 1024) return `${(sizeInBytes / 1024).toFixed(2)} KB`;
-    else if (sizeInBytes < 1024 * 1024 * 1024) return `${(sizeInBytes / (1024 * 1024)).toFixed(2)} MB`;
-    else return `${(sizeInBytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-  };
 
   const objectDetail = useMemo(() => {
     const objectList = profileId && objectDatas?.connectionId === profileId ? objectDatas.objectList : [];
