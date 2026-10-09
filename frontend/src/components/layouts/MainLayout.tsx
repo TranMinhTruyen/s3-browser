@@ -1,5 +1,6 @@
 import { AppShell, Group, SegmentedControl, Splitter } from '@mantine/core';
 import { Outlet } from 'react-router-dom';
+import DownloaderWindow from '@/components/layouts/downloader/DownloaderWindow';
 import LeftNavbar from '@/components/layouts/navbar/LeftNavbar';
 import i18n from '@/locales/i18n';
 
@@ -41,6 +42,8 @@ function MainLayout() {
             <Outlet />
           </Splitter.Pane>
         </Splitter>
+
+        <DownloaderWindow />
       </AppShell.Main>
     </AppShell>
   );

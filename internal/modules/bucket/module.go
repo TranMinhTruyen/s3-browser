@@ -22,22 +22,22 @@ var (
 	// Profile: {name} disconnect success
 	S3S003 = "S3S003"
 
-	// Download file {name} success, destination {dest}
+	// Download file {object} success, destination {dest}
 	S3S004 = "S3S004"
 
-	// access key or secret key is not valid for this endpoint
+	// Access key or secret key is not valid for this endpoint
 	S3E001 = "S3E001"
 
-	// the endpoint rejected
+	// The endpoint rejected
 	S3E002 = "S3E002"
 
-	// timed out reaching the endpoint, check the address and whether the server is running
+	// Timed out reaching the endpoint, check the address and whether the server is running
 	S3E003 = "S3E003"
 
-	// error while connect to S3 bucket
+	// Error while connect to S3 bucket
 	S3E004 = "S3E004"
 
-	// error while disconnect S3 bucket
+	// Error while disconnect S3 bucket
 	S3E005 = "S3E005"
 
 	// Profile: {name} is not connected
@@ -58,11 +58,17 @@ var (
 	// Get download history error
 	S3E011 = "S3E011"
 
+	// Download object: {object} error
+	S3E012 = "S3E012"
+
 	// Access bucket is limited
 	S3W001 = "S3W001"
 
 	// Download object: {object} is canceled
 	S3W002 = "S3W002"
+
+	// Update download history failed: {object} please reload!
+	S3W003 = "S3W003"
 )
 
 type Module struct {

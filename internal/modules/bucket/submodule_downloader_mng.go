@@ -101,6 +101,15 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 		Status:   DOWNLOADING,
 	})
 
+	m.app.Event.Emit(EventLoadDownloadHistory, models.DownloadHistoryItem{
+		ID:        saveResult.ID,
+		FileName:  saveResult.FileName,
+		DestPath:  saveResult.DestPath,
+		Status:    saveResult.Status,
+		UpdatedAt: saveResult.UpdatedAt.Time,
+		Version:   saveResult.Version,
+	})
+
 	if err != nil {
 		return output.ThrowError(
 			models.NewMessage(cnst.MessageTypeError, cnst.Downloader, S3E010, err.Error()),
@@ -109,15 +118,15 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 
 	err = download(ctx, s3Conn.Client, input.Bucket, input.Object, dest, func(done, total int64) {
 		m.app.Event.Emit(
-			EventConnectSaveProfile,
+			EventDownloadObjectProgress,
 			models.DownloadProgressOutput{DownloadId: id, Downloaded: done, Total: total},
 		)
 	})
 
 	if err != nil {
 		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Downloader, S3E009, err.Error(), map[string]any{
-				"name": input.ProfileName,
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Downloader, S3E012, err.Error(), map[string]any{
+				"object": input.Object,
 			}),
 		)
 	}
@@ -129,22 +138,39 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 			Version: saveResult.Version,
 		})
 		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Downloader, S3W002, err.Error(), map[string]any{
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Downloader, S3W002, ctx.Err().Error(), map[string]any{
 				"object": input.Object,
 			}),
 		)
 	}
 
-	m.q.UpdateStatusDownloadHistoryById(ctx, sqlc.UpdateStatusDownloadHistoryByIdParams{
+	updateResult, err := m.q.UpdateStatusDownloadHistoryById(ctx, sqlc.UpdateStatusDownloadHistoryByIdParams{
 		ID:      id,
 		Status:  DOWNLOADED,
 		Version: saveResult.Version,
 	})
 
+	if err != nil {
+		output.AddMessage(
+			models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Downloader, S3W003, "", map[string]any{
+				"object": input.Object,
+			}),
+		)
+	}
+
+	m.app.Event.Emit(EventLoadDownloadHistory, models.DownloadHistoryItem{
+		ID:        updateResult.ID,
+		FileName:  updateResult.FileName,
+		DestPath:  updateResult.DestPath,
+		Status:    updateResult.Status,
+		UpdatedAt: updateResult.UpdatedAt.Time,
+		Version:   updateResult.Version,
+	})
+
 	output.AddMessage(
-		models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Downloader, S3S004, err.Error(), map[string]any{
-			"name": input.Object,
-			"dest": dest,
+		models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Downloader, S3S004, "", map[string]any{
+			"object": input.Object,
+			"dest":   dest,
 		}),
 	)
 	return output
