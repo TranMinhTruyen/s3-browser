@@ -7,7 +7,6 @@ import (
 	"S3Browser/internal/pkg/utils"
 	"S3Browser/models"
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -15,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -27,24 +27,24 @@ import (
 )
 
 type submoduleDownloaderMng struct {
-	logger *slog.Logger
-	app    *application.App
-	global *global.Module
-	q      *sqlc.Queries
-	jobs   sync.Map
+	logger                      *slog.Logger
+	app                         *application.App
+	global                      *global.Module
+	submoduleDownloadHistoryMng *submoduleDownloadHistoryMng
+	jobs                        sync.Map
 }
 
 func newSubmoduleDownloaderMng(
 	app *application.App,
 	logger *slog.Logger,
 	global *global.Module,
-	db *sql.DB,
+	submoduleDownloadHistoryMng *submoduleDownloadHistoryMng,
 ) *submoduleDownloaderMng {
 	return &submoduleDownloaderMng{
-		logger: logger.With("submodules", "download_mng"),
-		app:    app,
-		global: global,
-		q:      sqlc.New(db),
+		logger:                      logger.With("submodules", "downloader_mng"),
+		app:                         app,
+		global:                      global,
+		submoduleDownloadHistoryMng: submoduleDownloadHistoryMng,
 	}
 }
 
@@ -53,20 +53,18 @@ type job struct {
 	cancel context.CancelFunc
 }
 
+type downloadResult struct {
+	key    string
+	err    error
+	update *sqlc.UpdateStatusDownloadHistoryByIdParams
+}
+
 const (
 	chunkSize   = 64 << 20
 	concurrency = 6
-
-	DOWNLOADING    = "DOWNLOADING"
-	DOWNLOADED     = "DOWNLOADED"
-	CANCELED       = "CANCELED"
-	DOWNLOAD_ERROR = "DOWNLOAD_ERROR"
 )
 
 func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) models.Output[any] {
-	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
-	defer cancel()
-
 	output := models.NewOutput[any]()
 
 	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
@@ -79,135 +77,153 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 		)
 	}
 
-	app := application.Get()
-	dest, err := app.Dialog.SaveFile().SetFilename(path.Base(input.Object)).PromptForSingleSelection()
-	if err != nil || dest == "" {
-		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Downloader, S3E009, err.Error(), map[string]any{
-				"path": dest,
-			}),
-		)
+	var (
+		destDir string
+		err     error
+	)
+
+	if len(input.Objects) > 1 {
+		destDir, err = m.app.Dialog.OpenFile().
+			CanChooseDirectories(true).
+			CanChooseFiles(false).
+			CanCreateDirectories(true).
+			PromptForSingleSelection()
+	} else {
+		destDir, err = m.app.Dialog.SaveFile().SetFilename(path.Base(input.Objects[0])).PromptForSingleSelection()
 	}
+
+	if err != nil {
+		return output.ThrowError(models.NewParamsMessage(cnst.MessageTypeError, cnst.Downloader, S3E009, err.Error(),
+			map[string]any{"path": destDir}))
+	}
+
+	if destDir == "" {
+		return output
+	}
+
+	results := make(chan downloadResult, len(input.Objects))
+	var g errgroup.Group
+	g.SetLimit(concurrency)
+	for _, key := range input.Objects {
+		dest := destDir
+
+		if len(input.Objects) > 1 {
+			dest = filepath.Join(destDir, path.Base(key))
+		}
+
+		g.Go(func() error {
+			r := m.downloadOne(m.app.Context(), input.ConnectionId, s3Conn.Client, input.Bucket, key, dest)
+			if r.update != nil {
+				m.finishHistory(&r)
+			}
+			results <- r
+			return nil
+		})
+	}
+	_ = g.Wait()
+	close(results)
+
+	for r := range results {
+		switch {
+		case r.err == nil:
+			output.AddMessage(
+				models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Downloader, S3S004, "", map[string]any{
+					"object": r.key,
+					"dest":   destDir,
+				}),
+			)
+		case errors.Is(r.err, context.Canceled):
+			output.AddMessage(
+				models.NewParamsMessage(cnst.MessageTypeError, cnst.Downloader, S3W002, "", map[string]any{
+					"object": r.key,
+				}),
+			)
+		default:
+			output.AddMessage(
+				models.NewParamsMessage(cnst.MessageTypeError, cnst.Downloader, S3E012, r.err.Error(), map[string]any{
+					"object": r.key,
+				}),
+			)
+		}
+	}
+	return output
+}
+
+func (m *submoduleDownloaderMng) cancelDownloadOne(id string) models.Output[any] {
+	output := models.NewOutput[any]()
+	v, ok := m.jobs.Load(id)
+	if !ok {
+		return output
+	}
+	v.(job).cancel()
+	return output
+}
+
+func (m *submoduleDownloaderMng) downloadOne(
+	parent context.Context,
+	connID string,
+	c *s3.Client,
+	bucket, key, dest string,
+) downloadResult {
+	ctx, cancel := context.WithCancel(parent)
 
 	id := utils.GenerateUUID()
 
-	m.jobs.Store(id, job{connID: input.ConnectionId, cancel: cancel})
+	m.jobs.Store(id, job{connID: connID, cancel: cancel})
 	defer func() { cancel(); m.jobs.Delete(id) }()
 
-	saveResult, err := m.q.CreateDownloadHistory(ctx, sqlc.CreateDownloadHistoryParams{
+	saved, err := m.submoduleDownloadHistoryMng.createDownloadHistory(models.DownloadHistoryItem{
 		ID:       id,
-		FileName: input.Object,
+		FileName: key,
 		DestPath: dest,
-		Status:   DOWNLOADING,
-	})
-
-	m.app.Event.Emit(EventLoadDownloadHistory, models.DownloadHistoryItem{
-		ID:        saveResult.ID,
-		FileName:  saveResult.FileName,
-		DestPath:  saveResult.DestPath,
-		Status:    saveResult.Status,
-		UpdatedAt: saveResult.UpdatedAt.Time,
-		Version:   saveResult.Version,
 	})
 
 	if err != nil {
-		return output.ThrowError(
-			models.NewMessage(cnst.MessageTypeError, cnst.Downloader, S3E010, err.Error()),
-		)
+		return downloadResult{key: key, err: fmt.Errorf("create history: %w", err)}
 	}
 
-	err = download(ctx, s3Conn.Client, input.Bucket, input.Object, dest, func(done, total int64) {
+	m.app.Event.Emit(EventLoadDownloadHistory, saved)
+
+	err = download(ctx, c, bucket, key, dest, func(done, total int64) {
 		m.app.Event.Emit(
 			EventDownloadObjectProgress,
 			models.DownloadProgressOutput{DownloadId: id, Downloaded: done, Total: total},
 		)
 	})
 
+	status := DOWNLOADED
 	if err != nil {
-		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Downloader, S3E012, err.Error(), map[string]any{
-				"object": input.Object,
-			}),
-		)
-	}
-
-	if ctx.Err() != nil {
-		m.q.UpdateStatusDownloadHistoryById(ctx, sqlc.UpdateStatusDownloadHistoryByIdParams{
-			ID:      id,
-			Status:  CANCELED,
-			Version: saveResult.Version,
-		})
-		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Downloader, S3W002, ctx.Err().Error(), map[string]any{
-				"object": input.Object,
-			}),
-		)
-	}
-
-	updateResult, err := m.q.UpdateStatusDownloadHistoryById(ctx, sqlc.UpdateStatusDownloadHistoryByIdParams{
-		ID:      id,
-		Status:  DOWNLOADED,
-		Version: saveResult.Version,
-	})
-
-	if err != nil {
-		output.AddMessage(
-			models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Downloader, S3W003, "", map[string]any{
-				"object": input.Object,
-			}),
-		)
-	}
-
-	m.app.Event.Emit(EventLoadDownloadHistory, models.DownloadHistoryItem{
-		ID:        updateResult.ID,
-		FileName:  updateResult.FileName,
-		DestPath:  updateResult.DestPath,
-		Status:    updateResult.Status,
-		UpdatedAt: updateResult.UpdatedAt.Time,
-		Version:   updateResult.Version,
-	})
-
-	output.AddMessage(
-		models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Downloader, S3S004, "", map[string]any{
-			"object": input.Object,
-			"dest":   dest,
-		}),
-	)
-	return output
-}
-
-func (m *submoduleDownloaderMng) getDownloadHistory(
-	input models.DownloadHistoryInput,
-) models.Output[models.DownloadHistoryOutput] {
-	ctx, cancel := context.WithTimeout(m.app.Context(), 60*time.Second)
-	defer cancel()
-	output := models.NewOutput[models.DownloadHistoryOutput]()
-
-	result, err := m.q.SelectAllDownloadHistory(ctx, sqlc.SelectAllDownloadHistoryParams{
-		AfterID:  input.AfterID,
-		PageSize: input.PageSize,
-	})
-
-	if err != nil {
-		return output.ThrowError(
-			models.NewMessage(cnst.MessageTypeError, cnst.Downloader, S3E011, err.Error()),
-		)
-	}
-
-	historyList := make([]models.DownloadHistoryItem, len(result))
-	for idx, item := range result {
-		historyList[idx] = models.DownloadHistoryItem{
-			ID:        item.ID,
-			FileName:  item.FileName,
-			DestPath:  item.DestPath,
-			Status:    item.Status,
-			UpdatedAt: item.UpdatedAt.Time,
-			Version:   item.Version,
+		status = DOWNLOAD_ERROR
+		if ctx.Err() != nil {
+			status = CANCELED
+			err = context.Canceled
 		}
 	}
 
-	output.Body.DownloadHistoryList = historyList
-	return output
+	return downloadResult{
+		key: key,
+		err: err,
+		update: &sqlc.UpdateStatusDownloadHistoryByIdParams{
+			ID:      id,
+			Status:  status,
+			Version: saved.Version,
+		},
+	}
+}
+
+func (m *submoduleDownloaderMng) finishHistory(r *downloadResult) {
+	updated, err := m.submoduleDownloadHistoryMng.updateDownloadHistory(models.DownloadHistoryItem{
+		ID:      r.update.ID,
+		Status:  r.update.Status,
+		Version: r.update.Version,
+	})
+
+	if err != nil {
+		r.err = err
+		return
+	}
+
+	m.app.Event.Emit(EventLoadDownloadHistory, updated)
 }
 
 func download(ctx context.Context, c *s3.Client, bucket, key, dest string, progress func(done, total int64)) error {

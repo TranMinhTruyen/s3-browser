@@ -91,10 +91,11 @@ func NewModule(
 	profileModule *profile.Module,
 ) *Module {
 	submoduleCfgMng := newSubmoduleCfgMng(logger)
+	submoduleDownloadHistoryMng := newSubmoduleDownloadHistoryMng(app, logger, db)
 	submoduleConnMng := newSubmoduleConnMng(app, logger, global, profileModule, submoduleCfgMng)
 	submoduleBucketMng := newSubmoduleBucketMng(app, logger, global)
 	submoduleObjMng := newSubmoduleObjMng(app, logger, global)
-	submoduleDownloaderMng := newSubmoduleDownloaderMng(app, logger, global, db)
+	submoduleDownloaderMng := newSubmoduleDownloaderMng(app, logger, global, submoduleDownloadHistoryMng)
 
 	return &Module{
 		logger:  logger.With("modules", "bucket"),

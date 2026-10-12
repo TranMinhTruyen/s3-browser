@@ -8,6 +8,9 @@
       "options": {
         "cwd": "${workspaceFolder}"
       },
+      "dependsOn": [
+        "wails: release locked binary"
+      ],
       "group": "build",
       "problemMatcher": [
         "$go"
@@ -49,6 +52,7 @@
         "cwd": "${workspaceFolder}"
       },
       "dependsOn": [
+        "wails: release locked binary",
         "vite: dev server"
       ],
       "group": "build",
@@ -70,6 +74,7 @@
         "cwd": "${workspaceFolder}"
       },
       "dependsOn": [
+        "wails: release locked binary",
         "vite: dev server"
       ],
       "group": "build",
@@ -81,6 +86,29 @@
       "problemMatcher": [
         "$go"
       ]
+    },
+    {
+      "label": "wails: release locked binary",
+      "detail": "On restart VS Code rebuilds while Delve still runs the old .exe, which Windows locks. A running .exe can be renamed but not overwritten, so move it aside instead of killing the debuggee.",
+      "type": "shell",
+      "command": "foreach ($n in 'S3Browser','S3Browser-dev','S3Browser-server') { $exe = \"build/bin/$n.exe\"; $old = \"$exe.old\"; Remove-Item $old -Force -ErrorAction SilentlyContinue; if (Test-Path $exe) { Move-Item $exe $old -Force -ErrorAction SilentlyContinue } }; exit 0",
+      "options": {
+        "shell": {
+          "executable": "powershell.exe",
+          "args": [
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command"
+          ]
+        }
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "group": "wails-dev",
+        "close": true
+      },
+      "problemMatcher": []
     },
     {
       "label": "vite: stop dev server",

@@ -85,12 +85,10 @@ func (m *submoduleConnMng) connectAction(
 
 	if isManualConnect == false {
 		createResult := m.profile.CreateProfile(input)
-		if createResult.MessageList != nil {
-			*status.MessageList = append(*status.MessageList, *createResult.MessageList...)
-		}
-		if createResult.Body != nil {
+		status.AddMessage(createResult.MessageList...)
+		if createResult.Result {
 			connectionId = createResult.Body.ID
-			m.app.Event.Emit(EventConnectSaveProfile, *createResult.Body)
+			m.app.Event.Emit(EventConnectSaveProfile, createResult.Body)
 		}
 	}
 
@@ -112,12 +110,8 @@ func (m *submoduleConnMng) profileConnectAction(connectionId string) models.Outp
 
 	// The profile lookup owns the reason it failed, so pass its messages through
 	// instead of letting an empty endpoint fail later as a generic S3 error.
-	if profile.Body == nil {
-		output.Body = &models.ConnectOutput{}
-		if profile.MessageList != nil {
-			output.AddMessage(*profile.MessageList...)
-		}
-		return output
+	if !profile.Result {
+		return output.ThrowError(profile.MessageList...)
 	}
 
 	connectInput := models.ConnectionProfileInput{
@@ -159,7 +153,7 @@ func (m *submoduleConnMng) disconnectAction(connectionId string) models.Output[b
 
 	if conn, ok := m.global.RemoveConn(connectionId); ok {
 		conn.Transport.CloseIdleConnections()
-		output.Body = utils.ToPtr(true)
+		output.Body = true
 		output.AddMessage(
 			models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Bucket, S3S003, "", map[string]any{
 				"name": conn.ProfileName,

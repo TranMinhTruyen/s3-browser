@@ -52,3 +52,7 @@ func (h *BucketHandler) GetListBucket(input models.ListBucketInput) models.Outpu
 func (h *BucketHandler) GetListObject(input models.ListObjectInput) models.Output[models.ListObjectOutput] {
 	return h.bucket.GetListObject(input)
 }
+
+func (h *BucketHandler) DownloadObject(input models.DownloadObjInput) models.Output[any] {
+	return h.bucket.DownloadObject(input)
+}

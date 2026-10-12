@@ -1,13 +1,14 @@
 import { Box, Card, Menu, Stack, Text } from '@mantine/core';
-import { GetListObject } from '@wails/S3Browser/internal/handlers/buckethandler';
+import { DownloadObject, GetListObject } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput, ListObjectOutput } from '@wails/S3Browser/models';
 import dayjs from 'dayjs';
 import { Ellipsis, File } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/AcctionIcon';
+import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import classes from '@/pages/bucket/page.module.css';
 
 type ObjectListViewProps = {
@@ -24,6 +25,7 @@ type ObjectDatas = ListObjectOutput & {
 function ObjectListView(props: ObjectListViewProps) {
   const { bucket, profile } = props;
 
+  const [selection, setSelection] = useState<string[]>([]);
   const [objectDatas, setObjectDatas] = useState<ObjectDatas>({
     objectList: [],
     nextCursor: '',
@@ -39,7 +41,7 @@ function ObjectListView(props: ObjectListViewProps) {
 
     let cancelled = false;
     callIPC(GetListObject, [
-      { connectionId: profileId, profileName, bucket: bucket, prefix: '', nextCursor: '', limit: 10 },
+      { connectionId: profileId, profileName, bucket, prefix: '', nextCursor: '', limit: 10 },
     ]).then(output => {
       if (output && !cancelled) {
         setObjectDatas({ ...output, connectionId: profileId, profileName, bucket });
@@ -50,10 +52,32 @@ function ObjectListView(props: ObjectListViewProps) {
     };
   }, [profileId, profileName, bucket]);
 
+  const onClickDownload = useCallback(
+    (object: string) => {
+      if (!profileId || !bucket) return;
+      callIPC(DownloadObject, [{ connectionId: profileId, profileName, bucket, objects: [object] }]);
+    },
+    [bucket, profileName, profileId]
+  );
+
   const objectDetail = useMemo(() => {
     const objectList = profileId && objectDatas?.connectionId === profileId ? objectDatas.objectList : [];
     return (objectList || []).map((item, idx) => (
-      <Card key={`${item.name}-${idx}`} padding="sm" orientation="horizontal" className={classes.card}>
+      <Card key={`${item.name}-${idx}`} padding="8px" orientation="horizontal" className={classes.card}>
+        <Card.Section
+          inheritPadding
+          px="8px"
+          withBorder
+          className={classes.iconSection}
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <CheckBoxInput />
+        </Card.Section>
         <Card.Section
           inheritPadding
           px="xs"
@@ -80,7 +104,7 @@ function ObjectListView(props: ObjectListViewProps) {
           }}
         >
           <Stack>
-            <Text size="xl" fw="bold">
+            <Text size="xl" fw="bold" truncate="end">
               {item.name}
             </Text>
             <Box>
@@ -109,7 +133,7 @@ function ObjectListView(props: ObjectListViewProps) {
             justifyContent: 'center',
           }}
         >
-          <Menu shadow="lg" withArrow width={200}>
+          <Menu width={200}>
             <Menu.Target>
               <ActionIcon>
                 <Ellipsis />
@@ -117,31 +141,13 @@ function ObjectListView(props: ObjectListViewProps) {
             </Menu.Target>
 
             <Menu.Dropdown>
-              <Menu.Label>Application</Menu.Label>
-              <Menu.Item>Settings</Menu.Item>
-              <Menu.Item>Messages</Menu.Item>
-              <Menu.Item>Gallery</Menu.Item>
-              <Menu.Item
-                rightSection={
-                  <Text size="xs" c="dimmed">
-                    ⌘K
-                  </Text>
-                }
-              >
-                Search
-              </Menu.Item>
-
-              <Menu.Divider />
-
-              <Menu.Label>Danger zone</Menu.Label>
-              <Menu.Item>Transfer my data</Menu.Item>
-              <Menu.Item color="red">Delete my account</Menu.Item>
+              <Menu.Item onClick={() => onClickDownload(item.key)}>Download</Menu.Item>
             </Menu.Dropdown>
           </Menu>
         </Card.Section>
       </Card>
     ));
-  }, [profileId, objectDatas.objectList, objectDatas.connectionId]);
+  }, [profileId, objectDatas.objectList, objectDatas.connectionId, onClickDownload]);
 
   return <>{objectDetail}</>;
 }

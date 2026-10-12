@@ -5,6 +5,7 @@ import connectModal from '@/locales/ja/components/modals/connectModal.json';
 import connectionProfiles from '@/locales/ja/components/navbar/connectionProfiles.json';
 import ipcMessage from '@/locales/ja/messages/ipcMessage.json';
 import validateMessage from '@/locales/ja/messages/validateMessage.json';
+import bucketPage from '@/locales/ja/pages/bucket/page.json';
 
 const japaneseResource: ResourceLanguage = {
   ipcMessage: ipcMessage,
@@ -12,6 +13,9 @@ const japaneseResource: ResourceLanguage = {
   connectModal: connectModal,
   confirmModal: confirmModal,
   connectionProfiles: connectionProfiles,
+  bucket: {
+    page: bucketPage,
+  },
   inputs: inputs,
 };
 export default japaneseResource;

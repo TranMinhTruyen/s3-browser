@@ -89,15 +89,8 @@ func (m *submoduleCfgMng) probe(ctx context.Context, c *global.S3Conn) (models.O
 
 func describeConnectStatus(err error, output *models.Output[models.ConnectOutput]) error {
 	if errors.Is(err, context.DeadlineExceeded) {
-		output.MessageList = &[]models.Message{
+		output.MessageList = []models.Message{
 			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E003, err.Error()),
-		}
-		return err
-	}
-
-	if err != nil {
-		output.MessageList = &[]models.Message{
-			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E004, err.Error()),
 		}
 		return err
 	}
@@ -106,23 +99,28 @@ func describeConnectStatus(err error, output *models.Output[models.ConnectOutput
 
 	switch errStr {
 	case "InvalidAccessKeyId", "SignatureDoesNotMatch", "InvalidClientTokenId":
-		output.MessageList = &[]models.Message{
+		output.MessageList = []models.Message{
 			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E001, errStr),
 		}
 		return err
 	case "AuthorizationHeaderMalformed", "InvalidRegion":
-		output.MessageList = &[]models.Message{
+		output.MessageList = []models.Message{
 			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E002, errStr),
 		}
 		return err
 	case "AccessDenied", "AllAccessDisabled", "UnauthorizedAccess":
-		output.MessageList = &[]models.Message{
+		output.MessageList = []models.Message{
 			models.NewMessage(cnst.MessageTypeWarn, cnst.Bucket, S3W001, errStr),
 		}
 		output.Body.Limited = true
 		return nil
+	case "":
+		output.MessageList = []models.Message{
+			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E004, err.Error()),
+		}
+		return err
 	default:
-		output.MessageList = &[]models.Message{
+		output.MessageList = []models.Message{
 			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E003, errStr),
 		}
 		return err

@@ -45,7 +45,6 @@ function BucketListView(props: BucketListViewProps) {
   }, [profileId, profileName]);
 
   const bucketDetail = useMemo(() => {
-    // Only show data loaded for the currently connected profile
     const bucketList = profileId && bucketDatas?.connectionId === profileId ? bucketDatas.bucketList : [];
     return (bucketList || []).map((item, idx) => (
       <Card
@@ -81,7 +80,7 @@ function BucketListView(props: BucketListViewProps) {
           }}
         >
           <Stack>
-            <Text size="xl" fw="bold">
+            <Text size="xl" fw="bold" truncate="end">
               {item.name}
             </Text>
             <Box>
