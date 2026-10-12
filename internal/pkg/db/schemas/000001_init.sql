@@ -38,9 +38,9 @@ CREATE TABLE IF NOT EXISTS master(
     , version INTEGER NOT NULL DEFAULT 1
 );
 
-CREATE INDEX idx_master_code ON master(code); 
+CREATE INDEX idx_master_code ON master(code);
 
-INSERT 
+INSERT
 INTO master(code, name, value1, value2, sort_order)
 VALUES ('REGION', 'Singapore', 'ap-southeast-1', '01', 1)
 , ('REGION', 'Tokyo', 'ap-northeast-1', '01', 2)

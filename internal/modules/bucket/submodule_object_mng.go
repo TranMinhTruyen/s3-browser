@@ -3,10 +3,10 @@ package bucket
 import (
 	"S3Browser/internal/modules/global"
 	"S3Browser/internal/pkg/cnst"
-	"S3Browser/internal/pkg/utils"
 	"S3Browser/models"
 	"context"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -75,31 +75,32 @@ func (m *submoduleObjMng) listObject(input models.ListObjectInput) models.Output
 				},
 			),
 		)
-		output.Result = utils.ToPtr(false)
+		output.Result = false
 		return output
 	}
 
 	body := models.ListObjectOutput{
-		ObjectList: make([]models.ObjectItem, len(objects.Contents)),
+		ObjectList: make([]models.ObjectItem, 0, len(objects.Contents)),
 		NextCursor: objects.NextContinuationToken,
 	}
 
-	for i, o := range objects.Contents {
-		key := *o.Key
+	// S3-compatible providers may omit optional fields, so read them via aws.ToX instead of dereferencing.
+	for _, o := range objects.Contents {
+		key := aws.ToString(o.Key)
 
-		if key == input.Prefix {
+		if key == "" || key == input.Prefix {
 			continue
 		}
 
-		body.ObjectList[i] = models.ObjectItem{
+		body.ObjectList = append(body.ObjectList, models.ObjectItem{
 			Key:          key,
-			Name:         key[len(input.Prefix):],
-			Size:         *o.Size,
-			LastModified: *o.LastModified,
-			ETag:         *o.ETag,
-		}
+			Name:         strings.TrimPrefix(key, input.Prefix),
+			Size:         aws.ToInt64(o.Size),
+			LastModified: aws.ToTime(o.LastModified),
+			ETag:         aws.ToString(o.ETag),
+		})
 	}
 
-	output.Body = &body
+	output.Body = body
 	return output
 }

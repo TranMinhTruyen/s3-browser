@@ -79,10 +79,8 @@ func (m *Module) GetRegion() models.Output[models.RegionOutput] {
 	rows, err := m.q.SelectAllRegion(m.app.Context())
 
 	if err != nil {
-		output.Body = nil
 		m.logger.Error("get region data failed", "error", err)
-		output.AddMessage(models.NewMessage(cnst.MessageTypeError, cnst.Master, MTE001, err.Error()))
-		return output
+		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Master, MTE001, err.Error()))
 	}
 
 	output.Body.RegionData = make(map[string][]models.MasterOutput)

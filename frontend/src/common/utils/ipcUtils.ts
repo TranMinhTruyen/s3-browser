@@ -138,7 +138,8 @@ async function run<A extends unknown[], T>(
         });
     }
 
-    return output.body;
+    // Body is a value type on the Go side, so a failed call still carries a zero-value body; hide it.
+    return output.result ? output.body : null;
   } catch (err) {
     toast.error(i18n.t('ipcMessage:common.CME001'), {
       description: err instanceof Error ? err.message : String(err),

@@ -9,7 +9,7 @@ interface DownloaderState {
 }
 
 interface DownloaderAction {
-  addDownloadItems: (inputs: DownloadHistoryItem[]) => void;
+  upsertDownloadItems: (inputs: DownloadHistoryItem[]) => void;
   setDownloadProgess: (input: DownloadProgressOutput) => void;
   reset: () => void;
 }
@@ -36,7 +36,7 @@ export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAct
         downloadId: 'mock-2',
         fileName: 'backup.zip',
         destPath: 'C:\\Users\\Downloads\\backup.zip',
-        status: 'DOWNLOADED',
+        status: 'DOWNLOADING',
         updatedAt: new Date().toISOString(),
         version: 1,
         downloaded: 512 * 1024 * 1024,
@@ -47,7 +47,7 @@ export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAct
         downloadId: 'mock-3',
         fileName: 'video-with-a-very-long-file-name-for-testing-ellipsis.mp4',
         destPath: 'C:\\Users\\Downloads\\video-with-a-very-long-file-name-for-testing-ellipsis.mp4',
-        status: 'CANCELED',
+        status: 'DOWNLOADING',
         updatedAt: new Date().toISOString(),
         version: 1,
         downloaded: 120 * 1024 * 1024,
@@ -55,11 +55,21 @@ export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAct
       },
     },
 
-    addDownloadItems: (inputs: DownloadHistoryItem[]) => {
+    upsertDownloadItems: (inputs: DownloadHistoryItem[]) => {
       set(
         state => {
           for (const input of inputs) {
-            state.downloadItems[input.id] = { ...input, downloadId: input.id, downloaded: 0, total: 0 };
+            const prev: DownloadItem | undefined = state.downloadItems[input.id];
+
+            if (prev && (input.version ?? 0) < (prev.version ?? 0)) continue;
+
+            state.downloadItems[input.id] = {
+              ...prev,
+              ...input,
+              downloadId: input.id,
+              downloaded: prev?.downloaded ?? 0,
+              total: prev?.total ?? 0,
+            };
           }
         },
         undefined,
@@ -94,3 +104,8 @@ export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAct
   }),
   SCOPE
 );
+
+export const selectDownloadingIds = (s: DownloaderState) =>
+  Object.values(s.downloadItems)
+    .filter(item => item.status === 'DOWNLOADING')
+    .map(item => item.id);

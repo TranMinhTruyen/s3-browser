@@ -24,7 +24,6 @@ type (
 	ListObjectOutput       = bucket.ListObjectOutput
 	DownloadProgressOutput = bucket.DownloadProgressOutput
 	DownloadObjInput       = bucket.DownloadObjInput
-	DownloadObjOutput      = bucket.DownloadObjOutput
 	DownloadHistoryItem    = bucket.DownloadHistoryItem
 	DownloadHistoryInput   = bucket.DownloadHistoryInput
 	DownloadHistoryOutput  = bucket.DownloadHistoryOutput

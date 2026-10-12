@@ -1,4 +1,4 @@
--- name: CreateDownloadHistory :one
+-- name: CreateDownloadHistory :exec
 INSERT
 INTO download_history(
     id

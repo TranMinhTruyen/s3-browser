@@ -1,12 +1,15 @@
 import { CloseButton, Group, Paper, Scroller, Tabs, Text } from '@mantine/core';
 import { Plus } from 'lucide-react';
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useProfileStore } from '@/common/stores/profileStore';
 import ActionIcon from '@/components/buttons/AcctionIcon';
 import PanelDetail from '@/pages/bucket/components/PanelDetail';
 import { useTabListStore } from '@/pages/bucket/tabListStore';
 
 function Page() {
+  const { t } = useTranslation('bucket', { keyPrefix: 'page' });
+
   const activeTab = useTabListStore(s => s.activeTab);
   const tabList = useTabListStore(s => s.tabList);
   const connectionProfiles = useProfileStore(s => s.connectionProfiles);
@@ -51,17 +54,17 @@ function Page() {
               styles={{ tabLabel: { minWidth: 0, flex: 1 } }}
             >
               <Group gap="xs" wrap="nowrap" p="0" justify="space-between">
-                <Text truncate="end" style={{ minWidth: 0, flex: 1 }}>
-                  {value ? connectionProfiles[value]?.name : 'New connection'}
-                </Text>
-                <CloseButton
-                  component="span"
-                  role="button"
-                  aria-label="Close tab"
-                  size="xs"
-                  onClick={handleCloseTab(key)}
-                  style={{ flexShrink: 0 }}
-                />
+                <Text truncate="end">{value ? connectionProfiles[value]?.name : `${t('title.defaultTabName')}`}</Text>
+                {tabEntries.length > 1 && (
+                  <CloseButton
+                    component="span"
+                    role="button"
+                    aria-label="Close tab"
+                    size="xs"
+                    onClick={handleCloseTab(key)}
+                    style={{ flexShrink: 0 }}
+                  />
+                )}
               </Group>
             </Tabs.Tab>
           ))}

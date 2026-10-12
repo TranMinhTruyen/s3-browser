@@ -10,10 +10,11 @@ function MainLayout() {
       <AppShell.Header>
         <Group h="100%" px="sm" style={{ backgroundColor: '#d0ebff' }}>
           <Group gap="xs"></Group>
-          <Group gap="xs" ml="auto">
-            <SegmentedControl
+          <Group ml="auto">
+            <SegmentedControl<'en' | 'ja' | 'vi'>
               defaultValue={'en'}
               onChange={(value: 'en' | 'ja' | 'vi') => i18n.changeLanguage(value)}
+              style={{ height: '35px' }}
               data={[
                 {
                   label: 'EN',

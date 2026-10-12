@@ -73,11 +73,11 @@ func (m *submoduleBucketMng) listBucket(input models.ListBucketInput) models.Out
 
 	for i, item := range result.Buckets {
 		body.BucketList[i] = models.Bucket{
-			Name:         *item.Name,
-			CreationDate: *item.CreationDate,
+			Name:         aws.ToString(item.Name),
+			CreationDate: aws.ToTime(item.CreationDate),
 		}
 	}
 
-	output.Body = &body
+	output.Body = body
 	return output
 }
