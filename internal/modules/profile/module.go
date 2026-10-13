@@ -66,13 +66,13 @@ func NewModule(
 }
 
 func (m *Module) CreateProfile(
-	profileInput models.ConnectionProfileInput,
+	input models.ConnectionProfileInput,
 ) models.Output[models.ConnectionProfileOutput] {
 	output := models.NewOutput[models.ConnectionProfileOutput]()
 	encryptedSecret := ""
 
-	if profileInput.SavePassword {
-		encrypted, err := m.km.Encrypt(profileInput.SecretKey)
+	if input.SavePassword {
+		encrypted, err := m.km.Encrypt(input.SecretKey)
 
 		if err != nil {
 			output.Result = false
@@ -86,21 +86,21 @@ func (m *Module) CreateProfile(
 
 	params := sqlc.CreateProfileParams{
 		ID:          utils.GenerateUUID(),
-		Name:        sql.NullString{String: profileInput.Name, Valid: true},
-		Color:       sql.NullString{String: profileInput.Color, Valid: true},
-		Provider:    profileInput.Provider,
-		Endpoint:    profileInput.Endpoint,
-		Region:      profileInput.Region,
-		AccessKey:   profileInput.AccessKey,
+		Name:        sql.NullString{String: input.Name, Valid: true},
+		Color:       sql.NullString{String: input.Color, Valid: true},
+		Provider:    input.Provider,
+		Endpoint:    input.Endpoint,
+		Region:      input.Region,
+		AccessKey:   input.AccessKey,
 		SecretKey:   sql.NullString{String: encryptedSecret, Valid: true},
-		PathStyle:   sql.NullBool{Bool: profileInput.PathStyle, Valid: true},
-		AutoConnect: sql.NullBool{Bool: profileInput.AutoConnect, Valid: true},
+		PathStyle:   sql.NullBool{Bool: input.PathStyle, Valid: true},
+		AutoConnect: sql.NullBool{Bool: input.AutoConnect, Valid: true},
 	}
 
 	result, err := m.q.CreateProfile(m.app.Context(), params)
 
 	if err != nil {
-		m.logger.Error("save connection profile failed", "connectionId", profileInput.Id, "error", err)
+		m.logger.Error("save connection profile failed", "connectionId", input.Id, "error", err)
 		output.Result = false
 		output.AddMessage(models.NewMessage(cnst.MessageTypeError, cnst.Profile, PFE001, err.Error()))
 		return output
@@ -114,7 +114,7 @@ func (m *Module) CreateProfile(
 		Endpoint:    result.Endpoint,
 		Region:      result.Region,
 		AccessKey:   result.AccessKey,
-		SecretKey:   result.SecretKey.String,
+		SecretKey:   input.SecretKey,
 		PathStyle:   result.PathStyle.Bool,
 		AutoConnect: result.AutoConnect.Bool,
 		CreatedAt:   result.CreatedAt.Time,
@@ -181,7 +181,7 @@ func (m *Module) UpdateProfileById(input models.ConnectionProfileInput) models.O
 		Endpoint:    result.Endpoint,
 		Region:      result.Region,
 		AccessKey:   result.AccessKey,
-		SecretKey:   encryptedSecret,
+		SecretKey:   input.SecretKey,
 		PathStyle:   result.PathStyle.Bool,
 		AutoConnect: result.AutoConnect.Bool,
 		CreatedAt:   result.CreatedAt.Time,

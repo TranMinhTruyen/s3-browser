@@ -42,7 +42,7 @@ func (m *submoduleObjMng) listObject(input models.ListObjectInput) models.Output
 
 	if ok == false {
 		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Object, S3E006, "", map[string]any{
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
 				"name": input.ProfileName,
 			}),
 		)

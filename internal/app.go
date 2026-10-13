@@ -62,6 +62,7 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 
 // Clean up when shutdow app
 func (a *App) Shutdown() {
+	a.BucketHandler.CancelAllDownloads()
 	a.BucketHandler.DisconnectAll()
 	a.app.Event.Reset()
 	if a.sqlDb != nil {

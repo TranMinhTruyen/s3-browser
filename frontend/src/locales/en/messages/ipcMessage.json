@@ -6,6 +6,7 @@
     "S3S001": "Test connection profile {name} to S3 success",
     "S3S002": "Profile: {name} is connected",
     "S3S003": "Profile: {name} disconnect success",
+    "S3S004": "Download file {object} success, destination {dest}",
     "S3E001": "Access key or secret key is not valid for this endpoint",
     "S3E002": "The endpoint rejected",
     "S3E003": "Timed out reaching the endpoint, check the address and whether the server is running",
@@ -14,7 +15,13 @@
     "S3E006": "Profile: {name} is not connected",
     "S3E007": "Get list bucket error, profile: {name}",
     "S3E008": "Get list object error, profile: {name}, bucket: {bucket}",
-    "S3W001": "Access bucket is limited"
+    "S3E009": "Destination {path} not exists",
+    "S3E010": "Create download history of {object} error",
+    "S3E011": "Get download history error",
+    "S3E012": "Download object: {object} error",
+    "S3W001": "Access bucket is limited",
+    "S3W002": "Download object: {object} is canceled",
+    "S3W003": "Update download history failed: {object} please reload!"
   },
   "master": {
     "MTE001": "Error while loading master data"

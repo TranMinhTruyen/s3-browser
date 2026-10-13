@@ -2,11 +2,9 @@ package cnst
 
 // Module name.
 var (
-	Master     = "master"
-	Profile    = "profile"
-	Bucket     = "bucket"
-	Object     = "object"
-	Downloader = "downloader"
+	Master  = "master"
+	Profile = "profile"
+	Bucket  = "bucket"
 )
 
 var (

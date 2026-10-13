@@ -1,0 +1,10 @@
+.card {
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.card:hover {
+  border-color: #000000;
+}

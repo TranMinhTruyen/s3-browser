@@ -52,7 +52,7 @@ function DownloaderWindow() {
       {visible && (
         <FloatingWindow
           p="xs"
-          w="350px"
+          w="400px"
           withBorder
           excludeDragHandleSelector="button"
           style={{ bottom: '16px', right: '16px' }}

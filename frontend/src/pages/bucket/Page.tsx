@@ -2,17 +2,24 @@ import { CloseButton, Group, Paper, Scroller, Tabs, Text } from '@mantine/core';
 import { Plus } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useProfileStore } from '@/common/stores/profileStore';
+import { useTabListStore } from '@/common/stores/tabListStore';
 import ActionIcon from '@/components/buttons/AcctionIcon';
-import PanelDetail from '@/pages/bucket/components/PanelDetail';
-import { useTabListStore } from '@/pages/bucket/tabListStore';
+import TabDetail from '@/pages/bucket/components/TabDetail';
 
-function Page() {
+function TabLabel({ tabId }: { tabId: string }) {
   const { t } = useTranslation('bucket', { keyPrefix: 'page' });
 
+  const profileId = useTabListStore(s => s.tabList[tabId]?.profileId);
+  const profile = useProfileStore(s => (profileId ? s.connectionProfiles[profileId] : undefined));
+
+  return <Text truncate="end">{profile?.isConnected ? profile.name : `${t('title.defaultTabName')}`}</Text>;
+}
+
+function Page() {
   const activeTab = useTabListStore(s => s.activeTab);
-  const tabList = useTabListStore(s => s.tabList);
-  const connectionProfiles = useProfileStore(s => s.connectionProfiles);
+  const tabIds = useTabListStore(useShallow(s => Object.keys(s.tabList)));
   const addTab = useTabListStore(s => s.addTab);
   const closeTab = useTabListStore(s => s.closeTab);
   const setActiveTab = useTabListStore(s => s.setActiveTab);
@@ -22,8 +29,6 @@ function Page() {
     closeTab(tabId);
   };
 
-  const tabEntries = Object.entries(tabList);
-
   const scrollerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const container = scrollerRef.current?.querySelector<HTMLElement>('.mantine-Scroller-container');
@@ -31,19 +36,20 @@ function Page() {
 
     container.querySelector('[data-active]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     container.dispatchEvent(new Event('scroll'));
-  }, [tabList, activeTab]);
+  }, [tabIds, activeTab]);
 
   return (
     <Tabs
       variant="outline"
       value={activeTab}
       onChange={setActiveTab}
+      keepMountedMode="display-none"
       h="100%"
       style={{ display: 'flex', flexDirection: 'column' }}
     >
       <Tabs.List style={{ flexWrap: 'nowrap', alignItems: 'center' }}>
         <Scroller ref={scrollerRef} style={{ flexShrink: 1, minWidth: 0 }}>
-          {tabEntries.map(([key, value]) => (
+          {tabIds.map(key => (
             <Tabs.Tab
               key={key}
               value={key}
@@ -54,8 +60,8 @@ function Page() {
               styles={{ tabLabel: { minWidth: 0, flex: 1 } }}
             >
               <Group gap="xs" wrap="nowrap" p="0" justify="space-between">
-                <Text truncate="end">{value ? connectionProfiles[value]?.name : `${t('title.defaultTabName')}`}</Text>
-                {tabEntries.length > 1 && (
+                <TabLabel tabId={key} />
+                {tabIds.length > 1 && (
                   <CloseButton
                     component="span"
                     role="button"
@@ -74,7 +80,7 @@ function Page() {
         </ActionIcon>
       </Tabs.List>
 
-      {tabEntries.map(([key, value]) => (
+      {tabIds.map(key => (
         <Tabs.Panel key={key} value={key} style={{ flex: 1, minHeight: 0 }}>
           <Paper
             withBorder
@@ -82,7 +88,7 @@ function Page() {
             p="4px"
             style={{ overflow: 'auto', borderTop: 'none', borderTopLeftRadius: 0, borderTopRightRadius: 0 }}
           >
-            <PanelDetail tabId={key} profileId={value} />
+            <TabDetail tabId={key} />
           </Paper>
         </Tabs.Panel>
       ))}

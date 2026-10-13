@@ -7,7 +7,9 @@ import { Cable, Unplug } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionProfile, useProfileStore } from '@/common/stores/profileStore';
+import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
+import classes from '@/components/layouts/layout.module.css';
 import ConfirmModal from '@/components/modals/ConfirmModal';
 import ConnectModal from '@/components/modals/ConnectModal';
 
@@ -18,12 +20,12 @@ function ConnectionProfiles() {
   const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
   const deleteConnectionProfiles = useProfileStore(s => s.deleteConnectionProfiles);
   const reset = useProfileStore(s => s.reset);
+  const resetViewByProfile = useTabListStore(s => s.resetViewByProfile);
   const connectionProfiles = useProfileStore(s => s.connectionProfiles);
   const autoConnectDoneRef = useRef(false);
 
   const [connectLoading, { open: openConnectLoading, close: closeConnectLoading }] = useDisclosure();
   const [openedMenuKey, setOpenedMenuKey] = useState<string | null>(null);
-  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 
   useEffect(() => {
     loadConnectionProfiles();
@@ -76,6 +78,7 @@ function ConnectionProfiles() {
       const output = await callIPC(Disconnect, [key]);
       if (output) {
         updateConnectionProfiles(key, { ...value, isConnected: false });
+        resetViewByProfile(key);
       }
     } finally {
       closeConnectLoading();
@@ -131,15 +134,9 @@ function ConnectionProfiles() {
               padding="8px"
               withBorder
               orientation="horizontal"
-              onMouseEnter={() => setHoveredKey(key)}
-              onMouseLeave={() => setHoveredKey(prev => (prev === key ? null : prev))}
               onDoubleClick={handleConnect(key, value)}
               c={isLightColor(value.color ?? '#d0ebff') ? '#000000' : '#FFFFFF'}
-              style={{
-                cursor: 'pointer',
-                transition: 'border-color 150ms ease',
-                borderColor: openedMenuKey === key || hoveredKey === key ? '#000000' : undefined,
-              }}
+              className={classes.card}
             >
               <Card.Section
                 inheritPadding

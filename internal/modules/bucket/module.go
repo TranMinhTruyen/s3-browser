@@ -163,3 +163,11 @@ func (m *Module) GetListObject(input models.ListObjectInput) models.Output[model
 func (m *Module) DownloadObject(input models.DownloadObjInput) models.Output[any] {
 	return m.submoduleDownloaderMng.downloadObject(input)
 }
+
+func (m *Module) CancelDownloadOne(id string) models.Output[any] {
+	return m.submoduleDownloaderMng.cancelDownloadOne(id)
+}
+
+func (m *Module) CancelAllDownloads() models.Output[any] {
+	return m.submoduleDownloaderMng.cancelAllDownloads()
+}

@@ -6,6 +6,7 @@
     "S3S001": "Kiểm tra kết nối hồ sơ {name} tới S3 thành công",
     "S3S002": "Hồ sơ: {name} đã kết nối",
     "S3S003": "Hồ sơ: {name} ngắt kết nối thành công",
+    "S3S004": "Tải xuống {object} thành công, thư mục lưu: {dest}",
     "S3E001": "Access key hoặc secret key không hợp lệ với endpoint này",
     "S3E002": "Endpoint từ chối kết nối",
     "S3E003": "Hết thời gian chờ khi kết nối tới endpoint, hãy kiểm tra địa chỉ và máy chủ có đang chạy hay không",
@@ -14,7 +15,13 @@
     "S3E006": "Hồ sơ: {name} chưa được kết nối",
     "S3E007": "Lỗi khi lấy danh sách bucket, hồ sơ: {name}",
     "S3E008": "Lỗi khi lấy danh sách object, hồ sơ: {name}, bucket: {bucket}",
-    "S3W001": "Quyền truy cập bucket bị giới hạn"
+    "S3E009": "Thư mục lưu {path} không tồn tại",
+    "S3E010": "Lỗi khi tạo lịch sử tải xuống của {object}",
+    "S3E011": "Lỗi khi lấy lịch sử tải xuống",
+    "S3E012": "Tải xuống object: {object} thất bại",
+    "S3W001": "Quyền truy cập bucket bị giới hạn",
+    "S3W002": "Đã hủy tải xuống object: {object}",
+    "S3W003": "Cập nhật lịch sử tải xuống của {object} thất bại, vui lòng tải lại!"
   },
   "master": {
     "MTE001": "Lỗi khi tải dữ liệu master"
