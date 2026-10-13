@@ -104,7 +104,7 @@ func (m *submoduleDownloadHistoryMng) getDownloadHistory(
 
 	if err != nil {
 		return output.ThrowError(
-			models.NewMessage(cnst.MessageTypeError, cnst.Downloader, S3E011, err.Error()),
+			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E011, err.Error()),
 		)
 	}
 

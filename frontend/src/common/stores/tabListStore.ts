@@ -1,18 +1,25 @@
-import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
 import { createUUID } from '@/common/utils/stringUtils';
 
+interface TabDetail {
+  profileId?: string | null;
+  currentView: 'bucketList' | 'objectList';
+  nextCursor?: string | null;
+}
+
 interface TabListState {
   activeTab: string;
-  tabList: Record<string, string | null | undefined>;
+  tabList: Record<string, TabDetail>;
 }
 
 interface TabListAction {
   setActiveTab: (tabId: string | null) => void;
   addTab: () => void;
-  updateTab: (tabId: string, profileId?: string | null) => void;
+  updateTab: (tabId: string, patch: Partial<TabDetail>) => void;
   closeTab: (tabId: string) => void;
+  changeCurrentView: (tabId: string, currentView: 'bucketList' | 'objectList') => void;
+  resetViewByProfile: (profileId: string) => void;
   reset: () => void;
 }
 
@@ -22,7 +29,11 @@ const initialId = createUUID();
 export const useTabListStore = createAppStore<TabListState & TabListAction>(
   (set, get) => ({
     activeTab: initialId,
-    tabList: { [initialId]: '' },
+    tabList: {
+      [initialId]: {
+        currentView: 'bucketList',
+      },
+    },
 
     setActiveTab: (tabId: string | null) => {
       if (!tabId) return;
@@ -35,7 +46,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
         state => ({
           tabList: {
             ...state.tabList,
-            [tabId]: {} as ConnectionProfileOutput,
+            [tabId]: { currentView: 'bucketList' },
           },
           activeTab: tabId,
         }),
@@ -44,10 +55,11 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       );
     },
 
-    updateTab: (tabId: string, profileId?: string | null) => {
+    updateTab: (tabId: string, patch: Partial<TabDetail>) => {
       set(
         state => {
-          state.tabList[tabId] = profileId;
+          const tab = state.tabList[tabId];
+          if (tab) Object.assign(tab, patch);
         },
         undefined,
         `${SCOPE}/updateTab`
@@ -74,11 +86,36 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       );
     },
 
+    changeCurrentView: (tabId: string, currentView: 'bucketList' | 'objectList') => {
+      set(
+        state => {
+          const tab = state.tabList[tabId];
+          if (tab) tab.currentView = currentView;
+        },
+        undefined,
+        `${SCOPE}/changeCurrentView`
+      );
+    },
+
+    resetViewByProfile: (profileId: string) => {
+      set(
+        state => {
+          Object.values(state.tabList).forEach(tab => {
+            if (tab.profileId === profileId) tab.currentView = 'bucketList';
+          });
+        },
+        undefined,
+        `${SCOPE}/resetViewByProfile`
+      );
+    },
+
     reset: () => {
       invalidateLoads(SCOPE);
       const id = createUUID();
-      set({ activeTab: id, tabList: { [id]: '' } }, undefined, `${SCOPE}/reset`);
+      set({ activeTab: id, tabList: { [id]: { currentView: 'bucketList' } } }, undefined, `${SCOPE}/reset`);
     },
   }),
   SCOPE
 );
+
+export const selectActiveTab = (s: TabListState) => s.tabList[s.activeTab];

@@ -108,8 +108,6 @@ func (m *submoduleConnMng) profileConnectAction(connectionId string) models.Outp
 	output := models.NewOutput[models.ConnectOutput]()
 	profile := m.profile.GetConnectionProfileById(connectionId)
 
-	// The profile lookup owns the reason it failed, so pass its messages through
-	// instead of letting an empty endpoint fail later as a generic S3 error.
 	if !profile.Result {
 		return output.ThrowError(profile.MessageList...)
 	}
@@ -128,17 +126,18 @@ func (m *submoduleConnMng) profileConnectAction(connectionId string) models.Outp
 	defer cancel()
 
 	c := m.submoduleCfgMng.buildClient(connectInput)
-	_, err := m.submoduleCfgMng.probe(ctx, c)
+	status, err := m.submoduleCfgMng.probe(ctx, c)
 
 	if err != nil {
 		output.Body.IsConnected = false
-		return output
+		return output.ThrowError(status.MessageList...)
 	}
 
 	m.global.PutConnContainer(connectionId, c)
 
 	output.Body.ConnectionId = connectionId
 	output.Body.IsConnected = true
+	output.AddMessage(status.MessageList...)
 	output.AddMessage(
 		models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Bucket, S3S002, "", map[string]any{
 			"name": profile.Body.Name,

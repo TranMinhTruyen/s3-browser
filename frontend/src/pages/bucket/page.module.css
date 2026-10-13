@@ -19,3 +19,12 @@
 .card:hover .iconSection {
   border-color: #3b48ff;
 }
+
+.label {
+  color: var(--mantine-color-dimmed);
+  transition: color 150ms ease;
+}
+
+.card:hover .label {
+  color: #3b48ff;
+}

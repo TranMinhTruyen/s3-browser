@@ -20,46 +20,46 @@ export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAct
   (set, get) => ({
     // TODO: remove mock data after testing
     downloadItems: {
-      'mock-1': {
-        id: 'mock-1',
-        downloadId: 'mock-1',
-        fileName: 'report-2026.pdf',
-        destPath: 'C:\\Users\\Downloads\\report-2026.pdf',
-        status: 'DOWNLOADING',
-        updatedAt: new Date().toISOString(),
-        version: 1,
-        downloaded: 35 * 1024 * 1024,
-        total: 100 * 1024 * 1024,
-      },
-      'mock-2': {
-        id: 'mock-2',
-        downloadId: 'mock-2',
-        fileName: 'backup.zip',
-        destPath: 'C:\\Users\\Downloads\\backup.zip',
-        status: 'DOWNLOADING',
-        updatedAt: new Date().toISOString(),
-        version: 1,
-        downloaded: 512 * 1024 * 1024,
-        total: 512 * 1024 * 1024,
-      },
-      'mock-3': {
-        id: 'mock-3',
-        downloadId: 'mock-3',
-        fileName: 'video-with-a-very-long-file-name-for-testing-ellipsis.mp4',
-        destPath: 'C:\\Users\\Downloads\\video-with-a-very-long-file-name-for-testing-ellipsis.mp4',
-        status: 'DOWNLOADING',
-        updatedAt: new Date().toISOString(),
-        version: 1,
-        downloaded: 120 * 1024 * 1024,
-        total: 1024 * 1024 * 1024,
-      },
+      // 'mock-1': {
+      //   id: 'mock-1',
+      //   downloadId: 'mock-1',
+      //   fileName: 'report-2026.pdf',
+      //   destPath: 'C:\\Users\\Downloads\\report-2026.pdf',
+      //   status: 'DOWNLOADING',
+      //   updatedAt: new Date().toISOString(),
+      //   version: 1,
+      //   downloaded: 35 * 1024 * 1024,
+      //   total: 100 * 1024 * 1024,
+      // },
+      // 'mock-2': {
+      //   id: 'mock-2',
+      //   downloadId: 'mock-2',
+      //   fileName: 'backup.zip',
+      //   destPath: 'C:\\Users\\Downloads\\backup.zip',
+      //   status: 'DOWNLOADING',
+      //   updatedAt: new Date().toISOString(),
+      //   version: 1,
+      //   downloaded: 512 * 1024 * 1024,
+      //   total: 512 * 1024 * 1024,
+      // },
+      // 'mock-3': {
+      //   id: 'mock-3',
+      //   downloadId: 'mock-3',
+      //   fileName: 'video-with-a-very-long-file-name-for-testing-ellipsis.mp4',
+      //   destPath: 'C:\\Users\\Downloads\\video-with-a-very-long-file-name-for-testing-ellipsis.mp4',
+      //   status: 'DOWNLOADING',
+      //   updatedAt: new Date().toISOString(),
+      //   version: 1,
+      //   downloaded: 120 * 1024 * 1024,
+      //   total: 1024 * 1024 * 1024,
+      // },
     },
 
     upsertDownloadItems: (inputs: DownloadHistoryItem[]) => {
       set(
         state => {
           for (const input of inputs) {
-            const prev: DownloadItem | undefined = state.downloadItems[input.id];
+            const prev = state.downloadItems[input.id];
 
             if (prev && (input.version ?? 0) < (prev.version ?? 0)) continue;
 

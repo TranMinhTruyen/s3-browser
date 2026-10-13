@@ -56,3 +56,11 @@ func (h *BucketHandler) GetListObject(input models.ListObjectInput) models.Outpu
 func (h *BucketHandler) DownloadObject(input models.DownloadObjInput) models.Output[any] {
 	return h.bucket.DownloadObject(input)
 }
+
+func (m *BucketHandler) CancelDownloadOne(id string) models.Output[any] {
+	return m.bucket.CancelDownloadOne(id)
+}
+
+func (m *BucketHandler) CancelAllDownloads() models.Output[any] {
+	return m.bucket.CancelAllDownloads()
+}

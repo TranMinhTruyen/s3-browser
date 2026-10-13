@@ -1,8 +1,8 @@
-import { Box, Card, Menu, Stack, Text } from '@mantine/core';
+import { Box, Card, Group, Menu, Stack, Text } from '@mantine/core';
 import { DownloadObject, GetListObject } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput, ListObjectOutput } from '@wails/S3Browser/models';
 import dayjs from 'dayjs';
-import { Ellipsis, File } from 'lucide-react';
+import { Ellipsis } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
 import { callIPC } from '@/common/utils/ipcUtils';
@@ -80,21 +80,6 @@ function ObjectListView(props: ObjectListViewProps) {
         </Card.Section>
         <Card.Section
           inheritPadding
-          px="xs"
-          withBorder
-          className={classes.iconSection}
-          style={{
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            minWidth: '56px',
-            justifyContent: 'center',
-          }}
-        >
-          <File />
-        </Card.Section>
-        <Card.Section
-          inheritPadding
           px="md"
           style={{
             flex: 1,
@@ -104,23 +89,24 @@ function ObjectListView(props: ObjectListViewProps) {
           }}
         >
           <Stack>
-            <Text size="xl" fw="bold" truncate="end">
+            <Text size="xl" truncate="end" fw={500}>
               {item.name}
             </Text>
-            <Box>
-              <Text>
-                <Text span fw={500}>
-                  File size:
-                </Text>{' '}
-                {formatFileSize(item.size)}
-              </Text>
-              <Text>
-                <Text span fw={500}>
-                  Last Modified:
-                </Text>{' '}
-                {dayjs(item.lastModified).format(FULL_DATE_TIME_FORMAT)}
-              </Text>
-            </Box>
+            <Group gap="xl">
+              <Box miw="100px">
+                <Text span className={classes.label}>
+                  Size
+                </Text>
+                <Text>{formatFileSize(item.size)}</Text>
+              </Box>
+
+              <Box miw="100px">
+                <Text span className={classes.label}>
+                  Last Modified
+                </Text>
+                <Text>{dayjs(item.lastModified).format(FULL_DATE_TIME_FORMAT)}</Text>
+              </Box>
+            </Group>
           </Stack>
         </Card.Section>
 
