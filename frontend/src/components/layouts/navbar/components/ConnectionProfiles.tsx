@@ -16,16 +16,17 @@ import ConnectModal from '@/components/modals/ConnectModal';
 function ConnectionProfiles() {
   const { t } = useTranslation('connectionProfiles');
 
+  const [connectLoading, { open: openConnectLoading, close: closeConnectLoading }] = useDisclosure();
+  const [openedMenuKey, setOpenedMenuKey] = useState<string | null>(null);
+
+  const connectionProfiles = useProfileStore(s => s.connectionProfiles);
+  const autoConnectDoneRef = useRef(false);
+
   const loadConnectionProfiles = useProfileStore(s => s.loadConnectionProfiles);
   const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
   const deleteConnectionProfiles = useProfileStore(s => s.deleteConnectionProfiles);
   const reset = useProfileStore(s => s.reset);
   const resetViewByProfile = useTabListStore(s => s.resetViewByProfile);
-  const connectionProfiles = useProfileStore(s => s.connectionProfiles);
-  const autoConnectDoneRef = useRef(false);
-
-  const [connectLoading, { open: openConnectLoading, close: closeConnectLoading }] = useDisclosure();
-  const [openedMenuKey, setOpenedMenuKey] = useState<string | null>(null);
 
   useEffect(() => {
     loadConnectionProfiles();

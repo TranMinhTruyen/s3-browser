@@ -1,25 +1,16 @@
-import { CloseButton, Group, Paper, Scroller, Tabs, Text } from '@mantine/core';
+import { CloseButton, Group, Paper, Scroller, Tabs } from '@mantine/core';
 import { Plus } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import ActionIcon from '@/components/buttons/AcctionIcon';
 import TabDetail from '@/pages/bucket/components/TabDetail';
-
-function TabLabel({ tabId }: { tabId: string }) {
-  const { t } = useTranslation('bucket', { keyPrefix: 'page' });
-
-  const profileId = useTabListStore(s => s.tabList[tabId]?.profileId);
-  const profile = useProfileStore(s => (profileId ? s.connectionProfiles[profileId] : undefined));
-
-  return <Text truncate="end">{profile?.isConnected ? profile.name : `${t('title.defaultTabName')}`}</Text>;
-}
+import TabLabel from '@/pages/bucket/components/TabLabel';
 
 function Page() {
   const activeTab = useTabListStore(s => s.activeTab);
   const tabIds = useTabListStore(useShallow(s => Object.keys(s.tabList)));
+
   const addTab = useTabListStore(s => s.addTab);
   const closeTab = useTabListStore(s => s.closeTab);
   const setActiveTab = useTabListStore(s => s.setActiveTab);
@@ -86,7 +77,7 @@ function Page() {
             withBorder
             h="100%"
             p="4px"
-            style={{ overflow: 'auto', borderTop: 'none', borderTopLeftRadius: 0, borderTopRightRadius: 0 }}
+            style={{ overflow: 'hidden', borderTop: 'none', borderTopLeftRadius: 0, borderTopRightRadius: 0 }}
           >
             <TabDetail tabId={key} />
           </Paper>

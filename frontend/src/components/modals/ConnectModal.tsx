@@ -67,7 +67,9 @@ export default createMantineModal<ConnectModalProps, false>(
       .parse(undefined);
 
     const initialValues =
-      mode === 'connect' || mode === 'createProfile' ? defaultValues : { ...defaultValues, ...connectionProfile };
+      mode === 'connect' || mode === 'createProfile'
+        ? defaultValues
+        : { ...defaultValues, ...connectionProfile, savePassword: connectionProfile?.secretKey ? true : false };
 
     const form = useForm<ConnectionInfo>({
       mode: 'uncontrolled',

@@ -11,6 +11,7 @@ import classes from '@/pages/bucket/page.module.css';
 type BucketListViewProps = {
   profile?: ConnectionProfileOutput | null;
   onSelectBucket?: (bucketName: string | undefined) => void;
+  onRefresh?: () => void;
 };
 
 type BucketDatas = ListBucketOutput & {

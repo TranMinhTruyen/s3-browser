@@ -5,7 +5,8 @@ import { createUUID } from '@/common/utils/stringUtils';
 interface TabDetail {
   profileId?: string | null;
   currentView: 'bucketList' | 'objectList';
-  nextCursor?: string | null;
+  selectionItem: string[];
+  nextCursor: string;
 }
 
 interface TabListState {
@@ -18,8 +19,13 @@ interface TabListAction {
   addTab: () => void;
   updateTab: (tabId: string, patch: Partial<TabDetail>) => void;
   closeTab: (tabId: string) => void;
+
   changeCurrentView: (tabId: string, currentView: 'bucketList' | 'objectList') => void;
   resetViewByProfile: (profileId: string) => void;
+
+  addSelectItem: (tabId: string, items: string[]) => void;
+  removeSelectItem: (tabId: string, items: string[]) => void;
+
   reset: () => void;
 }
 
@@ -32,6 +38,8 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
     tabList: {
       [initialId]: {
         currentView: 'bucketList',
+        selectionItem: [],
+        nextCursor: '',
       },
     },
 
@@ -46,7 +54,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
         state => ({
           tabList: {
             ...state.tabList,
-            [tabId]: { currentView: 'bucketList' },
+            [tabId]: { currentView: 'bucketList', selectionItem: [], nextCursor: '' },
           },
           activeTab: tabId,
         }),
@@ -90,7 +98,11 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       set(
         state => {
           const tab = state.tabList[tabId];
-          if (tab) tab.currentView = currentView;
+          if (tab) {
+            tab.currentView = currentView;
+            tab.selectionItem = [];
+            tab.nextCursor = '';
+          }
         },
         undefined,
         `${SCOPE}/changeCurrentView`
@@ -101,7 +113,11 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       set(
         state => {
           Object.values(state.tabList).forEach(tab => {
-            if (tab.profileId === profileId) tab.currentView = 'bucketList';
+            if (tab.profileId === profileId) {
+              tab.currentView = 'bucketList';
+              tab.selectionItem = [];
+              tab.nextCursor = '';
+            }
           });
         },
         undefined,
@@ -109,10 +125,41 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       );
     },
 
+    addSelectItem: (tabId: string, items: string[]) => {
+      set(
+        state => {
+          const tab = state.tabList[tabId];
+          if (tab) {
+            tab.selectionItem = [...new Set([...tab.selectionItem, ...items])];
+          }
+        },
+        undefined,
+        `${SCOPE}/addSelectItem`
+      );
+    },
+
+    removeSelectItem: (tabId: string, items: string[]) => {
+      set(
+        state => {
+          const tab = state.tabList[tabId];
+          if (tab) {
+            const removing = new Set(items);
+            tab.selectionItem = tab.selectionItem.filter(item => !removing.has(item));
+          }
+        },
+        undefined,
+        `${SCOPE}/removeSelectItem`
+      );
+    },
+
     reset: () => {
       invalidateLoads(SCOPE);
       const id = createUUID();
-      set({ activeTab: id, tabList: { [id]: { currentView: 'bucketList' } } }, undefined, `${SCOPE}/reset`);
+      set(
+        { activeTab: id, tabList: { [id]: { currentView: 'bucketList', selectionItem: [], nextCursor: '' } } },
+        undefined,
+        `${SCOPE}/reset`
+      );
     },
   }),
   SCOPE
