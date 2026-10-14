@@ -1,69 +1,104 @@
 import { Box, Card, Group, Menu, Stack, Text } from '@mantine/core';
 import { DownloadObject, GetListObject } from '@wails/S3Browser/internal/handlers/buckethandler';
-import { ConnectionProfileOutput, ListObjectOutput } from '@wails/S3Browser/models';
+import { ConnectionProfileOutput } from '@wails/S3Browser/models';
+import { ObjectItem } from '@wails/S3Browser/models/bucket';
 import dayjs from 'dayjs';
 import { Ellipsis } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Ref, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
 import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
+import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/AcctionIcon';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import classes from '@/pages/bucket/page.module.css';
 
-type ObjectListViewProps = {
-  profile?: ConnectionProfileOutput | null;
-  bucket?: string;
+export type ObjectListViewRef = {
+  onRefresh?: () => Promise<void>;
 };
 
-type ObjectDatas = ListObjectOutput & {
-  connectionId: string;
-  bucket: string;
-  profileName?: string;
+type ObjectListViewProps = {
+  tabId: string;
+  bucket?: string;
+  profile?: ConnectionProfileOutput | null;
+  ref?: Ref<ObjectListViewRef>;
 };
+
+// Stable fallback so the selector doesn't return a new array on every call
+const EMPTY_SELECTION: string[] = [];
 
 function ObjectListView(props: ObjectListViewProps) {
-  const { bucket, profile } = props;
+  const { tabId, bucket, profile, ref } = props;
 
-  const [selection, setSelection] = useState<string[]>([]);
-  const [objectDatas, setObjectDatas] = useState<ObjectDatas>({
-    objectList: [],
-    nextCursor: '',
-    connectionId: '',
-    bucket: '',
-  });
+  const [objectDatas, setObjectDatas] = useState<ObjectItem[]>([]);
 
-  const profileId = profile?.id;
+  const connectionId = profile?.id;
   const profileName = profile?.name;
+  const selectItems = useTabListStore(s => s.tabList[tabId]?.selectionItem ?? EMPTY_SELECTION);
+  const selectedKeys = useMemo(() => new Set(selectItems), [selectItems]);
+
+  const addSelectItem = useTabListStore(s => s.addSelectItem);
+  const removeSelectItem = useTabListStore(s => s.removeSelectItem);
+
+  const handleGetListObject = useCallback(() => {
+    if (!connectionId || !bucket) return Promise.resolve(undefined);
+    return callIPC(GetListObject, [{ connectionId, profileName, bucket, prefix: '', nextCursor: '', limit: 10 }]);
+  }, [bucket, profileName, connectionId]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      onRefresh: async () => {
+        removeSelectItem(tabId, selectItems);
+        const output = await handleGetListObject();
+        if (output) {
+          setObjectDatas(output.objectList);
+        }
+      },
+    }),
+    [handleGetListObject, tabId, selectItems, removeSelectItem]
+  );
 
   useEffect(() => {
-    if (!profileId || !bucket) return;
+    if (!connectionId || !bucket) return;
 
     let cancelled = false;
-    callIPC(GetListObject, [
-      { connectionId: profileId, profileName, bucket, prefix: '', nextCursor: '', limit: 10 },
-    ]).then(output => {
+    handleGetListObject().then(output => {
       if (output && !cancelled) {
-        setObjectDatas({ ...output, connectionId: profileId, profileName, bucket });
+        setObjectDatas(output.objectList);
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [profileId, profileName, bucket]);
+  }, [connectionId, bucket, handleGetListObject]);
 
   const onClickDownload = useCallback(
     (object: string) => {
-      if (!profileId || !bucket) return;
-      callIPC(DownloadObject, [{ connectionId: profileId, profileName, bucket, objects: [object] }]);
+      if (!connectionId || !bucket) return;
+      callIPC(DownloadObject, [{ connectionId: connectionId, profileName, bucket, objects: [object] }]);
     },
-    [bucket, profileName, profileId]
+    [bucket, profileName, connectionId]
+  );
+
+  const onToggleSelect = useCallback(
+    (key: string, checked: boolean) => {
+      if (checked) addSelectItem(tabId, [key]);
+      else removeSelectItem(tabId, [key]);
+    },
+    [tabId, addSelectItem, removeSelectItem]
   );
 
   const objectDetail = useMemo(() => {
-    const objectList = profileId && objectDatas?.connectionId === profileId ? objectDatas.objectList : [];
+    const objectList = connectionId ? objectDatas : [];
     return (objectList || []).map((item, idx) => (
-      <Card key={`${item.name}-${idx}`} padding="8px" orientation="horizontal" className={classes.card}>
+      <Card
+        key={`${item.name}-${idx}`}
+        padding="8px"
+        orientation="horizontal"
+        onClick={() => onToggleSelect(item.key, !selectedKeys.has(item.key))}
+        className={classes.card}
+      >
         <Card.Section
           inheritPadding
           px="8px"
@@ -76,7 +111,11 @@ function ObjectListView(props: ObjectListViewProps) {
             justifyContent: 'center',
           }}
         >
-          <CheckBoxInput />
+          <CheckBoxInput
+            styles={{ input: { cursor: 'pointer' } }}
+            checked={selectedKeys.has(item.key)}
+            onChange={e => onToggleSelect(item.key, e.currentTarget.checked)}
+          />
         </Card.Section>
         <Card.Section
           inheritPadding
@@ -111,6 +150,7 @@ function ObjectListView(props: ObjectListViewProps) {
         </Card.Section>
 
         <Card.Section
+          onClick={e => e.stopPropagation()}
           style={{
             flexShrink: 0,
             display: 'flex',
@@ -133,7 +173,7 @@ function ObjectListView(props: ObjectListViewProps) {
         </Card.Section>
       </Card>
     ));
-  }, [profileId, objectDatas.objectList, objectDatas.connectionId, onClickDownload]);
+  }, [connectionId, objectDatas, onClickDownload, selectedKeys, onToggleSelect]);
 
   return <>{objectDetail}</>;
 }
