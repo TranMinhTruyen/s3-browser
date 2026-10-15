@@ -5,6 +5,7 @@ import (
 	"S3Browser/internal/pkg/cnst"
 	"S3Browser/models"
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -31,9 +32,15 @@ func newSubmoduleBucketMng(
 	}
 }
 
-func (m *submoduleBucketMng) listBucket(input models.ListBucketInput) models.Output[models.ListBucketOutput] {
-	ctx, cancel := context.WithTimeout(m.app.Context(), 10*time.Second)
+func (m *submoduleBucketMng) listBucket(
+	ctx context.Context,
+	input models.ListBucketInput,
+) models.Output[models.ListBucketOutput] {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
+	// Wails detaches the call context from the app lifetime, so also stop on app shutdown.
+	stop := context.AfterFunc(m.app.Context(), cancel)
+	defer stop()
 
 	output := models.NewOutput[models.ListBucketOutput]()
 
@@ -58,6 +65,12 @@ func (m *submoduleBucketMng) listBucket(input models.ListBucketInput) models.Out
 	result, err := s3Conn.Client.ListBuckets(ctx, listBucketInput)
 
 	if err != nil {
+		// The frontend canceled the call; nobody is waiting for the result.
+		if errors.Is(ctx.Err(), context.Canceled) {
+			output.Result = false
+			return output
+		}
+
 		output.AddMessage(
 			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E007, err.Error(), map[string]any{
 				"name": input.ProfileName,

@@ -1,13 +1,13 @@
 import { Divider, Group, Paper, Stack, Tooltip } from '@mantine/core';
 import { ConnectS3ByProfile } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ArrowLeft, PlugZap, RefreshCw } from 'lucide-react';
-import { memo, useCallback, useRef, useState } from 'react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
-import ActionIcon from '@/components/buttons/AcctionIcon';
+import ActionIcon from '@/components/buttons/ActionIcon';
 import Combobox from '@/components/inputs/combobox/Combobox';
 import ConnectModal from '@/components/modals/ConnectModal';
 import BucketListView from '@/pages/bucket/components/views/BucketListView';
@@ -24,16 +24,23 @@ function TabDetail(props: TabDetailProps) {
 
   const [selectedBucket, setSelectedBucket] = useState<string | undefined>(undefined);
 
-  const tab = useTabListStore(s => s.tabList[tabId]);
-  const selectedProfileId = tab?.profileId ?? null;
+  // Narrow selectors: selection changes must not re-render the whole tab.
+  const selectedProfileId = useTabListStore(s => s.tabList[tabId]?.profileId ?? null);
+  const tabView = useTabListStore(s => s.tabList[tabId]?.currentView ?? 'bucketList');
   const connectionProfiles = useProfileStore(s => s.connectionProfiles);
   const objectListRef = useRef<ObjectListViewRef>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const isConnected = !!selectedProfileId && !!connectionProfiles[selectedProfileId]?.isConnected;
-  const currentView = isConnected ? (tab?.currentView ?? 'bucketList') : 'bucketList';
-  const optionsData = Object.entries(connectionProfiles).map(([key, value]) => ({
-    name: value?.name ?? '',
-    value: key,
-  }));
+  const currentView = isConnected ? tabView : 'bucketList';
+  // Memoized so Combobox options keep stable item references across renders.
+  const optionsData = useMemo(
+    () =>
+      Object.entries(connectionProfiles).map(([key, value]) => ({
+        name: value?.name ?? '',
+        value: key,
+      })),
+    [connectionProfiles]
+  );
 
   const updateTab = useTabListStore(s => s.updateTab);
   const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
@@ -96,6 +103,7 @@ function TabDetail(props: TabDetailProps) {
             tabId={tabId}
             profile={isConnected ? connectionProfiles[selectedProfileId] : null}
             bucket={selectedBucket}
+            scrollRef={scrollRef}
             ref={objectListRef}
           />
         </Stack>
@@ -121,13 +129,13 @@ function TabDetail(props: TabDetailProps) {
         </Tooltip>
 
         <Tooltip label={`Refresh ${t(`tooltip.${currentView}`)}`}>
-          <ActionIcon onClick={onClickRefresh}>
+          <ActionIcon onClick={onClickRefresh} disabled={!isConnected}>
             <RefreshCw />
           </ActionIcon>
         </Tooltip>
 
         {currentView === 'objectList' ? (
-          <Tooltip withArrow label="Back to bucket">
+          <Tooltip label="Back to bucket">
             <ActionIcon onClick={() => changeCurrentView(tabId, 'bucketList')}>
               <ArrowLeft />
             </ActionIcon>
@@ -137,7 +145,7 @@ function TabDetail(props: TabDetailProps) {
 
       <Divider />
 
-      <Paper p="8px" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+      <Paper ref={scrollRef} p="8px" style={{ flex: 1, minHeight: 0, overflow: 'auto', position: 'relative' }}>
         <Stack gap="8px">{renderView}</Stack>
       </Paper>
     </Paper>

@@ -3,6 +3,7 @@ package handlers
 import (
 	"S3Browser/internal/modules/bucket"
 	"S3Browser/models"
+	"context"
 	"log/slog"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -45,12 +46,18 @@ func (h *BucketHandler) Disconnect(connectionId string) models.Output[bool] {
 	return h.bucket.Disconnect(connectionId)
 }
 
-func (h *BucketHandler) GetListBucket(input models.ListBucketInput) models.Output[models.ListBucketOutput] {
-	return h.bucket.GetListBucket(input)
+func (h *BucketHandler) GetListBucket(
+	ctx context.Context,
+	input models.ListBucketInput,
+) models.Output[models.ListBucketOutput] {
+	return h.bucket.GetListBucket(ctx, input)
 }
 
-func (h *BucketHandler) GetListObject(input models.ListObjectInput) models.Output[models.ListObjectOutput] {
-	return h.bucket.GetListObject(input)
+func (h *BucketHandler) GetListObject(
+	ctx context.Context,
+	input models.ListObjectInput,
+) models.Output[models.ListObjectOutput] {
+	return h.bucket.GetListObject(ctx, input)
 }
 
 func (h *BucketHandler) DownloadObject(input models.DownloadObjInput) models.Output[any] {
@@ -63,4 +70,8 @@ func (m *BucketHandler) CancelDownloadOne(id string) models.Output[any] {
 
 func (m *BucketHandler) CancelAllDownloads() models.Output[any] {
 	return m.bucket.CancelAllDownloads()
+}
+
+func (m *BucketHandler) DeleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
+	return m.bucket.DeleteObject(ctx, input)
 }

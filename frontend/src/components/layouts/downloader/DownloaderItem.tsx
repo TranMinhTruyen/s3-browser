@@ -2,10 +2,11 @@ import { Box, Card, Center, Collapse, Group, RingProgress, Text } from '@mantine
 import { useDisclosure } from '@mantine/hooks';
 import { CancelDownloadOne } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { X } from 'lucide-react';
+import { memo, useCallback } from 'react';
 import { useDownloaderStore } from '@/common/stores/downloaderStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
-import ActionIcon from '@/components/buttons/AcctionIcon';
+import ActionIcon from '@/components/buttons/ActionIcon';
 
 type DownloaderItemProps = {
   id: string;
@@ -20,9 +21,9 @@ function DownloaderItem(props: DownloaderItemProps) {
 
   const percent = item.total > 0 ? Math.min(99, Math.round((item.downloaded / item.total) * 100)) : 100;
 
-  const onClickCancelDownload = () => {
-    callIPC(CancelDownloadOne, [id]);
-  };
+  const onClickCancelDownload = useCallback(async () => {
+    await callIPC(CancelDownloadOne, [id]);
+  }, [id]);
 
   return (
     <Card
@@ -88,4 +89,4 @@ function DownloaderItem(props: DownloaderItemProps) {
   );
 }
 
-export default DownloaderItem;
+export default memo(DownloaderItem);

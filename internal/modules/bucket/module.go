@@ -4,6 +4,7 @@ import (
 	"S3Browser/internal/modules/global"
 	"S3Browser/internal/modules/profile"
 	"S3Browser/models"
+	"context"
 	"database/sql"
 	"log/slog"
 
@@ -60,6 +61,9 @@ var (
 
 	// Download object: {object} error
 	S3E012 = "S3E012"
+
+	// Delete object: {object} error
+	S3E013 = "S3E013"
 
 	// Access bucket is limited
 	S3W001 = "S3W001"
@@ -150,14 +154,20 @@ func (m *Module) DisconnectAll() {
 
 // GetListBucket returns the buckets accessible from the connection
 // specified in input. The connection must already be established.
-func (m *Module) GetListBucket(input models.ListBucketInput) models.Output[models.ListBucketOutput] {
-	return m.submoduleBucketMng.listBucket(input)
+func (m *Module) GetListBucket(
+	ctx context.Context,
+	input models.ListBucketInput,
+) models.Output[models.ListBucketOutput] {
+	return m.submoduleBucketMng.listBucket(ctx, input)
 }
 
 // GetListObject returns the objects in the bucket specified in input,
 // using an already-established connection.
-func (m *Module) GetListObject(input models.ListObjectInput) models.Output[models.ListObjectOutput] {
-	return m.submoduleObjMng.listObject(input)
+func (m *Module) GetListObject(
+	ctx context.Context,
+	input models.ListObjectInput,
+) models.Output[models.ListObjectOutput] {
+	return m.submoduleObjMng.listObject(ctx, input)
 }
 
 func (m *Module) DownloadObject(input models.DownloadObjInput) models.Output[any] {
@@ -170,4 +180,8 @@ func (m *Module) CancelDownloadOne(id string) models.Output[any] {
 
 func (m *Module) CancelAllDownloads() models.Output[any] {
 	return m.submoduleDownloaderMng.cancelAllDownloads()
+}
+
+func (m *Module) DeleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
+	return m.submoduleObjMng.deleteObject(ctx, input)
 }

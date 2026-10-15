@@ -1,17 +1,12 @@
-import { Box, Card, Group, Menu, Stack, Text } from '@mantine/core';
+import { Center, Loader } from '@mantine/core';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { DownloadObject, GetListObject } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
-import { ObjectItem } from '@wails/S3Browser/models/bucket';
-import dayjs from 'dayjs';
-import { Ellipsis } from 'lucide-react';
-import { Ref, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
-import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
+import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
+import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
-import { formatFileSize } from '@/common/utils/stringUtils';
-import ActionIcon from '@/components/buttons/AcctionIcon';
-import CheckBoxInput from '@/components/inputs/CheckBoxInput';
-import classes from '@/pages/bucket/page.module.css';
+import ObjectItem from '@/pages/bucket/components/ObjectItem';
 
 export type ObjectListViewRef = {
   onRefresh?: () => Promise<void>;
@@ -21,57 +16,113 @@ type ObjectListViewProps = {
   tabId: string;
   bucket?: string;
   profile?: ConnectionProfileOutput | null;
+  scrollRef: RefObject<HTMLElement | null>;
   ref?: Ref<ObjectListViewRef>;
 };
 
-// Stable fallback so the selector doesn't return a new array on every call
-const EMPTY_SELECTION: string[] = [];
-
 function ObjectListView(props: ObjectListViewProps) {
-  const { tabId, bucket, profile, ref } = props;
+  const { tabId, bucket, profile, scrollRef, ref } = props;
 
-  const [objectDatas, setObjectDatas] = useState<ObjectItem[]>([]);
+  const [objectDatas, setObjectDatas] = useState<ObjectItemData[]>([]);
+  const [nextCursor, setNextCursor] = useState('');
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
+  const [scrollMargin, setScrollMargin] = useState(0);
 
   const connectionId = profile?.id;
   const profileName = profile?.name;
-  const selectItems = useTabListStore(s => s.tabList[tabId]?.selectionItem ?? EMPTY_SELECTION);
-  const selectedKeys = useMemo(() => new Set(selectItems), [selectItems]);
+  const requestCtrl = useRef<AbortController>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const addSelectItem = useTabListStore(s => s.addSelectItem);
   const removeSelectItem = useTabListStore(s => s.removeSelectItem);
+  const clearSelectItem = useTabListStore(s => s.clearSelectItem);
 
-  const handleGetListObject = useCallback(() => {
-    if (!connectionId || !bucket) return Promise.resolve(undefined);
-    return callIPC(GetListObject, [{ connectionId, profileName, bucket, prefix: '', nextCursor: '', limit: 10 }]);
-  }, [bucket, profileName, connectionId]);
+  const startRequest = useCallback(() => {
+    requestCtrl.current?.abort();
+    const ctrl = new AbortController();
+    requestCtrl.current = ctrl;
+    return ctrl;
+  }, []);
+
+  const handleGetListObject = useCallback(
+    (cursor: string, signal?: AbortSignal) => {
+      if (!connectionId || !bucket) return Promise.resolve(undefined);
+      return callIPC(
+        GetListObject,
+        [
+          {
+            connectionId,
+            profileName,
+            bucket,
+            prefix: '',
+            nextCursor: cursor,
+            limit: 10,
+          },
+        ],
+        {
+          signal,
+        }
+      );
+    },
+    [bucket, profileName, connectionId]
+  );
+
+  const loadFirstPage = useCallback(async () => {
+    const ctrl = startRequest();
+    setNextCursor('');
+    setIsLoadingMore(false);
+    setLoadMoreError(false);
+    // Aborting cancels the request on the Go side too, not only the state update.
+    const output = await handleGetListObject('', ctrl.signal);
+    if (output && !ctrl.signal.aborted) {
+      setObjectDatas(output.objectList);
+      setNextCursor(output.nextCursor ?? '');
+    }
+  }, [handleGetListObject, startRequest]);
+
+  const loadNextPage = useCallback(async () => {
+    if (!nextCursor) return;
+    const ctrl = startRequest();
+    setIsLoadingMore(true);
+    const output = await handleGetListObject(nextCursor, ctrl.signal);
+    if (ctrl.signal.aborted) return;
+    if (output) {
+      setObjectDatas(prev => [...prev, ...output.objectList]);
+      setNextCursor(output.nextCursor ?? '');
+    } else {
+      setLoadMoreError(true);
+    }
+    setIsLoadingMore(false);
+  }, [nextCursor, handleGetListObject, startRequest]);
 
   useImperativeHandle(
     ref,
     () => ({
       onRefresh: async () => {
-        removeSelectItem(tabId, selectItems);
-        const output = await handleGetListObject();
-        if (output) {
-          setObjectDatas(output.objectList);
-        }
+        setObjectDatas([]);
+        clearSelectItem(tabId);
+        await loadFirstPage();
+        scrollRef.current?.scrollTo({ top: 0 });
       },
     }),
-    [handleGetListObject, tabId, selectItems, removeSelectItem]
+    [loadFirstPage, tabId, clearSelectItem, scrollRef]
   );
 
   useEffect(() => {
     if (!connectionId || !bucket) return;
+    setObjectDatas([]);
+    loadFirstPage();
+  }, [connectionId, bucket, loadFirstPage]);
 
-    let cancelled = false;
-    handleGetListObject().then(output => {
-      if (output && !cancelled) {
-        setObjectDatas(output.objectList);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [connectionId, bucket, handleGetListObject]);
+  // Cancel any running request when the view unmounts.
+  useEffect(
+    () => () => {
+      requestCtrl.current?.abort();
+      clearSelectItem(tabId);
+    },
+    [clearSelectItem, tabId]
+  );
 
   const onClickDownload = useCallback(
     (object: string) => {
@@ -89,92 +140,64 @@ function ObjectListView(props: ObjectListViewProps) {
     [tabId, addSelectItem, removeSelectItem]
   );
 
-  const objectDetail = useMemo(() => {
-    const objectList = connectionId ? objectDatas : [];
-    return (objectList || []).map((item, idx) => (
-      <Card
-        key={`${item.name}-${idx}`}
-        padding="8px"
-        orientation="horizontal"
-        onClick={() => onToggleSelect(item.key, !selectedKeys.has(item.key))}
-        className={classes.card}
-      >
-        <Card.Section
-          inheritPadding
-          px="8px"
-          withBorder
-          className={classes.iconSection}
+  const objectList = connectionId ? objectDatas : [];
+
+  // The list sits below the scroll container's padding, so the virtualizer needs that offset.
+  useLayoutEffect(() => {
+    setScrollMargin(listRef.current?.offsetTop ?? 0);
+  }, []);
+
+  // React Compiler is disabled, so this compiler-only lint does not apply.
+  // oxlint-disable-next-line react/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: objectList.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 104,
+    getItemKey: idx => objectList[idx].key,
+    gap: 8,
+    overscan: 5,
+    scrollMargin,
+  });
+
+  const virtualItems = virtualizer.getVirtualItems();
+  const lastVisibleIndex = virtualizer.range?.endIndex ?? -1;
+
+  useEffect(() => {
+    // After a failed page, wait for Refresh instead of retrying in a loop.
+    if (!nextCursor || isLoadingMore || loadMoreError) return;
+    // Load the next page once only 2 items are left below the viewport.
+    if (lastVisibleIndex >= objectList.length - 1 - 2) {
+      loadNextPage();
+    }
+  }, [lastVisibleIndex, objectList.length, nextCursor, isLoadingMore, loadMoreError, loadNextPage]);
+
+  return (
+    <div ref={listRef} style={{ position: 'relative', height: virtualizer.getTotalSize() }}>
+      {virtualItems.map(row => (
+        <div
+          key={row.key}
+          data-index={row.index}
+          ref={virtualizer.measureElement}
           style={{
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            position: 'absolute',
+            width: '100%',
+            transform: `translateY(${row.start - scrollMargin}px)`,
           }}
         >
-          <CheckBoxInput
-            styles={{ input: { cursor: 'pointer' } }}
-            checked={selectedKeys.has(item.key)}
-            onChange={e => onToggleSelect(item.key, e.currentTarget.checked)}
+          <ObjectItem
+            tabId={tabId}
+            item={objectList[row.index]}
+            onToggleSelect={onToggleSelect}
+            onClickDownload={onClickDownload}
           />
-        </Card.Section>
-        <Card.Section
-          inheritPadding
-          px="md"
-          style={{
-            flex: 1,
-            minWidth: 0,
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          <Stack>
-            <Text size="xl" truncate="end" fw={500}>
-              {item.name}
-            </Text>
-            <Group gap="xl">
-              <Box miw="100px">
-                <Text span className={classes.label}>
-                  Size
-                </Text>
-                <Text>{formatFileSize(item.size)}</Text>
-              </Box>
-
-              <Box miw="100px">
-                <Text span className={classes.label}>
-                  Last Modified
-                </Text>
-                <Text>{dayjs(item.lastModified).format(FULL_DATE_TIME_FORMAT)}</Text>
-              </Box>
-            </Group>
-          </Stack>
-        </Card.Section>
-
-        <Card.Section
-          onClick={e => e.stopPropagation()}
-          style={{
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            minWidth: '56px',
-            justifyContent: 'center',
-          }}
-        >
-          <Menu width={200}>
-            <Menu.Target>
-              <ActionIcon>
-                <Ellipsis />
-              </ActionIcon>
-            </Menu.Target>
-
-            <Menu.Dropdown>
-              <Menu.Item onClick={() => onClickDownload(item.key)}>Download</Menu.Item>
-            </Menu.Dropdown>
-          </Menu>
-        </Card.Section>
-      </Card>
-    ));
-  }, [connectionId, objectDatas, onClickDownload, selectedKeys, onToggleSelect]);
-
-  return <>{objectDetail}</>;
+        </div>
+      ))}
+      {isLoadingMore ? (
+        <Center style={{ position: 'absolute', top: '100%', width: '100%' }} py="8px">
+          <Loader size="sm" />
+        </Center>
+      ) : null}
+    </div>
+  );
 }
 export default ObjectListView;
