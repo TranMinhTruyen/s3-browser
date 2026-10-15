@@ -15,6 +15,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -32,6 +34,8 @@ type submoduleDownloaderMng struct {
 	global                      *global.Module
 	submoduleDownloadHistoryMng *submoduleDownloadHistoryMng
 	jobs                        sync.Map
+	destsMu                     sync.Mutex
+	dests                       map[string]struct{}
 }
 
 func newSubmoduleDownloaderMng(
@@ -45,6 +49,7 @@ func newSubmoduleDownloaderMng(
 		app:                         app,
 		global:                      global,
 		submoduleDownloadHistoryMng: submoduleDownloadHistoryMng,
+		dests:                       make(map[string]struct{}),
 	}
 }
 
@@ -55,6 +60,7 @@ type job struct {
 
 type downloadResult struct {
 	key    string
+	dest   string
 	err    error
 	update *sqlc.UpdateStatusDownloadHistoryByIdParams
 }
@@ -118,16 +124,25 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 	// A plain errgroup.Group (no shared context): one failed object must not cancel the others.
 	var g errgroup.Group
 	g.SetLimit(concurrency)
+	// A single object goes to the exact path the user chose (the dialog already asked
+	// about overwriting); objects saved into a folder must not replace files already there.
+	multi := len(input.Objects) > 1
 	for _, key := range input.Objects {
 		dest := destDir
-
-		if len(input.Objects) > 1 {
+		if multi {
 			dest = filepath.Join(destDir, path.Base(key))
 		}
+		// The same ID is used for the job, the history record, the progress events and,
+		// on a name clash, the file name.
+		id := utils.GenerateUUID()
+		// Reserve the name now, in order, so objects with the same base name don't clash.
+		dest, release := m.reserveDest(dest, id, multi)
 
 		// Always return nil: errors are reported per object through results.
 		g.Go(func() error {
-			r := m.downloadOne(m.app.Context(), input.ConnectionId, s3Conn.Client, input.Bucket, key, dest)
+			defer release()
+			r := m.downloadOne(m.app.Context(), id, input.ConnectionId, s3Conn.Client, input.Bucket, key, dest)
+			r.dest = dest
 			if r.update != nil {
 				m.finishHistory(&r)
 			}
@@ -142,11 +157,11 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 	for r := range results {
 		switch {
 		case r.err == nil:
-			m.logger.Info(fmt.Sprintf("Download file %s success, destination %s", r.key, destDir))
+			m.logger.Info(fmt.Sprintf("Download file %s success, destination %s", r.key, r.dest))
 			output.AddMessage(
 				models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Bucket, S3S004, "", map[string]any{
 					"object": r.key,
-					"dest":   destDir,
+					"dest":   r.dest,
 				}),
 			)
 		case errors.Is(r.err, context.Canceled):
@@ -189,20 +204,76 @@ func (m *submoduleDownloaderMng) cancelAllDownloads() models.Output[any] {
 	return models.NewOutput[any]()
 }
 
+// reserveDest returns a path for a new download based on dest and marks it as in use
+// until release is called. If dest is taken it becomes "name(<id>).ext"; id is the job's
+// unique ID, so that path is never taken. A path is taken when a running download writes
+// to it or, if avoidExisting is set, when a file (or its .part) already exists on disk.
+func (m *submoduleDownloaderMng) reserveDest(dest, id string, avoidExisting bool) (string, func()) {
+	m.destsMu.Lock()
+	defer m.destsMu.Unlock()
+
+	candidate := dest
+	if m.destTaken(candidate, avoidExisting) {
+		candidate = suffixedPath(dest, id)
+	}
+	k := destKey(candidate)
+	m.dests[k] = struct{}{}
+
+	return candidate, func() {
+		m.destsMu.Lock()
+		delete(m.dests, k)
+		m.destsMu.Unlock()
+	}
+}
+
+// destKey is the key of p in dests. Windows file names are case-insensitive, so
+// "Report.pdf" and "report.pdf" must count as the same file there.
+func destKey(p string) string {
+	if runtime.GOOS == "windows" {
+		return strings.ToLower(p)
+	}
+	return p
+}
+
+// destTaken reports whether p cannot be used. The caller must hold destsMu.
+func (m *submoduleDownloaderMng) destTaken(p string, checkDisk bool) bool {
+	if _, ok := m.dests[destKey(p)]; ok {
+		return true
+	}
+	if !checkDisk {
+		return false
+	}
+	return pathExists(p) || pathExists(p+".part")
+}
+
+func pathExists(p string) bool {
+	_, err := os.Lstat(p)
+	return err == nil
+}
+
+// suffixedPath turns "dir/report.pdf" into "dir/report(<suffix>).pdf".
+// A dot file such as ".env" has no extension, so it becomes ".env(<suffix>)".
+func suffixedPath(p, suffix string) string {
+	dir, file := filepath.Split(p)
+	ext := filepath.Ext(file)
+	stem := strings.TrimSuffix(file, ext)
+	if stem == "" {
+		stem, ext = file, ""
+	}
+	return filepath.Join(dir, stem+"("+suffix+")"+ext)
+}
+
 // downloadOne downloads a single object to dest.
 // It registers a cancelable job, creates a history record, emits progress events while
 // downloading and returns the final status. It does not update the history record itself;
 // the caller does that with finishHistory.
 func (m *submoduleDownloaderMng) downloadOne(
 	parent context.Context,
-	connID string,
+	id, connID string,
 	c *s3.Client,
 	bucket, key, dest string,
 ) downloadResult {
 	ctx, cancel := context.WithCancel(parent)
-
-	// The same ID is used for the job, the history record and the progress events.
-	id := utils.GenerateUUID()
 
 	// Register the job so it can be canceled; remove it when the download ends.
 	m.jobs.Store(id, job{connID: connID, cancel: cancel})
@@ -402,7 +473,7 @@ func httpStatus(err error) int {
 //  3. waits for the goroutine to exit, so fn is never called after stop() returns.
 func reportEvery(d time.Duration, fn func()) (stop func()) {
 	t := time.NewTicker(d)
-	quit := make(chan struct{}) // unbuffered: a send blocks until the goroutine receives it
+	quit := make(chan struct{})
 
 	go func() {
 		defer t.Stop()

@@ -3,7 +3,7 @@ import { schemaResolver, useForm } from '@mantine/form';
 import { ConnectS3 } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { CreateProfile, UpdateProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
 import { ConnectionProfileInput, ConnectionProfileOutput } from '@wails/S3Browser/models';
-import { SyntheticEvent, useRef } from 'react';
+import { SyntheticEvent, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import z from 'zod';
 import awsLogo from '@/assets/images/aws.svg';
@@ -51,25 +51,27 @@ export default createMantineModal<ConnectModalProps, false>(
     const actionRef = useRef<'connect' | 'profile'>('connect');
     const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
 
-    const defaultValues = connectSchema
-      .default({
-        name: `Connection No.${createUUID()}`,
-        color: '#d0ebff',
-        provider: 'aws',
-        endpoint: '',
-        region: '',
-        accessKey: '',
-        secretKey: '',
-        pathStyle: false,
-        savePassword: false,
-        autoConnect: false,
-      })
-      .parse(undefined);
+    // useForm only reads initialValues on mount; compute them once instead of on every keystroke.
+    const [initialValues] = useState(() => {
+      const defaultValues = connectSchema
+        .default({
+          name: `Connection No.${createUUID()}`,
+          color: '#d0ebff',
+          provider: 'aws',
+          endpoint: '',
+          region: '',
+          accessKey: '',
+          secretKey: '',
+          pathStyle: false,
+          savePassword: false,
+          autoConnect: false,
+        })
+        .parse(undefined);
 
-    const initialValues =
-      mode === 'connect' || mode === 'createProfile'
+      return mode === 'connect' || mode === 'createProfile'
         ? defaultValues
         : { ...defaultValues, ...connectionProfile, savePassword: connectionProfile?.secretKey ? true : false };
+    });
 
     const form = useForm<ConnectionInfo>({
       mode: 'uncontrolled',

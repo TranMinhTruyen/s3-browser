@@ -1,5 +1,4 @@
 import { Card, isLightColor, Loader, Menu, Stack, Text } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
 import { ConnectS3ByProfile, Disconnect } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { DeleteProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
 import { Events } from '@wailsio/runtime';
@@ -16,11 +15,12 @@ import ConnectModal from '@/components/modals/ConnectModal';
 function ConnectionProfiles() {
   const { t } = useTranslation('connectionProfiles');
 
-  const [connectLoading, { open: openConnectLoading, close: closeConnectLoading }] = useDisclosure();
+  const [connectingKeys, setConnectingKeys] = useState<Set<string>>(new Set());
   const [openedMenuKey, setOpenedMenuKey] = useState<string | null>(null);
 
   const connectionProfiles = useProfileStore(s => s.connectionProfiles);
   const autoConnectDoneRef = useRef(false);
+  const connectingRef = useRef(new Set<string>());
 
   const loadConnectionProfiles = useProfileStore(s => s.loadConnectionProfiles);
   const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
@@ -56,25 +56,28 @@ function ConnectionProfiles() {
   };
 
   const handleConnect = (key: string, value: ConnectionProfile) => async () => {
-    if (!value || value.isConnected) return;
+    if (!value || value.isConnected || connectingRef.current.has(key)) return;
     if (autoConnectDoneRef.current && !value.secretKey) {
       handleOpenConnectModal(value, 'manualconnect');
       return;
     }
-    openConnectLoading();
+    connectingRef.current.add(key);
+    setConnectingKeys(new Set(connectingRef.current));
     try {
       const output = await callIPC(ConnectS3ByProfile, [key]);
       if (output?.isConnected) {
         updateConnectionProfiles(key, { ...value, isConnected: true });
       }
     } finally {
-      closeConnectLoading();
+      connectingRef.current.delete(key);
+      setConnectingKeys(new Set(connectingRef.current));
     }
   };
 
   const handleDisconnect = (key: string, value: ConnectionProfile) => async () => {
-    if (!value || !value.isConnected) return;
-    openConnectLoading();
+    if (!value || !value.isConnected || connectingRef.current.has(key)) return;
+    connectingRef.current.add(key);
+    setConnectingKeys(new Set(connectingRef.current));
     try {
       const output = await callIPC(Disconnect, [key]);
       if (output) {
@@ -82,7 +85,8 @@ function ConnectionProfiles() {
         resetViewByProfile(key);
       }
     } finally {
-      closeConnectLoading();
+      connectingRef.current.delete(key);
+      setConnectingKeys(new Set(connectingRef.current));
     }
   };
 
@@ -150,7 +154,13 @@ function ConnectionProfiles() {
                   backgroundColor: value.isConnected ? '#83f175' : '#FFFFFF',
                 }}
               >
-                {connectLoading ? <Loader color="blue" size="sm" /> : value.isConnected ? <Cable /> : <Unplug />}
+                {connectingKeys.has(key) ? (
+                  <Loader color="blue" size="sm" />
+                ) : value.isConnected ? (
+                  <Cable />
+                ) : (
+                  <Unplug />
+                )}
               </Card.Section>
               <Card.Section
                 px="xs"

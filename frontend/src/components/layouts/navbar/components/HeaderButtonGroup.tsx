@@ -1,7 +1,7 @@
 import { Group, Stack, Tooltip } from '@mantine/core';
 import { ListPlus, PlugZap, RefreshCw } from 'lucide-react';
 import { useProfileStore } from '@/common/stores/profileStore';
-import ActionIcon from '@/components/buttons/AcctionIcon';
+import ActionIcon from '@/components/buttons/ActionIcon';
 import ConnectModal from '@/components/modals/ConnectModal';
 
 function HeaderButtonGroup() {

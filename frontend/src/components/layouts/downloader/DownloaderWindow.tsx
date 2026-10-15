@@ -5,11 +5,13 @@ import { Download } from 'lucide-react';
 import { useEffect } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { selectDownloadingIds, useDownloaderStore } from '@/common/stores/downloaderStore';
-import ActionIcon from '@/components/buttons/AcctionIcon';
+import ActionIcon from '@/components/buttons/ActionIcon';
 import DownloaderItem from '@/components/layouts/downloader/DownloaderItem';
 
 function DownloaderWindow() {
   const [visible, handlers] = useDisclosure();
+  // `handlers` is a new object every render; its methods are stable.
+  const openWindow = handlers.open;
 
   const downloadItemIds = useDownloaderStore(useShallow(selectDownloadingIds));
   const addDownloadItems = useDownloaderStore(s => s.upsertDownloadItems);
@@ -18,7 +20,7 @@ function DownloaderWindow() {
   useEffect(() => {
     const unsubscribe = Events.On('downloader:load-download-history', e => {
       if (e.data) {
-        handlers.open();
+        openWindow();
         addDownloadItems([{ ...e.data }]);
       }
     });
@@ -26,7 +28,7 @@ function DownloaderWindow() {
     return () => {
       unsubscribe();
     };
-  }, [addDownloadItems, handlers]);
+  }, [addDownloadItems, openWindow]);
 
   useEffect(() => {
     const unsubscribe = Events.On('downloader:download-progress', e => {

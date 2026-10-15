@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useTabListStore } from '@/common/stores/tabListStore';
-import ActionIcon from '@/components/buttons/AcctionIcon';
+import ActionIcon from '@/components/buttons/ActionIcon';
 import TabDetail from '@/pages/bucket/components/TabDetail';
 import TabLabel from '@/pages/bucket/components/TabLabel';
 

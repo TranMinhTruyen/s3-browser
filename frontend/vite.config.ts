@@ -6,8 +6,7 @@ import svgr from 'vite-plugin-svgr';
 // https://vitejs.dev/config/
 export default defineConfig(() => {
   return {
-    // React Compiler runs through oxc-transform-react, so no Babel pass is needed.
-    plugins: [react({ compiler: { logDiagnostics: true } }), svgr()],
+    plugins: [react(), svgr()],
     server: {
       // Bind IPv4 explicitly: with the default 'localhost', Node resolves to
       // ::1 only, while the Wails asset proxy dials 127.0.0.1 — which would

@@ -6,7 +6,6 @@ interface TabDetail {
   profileId?: string | null;
   currentView: 'bucketList' | 'objectList';
   selectionItem: string[];
-  nextCursor: string;
 }
 
 interface TabListState {
@@ -25,6 +24,7 @@ interface TabListAction {
 
   addSelectItem: (tabId: string, items: string[]) => void;
   removeSelectItem: (tabId: string, items: string[]) => void;
+  clearSelectItem: (tabId: string) => void;
 
   reset: () => void;
 }
@@ -39,7 +39,6 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       [initialId]: {
         currentView: 'bucketList',
         selectionItem: [],
-        nextCursor: '',
       },
     },
 
@@ -54,7 +53,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
         state => ({
           tabList: {
             ...state.tabList,
-            [tabId]: { currentView: 'bucketList', selectionItem: [], nextCursor: '' },
+            [tabId]: { currentView: 'bucketList', selectionItem: [] },
           },
           activeTab: tabId,
         }),
@@ -101,7 +100,6 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
           if (tab) {
             tab.currentView = currentView;
             tab.selectionItem = [];
-            tab.nextCursor = '';
           }
         },
         undefined,
@@ -116,7 +114,6 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
             if (tab.profileId === profileId) {
               tab.currentView = 'bucketList';
               tab.selectionItem = [];
-              tab.nextCursor = '';
             }
           });
         },
@@ -152,11 +149,24 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       );
     },
 
+    clearSelectItem: (tabId: string) => {
+      set(
+        state => {
+          const tab = state.tabList[tabId];
+          if (tab) {
+            tab.selectionItem = [];
+          }
+        },
+        undefined,
+        `${SCOPE}/clearSelectItem`
+      );
+    },
+
     reset: () => {
       invalidateLoads(SCOPE);
       const id = createUUID();
       set(
-        { activeTab: id, tabList: { [id]: { currentView: 'bucketList', selectionItem: [], nextCursor: '' } } },
+        { activeTab: id, tabList: { [id]: { currentView: 'bucketList', selectionItem: [] } } },
         undefined,
         `${SCOPE}/reset`
       );

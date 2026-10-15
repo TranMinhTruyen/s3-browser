@@ -34,15 +34,16 @@ function BucketListView(props: BucketListViewProps) {
   useEffect(() => {
     if (!profileId) return;
 
-    let cancelled = false;
-    callIPC(GetListBucket, [{ connectionId: profileId, profileName, nextCursor: '', limit: 10 }]).then(output => {
-      if (output && !cancelled) {
+    // Aborting cancels the request on the Go side too, not only the state update.
+    const ctrl = new AbortController();
+    callIPC(GetListBucket, [{ connectionId: profileId, profileName, nextCursor: '', limit: 10 }], {
+      signal: ctrl.signal,
+    }).then(output => {
+      if (output && !ctrl.signal.aborted) {
         setBucketDatas({ ...output, connectionId: profileId, profileName });
       }
     });
-    return () => {
-      cancelled = true;
-    };
+    return () => ctrl.abort();
   }, [profileId, profileName]);
 
   const bucketDetail = useMemo(() => {
