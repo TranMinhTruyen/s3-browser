@@ -14,11 +14,11 @@ type ObjectItemProps = {
   tabId: string;
   item: ObjectItemData;
   onToggleSelect: (key: string, checked: boolean) => void;
-  onClickDownload: (key: string) => void;
+  onClickMenuButton: (objects: string[], action: 'download' | 'delete') => Promise<void>;
 };
 
 function ObjectItem(props: ObjectItemProps) {
-  const { tabId, item, onToggleSelect, onClickDownload } = props;
+  const { tabId, item, onToggleSelect, onClickMenuButton } = props;
 
   // Subscribe to this row's own selection only (a boolean), so toggling one row
   // does not re-render the others.
@@ -99,7 +99,10 @@ function ObjectItem(props: ObjectItemProps) {
           </Menu.Target>
 
           <Menu.Dropdown>
-            <Menu.Item onClick={() => onClickDownload(item.key)}>Download</Menu.Item>
+            <Menu.Item onClick={() => onClickMenuButton([item.key], 'download')}>Download</Menu.Item>
+            <Menu.Item color="red" onClick={() => onClickMenuButton([item.key], 'delete')}>
+              Delete
+            </Menu.Item>
           </Menu.Dropdown>
         </Menu>
       </Card.Section>
