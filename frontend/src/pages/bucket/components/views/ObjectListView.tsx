@@ -1,6 +1,6 @@
 import { Center, Loader } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { DownloadObject, GetListObject } from '@wails/S3Browser/internal/handlers/buckethandler';
+import { DeleteObject, DownloadObject, GetListObject } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
 import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
@@ -10,6 +10,7 @@ import ObjectItem from '@/pages/bucket/components/ObjectItem';
 
 export type ObjectListViewRef = {
   onRefresh?: () => Promise<void>;
+  onClickMenuButton?: (object: string[], action: 'download' | 'delete') => Promise<void>;
 };
 
 type ObjectListViewProps = {
@@ -96,19 +97,6 @@ function ObjectListView(props: ObjectListViewProps) {
     setIsLoadingMore(false);
   }, [nextCursor, handleGetListObject, startRequest]);
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      onRefresh: async () => {
-        setObjectDatas([]);
-        clearSelectItem(tabId);
-        await loadFirstPage();
-        scrollRef.current?.scrollTo({ top: 0 });
-      },
-    }),
-    [loadFirstPage, tabId, clearSelectItem, scrollRef]
-  );
-
   useEffect(() => {
     if (!connectionId || !bucket) return;
     setObjectDatas([]);
@@ -124,10 +112,17 @@ function ObjectListView(props: ObjectListViewProps) {
     [clearSelectItem, tabId]
   );
 
-  const onClickDownload = useCallback(
-    (object: string) => {
+  const onClickMenuButton = useCallback(
+    async (objects: string[], action: 'download' | 'delete' | 'detail') => {
       if (!connectionId || !bucket) return;
-      callIPC(DownloadObject, [{ connectionId: connectionId, profileName, bucket, objects: [object] }]);
+      switch (action) {
+        case 'download':
+          await callIPC(DownloadObject, [{ connectionId: connectionId, profileName, bucket, objects }]);
+          break;
+        default:
+          await callIPC(DeleteObject, [{ connectionId: connectionId, profileName, bucket, objects }]);
+          break;
+      }
     },
     [bucket, profileName, connectionId]
   );
@@ -138,6 +133,19 @@ function ObjectListView(props: ObjectListViewProps) {
       else removeSelectItem(tabId, [key]);
     },
     [tabId, addSelectItem, removeSelectItem]
+  );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      onRefresh: async () => {
+        setObjectDatas([]);
+        await loadFirstPage();
+        scrollRef.current?.scrollTo({ top: 0 });
+      },
+      onClickMenuButton,
+    }),
+    [loadFirstPage, scrollRef, onClickMenuButton]
   );
 
   const objectList = connectionId ? objectDatas : [];
@@ -188,7 +196,7 @@ function ObjectListView(props: ObjectListViewProps) {
             tabId={tabId}
             item={objectList[row.index]}
             onToggleSelect={onToggleSelect}
-            onClickDownload={onClickDownload}
+            onClickMenuButton={onClickMenuButton}
           />
         </div>
       ))}

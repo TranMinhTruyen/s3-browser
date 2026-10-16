@@ -1,6 +1,6 @@
 import { Divider, Group, Paper, Stack, Tooltip } from '@mantine/core';
 import { ConnectS3ByProfile } from '@wails/S3Browser/internal/handlers/buckethandler';
-import { ArrowLeft, PlugZap, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Download, PlugZap, RefreshCw } from 'lucide-react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProfileStore } from '@/common/stores/profileStore';
@@ -24,7 +24,6 @@ function TabDetail(props: TabDetailProps) {
 
   const [selectedBucket, setSelectedBucket] = useState<string | undefined>(undefined);
 
-  // Narrow selectors: selection changes must not re-render the whole tab.
   const selectedProfileId = useTabListStore(s => s.tabList[tabId]?.profileId ?? null);
   const tabView = useTabListStore(s => s.tabList[tabId]?.currentView ?? 'bucketList');
   const connectionProfiles = useProfileStore(s => s.connectionProfiles);
@@ -32,7 +31,7 @@ function TabDetail(props: TabDetailProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isConnected = !!selectedProfileId && !!connectionProfiles[selectedProfileId]?.isConnected;
   const currentView = isConnected ? tabView : 'bucketList';
-  // Memoized so Combobox options keep stable item references across renders.
+  const selectedItems = useTabListStore(s => s.tabList[tabId]?.selectionItem ?? []);
   const optionsData = useMemo(
     () =>
       Object.entries(connectionProfiles).map(([key, value]) => ({
@@ -45,6 +44,7 @@ function TabDetail(props: TabDetailProps) {
   const updateTab = useTabListStore(s => s.updateTab);
   const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
   const changeCurrentView = useTabListStore(s => s.changeCurrentView);
+  const clearSelectItem = useTabListStore(s => s.clearSelectItem);
 
   const onCLickConnect = useCallback(async () => {
     if (isNullOrEmpty(selectedProfileId)) return;
@@ -68,9 +68,10 @@ function TabDetail(props: TabDetailProps) {
 
   const onClickRefresh = useCallback(() => {
     if (currentView === 'objectList') {
+      clearSelectItem(tabId);
       return objectListRef.current?.onRefresh?.();
     }
-  }, [currentView]);
+  }, [currentView, clearSelectItem, tabId]);
 
   const onChangeSelectProfile = useCallback(
     (value: string | null) => {
@@ -88,6 +89,11 @@ function TabDetail(props: TabDetailProps) {
     },
     [tabId, changeCurrentView]
   );
+
+  const onClickDownloadSelected = useCallback(() => {
+    clearSelectItem(tabId);
+    return objectListRef.current?.onClickMenuButton?.(selectedItems, 'download');
+  }, [selectedItems, clearSelectItem, tabId]);
 
   const renderView = (
     <>
@@ -115,36 +121,51 @@ function TabDetail(props: TabDetailProps) {
     <Paper withBorder h="100%" display="flex" style={{ flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <Group gap="xs" p="4px" style={{ flexShrink: 0 }}>
-        <Combobox
-          value={selectedProfileId}
-          onChange={onChangeSelectProfile}
-          data={optionsData}
-          style={{ width: '200px' }}
-        />
+        <Group gap="xs">
+          <Combobox
+            value={selectedProfileId}
+            onChange={onChangeSelectProfile}
+            data={optionsData}
+            style={{ width: '200px' }}
+          />
 
-        <Tooltip label="Connect">
-          <ActionIcon onClick={onCLickConnect} disabled={isConnected || !selectedProfileId}>
-            <PlugZap />
-          </ActionIcon>
-        </Tooltip>
-
-        <Tooltip label={`Refresh ${t(`tooltip.${currentView}`)}`}>
-          <ActionIcon onClick={onClickRefresh} disabled={!isConnected}>
-            <RefreshCw />
-          </ActionIcon>
-        </Tooltip>
-
-        {currentView === 'objectList' ? (
-          <Tooltip label="Back to bucket">
-            <ActionIcon onClick={() => changeCurrentView(tabId, 'bucketList')}>
-              <ArrowLeft />
+          <Tooltip label="Connect">
+            <ActionIcon onClick={onCLickConnect} disabled={isConnected || !selectedProfileId}>
+              <PlugZap />
             </ActionIcon>
           </Tooltip>
-        ) : null}
+
+          <Tooltip label={`Refresh ${t(`tooltip.${currentView}`)}`}>
+            <ActionIcon onClick={onClickRefresh} disabled={!isConnected}>
+              <RefreshCw />
+            </ActionIcon>
+          </Tooltip>
+
+          {currentView === 'objectList' ? (
+            <>
+              <Tooltip label="Back to bucket">
+                <ActionIcon onClick={() => changeCurrentView(tabId, 'bucketList')}>
+                  <ArrowLeft />
+                </ActionIcon>
+              </Tooltip>
+
+              {selectedItems.length > 0 ? (
+                <Group gap="xs" ml="auto">
+                  <Tooltip label="Download selected">
+                    <ActionIcon onClick={onClickDownloadSelected}>
+                      <Download />
+                    </ActionIcon>
+                  </Tooltip>
+                </Group>
+              ) : null}
+            </>
+          ) : null}
+        </Group>
       </Group>
 
       <Divider />
 
+      {/* View */}
       <Paper ref={scrollRef} p="8px" style={{ flex: 1, minHeight: 0, overflow: 'auto', position: 'relative' }}>
         <Stack gap="8px">{renderView}</Stack>
       </Paper>
