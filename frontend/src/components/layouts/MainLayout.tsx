@@ -1,16 +1,30 @@
-import { AppShell, Group, SegmentedControl, Splitter } from '@mantine/core';
+import { AppShell, Group, SegmentedControl, Splitter, Tooltip } from '@mantine/core';
+import { RotateCcwClock } from 'lucide-react';
+import { useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
+import ActionIcon from '@/components/buttons/ActionIcon';
 import DownloaderWindow from '@/components/layouts/downloader/DownloaderWindow';
 import LeftNavbar from '@/components/layouts/navbar/LeftNavbar';
+import HistoryModal from '@/components/modals/HistoryModal';
 import i18n from '@/locales/i18n';
 
 function MainLayout() {
+  const onClickDownloadHistory = useCallback(async () => {
+    await HistoryModal.show();
+  }, []);
+
   return (
     <AppShell header={{ height: '48px' }} styles={{ main: { height: '100vh' } }}>
       <AppShell.Header>
         <Group h="100%" px="sm" style={{ backgroundColor: '#d0ebff' }}>
           <Group gap="xs"></Group>
           <Group ml="auto">
+            <Tooltip label="Download history">
+              <ActionIcon color="gray" onClick={onClickDownloadHistory}>
+                <RotateCcwClock />
+              </ActionIcon>
+            </Tooltip>
+
             <SegmentedControl<'en' | 'ja' | 'vi'>
               defaultValue={'en'}
               onChange={(value: 'en' | 'ja' | 'vi') => i18n.changeLanguage(value)}
@@ -36,7 +50,7 @@ function MainLayout() {
 
       <AppShell.Main>
         <Splitter h="100%">
-          <Splitter.Pane defaultSize="15%" min="10%" p={'4px 4px 4px 4px'}>
+          <Splitter.Pane defaultSize="18%" min="18%" p={'4px 4px 4px 4px'}>
             <LeftNavbar />
           </Splitter.Pane>
           <Splitter.Pane defaultSize="85%" min="50%" p={'4px 4px 4px 4px'}>

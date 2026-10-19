@@ -125,7 +125,7 @@ export default createMantineModal<ConnectModalProps, false>(
     const handleUpdateProfile = () => async (value: ConnectionInfo) => {
       const confirmModal = await ConfirmModal.show({
         type: 'info',
-        confirmCode: 'CFPF000001',
+        confirmCode: 'C000001',
       });
       if (confirmModal && connectionProfile) {
         const input: ConnectionProfileInput = {

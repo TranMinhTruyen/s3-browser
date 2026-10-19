@@ -38,6 +38,7 @@ function ObjectListView(props: ObjectListViewProps) {
   const addSelectItem = useTabListStore(s => s.addSelectItem);
   const removeSelectItem = useTabListStore(s => s.removeSelectItem);
   const clearSelectItem = useTabListStore(s => s.clearSelectItem);
+  const setDeleting = useTabListStore(s => s.setDeleting);
 
   const startRequest = useCallback(() => {
     requestCtrl.current?.abort();
@@ -112,19 +113,31 @@ function ObjectListView(props: ObjectListViewProps) {
     [clearSelectItem, tabId]
   );
 
+  const onRefresh = useCallback(async () => {
+    setObjectDatas([]);
+    await loadFirstPage();
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [scrollRef.current, loadFirstPage]);
+
   const onClickMenuButton = useCallback(
-    async (objects: string[], action: 'download' | 'delete' | 'detail') => {
+    async (objects: string[], action: 'download' | 'delete') => {
       if (!connectionId || !bucket) return;
       switch (action) {
         case 'download':
           await callIPC(DownloadObject, [{ connectionId: connectionId, profileName, bucket, objects }]);
           break;
         default:
-          await callIPC(DeleteObject, [{ connectionId: connectionId, profileName, bucket, objects }]);
+          setDeleting(tabId, objects, true);
+          try {
+            await callIPC(DeleteObject, [{ connectionId, profileName, bucket, objects }]);
+            await onRefresh();
+          } finally {
+            setDeleting(tabId, objects, false);
+          }
           break;
       }
     },
-    [bucket, profileName, connectionId]
+    [bucket, profileName, connectionId, onRefresh, setDeleting, tabId]
   );
 
   const onToggleSelect = useCallback(
@@ -138,14 +151,10 @@ function ObjectListView(props: ObjectListViewProps) {
   useImperativeHandle(
     ref,
     () => ({
-      onRefresh: async () => {
-        setObjectDatas([]);
-        await loadFirstPage();
-        scrollRef.current?.scrollTo({ top: 0 });
-      },
+      onRefresh,
       onClickMenuButton,
     }),
-    [loadFirstPage, scrollRef, onClickMenuButton]
+    [onClickMenuButton, onRefresh]
   );
 
   const objectList = connectionId ? objectDatas : [];

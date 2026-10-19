@@ -1,5 +1,9 @@
 {
   "title": {
     "defaultTabName": "新しいプロファイル"
+  },
+  "tooltip": {
+    "bucketList": "バケット一覧",
+    "objectList": "オブジェクト一覧"
   }
 }

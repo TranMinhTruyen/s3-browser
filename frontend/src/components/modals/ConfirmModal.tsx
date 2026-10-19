@@ -1,18 +1,18 @@
-import { Divider, Group, Modal, Stack, Text, Title } from '@mantine/core';
+import { Divider, Group, Modal, Text, Title } from '@mantine/core';
 import { Info, TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { createMantineModal } from '@/common/utils/modalUtils';
+import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import { formatStringJson } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
 
-type ConfirmModalProps = {
+type ConfirmModalProps = ModalProps & {
   type: 'info' | 'warning';
   confirmCode: string;
   params?: Record<string, any> | { [x: string]: any } | null;
 };
 
 export default createMantineModal<ConfirmModalProps, boolean>(props => {
-  const { type, confirmCode, params, mantine } = props;
+  const { type, confirmCode, params, mantine, size = 'sm', centered = true, ...restProps } = props;
 
   const { t } = useTranslation('confirmModal');
 
@@ -23,7 +23,7 @@ export default createMantineModal<ConfirmModalProps, boolean>(props => {
   const text = formatStringJson(t(`confirmText.${confirmCode}`), params);
 
   return (
-    <Modal.Root {...mantine.props} centered size="sm">
+    <Modal.Root {...mantine.props} size={size} centered={centered} {...restProps}>
       <Modal.Overlay />
       <Modal.Content>
         <Modal.Header
@@ -43,12 +43,10 @@ export default createMantineModal<ConfirmModalProps, boolean>(props => {
 
         <Divider />
 
-        <Modal.Body p="16px">
-          <Stack gap="sm" bg="var(--mantine-color-body)" align="stretch" justify="center">
-            <Text size="lg" ta="center">
-              {text}
-            </Text>
-          </Stack>
+        <Modal.Body p="8px">
+          <Modal.Stack>
+            <Text ta="center">{text}</Text>
+          </Modal.Stack>
         </Modal.Body>
 
         <Divider />

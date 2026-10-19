@@ -6,6 +6,7 @@ interface TabDetail {
   profileId?: string | null;
   currentView: 'bucketList' | 'objectList';
   selectionItem: string[];
+  deletingItems: string[];
 }
 
 interface TabListState {
@@ -26,6 +27,8 @@ interface TabListAction {
   removeSelectItem: (tabId: string, items: string[]) => void;
   clearSelectItem: (tabId: string) => void;
 
+  setDeleting: (tabId: string, items: string[], deleting: boolean) => void;
+
   reset: () => void;
 }
 
@@ -39,6 +42,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       [initialId]: {
         currentView: 'bucketList',
         selectionItem: [],
+        deletingItems: [],
       },
     },
 
@@ -53,7 +57,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
         state => ({
           tabList: {
             ...state.tabList,
-            [tabId]: { currentView: 'bucketList', selectionItem: [] },
+            [tabId]: { currentView: 'bucketList', selectionItem: [], deletingItems: [] },
           },
           activeTab: tabId,
         }),
@@ -162,11 +166,28 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       );
     },
 
+    setDeleting: (tabId: string, items: string[], deleting: boolean) => {
+      set(
+        state => {
+          const tab = state.tabList[tabId];
+          if (!tab) return;
+          if (deleting) {
+            tab.deletingItems = [...new Set([...tab.deletingItems, ...items])];
+          } else {
+            const removing = new Set(items);
+            tab.deletingItems = tab.deletingItems.filter(item => !removing.has(item));
+          }
+        },
+        undefined,
+        `${SCOPE}/setDeleting`
+      );
+    },
+
     reset: () => {
       invalidateLoads(SCOPE);
       const id = createUUID();
       set(
-        { activeTab: id, tabList: { [id]: { currentView: 'bucketList', selectionItem: [] } } },
+        { activeTab: id, tabList: { [id]: { currentView: 'bucketList', selectionItem: [], deletingItems: [] } } },
         undefined,
         `${SCOPE}/reset`
       );

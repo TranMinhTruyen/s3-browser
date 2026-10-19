@@ -147,14 +147,28 @@ func (m *submoduleObjMng) deleteObject(ctx context.Context, input models.DeleteO
 
 	var g errgroup.Group
 	g.SetLimit(concurrency)
-	errors := make(chan deleteResult, len(input.Objects))
+	result := make(chan deleteResult, len(input.Objects))
 	for _, key := range input.Objects {
 		g.Go(func() error {
-			_, err := s3Conn.Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+			_, err := s3Conn.Client.HeadObject(ctx, &s3.HeadObjectInput{
 				Bucket: aws.String(input.Bucket),
 				Key:    aws.String(key),
 			})
-			errors <- deleteResult{
+
+			if err != nil {
+				result <- deleteResult{
+					key: key,
+					err: err,
+				}
+				return nil
+			}
+
+			_, err = s3Conn.Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+				Bucket: aws.String(input.Bucket),
+				Key:    aws.String(key),
+			})
+
+			result <- deleteResult{
 				key: key,
 				err: err,
 			}
@@ -162,22 +176,34 @@ func (m *submoduleObjMng) deleteObject(ctx context.Context, input models.DeleteO
 		})
 	}
 	_ = g.Wait()
-	close(errors)
+	close(result)
 
-	for err := range errors {
-		output.AddMessage(
-			models.NewParamsMessage(
-				cnst.MessageTypeError,
-				cnst.Bucket,
-				S3E013,
-				err.err.Error(),
-				map[string]any{
-					"object": err.key,
-				},
-			),
-		)
-		output.Result = false
-		return output
+	for item := range result {
+		if item.err != nil {
+			output.AddMessage(
+				models.NewParamsMessage(
+					cnst.MessageTypeError,
+					cnst.Bucket,
+					S3E013,
+					item.err.Error(),
+					map[string]any{
+						"object": item.key,
+					},
+				),
+			)
+		} else {
+			output.AddMessage(
+				models.NewParamsMessage(
+					cnst.MessageTypeSuccess,
+					cnst.Bucket,
+					S3S005,
+					"",
+					map[string]any{
+						"object": item.key,
+					},
+				),
+			)
+		}
 	}
 
 	return output

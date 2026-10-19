@@ -1,6 +1,6 @@
 import { Divider, Group, Paper, Stack, Tooltip } from '@mantine/core';
 import { ConnectS3ByProfile } from '@wails/S3Browser/internal/handlers/buckethandler';
-import { ArrowLeft, Download, PlugZap, RefreshCw } from 'lucide-react';
+import { ArrowLeft, BroomSparkles, Download, PlugZap, RefreshCw, Trash } from 'lucide-react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProfileStore } from '@/common/stores/profileStore';
@@ -9,6 +9,7 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import Combobox from '@/components/inputs/combobox/Combobox';
+import ConfirmModal from '@/components/modals/ConfirmModal';
 import ConnectModal from '@/components/modals/ConnectModal';
 import BucketListView from '@/pages/bucket/components/views/BucketListView';
 import ObjectListView, { ObjectListViewRef } from '@/pages/bucket/components/views/ObjectListView';
@@ -40,6 +41,10 @@ function TabDetail(props: TabDetailProps) {
       })),
     [connectionProfiles]
   );
+  const hasDeletingSelected = useTabListStore(s => {
+    const tab = s.tabList[tabId];
+    return !!tab && tab.selectionItem.some(k => tab.deletingItems.includes(k));
+  });
 
   const updateTab = useTabListStore(s => s.updateTab);
   const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
@@ -93,6 +98,21 @@ function TabDetail(props: TabDetailProps) {
   const onClickDownloadSelected = useCallback(() => {
     clearSelectItem(tabId);
     return objectListRef.current?.onClickMenuButton?.(selectedItems, 'download');
+  }, [selectedItems, clearSelectItem, tabId]);
+
+  const onClickDeleteSelected = useCallback(async () => {
+    const confirmModal = await ConfirmModal.show({
+      type: 'warning',
+      confirmCode: 'C000004',
+      params: {
+        object: selectedItems.join(', '),
+      },
+      size: 'md',
+    });
+    if (confirmModal) {
+      clearSelectItem(tabId);
+      return objectListRef.current?.onClickMenuButton?.(selectedItems, 'delete');
+    }
   }, [selectedItems, clearSelectItem, tabId]);
 
   const renderView = (
@@ -151,9 +171,19 @@ function TabDetail(props: TabDetailProps) {
 
               {selectedItems.length > 0 ? (
                 <Group gap="xs" ml="auto">
+                  <Tooltip label="Clear selected">
+                    <ActionIcon onClick={() => clearSelectItem(tabId)} disabled={hasDeletingSelected}>
+                      <BroomSparkles />
+                    </ActionIcon>
+                  </Tooltip>
                   <Tooltip label="Download selected">
-                    <ActionIcon onClick={onClickDownloadSelected}>
+                    <ActionIcon onClick={onClickDownloadSelected} disabled={hasDeletingSelected}>
                       <Download />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label="Delete selected">
+                    <ActionIcon onClick={onClickDeleteSelected} color="red">
+                      <Trash />
                     </ActionIcon>
                   </Tooltip>
                 </Group>

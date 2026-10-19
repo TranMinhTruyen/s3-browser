@@ -1,8 +1,8 @@
-import { Card, isLightColor, Loader, Menu, Stack, Text } from '@mantine/core';
+import { Box, Card, isLightColor, Loader, Menu, Stack, Text } from '@mantine/core';
 import { ConnectS3ByProfile, Disconnect } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { DeleteProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
 import { Events } from '@wailsio/runtime';
-import { Cable, Unplug } from 'lucide-react';
+import { Cable, PlugZap, SquarePen, Trash, Unplug } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionProfile, useProfileStore } from '@/common/stores/profileStore';
@@ -48,17 +48,17 @@ function ConnectionProfiles() {
     };
   }, [updateConnectionProfiles]);
 
-  const handleOpenConnectModal = (value: ConnectionProfile, mode: 'manualconnect' | 'editProfile') => {
+  const onClickOpenConnectModal = (value: ConnectionProfile, mode: 'manualconnect' | 'editProfile') => {
     ConnectModal.show({
       mode: mode,
       connectionProfile: { ...value },
     });
   };
 
-  const handleConnect = (key: string, value: ConnectionProfile) => async () => {
+  const onClickConnect = (key: string, value: ConnectionProfile) => async () => {
     if (!value || value.isConnected || connectingRef.current.has(key)) return;
     if (autoConnectDoneRef.current && !value.secretKey) {
-      handleOpenConnectModal(value, 'manualconnect');
+      onClickOpenConnectModal(value, 'manualconnect');
       return;
     }
     connectingRef.current.add(key);
@@ -74,7 +74,7 @@ function ConnectionProfiles() {
     }
   };
 
-  const handleDisconnect = (key: string, value: ConnectionProfile) => async () => {
+  const onClickDisconnect = (key: string, value: ConnectionProfile) => async () => {
     if (!value || !value.isConnected || connectingRef.current.has(key)) return;
     connectingRef.current.add(key);
     setConnectingKeys(new Set(connectingRef.current));
@@ -90,14 +90,26 @@ function ConnectionProfiles() {
     }
   };
 
-  const handleEditProfile = (value: ConnectionProfile) => () => {
-    handleOpenConnectModal(value, 'editProfile');
+  const onClickEditProfile = (value: ConnectionProfile) => () => {
+    onClickOpenConnectModal(value, 'editProfile');
   };
 
-  const handleDeleteProfile = (value: ConnectionProfile) => async () => {
+  const onClickDeleteProfile = (key: string, value: ConnectionProfile) => async () => {
+    if (value.isConnected) {
+      const confirmModal = await ConfirmModal.show({
+        type: 'warning',
+        confirmCode: 'C000003',
+      });
+      if (confirmModal) {
+        onClickDisconnect(key, value);
+      } else {
+        return;
+      }
+    }
+
     const confirmModal = await ConfirmModal.show({
       type: 'warning',
-      confirmCode: 'CFPF000002',
+      confirmCode: 'C000002',
     });
     if (confirmModal && value.id) {
       const output = await callIPC(DeleteProfileById, [{ ...value }]);
@@ -107,7 +119,7 @@ function ConnectionProfiles() {
     }
   };
 
-  const handleMenuChange = (key: string) => (opened: boolean) => {
+  const onClickMenuChange = (key: string) => (opened: boolean) => {
     setOpenedMenuKey(prev => {
       if (opened) return key;
       return prev === key ? null : prev;
@@ -124,7 +136,7 @@ function ConnectionProfiles() {
 
     entries.forEach(([key, value]) => {
       if (!value?.autoConnect || value.isConnected) return;
-      void handleConnect(key, value)();
+      void onClickConnect(key, value)();
     });
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [connectionProfiles]);
@@ -133,13 +145,13 @@ function ConnectionProfiles() {
     .filter((entry): entry is [string, ConnectionProfile] => entry[1] !== undefined)
     .map(([key, value]) => {
       return (
-        <Menu key={key} width={200} opened={openedMenuKey === key} onChange={handleMenuChange(key)}>
+        <Menu key={key} width={200} opened={openedMenuKey === key} onChange={onClickMenuChange(key)}>
           <Menu.ContextMenu>
             <Card
               padding="8px"
               withBorder
               orientation="horizontal"
-              onDoubleClick={handleConnect(key, value)}
+              onDoubleClick={onClickConnect(key, value)}
               c={isLightColor(value.color ?? '#d0ebff') ? '#000000' : '#FFFFFF'}
               className={classes.card}
             >
@@ -173,25 +185,34 @@ function ConnectionProfiles() {
                   backgroundColor: value.color ?? '#FFFFFF',
                 }}
               >
-                <Text c="inherit" truncate="end">
-                  {value.name}
-                </Text>
+                <Box>
+                  <Text c="inherit" truncate="end">
+                    {value.name}
+                  </Text>
+                  <Text c="dimmed">{value.provider}</Text>
+                </Box>
               </Card.Section>
             </Card>
           </Menu.ContextMenu>
 
           <Menu.Dropdown>
             {!value.isConnected && (
-              <Menu.Item onClick={handleConnect(key, value)}>{t('contextMenu.connect')}</Menu.Item>
+              <Menu.Item leftSection={<PlugZap size="16px" />} onClick={onClickConnect(key, value)}>
+                {t('contextMenu.connect')}
+              </Menu.Item>
             )}
             {value.isConnected && (
-              <Menu.Item color="red" onClick={handleDisconnect(key, value)}>
+              <Menu.Item leftSection={<Unplug size="16px" />} color="red" onClick={onClickDisconnect(key, value)}>
                 {t('contextMenu.disconnect')}
               </Menu.Item>
             )}
-            <Menu.Item onClick={handleEditProfile(value)}>{t('contextMenu.edit')}</Menu.Item>
+            {!value.isConnected && (
+              <Menu.Item leftSection={<SquarePen size="16px" />} onClick={onClickEditProfile(value)}>
+                {t('contextMenu.edit')}
+              </Menu.Item>
+            )}
             <Menu.Divider />
-            <Menu.Item color="red" onClick={handleDeleteProfile(value)}>
+            <Menu.Item leftSection={<Trash size="16px" />} color="red" onClick={onClickDeleteProfile(key, value)}>
               {t('contextMenu.delete')}
             </Menu.Item>
           </Menu.Dropdown>
