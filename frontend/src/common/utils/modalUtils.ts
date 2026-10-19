@@ -1,4 +1,5 @@
 import NiceModal, { NiceModalHandler, type NiceModalHocProps, useModal } from '@ebay/nice-modal-react';
+import { ModalProps as MantineModalProps } from '@mantine/core';
 import { type ComponentType, createElement, type FC, useCallback, useLayoutEffect } from 'react';
 import { useModalStackStore } from '@/common/stores/modalStackStore';
 
@@ -6,6 +7,8 @@ import { useModalStackStore } from '@/common/stores/modalStackStore';
 const BASE_Z_INDEX = 200;
 /** z-index increment for each modal stacked above the previous one. */
 const STEP = 10;
+
+export type ModalProps = Omit<MantineModalProps, 'opened' | 'onClose'> & {};
 
 /**
  * A nice-modal component with strongly typed static helpers.

@@ -14,61 +14,64 @@ import (
 // Message codes returned to the frontend by the bucket module.
 // Naming convention: S3S = success, S3E = error, S3W = warning.
 var (
-	// Test connection profile {name} to S3 success
+	// Test connection profile {name} to S3 success.
 	S3S001 = "S3S001"
 
-	// Profile: {name} is connected
+	// Profile: {name} is connected.
 	S3S002 = "S3S002"
 
-	// Profile: {name} disconnect success
+	// Profile: {name} disconnect success.
 	S3S003 = "S3S003"
 
 	// Download file {object} success, destination {dest}
 	S3S004 = "S3S004"
 
-	// Access key or secret key is not valid for this endpoint
+	// Delete file {object} success.
+	S3S005 = "S3S005"
+
+	// Access key or secret key is not valid for this endpoint.
 	S3E001 = "S3E001"
 
-	// The endpoint rejected
+	// The endpoint rejected.
 	S3E002 = "S3E002"
 
-	// Timed out reaching the endpoint, check the address and whether the server is running
+	// Timed out reaching the endpoint, check the address and whether the server is running.
 	S3E003 = "S3E003"
 
-	// Error while connect to S3 bucket
+	// Error while connect to S3 bucket.
 	S3E004 = "S3E004"
 
-	// Error while disconnect S3 bucket
+	// Error while disconnect S3 bucket.
 	S3E005 = "S3E005"
 
-	// Profile: {name} is not connected
+	// Profile: {name} is not connected.
 	S3E006 = "S3E006"
 
-	// Get list bucket error, profile: {name}
+	// Get list bucket error, profile: {name}.
 	S3E007 = "S3E007"
 
-	// Get list object error, profile: {name}, bucket: {bucket}
+	// Get list object error, profile: {name}, bucket: {bucket}.
 	S3E008 = "S3E008"
 
-	// Destination {path} not exists
+	// Destination {path} not exists.
 	S3E009 = "S3E009"
 
-	// Create download history of {object} error
+	// Create download history of {object} error.
 	S3E010 = "S3E010"
 
-	// Get download history error
+	// Get download history error.
 	S3E011 = "S3E011"
 
-	// Download object: {object} error
+	// Download object: {object} error.
 	S3E012 = "S3E012"
 
-	// Delete object: {object} error
+	// Delete object: {object} error.
 	S3E013 = "S3E013"
 
-	// Access bucket is limited
+	// Access bucket is limited.
 	S3W001 = "S3W001"
 
-	// Download object: {object} is canceled
+	// Download object: {object} is canceled.
 	S3W002 = "S3W002"
 
 	// Update download history failed: {object} please reload!

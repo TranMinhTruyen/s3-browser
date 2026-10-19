@@ -1,5 +1,9 @@
 {
   "title": {
     "defaultTabName": "Hồ sơ mới"
+  },
+  "tooltip": {
+    "bucketList": "danh sách bucket",
+    "objectList": "danh sách object"
   }
 }

@@ -1,13 +1,14 @@
 import { Box, Card, Group, Menu, Stack, Text } from '@mantine/core';
 import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
 import dayjs from 'dayjs';
-import { Ellipsis } from 'lucide-react';
-import { memo } from 'react';
+import { Download, Ellipsis, Trash } from 'lucide-react';
+import { memo, useCallback } from 'react';
 import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
+import ConfirmModal from '@/components/modals/ConfirmModal';
 import classes from '@/pages/bucket/page.module.css';
 
 type ObjectItemProps = {
@@ -23,6 +24,21 @@ function ObjectItem(props: ObjectItemProps) {
   // Subscribe to this row's own selection only (a boolean), so toggling one row
   // does not re-render the others.
   const isSelected = useTabListStore(s => s.tabList[tabId]?.selectionItem.includes(item.key) ?? false);
+  const isDeleting = useTabListStore(s => s.tabList[tabId]?.deletingItems.includes(item.key) ?? false);
+
+  const onClickDeleteButton = useCallback(async () => {
+    const confirmModal = await ConfirmModal.show({
+      type: 'warning',
+      confirmCode: 'C000004',
+      params: {
+        object: item.name,
+      },
+      size: 'md',
+    });
+    if (confirmModal) {
+      onClickMenuButton([item.key], 'delete');
+    }
+  }, [onClickMenuButton, item.key, item.name]);
 
   return (
     <Card
@@ -93,14 +109,16 @@ function ObjectItem(props: ObjectItemProps) {
       >
         <Menu width={200}>
           <Menu.Target>
-            <ActionIcon>
+            <ActionIcon loading={isDeleting}>
               <Ellipsis />
             </ActionIcon>
           </Menu.Target>
 
           <Menu.Dropdown>
-            <Menu.Item onClick={() => onClickMenuButton([item.key], 'download')}>Download</Menu.Item>
-            <Menu.Item color="red" onClick={() => onClickMenuButton([item.key], 'delete')}>
+            <Menu.Item leftSection={<Download size="16px" />} onClick={() => onClickMenuButton([item.key], 'download')}>
+              Download
+            </Menu.Item>
+            <Menu.Item leftSection={<Trash size="16px" />} color="red" onClick={onClickDeleteButton}>
               Delete
             </Menu.Item>
           </Menu.Dropdown>

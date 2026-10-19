@@ -7,6 +7,7 @@
     "S3S002": "Hồ sơ: {name} đã kết nối",
     "S3S003": "Hồ sơ: {name} ngắt kết nối thành công",
     "S3S004": "Tải xuống {object} thành công, thư mục lưu: {dest}",
+    "S3S005": "Xóa {object} thành công",
     "S3E001": "Access key hoặc secret key không hợp lệ với endpoint này",
     "S3E002": "Endpoint từ chối kết nối",
     "S3E003": "Hết thời gian chờ khi kết nối tới endpoint, hãy kiểm tra địa chỉ và máy chủ có đang chạy hay không",
