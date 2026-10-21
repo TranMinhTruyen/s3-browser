@@ -19,7 +19,7 @@ WHERE
 `
 
 func (q *Queries) SelectConnectionProfileById(ctx context.Context, id string) (ConnectionProfile, error) {
-	row := q.db.QueryRowContext(ctx, selectConnectionProfileById, id)
+	row := q.queryRow(ctx, q.selectConnectionProfileByIdStmt, selectConnectionProfileById, id)
 	var i ConnectionProfile
 	err := row.Scan(
 		&i.ID,

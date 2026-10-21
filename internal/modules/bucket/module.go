@@ -68,6 +68,15 @@ var (
 	// Delete object: {object} error.
 	S3E013 = "S3E013"
 
+	// File {name} not exist.
+	S3E014 = "S3E014"
+
+	// File {name} can't access.
+	S3E015 = "S3E015"
+
+	// File {name} can't open.
+	S3E016 = "S3E016"
+
 	// Access bucket is limited.
 	S3W001 = "S3W001"
 
@@ -84,10 +93,11 @@ type Module struct {
 	global  *global.Module
 	profile *profile.Module
 
-	submoduleConnMng       *submoduleConnMng
-	submoduleBucketMng     *submoduleBucketMng
-	submoduleObjMng        *submoduleObjMng
-	submoduleDownloaderMng *submoduleDownloaderMng
+	submoduleDownloadHistoryMng *submoduleDownloadHistoryMng
+	submoduleConnMng            *submoduleConnMng
+	submoduleBucketMng          *submoduleBucketMng
+	submoduleObjMng             *submoduleObjMng
+	submoduleDownloaderMng      *submoduleDownloaderMng
 }
 
 func NewModule(
@@ -110,10 +120,11 @@ func NewModule(
 		global:  global,
 		profile: profileModule,
 
-		submoduleConnMng:       submoduleConnMng,
-		submoduleBucketMng:     submoduleBucketMng,
-		submoduleObjMng:        submoduleObjMng,
-		submoduleDownloaderMng: submoduleDownloaderMng,
+		submoduleDownloadHistoryMng: submoduleDownloadHistoryMng,
+		submoduleConnMng:            submoduleConnMng,
+		submoduleBucketMng:          submoduleBucketMng,
+		submoduleObjMng:             submoduleObjMng,
+		submoduleDownloaderMng:      submoduleDownloaderMng,
 	}
 }
 
@@ -187,4 +198,12 @@ func (m *Module) CancelAllDownloads() models.Output[any] {
 
 func (m *Module) DeleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
 	return m.submoduleObjMng.deleteObject(ctx, input)
+}
+
+func (m *Module) GetDownloadHistory(input models.DownloadHistoryInput) models.Output[models.DownloadHistoryOutput] {
+	return m.submoduleDownloadHistoryMng.getDownloadHistory(input)
+}
+
+func (m *Module) OpenDownloadDest(fileName, path string) models.Output[any] {
+	return m.submoduleDownloadHistoryMng.openDownloadDest(fileName, path)
 }

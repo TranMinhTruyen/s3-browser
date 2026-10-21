@@ -1,6 +1,10 @@
 {
-  "buttonLbl": {
-    "refresh": "更新",
-    "connect": "接続"
+  "button": {
+    "create": "作成",
+    "update": "更新",
+    "refresh": "再読み込み",
+    "connect": "接続",
+    "cancel": "キャンセル",
+    "OK": "OK"
   }
 }

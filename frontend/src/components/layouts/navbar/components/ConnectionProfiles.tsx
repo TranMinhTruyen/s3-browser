@@ -101,7 +101,7 @@ function ConnectionProfiles() {
         confirmCode: 'C000003',
       });
       if (confirmModal) {
-        onClickDisconnect(key, value);
+        await onClickDisconnect(key, value)();
       } else {
         return;
       }

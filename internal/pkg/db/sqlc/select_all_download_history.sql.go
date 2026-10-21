@@ -11,13 +11,14 @@ import (
 
 const selectAllDownloadHistory = `-- name: SelectAllDownloadHistory :many
 SELECT
-    dh.id, dh.file_name, dh.dest_path, dh.status, dh.created_at, dh.updated_at, dh.version
+    dh.id, dh.file_name, dh.dest_path, dh.status, dh.size, dh.created_at, dh.updated_at, dh.version
 FROM
     download_history dh
 WHERE
-    dh.id > ?1
+    dh.id < ?1
+    OR ?1 = ''
 ORDER BY
-    dh.id
+    dh.id DESC
 LIMIT
     ?2
 `
@@ -28,7 +29,7 @@ type SelectAllDownloadHistoryParams struct {
 }
 
 func (q *Queries) SelectAllDownloadHistory(ctx context.Context, arg SelectAllDownloadHistoryParams) ([]DownloadHistory, error) {
-	rows, err := q.db.QueryContext(ctx, selectAllDownloadHistory, arg.AfterID, arg.PageSize)
+	rows, err := q.query(ctx, q.selectAllDownloadHistoryStmt, selectAllDownloadHistory, arg.AfterID, arg.PageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -41,6 +42,7 @@ func (q *Queries) SelectAllDownloadHistory(ctx context.Context, arg SelectAllDow
 			&i.FileName,
 			&i.DestPath,
 			&i.Status,
+			&i.Size,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Version,

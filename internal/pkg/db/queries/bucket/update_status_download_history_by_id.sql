@@ -1,7 +1,9 @@
 -- name: UpdateStatusDownloadHistoryById :one
 UPDATE download_history 
 SET
-    status = ? 
+    dest_path = ? 
+    , status = ? 
+    , size = ? 
     , updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
     , version = version + 1 
 WHERE

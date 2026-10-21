@@ -44,7 +44,7 @@ type UpdateConnectionProfileByIdParams struct {
 }
 
 func (q *Queries) UpdateConnectionProfileById(ctx context.Context, arg UpdateConnectionProfileByIdParams) (ConnectionProfile, error) {
-	row := q.db.QueryRowContext(ctx, updateConnectionProfileById,
+	row := q.queryRow(ctx, q.updateConnectionProfileByIdStmt, updateConnectionProfileById,
 		arg.Name,
 		arg.Color,
 		arg.Provider,

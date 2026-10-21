@@ -1,6 +1,5 @@
 import { AppShell, Group, SegmentedControl, Splitter, Tooltip } from '@mantine/core';
 import { RotateCcwClock } from 'lucide-react';
-import { useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import DownloaderWindow from '@/components/layouts/downloader/DownloaderWindow';
@@ -9,10 +8,6 @@ import HistoryModal from '@/components/modals/HistoryModal';
 import i18n from '@/locales/i18n';
 
 function MainLayout() {
-  const onClickDownloadHistory = useCallback(async () => {
-    await HistoryModal.show();
-  }, []);
-
   return (
     <AppShell header={{ height: '48px' }} styles={{ main: { height: '100vh' } }}>
       <AppShell.Header>
@@ -20,7 +15,12 @@ function MainLayout() {
           <Group gap="xs"></Group>
           <Group ml="auto">
             <Tooltip label="Download history">
-              <ActionIcon color="gray" onClick={onClickDownloadHistory}>
+              <ActionIcon
+                color="gray"
+                onClick={() => {
+                  HistoryModal.show();
+                }}
+              >
                 <RotateCcwClock />
               </ActionIcon>
             </Tooltip>

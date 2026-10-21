@@ -51,7 +51,7 @@ type SelectAllRegionRow struct {
 }
 
 func (q *Queries) SelectAllRegion(ctx context.Context) ([]SelectAllRegionRow, error) {
-	rows, err := q.db.QueryContext(ctx, selectAllRegion)
+	rows, err := q.query(ctx, q.selectAllRegionStmt, selectAllRegion)
 	if err != nil {
 		return nil, err
 	}

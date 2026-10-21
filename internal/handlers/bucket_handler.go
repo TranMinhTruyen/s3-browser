@@ -75,3 +75,13 @@ func (m *BucketHandler) CancelAllDownloads() models.Output[any] {
 func (m *BucketHandler) DeleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
 	return m.bucket.DeleteObject(ctx, input)
 }
+
+func (m *BucketHandler) GetDownloadHistory(
+	input models.DownloadHistoryInput,
+) models.Output[models.DownloadHistoryOutput] {
+	return m.bucket.GetDownloadHistory(input)
+}
+
+func (m *BucketHandler) OpenDownloadDest(fileName, path string) models.Output[any] {
+	return m.bucket.OpenDownloadDest(fileName, path)
+}

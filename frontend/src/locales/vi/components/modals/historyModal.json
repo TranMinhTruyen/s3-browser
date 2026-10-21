@@ -1,0 +1,10 @@
+{
+  "title": "Lịch sử tải xuống",
+  "label": {
+    "emptyLbl": "TRỐNG",
+    "sizeLbl": "Kích thước",
+    "downloadAtLbl": "Tải xuống lúc",
+    "statusLbl": "Trạng thái",
+    "destPathLbl": "Đường dẫn lưu"
+  }
+}

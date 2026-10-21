@@ -51,7 +51,7 @@ type SelectMasterByCodeRow struct {
 }
 
 func (q *Queries) SelectMasterByCode(ctx context.Context, code string) ([]SelectMasterByCodeRow, error) {
-	rows, err := q.db.QueryContext(ctx, selectMasterByCode, code)
+	rows, err := q.query(ctx, q.selectMasterByCodeStmt, selectMasterByCode, code)
 	if err != nil {
 		return nil, err
 	}

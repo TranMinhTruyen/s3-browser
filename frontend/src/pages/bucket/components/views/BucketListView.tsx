@@ -1,104 +1,153 @@
-import { Box, Card, Stack, Text } from '@mantine/core';
+import { Center, Loader } from '@mantine/core';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { GetListBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
-import { ConnectionProfileOutput, ListBucketOutput } from '@wails/S3Browser/models';
-import dayjs from 'dayjs';
-import { Folder } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
-import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
+import { ConnectionProfileOutput } from '@wails/S3Browser/models';
+import { Bucket } from '@wails/S3Browser/models/bucket';
+import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { callIPC } from '@/common/utils/ipcUtils';
-import classes from '@/pages/bucket/page.module.css';
+import BucketItem from '@/pages/bucket/components/BucketItem';
+
+export type BucketListViewRef = {
+  onRefresh?: () => Promise<void>;
+};
 
 type BucketListViewProps = {
   profile?: ConnectionProfileOutput | null;
+  active: boolean;
+  scrollRef: RefObject<HTMLElement | null>;
   onSelectBucket?: (bucketName: string | undefined) => void;
-  onRefresh?: () => void;
-};
-
-type BucketDatas = ListBucketOutput & {
-  connectionId: string;
-  profileName?: string;
+  ref?: Ref<BucketListViewRef>;
 };
 
 function BucketListView(props: BucketListViewProps) {
-  const { profile, onSelectBucket } = props;
+  const { profile, active, scrollRef, onSelectBucket, ref } = props;
 
-  const [bucketDatas, setBucketDatas] = useState<BucketDatas>({
-    bucketList: [],
-    nextCursor: '',
-    connectionId: '',
-  });
+  const [bucketDatas, setBucketDatas] = useState<Bucket[]>([]);
+  const [nextCursor, setNextCursor] = useState('');
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
+  const [scrollMargin, setScrollMargin] = useState(0);
 
-  const profileId = profile?.id;
+  const connectionId = profile?.id;
   const profileName = profile?.name;
+  const requestCtrl = useRef<AbortController>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  const startRequest = useCallback(() => {
+    requestCtrl.current?.abort();
+    const ctrl = new AbortController();
+    requestCtrl.current = ctrl;
+    return ctrl;
+  }, []);
+
+  const handleGetListBucket = useCallback(
+    (cursor: string, signal?: AbortSignal) => {
+      if (!connectionId) return Promise.resolve(undefined);
+      return callIPC(GetListBucket, [{ connectionId, profileName, nextCursor: cursor, limit: 10 }], { signal });
+    },
+    [profileName, connectionId]
+  );
+
+  const loadFirstPage = useCallback(async () => {
+    const ctrl = startRequest();
+    setNextCursor('');
+    setIsLoadingMore(false);
+    setLoadMoreError(false);
+    // Aborting cancels the request on the Go side too, not only the state update.
+    const output = await handleGetListBucket('', ctrl.signal);
+    if (output && !ctrl.signal.aborted) {
+      setBucketDatas(output.bucketList ?? []);
+      setNextCursor(output.nextCursor ?? '');
+    }
+  }, [handleGetListBucket, startRequest]);
+
+  const loadNextPage = useCallback(async () => {
+    if (!nextCursor) return;
+    const ctrl = startRequest();
+    setIsLoadingMore(true);
+    const output = await handleGetListBucket(nextCursor, ctrl.signal);
+    if (ctrl.signal.aborted) return;
+    if (output) {
+      setBucketDatas(prev => [...prev, ...(output.bucketList ?? [])]);
+      setNextCursor(output.nextCursor ?? '');
+    } else {
+      setLoadMoreError(true);
+    }
+    setIsLoadingMore(false);
+  }, [nextCursor, handleGetListBucket, startRequest]);
 
   useEffect(() => {
-    if (!profileId) return;
+    if (!connectionId) return;
+    setBucketDatas([]);
+    loadFirstPage();
+  }, [connectionId, loadFirstPage]);
 
-    // Aborting cancels the request on the Go side too, not only the state update.
-    const ctrl = new AbortController();
-    callIPC(GetListBucket, [{ connectionId: profileId, profileName, nextCursor: '', limit: 10 }], {
-      signal: ctrl.signal,
-    }).then(output => {
-      if (output && !ctrl.signal.aborted) {
-        setBucketDatas({ ...output, connectionId: profileId, profileName });
-      }
-    });
-    return () => ctrl.abort();
-  }, [profileId, profileName]);
+  // Cancel any running request when the view unmounts.
+  useEffect(() => () => requestCtrl.current?.abort(), []);
 
-  const bucketDetail = useMemo(() => {
-    const bucketList = profileId && bucketDatas?.connectionId === profileId ? bucketDatas.bucketList : [];
-    return (bucketList || []).map((item, idx) => (
-      <Card
-        key={`${item.name}-${idx}`}
-        padding="sm"
-        orientation="horizontal"
-        onClick={() => onSelectBucket?.(item.name)}
-        className={classes.card}
-      >
-        <Card.Section
-          inheritPadding
-          px="xs"
-          withBorder
-          className={classes.iconSection}
+  const onRefresh = useCallback(async () => {
+    setBucketDatas([]);
+    await loadFirstPage();
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [scrollRef, loadFirstPage]);
+
+  useImperativeHandle(ref, () => ({ onRefresh }), [onRefresh]);
+
+  const bucketList = connectionId ? bucketDatas : [];
+
+  // The list sits below the scroll container's padding, so the virtualizer needs that offset.
+  // Re-measure when the view is shown again, since offsetTop is 0 while it is hidden.
+  useLayoutEffect(() => {
+    if (active) setScrollMargin(listRef.current?.offsetTop ?? 0);
+  }, [active]);
+
+  // React Compiler is disabled, so this compiler-only lint does not apply.
+  // oxlint-disable-next-line react/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: bucketList.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 88,
+    getItemKey: idx => bucketList[idx].name ?? idx,
+    gap: 8,
+    overscan: 5,
+    scrollMargin,
+    enabled: active,
+  });
+
+  const virtualItems = virtualizer.getVirtualItems();
+  const lastVisibleIndex = virtualizer.range?.endIndex ?? -1;
+
+  useEffect(() => {
+    // After a failed page, wait for Refresh instead of retrying in a loop.
+    if (!active || !nextCursor || isLoadingMore || loadMoreError) return;
+    // Load the next page once only 2 items are left below the viewport.
+    if (lastVisibleIndex >= bucketList.length - 1 - 2) {
+      loadNextPage();
+    }
+  }, [active, lastVisibleIndex, bucketList.length, nextCursor, isLoadingMore, loadMoreError, loadNextPage]);
+
+  return (
+    <div ref={listRef} style={{ position: 'relative', height: virtualizer.getTotalSize() }}>
+      {virtualItems.map(row => (
+        <div
+          key={row.key}
+          data-index={row.index}
+          ref={virtualizer.measureElement}
           style={{
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            minWidth: '56px',
-            justifyContent: 'center',
+            position: 'absolute',
+            width: '100%',
+            transform: `translateY(${row.start - scrollMargin}px)`,
           }}
         >
-          <Folder />
-        </Card.Section>
-        <Card.Section
-          inheritPadding
-          px="xs"
-          style={{
-            flex: 1,
-            minWidth: 0,
-            display: 'flex',
-            alignItems: 'center',
-          }}
-        >
-          <Stack>
-            <Text size="xl" fw="bold" truncate="end">
-              {item.name}
-            </Text>
-            <Box>
-              <Text>
-                <Text span fw={500}>
-                  Create date:
-                </Text>{' '}
-                {dayjs(item.creationDate).format(FULL_DATE_TIME_FORMAT)}
-              </Text>
-            </Box>
-          </Stack>
-        </Card.Section>
-      </Card>
-    ));
-  }, [bucketDatas, profileId, onSelectBucket]);
-
-  return <>{bucketDetail}</>;
+          <BucketItem item={bucketList[row.index]} onSelectBucket={onSelectBucket} />
+        </div>
+      ))}
+      {isLoadingMore ? (
+        <Center style={{ position: 'absolute', top: '100%', width: '100%' }} py="8px">
+          <Loader size="sm" />
+        </Center>
+      ) : null}
+    </div>
+  );
 }
 export default BucketListView;

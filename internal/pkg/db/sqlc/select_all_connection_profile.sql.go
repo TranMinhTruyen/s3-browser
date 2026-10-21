@@ -48,7 +48,7 @@ type SelectAllConnectionProfileRow struct {
 }
 
 func (q *Queries) SelectAllConnectionProfile(ctx context.Context) ([]SelectAllConnectionProfileRow, error) {
-	rows, err := q.db.QueryContext(ctx, selectAllConnectionProfile)
+	rows, err := q.query(ctx, q.selectAllConnectionProfileStmt, selectAllConnectionProfile)
 	if err != nil {
 		return nil, err
 	}

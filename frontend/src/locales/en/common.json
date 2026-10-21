@@ -1,6 +1,10 @@
 {
-  "buttonLbl": {
+  "button": {
+    "create": "Create",
+    "update": "Update",
     "refresh": "Refresh",
-    "connect": "Connect"
+    "connect": "Connect",
+    "cancel": "Cancel",
+    "OK": "OK"
   }
 }

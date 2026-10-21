@@ -1,0 +1,10 @@
+{
+  "title": "Download history",
+  "label": {
+    "emptyLbl": "EMPTY",
+    "sizeLbl": "Size",
+    "downloadAtLbl": "Download at",
+    "statusLbl": "Status",
+    "destPathLbl": "Destination path"
+  }
+}

@@ -3,10 +3,6 @@
     "info": "Thông tin",
     "warning": "Cảnh báo"
   },
-  "button": {
-    "OK": "OK",
-    "cancel": "Hủy"
-  },
   "confirmText": {
     "C000001": "Bạn có chắc chắn muốn cập nhật hồ sơ kết nối này không?",
     "C000002": "Bạn có chắc chắn muốn xóa hồ sơ kết nối này không?",

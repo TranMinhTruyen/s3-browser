@@ -54,8 +54,9 @@ VALUES ('REGION', 'Singapore', 'ap-southeast-1', '01', 1)
 CREATE TABLE IF NOT EXISTS download_history(
     id TEXT PRIMARY KEY
     , file_name TEXT NOT NULL
-    , dest_path TEXT NOT NULL
+    , dest_path TEXT
     , status TEXT NOT NULL
+    , size FLOAT
     , created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     , updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     , version INTEGER NOT NULL DEFAULT 1
