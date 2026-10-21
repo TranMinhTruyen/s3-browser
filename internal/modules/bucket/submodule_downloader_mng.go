@@ -54,7 +54,7 @@ func newSubmoduleDownloaderMng(
 	}
 }
 
-type job struct {
+type downloaderJob struct {
 	connID string
 	cancel context.CancelFunc
 }
@@ -190,7 +190,7 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 // Unknown or already finished IDs are ignored.
 func (m *submoduleDownloaderMng) cancelDownloadOne(id string) models.Output[any] {
 	if v, ok := m.jobs.LoadAndDelete(id); ok {
-		v.(job).cancel()
+		v.(downloaderJob).cancel()
 		m.logger.Info(fmt.Sprintf("download %s is canceled", id))
 	}
 	return models.NewOutput[any]()
@@ -199,7 +199,7 @@ func (m *submoduleDownloaderMng) cancelDownloadOne(id string) models.Output[any]
 // cancelAllDownloads cancels every running download.
 func (m *submoduleDownloaderMng) cancelAllDownloads() models.Output[any] {
 	m.jobs.Range(func(k, v any) bool {
-		v.(job).cancel()
+		v.(downloaderJob).cancel()
 		m.logger.Info(fmt.Sprintf("download %s is canceled", k))
 		return true
 	})
@@ -279,7 +279,7 @@ func (m *submoduleDownloaderMng) downloadOne(
 	ctx, cancel := context.WithCancel(parent)
 
 	// Register the job so it can be canceled; remove it when the download ends.
-	m.jobs.Store(id, job{connID: connID, cancel: cancel})
+	m.jobs.Store(id, downloaderJob{connID: connID, cancel: cancel})
 	defer func() { cancel(); m.jobs.Delete(id) }()
 
 	saved, err := m.submoduleDownloadHistoryMng.createDownloadHistory(models.DownloadHistoryItem{
