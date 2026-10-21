@@ -46,6 +46,7 @@ type ConnectModalProps = {
 export default createMantineModal<ConnectModalProps, false>(
   props => {
     const { mode = 'connect', connectionProfile, mantine } = props;
+
     const { t } = useTranslation('connectModal');
 
     const actionRef = useRef<'connect' | 'profile'>('connect');
@@ -176,7 +177,7 @@ export default createMantineModal<ConnectModalProps, false>(
           <Modal.Content>
             <Modal.Header
               pos="relative"
-              p="16px"
+              p="8px"
               mih="0px"
               style={{ justifyContent: 'flex-end', backgroundColor: '#d0ebff' }}
             >
@@ -299,14 +300,14 @@ export default createMantineModal<ConnectModalProps, false>(
 
             <Divider />
 
-            <Group p="16px" justify="space-between">
+            <Group p="8px" justify="space-between">
               <Button type="button" loading={form.submitting} onClick={submitAs('connect', handleConnect(true))}>
                 {t('form.button.testConnection')}
               </Button>
 
               {mode === 'connect' || mode === 'manualconnect' ? (
                 <Button type="submit" loading={form.submitting}>
-                  {t('form.button.connect')}
+                  {t('common:button.connect')}
                 </Button>
               ) : null}
 

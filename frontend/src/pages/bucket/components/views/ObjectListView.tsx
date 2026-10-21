@@ -6,6 +6,7 @@ import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
 import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
+import ConfirmModal from '@/components/modals/ConfirmModal';
 import ObjectItem from '@/pages/bucket/components/ObjectItem';
 
 export type ObjectListViewRef = {
@@ -122,28 +123,47 @@ function ObjectListView(props: ObjectListViewProps) {
   const onClickMenuButton = useCallback(
     async (objects: string[], action: 'download' | 'delete') => {
       if (!connectionId || !bucket) return;
+      if (objects.length > 5) {
+        ConfirmModal.show({
+          type: 'warning',
+          confirmCode: 'C000005',
+        });
+        return;
+      }
       switch (action) {
         case 'download':
           await callIPC(DownloadObject, [{ connectionId: connectionId, profileName, bucket, objects }]);
           break;
         default:
-          setDeleting(tabId, objects, true);
-          try {
-            await callIPC(DeleteObject, [{ connectionId, profileName, bucket, objects }]);
-            await onRefresh();
-          } finally {
-            setDeleting(tabId, objects, false);
+          const confirmModal = await ConfirmModal.show({
+            type: 'warning',
+            confirmCode: 'C000004',
+            params: {
+              object: objects.join(', '),
+            },
+            size: 'md',
+          });
+          if (confirmModal) {
+            setDeleting(tabId, objects, true);
+            try {
+              await callIPC(DeleteObject, [{ connectionId, profileName, bucket, objects }]);
+              await onRefresh();
+            } finally {
+              setDeleting(tabId, objects, false);
+            }
           }
           break;
       }
+      clearSelectItem(tabId);
     },
-    [bucket, profileName, connectionId, onRefresh, setDeleting, tabId]
+    [bucket, profileName, connectionId, onRefresh, setDeleting, tabId, clearSelectItem]
   );
 
   const onToggleSelect = useCallback(
     (key: string, checked: boolean) => {
-      if (checked) addSelectItem(tabId, [key]);
-      else removeSelectItem(tabId, [key]);
+      if (checked) {
+        addSelectItem(tabId, [key]);
+      } else removeSelectItem(tabId, [key]);
     },
     [tabId, addSelectItem, removeSelectItem]
   );

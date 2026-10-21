@@ -7,6 +7,7 @@ import (
 	"S3Browser/internal/pkg/utils"
 	"S3Browser/models"
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"io"
@@ -23,7 +24,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"golang.org/x/sync/errgroup"
 )
@@ -65,10 +66,8 @@ type downloadResult struct {
 	update *sqlc.UpdateStatusDownloadHistoryByIdParams
 }
 
-const (
-	chunkSize   = 64 << 20
-	concurrency = 6
-)
+// concurrency limits both the objects downloaded at once and the parts fetched at once per object.
+const concurrency = 6
 
 // downloadObject asks the user where to save, then downloads every object in input.Objects.
 //   - One object: a "Save file" dialog is shown and the object is written to the chosen path.
@@ -119,6 +118,10 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 		return output
 	}
 
+	tm := transfermanager.New(s3Conn.Client, func(o *transfermanager.Options) {
+		o.Concurrency = concurrency
+	})
+
 	// Buffered so goroutines never block on send; results are read only after g.Wait().
 	results := make(chan downloadResult, len(input.Objects))
 	// A plain errgroup.Group (no shared context): one failed object must not cancel the others.
@@ -141,7 +144,7 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 		// Always return nil: errors are reported per object through results.
 		g.Go(func() error {
 			defer release()
-			r := m.downloadOne(m.app.Context(), id, input.ConnectionId, s3Conn.Client, input.Bucket, key, dest)
+			r := m.downloadOne(m.app.Context(), id, input.ConnectionId, tm, input.Bucket, key, dest)
 			r.dest = dest
 			if r.update != nil {
 				m.finishHistory(&r)
@@ -188,8 +191,8 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 func (m *submoduleDownloaderMng) cancelDownloadOne(id string) models.Output[any] {
 	if v, ok := m.jobs.LoadAndDelete(id); ok {
 		v.(job).cancel()
+		m.logger.Info(fmt.Sprintf("download %s is canceled", id))
 	}
-	m.logger.Info(fmt.Sprintf("download %s is canceled", id))
 	return models.NewOutput[any]()
 }
 
@@ -270,7 +273,7 @@ func suffixedPath(p, suffix string) string {
 func (m *submoduleDownloaderMng) downloadOne(
 	parent context.Context,
 	id, connID string,
-	c *s3.Client,
+	tm *transfermanager.Client,
 	bucket, key, dest string,
 ) downloadResult {
 	ctx, cancel := context.WithCancel(parent)
@@ -293,7 +296,7 @@ func (m *submoduleDownloaderMng) downloadOne(
 	// Tell the frontend a new download has started.
 	m.app.Event.Emit(EventLoadDownloadHistory, saved)
 
-	err = download(ctx, c, bucket, key, dest, func(done, total int64) {
+	size, err := download(ctx, tm, bucket, key, dest, func(done, total int64) {
 		m.app.Event.Emit(
 			EventDownloadObjectProgress,
 			models.DownloadProgressOutput{DownloadId: id, Downloaded: done, Total: total},
@@ -315,9 +318,11 @@ func (m *submoduleDownloaderMng) downloadOne(
 		key: key,
 		err: err,
 		update: &sqlc.UpdateStatusDownloadHistoryByIdParams{
-			ID:      id,
-			Status:  status,
-			Version: saved.Version,
+			ID:       id,
+			DestPath: sql.NullString{String: saved.DestPath, Valid: err == nil},
+			Status:   status,
+			Size:     sql.NullFloat64{Float64: float64(size), Valid: size > 0},
+			Version:  saved.Version,
 		},
 	}
 }
@@ -325,10 +330,16 @@ func (m *submoduleDownloaderMng) downloadOne(
 // finishHistory writes the final status from r.update to the history record and
 // notifies the frontend. If the update fails, the error replaces r.err.
 func (m *submoduleDownloaderMng) finishHistory(r *downloadResult) {
+	destPath := ""
+	if r.update.DestPath.Valid {
+		destPath = r.update.DestPath.String
+	}
 	updated, err := m.submoduleDownloadHistoryMng.updateDownloadHistory(models.DownloadHistoryItem{
-		ID:      r.update.ID,
-		Status:  r.update.Status,
-		Version: r.update.Version,
+		ID:       r.update.ID,
+		DestPath: destPath,
+		Status:   r.update.Status,
+		Size:     r.update.Size.Float64,
+		Version:  r.update.Version,
 	})
 
 	if err != nil {
@@ -339,26 +350,26 @@ func (m *submoduleDownloaderMng) finishHistory(r *downloadResult) {
 	m.app.Event.Emit(EventLoadDownloadHistory, updated)
 }
 
-// download saves the object to dest by fetching it in parallel byte ranges of chunkSize.
+// download saves the object to dest with the transfer manager, which fetches the object's
+// parts in parallel, retries a part whose body read fails, sends If-Match with the ETag of
+// the first part (so a file never mixes old and new content) and validates checksums.
 // progress is called periodically with the bytes received so far and the total size.
 // On failure or cancellation, no file is left at dest.
-func download(ctx context.Context, c *s3.Client, bucket, key, dest string, progress func(done, total int64)) error {
+func download(
+	ctx context.Context,
+	tm *transfermanager.Client,
+	bucket, key, dest string,
+	progress func(done, total int64),
+) (int64, error) {
 	if progress == nil {
 		progress = func(int64, int64) {} // allow callers that don't track progress
 	}
 
-	// Step 1: get size and ETag without downloading the content.
-	head, err := c.HeadObject(ctx, &s3.HeadObjectInput{Bucket: &bucket, Key: &key})
-	if err != nil {
-		return err
-	}
-	size, etag := aws.ToInt64(head.ContentLength), aws.ToString(head.ETag)
-
-	// Step 2: write to a temporary file so dest never ends up incomplete.
+	// Step 1: write to a temporary file so dest never ends up incomplete.
 	part := dest + ".part"
 	f, err := os.Create(part)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer func() {
 		// if already closed at the end of the function, this just returns an ignored error
@@ -369,90 +380,61 @@ func download(ctx context.Context, c *s3.Client, bucket, key, dest string, progr
 		}
 	}()
 
-	// Pre-size the file so each part can write at any offset.
-	if err = f.Truncate(size); err != nil {
-		return err
-	}
-
-	// downloaded is the total number of bytes received across all parts.
-	// It is atomic because several goroutines add to it and read it concurrently.
-	var downloaded atomic.Int64
+	w := &countingWriterAt{w: f}
+	var total atomic.Int64
+	total.Store(-1)
 	stop := reportEvery(200*time.Millisecond, func() {
-		progress(downloaded.Load(), size)
+		if t := total.Load(); t >= 0 {
+			progress(min(w.n.Load(), t), t)
+		}
 	})
 	defer stop()
 
-	// Step 3: download in parallel.
-	// errgroup runs at most `concurrency` parts at once. If one part fails,
-	// gctx is canceled so the remaining parts stop, and g.Wait() returns the first error.
-	g, gctx := errgroup.WithContext(ctx)
-	g.SetLimit(concurrency)
-	for start := int64(0); start < size; start += chunkSize {
-		end := min(start+chunkSize, size) - 1
-		g.Go(func() error {
-			return fetchChunk(gctx, c, bucket, key, etag, f, start, end, &downloaded)
-		})
-	}
-	if err = g.Wait(); err != nil {
-		return err
-	}
-
-	// Step 4: the file must be closed before renaming (Windows can't rename an open file).
-	if err = f.Close(); err != nil {
-		return err
-	}
-	return os.Rename(part, dest)
-}
-
-// fetchChunk downloads the byte range [start, end] of the object and writes it into f at offset start.
-func fetchChunk(
-	ctx context.Context,
-	c *s3.Client,
-	bucket, key, etag string,
-	f *os.File,
-	start, end int64,
-	downloaded *atomic.Int64,
-) error {
-	in := &s3.GetObjectInput{Bucket: &bucket, Key: &key, Range: aws.String(fmt.Sprintf("bytes=%d-%d", start, end))}
-	if etag != "" {
-		// Only return data if the object is still the same version as when the download started.
-		// If it was overwritten, S3 responds with 412 instead of sending new data,
-		// so we never produce a file that mixes old and new content.
-		in.IfMatch = &etag
-	}
-
-	out, err := c.GetObject(ctx, in)
+	// Step 2: download the parts in parallel into the temporary file.
+	out, err := tm.DownloadObject(ctx, &transfermanager.DownloadObjectInput{
+		Bucket:   &bucket,
+		Key:      &key,
+		WriterAt: w,
+	}, func(o *transfermanager.Options) {
+		o.ObjectProgressListeners.Register(onTransferStart(func(size int64) { total.Store(size) }))
+	})
 	if err != nil {
 		if httpStatus(err) == http.StatusPreconditionFailed {
-			return errors.New("object has changed on server during download")
+			err = errors.New("object has changed on server during download")
 		}
-		return fmt.Errorf("get bytes %d-%d: %w", start, end, err)
-	}
-	defer out.Body.Close()
-
-	// Every block of data read from S3 is written to two places at once:
-	//   - NewOffsetWriter: into the file, starting at offset start
-	//   - counter: adds the byte count to downloaded for progress reporting
-	n, err := io.Copy(io.MultiWriter(io.NewOffsetWriter(f, start), counter{downloaded}), out.Body)
-
-	if err == nil && n != end-start+1 {
-		err = io.ErrUnexpectedEOF // connection closed early, fewer bytes than expected
+		return 0, err
 	}
 
-	if err != nil {
-		return fmt.Errorf("read bytes %d-%d: %w", start, end, err)
+	// Step 3: the file must be closed before renaming (Windows can't rename an open file).
+	if err = f.Close(); err != nil {
+		return 0, err
 	}
 
-	return nil
+	if err = os.Rename(part, dest); err != nil {
+		return 0, err
+	}
+
+	return aws.ToInt64(out.ContentLength), nil
 }
 
-// counter is an io.Writer that doesn't store data anywhere;
-// it only adds the number of received bytes to n (used for progress).
-type counter struct{ n *atomic.Int64 }
+// countingWriterAt writes to w and adds the number of written bytes to n (used for progress).
+type countingWriterAt struct {
+	w io.WriterAt
+	n atomic.Int64
+}
 
-func (c counter) Write(p []byte) (int, error) {
-	c.n.Add(int64(len(p)))
-	return len(p), nil
+func (c *countingWriterAt) WriteAt(p []byte, off int64) (int, error) {
+	n, err := c.w.WriteAt(p, off)
+	c.n.Add(int64(n))
+	return n, err
+}
+
+// onTransferStart is a transfer manager listener that receives the object size
+// once the first response arrives.
+type onTransferStart func(size int64)
+
+func (f onTransferStart) OnObjectTransferStart(_ context.Context, e *transfermanager.ObjectTransferStartEvent) {
+	f(e.TotalBytes)
 }
 
 // httpStatus returns the HTTP status code carried by an AWS SDK error.

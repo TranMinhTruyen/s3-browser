@@ -15,10 +15,9 @@
       "autoConnect": "Auto connect"
     },
     "button": {
-      "connect": "Connect",
       "testConnection": "Test connection",
-      "createProfile": "Create",
-      "editProfile": "Update"
+      "createProfile": "Create profile",
+      "editProfile": "Update profile"
     }
   }
 }

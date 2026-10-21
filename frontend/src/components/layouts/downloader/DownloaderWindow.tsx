@@ -1,4 +1,4 @@
-import { Affix, CloseButton, FloatingWindow, Group, ScrollArea, Stack, Text } from '@mantine/core';
+import { Affix, Box, CloseButton, Divider, Group, Paper, Stack, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { Events } from '@wailsio/runtime';
 import { Download } from 'lucide-react';
@@ -52,26 +52,24 @@ function DownloaderWindow() {
         </Affix>
       ) : null}
       {visible && (
-        <FloatingWindow
-          p="xs"
-          w="400px"
-          withBorder
-          excludeDragHandleSelector="button"
-          style={{ bottom: '16px', right: '16px' }}
-          enabled={false}
-        >
-          <Group mb="xs" justify="space-between">
-            <Text>Downloading</Text>
-            <CloseButton onClick={handlers.close} ml="auto" />
-          </Group>
-          <ScrollArea h="260px" scrollbars="y" styles={{ content: { display: 'block' } }}>
-            <Stack gap="xs">
-              {downloadItemIds.map(id => (
-                <DownloaderItem key={id} id={id} />
-              ))}
-            </Stack>
-          </ScrollArea>
-        </FloatingWindow>
+        <Affix position={{ bottom: 16, right: 16 }}>
+          <Paper w="400px" withBorder style={{ overflow: 'hidden' }}>
+            <Group p="xs" justify="space-between">
+              <Text>Downloading</Text>
+              <CloseButton onClick={handlers.close} ml="auto" />
+            </Group>
+
+            <Divider />
+
+            <Box p="8px" style={{ maxHeight: '260px', overflow: 'auto' }}>
+              <Stack gap="xs">
+                {downloadItemIds.map(id => (
+                  <DownloaderItem key={id} id={id} />
+                ))}
+              </Stack>
+            </Box>
+          </Paper>
+        </Affix>
       )}
     </>
   ) : null;

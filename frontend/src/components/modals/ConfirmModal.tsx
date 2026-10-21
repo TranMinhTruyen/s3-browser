@@ -20,7 +20,7 @@ export default createMantineModal<ConfirmModalProps, boolean>(props => {
 
   const title = type === 'info' ? t('title.info') : t('title.warning');
 
-  const text = formatStringJson(t(`confirmText.${confirmCode}`), params);
+  const text = formatStringJson(t(`confirmCode.${confirmCode}`), params);
 
   return (
     <Modal.Root {...mantine.props} size={size} centered={centered} {...restProps}>
@@ -58,16 +58,16 @@ export default createMantineModal<ConfirmModalProps, boolean>(props => {
               mantine.handler.hide();
             }}
           >
-            {t('button.OK')}
+            {t('common:button.OK')}
           </Button>
           <Button
             onClick={() => {
               mantine.handler.resolve(false);
               mantine.handler.hide();
             }}
-            color="#ff0000"
+            color="red"
           >
-            {t('button.cancel')}
+            {t('common:button.cancel')}
           </Button>
         </Group>
       </Modal.Content>

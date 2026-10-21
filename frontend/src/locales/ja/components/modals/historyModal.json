@@ -1,0 +1,10 @@
+{
+  "title": "ダウンロード履歴",
+  "label": {
+    "emptyLbl": "履歴なし",
+    "sizeLbl": "サイズ",
+    "downloadAtLbl": "ダウンロード日時",
+    "statusLbl": "ステータス",
+    "destPathLbl": "保存先パス"
+  }
+}

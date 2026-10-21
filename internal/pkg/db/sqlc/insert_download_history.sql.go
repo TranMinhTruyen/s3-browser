@@ -7,6 +7,7 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createDownloadHistory = `-- name: CreateDownloadHistory :one
@@ -17,18 +18,18 @@ INTO download_history(
     , dest_path
     , status
 )
-VALUES (? , ? , ? , ?) RETURNING id, file_name, dest_path, status, created_at, updated_at, version
+VALUES (? , ? , ? , ?) RETURNING id, file_name, dest_path, status, size, created_at, updated_at, version
 `
 
 type CreateDownloadHistoryParams struct {
-	ID       string `json:"id"`
-	FileName string `json:"file_name"`
-	DestPath string `json:"dest_path"`
-	Status   string `json:"status"`
+	ID       string         `json:"id"`
+	FileName string         `json:"file_name"`
+	DestPath sql.NullString `json:"dest_path"`
+	Status   string         `json:"status"`
 }
 
 func (q *Queries) CreateDownloadHistory(ctx context.Context, arg CreateDownloadHistoryParams) (DownloadHistory, error) {
-	row := q.db.QueryRowContext(ctx, createDownloadHistory,
+	row := q.queryRow(ctx, q.createDownloadHistoryStmt, createDownloadHistory,
 		arg.ID,
 		arg.FileName,
 		arg.DestPath,
@@ -40,6 +41,7 @@ func (q *Queries) CreateDownloadHistory(ctx context.Context, arg CreateDownloadH
 		&i.FileName,
 		&i.DestPath,
 		&i.Status,
+		&i.Size,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Version,

@@ -41,7 +41,7 @@ type CreateProfileParams struct {
 }
 
 func (q *Queries) CreateProfile(ctx context.Context, arg CreateProfileParams) (ConnectionProfile, error) {
-	row := q.db.QueryRowContext(ctx, createProfile,
+	row := q.queryRow(ctx, q.createProfileStmt, createProfile,
 		arg.ID,
 		arg.Name,
 		arg.Color,

@@ -9,9 +9,8 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import Combobox from '@/components/inputs/combobox/Combobox';
-import ConfirmModal from '@/components/modals/ConfirmModal';
 import ConnectModal from '@/components/modals/ConnectModal';
-import BucketListView from '@/pages/bucket/components/views/BucketListView';
+import BucketListView, { BucketListViewRef } from '@/pages/bucket/components/views/BucketListView';
 import ObjectListView, { ObjectListViewRef } from '@/pages/bucket/components/views/ObjectListView';
 
 type TabDetailProps = {
@@ -28,6 +27,7 @@ function TabDetail(props: TabDetailProps) {
   const selectedProfileId = useTabListStore(s => s.tabList[tabId]?.profileId ?? null);
   const tabView = useTabListStore(s => s.tabList[tabId]?.currentView ?? 'bucketList');
   const connectionProfiles = useProfileStore(s => s.connectionProfiles);
+  const bucketListRef = useRef<BucketListViewRef>(null);
   const objectListRef = useRef<ObjectListViewRef>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isConnected = !!selectedProfileId && !!connectionProfiles[selectedProfileId]?.isConnected;
@@ -76,7 +76,8 @@ function TabDetail(props: TabDetailProps) {
       clearSelectItem(tabId);
       return objectListRef.current?.onRefresh?.();
     }
-  }, [currentView, clearSelectItem, tabId]);
+    return bucketListRef.current?.onRefresh?.();
+  },[currentView, clearSelectItem, tabId]);
 
   const onChangeSelectProfile = useCallback(
     (value: string | null) => {
@@ -96,31 +97,22 @@ function TabDetail(props: TabDetailProps) {
   );
 
   const onClickDownloadSelected = useCallback(() => {
-    clearSelectItem(tabId);
     return objectListRef.current?.onClickMenuButton?.(selectedItems, 'download');
-  }, [selectedItems, clearSelectItem, tabId]);
+  }, [selectedItems]);
 
   const onClickDeleteSelected = useCallback(async () => {
-    const confirmModal = await ConfirmModal.show({
-      type: 'warning',
-      confirmCode: 'C000004',
-      params: {
-        object: selectedItems.join(', '),
-      },
-      size: 'md',
-    });
-    if (confirmModal) {
-      clearSelectItem(tabId);
-      return objectListRef.current?.onClickMenuButton?.(selectedItems, 'delete');
-    }
-  }, [selectedItems, clearSelectItem, tabId]);
+    return objectListRef.current?.onClickMenuButton?.(selectedItems, 'delete');
+  }, [selectedItems]);
 
   const renderView = (
     <>
       <Stack gap="8px" display={currentView === 'bucketList' ? undefined : 'none'}>
         <BucketListView
           profile={isConnected ? connectionProfiles[selectedProfileId] : null}
+          active={currentView === 'bucketList'}
+          scrollRef={scrollRef}
           onSelectBucket={onChangeSelectBucket}
+          ref={bucketListRef}
         />
       </Stack>
       {currentView === 'objectList' ? (

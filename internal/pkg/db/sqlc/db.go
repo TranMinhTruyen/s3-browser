@@ -7,6 +7,7 @@ package sqlc
 import (
 	"context"
 	"database/sql"
+	"fmt"
 )
 
 type DBTX interface {
@@ -20,12 +21,168 @@ func New(db DBTX) *Queries {
 	return &Queries{db: db}
 }
 
+func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
+	q := Queries{db: db}
+	var err error
+	if q.createDownloadHistoryStmt, err = db.PrepareContext(ctx, createDownloadHistory); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateDownloadHistory: %w", err)
+	}
+	if q.createProfileStmt, err = db.PrepareContext(ctx, createProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateProfile: %w", err)
+	}
+	if q.deleteConnectionProfileByIdStmt, err = db.PrepareContext(ctx, deleteConnectionProfileById); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteConnectionProfileById: %w", err)
+	}
+	if q.selectAllConnectionProfileStmt, err = db.PrepareContext(ctx, selectAllConnectionProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query SelectAllConnectionProfile: %w", err)
+	}
+	if q.selectAllDownloadHistoryStmt, err = db.PrepareContext(ctx, selectAllDownloadHistory); err != nil {
+		return nil, fmt.Errorf("error preparing query SelectAllDownloadHistory: %w", err)
+	}
+	if q.selectAllRegionStmt, err = db.PrepareContext(ctx, selectAllRegion); err != nil {
+		return nil, fmt.Errorf("error preparing query SelectAllRegion: %w", err)
+	}
+	if q.selectConnectionProfileByIdStmt, err = db.PrepareContext(ctx, selectConnectionProfileById); err != nil {
+		return nil, fmt.Errorf("error preparing query SelectConnectionProfileById: %w", err)
+	}
+	if q.selectConnectionProfileForUpdateStmt, err = db.PrepareContext(ctx, selectConnectionProfileForUpdate); err != nil {
+		return nil, fmt.Errorf("error preparing query SelectConnectionProfileForUpdate: %w", err)
+	}
+	if q.selectMasterByCodeStmt, err = db.PrepareContext(ctx, selectMasterByCode); err != nil {
+		return nil, fmt.Errorf("error preparing query SelectMasterByCode: %w", err)
+	}
+	if q.updateConnectionProfileByIdStmt, err = db.PrepareContext(ctx, updateConnectionProfileById); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateConnectionProfileById: %w", err)
+	}
+	if q.updateStatusDownloadHistoryByIdStmt, err = db.PrepareContext(ctx, updateStatusDownloadHistoryById); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateStatusDownloadHistoryById: %w", err)
+	}
+	return &q, nil
+}
+
+func (q *Queries) Close() error {
+	var err error
+	if q.createDownloadHistoryStmt != nil {
+		if cerr := q.createDownloadHistoryStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createDownloadHistoryStmt: %w", cerr)
+		}
+	}
+	if q.createProfileStmt != nil {
+		if cerr := q.createProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createProfileStmt: %w", cerr)
+		}
+	}
+	if q.deleteConnectionProfileByIdStmt != nil {
+		if cerr := q.deleteConnectionProfileByIdStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteConnectionProfileByIdStmt: %w", cerr)
+		}
+	}
+	if q.selectAllConnectionProfileStmt != nil {
+		if cerr := q.selectAllConnectionProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing selectAllConnectionProfileStmt: %w", cerr)
+		}
+	}
+	if q.selectAllDownloadHistoryStmt != nil {
+		if cerr := q.selectAllDownloadHistoryStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing selectAllDownloadHistoryStmt: %w", cerr)
+		}
+	}
+	if q.selectAllRegionStmt != nil {
+		if cerr := q.selectAllRegionStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing selectAllRegionStmt: %w", cerr)
+		}
+	}
+	if q.selectConnectionProfileByIdStmt != nil {
+		if cerr := q.selectConnectionProfileByIdStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing selectConnectionProfileByIdStmt: %w", cerr)
+		}
+	}
+	if q.selectConnectionProfileForUpdateStmt != nil {
+		if cerr := q.selectConnectionProfileForUpdateStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing selectConnectionProfileForUpdateStmt: %w", cerr)
+		}
+	}
+	if q.selectMasterByCodeStmt != nil {
+		if cerr := q.selectMasterByCodeStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing selectMasterByCodeStmt: %w", cerr)
+		}
+	}
+	if q.updateConnectionProfileByIdStmt != nil {
+		if cerr := q.updateConnectionProfileByIdStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateConnectionProfileByIdStmt: %w", cerr)
+		}
+	}
+	if q.updateStatusDownloadHistoryByIdStmt != nil {
+		if cerr := q.updateStatusDownloadHistoryByIdStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateStatusDownloadHistoryByIdStmt: %w", cerr)
+		}
+	}
+	return err
+}
+
+func (q *Queries) exec(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (sql.Result, error) {
+	switch {
+	case stmt != nil && q.tx != nil:
+		return q.tx.StmtContext(ctx, stmt).ExecContext(ctx, args...)
+	case stmt != nil:
+		return stmt.ExecContext(ctx, args...)
+	default:
+		return q.db.ExecContext(ctx, query, args...)
+	}
+}
+
+func (q *Queries) query(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (*sql.Rows, error) {
+	switch {
+	case stmt != nil && q.tx != nil:
+		return q.tx.StmtContext(ctx, stmt).QueryContext(ctx, args...)
+	case stmt != nil:
+		return stmt.QueryContext(ctx, args...)
+	default:
+		return q.db.QueryContext(ctx, query, args...)
+	}
+}
+
+func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) *sql.Row {
+	switch {
+	case stmt != nil && q.tx != nil:
+		return q.tx.StmtContext(ctx, stmt).QueryRowContext(ctx, args...)
+	case stmt != nil:
+		return stmt.QueryRowContext(ctx, args...)
+	default:
+		return q.db.QueryRowContext(ctx, query, args...)
+	}
+}
+
 type Queries struct {
-	db DBTX
+	db                                   DBTX
+	tx                                   *sql.Tx
+	createDownloadHistoryStmt            *sql.Stmt
+	createProfileStmt                    *sql.Stmt
+	deleteConnectionProfileByIdStmt      *sql.Stmt
+	selectAllConnectionProfileStmt       *sql.Stmt
+	selectAllDownloadHistoryStmt         *sql.Stmt
+	selectAllRegionStmt                  *sql.Stmt
+	selectConnectionProfileByIdStmt      *sql.Stmt
+	selectConnectionProfileForUpdateStmt *sql.Stmt
+	selectMasterByCodeStmt               *sql.Stmt
+	updateConnectionProfileByIdStmt      *sql.Stmt
+	updateStatusDownloadHistoryByIdStmt  *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
-		db: tx,
+		db:                                   tx,
+		tx:                                   tx,
+		createDownloadHistoryStmt:            q.createDownloadHistoryStmt,
+		createProfileStmt:                    q.createProfileStmt,
+		deleteConnectionProfileByIdStmt:      q.deleteConnectionProfileByIdStmt,
+		selectAllConnectionProfileStmt:       q.selectAllConnectionProfileStmt,
+		selectAllDownloadHistoryStmt:         q.selectAllDownloadHistoryStmt,
+		selectAllRegionStmt:                  q.selectAllRegionStmt,
+		selectConnectionProfileByIdStmt:      q.selectConnectionProfileByIdStmt,
+		selectConnectionProfileForUpdateStmt: q.selectConnectionProfileForUpdateStmt,
+		selectMasterByCodeStmt:               q.selectMasterByCodeStmt,
+		updateConnectionProfileByIdStmt:      q.updateConnectionProfileByIdStmt,
+		updateStatusDownloadHistoryByIdStmt:  q.updateStatusDownloadHistoryByIdStmt,
 	}
 }

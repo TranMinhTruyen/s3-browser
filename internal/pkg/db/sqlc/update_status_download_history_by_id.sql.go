@@ -7,33 +7,45 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 )
 
 const updateStatusDownloadHistoryById = `-- name: UpdateStatusDownloadHistoryById :one
 UPDATE download_history 
 SET
-    status = ? 
+    dest_path = ? 
+    , status = ? 
+    , size = ? 
     , updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
     , version = version + 1 
 WHERE
     id = ? 
-    AND version = ? RETURNING id, file_name, dest_path, status, created_at, updated_at, version
+    AND version = ? RETURNING id, file_name, dest_path, status, size, created_at, updated_at, version
 `
 
 type UpdateStatusDownloadHistoryByIdParams struct {
-	Status  string `json:"status"`
-	ID      string `json:"id"`
-	Version int64  `json:"version"`
+	DestPath sql.NullString  `json:"dest_path"`
+	Status   string          `json:"status"`
+	Size     sql.NullFloat64 `json:"size"`
+	ID       string          `json:"id"`
+	Version  int64           `json:"version"`
 }
 
 func (q *Queries) UpdateStatusDownloadHistoryById(ctx context.Context, arg UpdateStatusDownloadHistoryByIdParams) (DownloadHistory, error) {
-	row := q.db.QueryRowContext(ctx, updateStatusDownloadHistoryById, arg.Status, arg.ID, arg.Version)
+	row := q.queryRow(ctx, q.updateStatusDownloadHistoryByIdStmt, updateStatusDownloadHistoryById,
+		arg.DestPath,
+		arg.Status,
+		arg.Size,
+		arg.ID,
+		arg.Version,
+	)
 	var i DownloadHistory
 	err := row.Scan(
 		&i.ID,
 		&i.FileName,
 		&i.DestPath,
 		&i.Status,
+		&i.Size,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Version,

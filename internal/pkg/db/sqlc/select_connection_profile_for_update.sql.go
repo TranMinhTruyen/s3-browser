@@ -25,7 +25,7 @@ type SelectConnectionProfileForUpdateParams struct {
 }
 
 func (q *Queries) SelectConnectionProfileForUpdate(ctx context.Context, arg SelectConnectionProfileForUpdateParams) (ConnectionProfile, error) {
-	row := q.db.QueryRowContext(ctx, selectConnectionProfileForUpdate, arg.ID, arg.Version)
+	row := q.queryRow(ctx, q.selectConnectionProfileForUpdateStmt, selectConnectionProfileForUpdate, arg.ID, arg.Version)
 	var i ConnectionProfile
 	err := row.Scan(
 		&i.ID,

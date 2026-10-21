@@ -15,10 +15,9 @@
       "autoConnect": "Tự động kết nối"
     },
     "button": {
-      "connect": "Kết nối",
       "testConnection": "Kiểm tra kết nối",
-      "createProfile": "Tạo mới",
-      "editProfile": "Cập nhật"
+      "createProfile": "Tạo hồ sơ",
+      "editProfile": "Cập nhật hồ sơ"
     }
   }
 }

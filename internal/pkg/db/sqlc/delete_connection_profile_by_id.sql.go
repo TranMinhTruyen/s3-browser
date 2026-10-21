@@ -18,6 +18,6 @@ WHERE
 `
 
 func (q *Queries) DeleteConnectionProfileById(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deleteConnectionProfileById, id)
+	_, err := q.exec(ctx, q.deleteConnectionProfileByIdStmt, deleteConnectionProfileById, id)
 	return err
 }

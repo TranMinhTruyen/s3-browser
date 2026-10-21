@@ -3,14 +3,11 @@
     "info": "Info",
     "warning": "Warning"
   },
-  "button": {
-    "OK": "OK",
-    "cancel": "Cancel"
-  },
-  "confirmText": {
+  "confirmCode": {
     "C000001": "Please confirm that you want to update this connection profile ?",
     "C000002": "Please confirm that you want to delete this connection profile ?",
     "C000003": "Please disconnect before action!",
-    "C000004": "Please confirm that you want to delete [{object}] ?"
+    "C000004": "Please confirm that you want to delete [{object}] ?",
+    "C000005": "Maximum item selected is 5!"
   }
 }

@@ -25,13 +25,14 @@ type ConnectionProfile struct {
 }
 
 type DownloadHistory struct {
-	ID        string       `json:"id"`
-	FileName  string       `json:"file_name"`
-	DestPath  string       `json:"dest_path"`
-	Status    string       `json:"status"`
-	CreatedAt sql.NullTime `json:"created_at"`
-	UpdatedAt sql.NullTime `json:"updated_at"`
-	Version   int64        `json:"version"`
+	ID        string          `json:"id"`
+	FileName  string          `json:"file_name"`
+	DestPath  sql.NullString  `json:"dest_path"`
+	Status    string          `json:"status"`
+	Size      sql.NullFloat64 `json:"size"`
+	CreatedAt sql.NullTime    `json:"created_at"`
+	UpdatedAt sql.NullTime    `json:"updated_at"`
+	Version   int64           `json:"version"`
 }
 
 type Master struct {

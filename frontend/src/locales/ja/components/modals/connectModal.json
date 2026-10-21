@@ -15,10 +15,9 @@
       "autoConnect": "自動接続"
     },
     "button": {
-      "connect": "接続",
       "testConnection": "接続テスト",
-      "createProfile": "作成",
-      "editProfile": "更新"
+      "createProfile": "プロファイルを作成",
+      "editProfile": "プロファイルを更新"
     }
   }
 }
