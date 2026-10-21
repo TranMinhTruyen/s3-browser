@@ -28,6 +28,7 @@ type (
 	DownloadHistoryInput   = bucket.DownloadHistoryInput
 	DownloadHistoryOutput  = bucket.DownloadHistoryOutput
 	DeleteObjInput         = bucket.DeleteObjInput
+	UploadProgressOutput   = bucket.UploadProgressOutput
 )
 
 // master
