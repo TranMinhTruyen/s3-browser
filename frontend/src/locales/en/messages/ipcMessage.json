@@ -9,6 +9,7 @@
     "S3S004": "Download file {object} success, destination {dest}.",
     "S3S005": "Delete file {object} success.",
     "S3S006": "Upload file {name} success, key {key}.",
+    "S3S007": "Deleted {count} object(s) under folder {prefix}.",
     "S3E001": "Access key or secret key is not valid for this endpoint.",
     "S3E002": "The endpoint rejected.",
     "S3E003": "Timed out reaching the endpoint, check the address and whether the server is running.",
@@ -26,15 +27,19 @@
     "S3E015": "File {name} can't access.",
     "S3E016": "File {name} can't open.",
     "S3E017": "Upload file {name} error.",
-    "S3E018": "Upload at most {max} files at a time.",
+    "S3E018": "Folder {folder} has more than {max} files to upload.",
     "S3E019": "Invalid upload path for file {name}.",
+    "S3E020": "Invalid folder {prefix}, it cannot be deleted.",
+    "S3E021": "Delete folder {prefix} error: {failed} object(s) failed, {deleted} deleted.",
+    "S3E022": "Folder {folder} has more than {max} files over {size} GiB to upload.",
+    "S3E023": "Upload at most {max} files at a time.",
     "S3W001": "Access bucket is limited.",
     "S3W002": "Download object: {object} is canceled.",
     "S3W003": "Update download history failed: {object} please reload!",
     "S3W004": "Upload file {name} is canceled.",
     "S3W005": "Another upload is running, please wait until it finishes.",
     "S3W006": "Skipped {count} item(s) that cannot be uploaded (unreadable, symbolic link or not a regular file).",
-    "S3W007": "A file is over 5 GiB, so only the largest file {name} is uploaded."
+    "S3W007": "The drop holds more than {max} files, the files after the first {max} are ignored."
   },
   "master": {
     "MTE001": "Error while loading master data."
@@ -43,9 +48,9 @@
     "PFE001": "Error while save profile.",
     "PFE002": "Encrypted SecretKey failed.",
     "PFE003": "Error get all connnection profile.",
-    "PFE004": "Error while update profile.",
     "PFE005": "Update profile [{name}] error.",
     "PFE006": "Delete profile [{name}] error.",
+    "PFE007": "Profile [{name}] has uploads or downloads in progress, cannot delete.",
     "PFS001": "Add new profile [{name}] success.",
     "PFS002": "Update profile [{name}] success.",
     "PFS003": "Delete profile [{name}] success."

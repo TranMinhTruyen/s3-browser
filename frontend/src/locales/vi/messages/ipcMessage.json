@@ -9,6 +9,7 @@
     "S3S004": "Tải xuống {object} thành công, thư mục lưu: {dest}",
     "S3S005": "Xóa {object} thành công",
     "S3S006": "Tải lên {name} thành công, key {key}.",
+    "S3S007": "Đã xóa {count} object trong thư mục {prefix}.",
     "S3E001": "Access key hoặc secret key không hợp lệ với endpoint này",
     "S3E002": "Endpoint từ chối kết nối",
     "S3E003": "Hết thời gian chờ khi kết nối tới endpoint, hãy kiểm tra địa chỉ và máy chủ có đang chạy hay không",
@@ -26,15 +27,19 @@
     "S3E015": "Không thể truy cập tệp {name}",
     "S3E016": "Không thể mở tệp {name}",
     "S3E017": "Tải lên {name} thất bại.",
-    "S3E018": "Chỉ được tải lên tối đa {max} file mỗi lần.",
+    "S3E018": "Thư mục {folder} có hơn {max} file cần tải lên.",
     "S3E019": "Đường dẫn tải lên của file {name} không hợp lệ.",
+    "S3E020": "Thư mục {prefix} không hợp lệ, không thể xóa.",
+    "S3E021": "Xóa thư mục {prefix} thất bại: {failed} object lỗi, {deleted} đã xóa.",
+    "S3E022": "Thư mục {folder} có hơn {max} file lớn hơn {size} GiB cần tải lên.",
+    "S3E023": "Chỉ được tải lên tối đa {max} file mỗi lần.",
     "S3W001": "Quyền truy cập bucket bị giới hạn",
     "S3W002": "Đã hủy tải xuống object: {object}",
     "S3W003": "Cập nhật lịch sử tải xuống của {object} thất bại, vui lòng tải lại!",
     "S3W004": "Đã hủy tải lên {name}.",
     "S3W005": "Đang có tiến trình tải lên khác, vui lòng chờ hoàn tất.",
     "S3W006": "Đã bỏ qua {count} mục không thể tải lên (không đọc được, liên kết tượng trưng hoặc không phải file thường).",
-    "S3W007": "Có file lớn hơn 5 GiB nên chỉ tải lên file lớn nhất {name}."
+    "S3W007": "Có hơn {max} file được thả vào, các file sau {max} file đầu tiên bị bỏ qua."
   },
   "master": {
     "MTE001": "Lỗi khi tải dữ liệu master"
@@ -43,9 +48,9 @@
     "PFE001": "Lỗi khi lưu hồ sơ",
     "PFE002": "Mã hóa SecretKey thất bại",
     "PFE003": "Lỗi khi lấy danh sách hồ sơ kết nối",
-    "PFE004": "Lỗi khi cập nhật hồ sơ",
     "PFE005": "Cập nhật hồ sơ [{name}] thất bại",
     "PFE006": "Xóa hồ sơ [{name}] thất bại",
+    "PFE007": "Hồ sơ [{name}] đang có tác vụ tải lên/tải xuống, không thể xóa",
     "PFS001": "Thêm hồ sơ [{name}] thành công",
     "PFS002": "Cập nhật hồ sơ [{name}] thành công",
     "PFS003": "Xóa hồ sơ [{name}] thành công"

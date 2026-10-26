@@ -5,16 +5,18 @@ package bucket
 // newSubmoduleUploaderMng.getClient: found / not found   TestNewSubmoduleUploaderMng
 // uploadObject
 //   empty list                                           TestUploadObject_Empty
-//   more than maxUploadFiles                             TestUploadObject_TooMany
+//   more than maxTotalFiles                              TestUploadObject_TooMany
+//   group over maxFilesPerFolder (and exactly 50 ok)     TestUploadObject_GroupTooBig
+//   group over largeFileMaxCount (and exactly 4 ok)      TestUploadObject_TooManyLarge
 //   invalid RelKey                                       TestUploadObject_BadKey
 //   busy                                                 TestUploadObject_Busy
-//   large file rule applied / not applied                TestUploadObject_LargeFile / _Success
+//   groups share one concurrency limit                   TestUploadObject_SharedLimit
+//   canceled while waiting for a slot                    TestUploadObject_CanceledWaiting
 //   connection missing                                   TestUploadObject_NoConn
 //   key free / taken / taken inside the batch            TestUploadObject_Success
 //   result success / canceled / error                    TestUploadObject_Success / _Canceled / _Error
 // cleanUploadItems: ok / bad key                         TestUploadObject_Success / _BadKey
-// limitToLargest: stat error, larger, not larger,
-//   over limit / not over                                TestLimitToLargest
+// groupUploadItems: root group, nested groups, order       TestGroupUploadItems
 // renameKey: with folder / without                       TestRenameKey
 // handleFilesDropped: nil context                        TestHandleFilesDropped_NilContext
 // handleDrop: nil target / target                        TestHandleDrop
@@ -36,7 +38,9 @@ import (
 	"S3Browser/internal/modules/global"
 	"S3Browser/models"
 	"context"
+	"fmt"
 	"log/slog"
+	"reflect"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -71,10 +75,18 @@ func TestNewSubmoduleUploaderMng(t *testing.T) {
 	g.PutConnContainer("c1", &global.S3Conn{Client: &s3.Client{}})
 	m := newSubmoduleUploaderMng(nil, slog.New(slog.DiscardHandler), g)
 
-	if c, ok := m.getClient("c1"); !ok || c == nil {
+	c, release, ok := m.getClient("c1")
+	if !ok || c == nil {
 		t.Fatal("c1 should be found")
 	}
-	if _, ok := m.getClient("other"); ok {
+	if _, _, busy := g.RemoveConnIfIdle("c1"); !busy {
+		t.Fatal("c1 should be busy while acquired")
+	}
+	release()
+	if _, removed, busy := g.RemoveConnIfIdle("c1"); busy || !removed {
+		t.Fatal("c1 should be removable after release")
+	}
+	if _, _, ok := m.getClient("other"); ok {
 		t.Fatal("other should not be found")
 	}
 }
@@ -89,10 +101,201 @@ func TestUploadObject_Empty(t *testing.T) {
 
 func TestUploadObject_TooMany(t *testing.T) {
 	m, _ := newTestUploader(&fakeS3{})
-	items := make([]models.UploadObj, maxUploadFiles+1)
+	// 21 groups of 50 files: no group is over its limit, only the total is.
+	items := make([]models.UploadObj, maxTotalFiles+1)
+	for i := range items {
+		items[i] = models.UploadObj{Path: "x", RelKey: fmt.Sprintf("d%d/%d", i/maxFilesPerFolder, i)}
+	}
 	out := m.uploadObject(models.UploadObjInput{ConnectionId: "conn", ObjList: items})
-	if out.Result || !hasCode(out, S3E018) {
+	if out.Result || !hasCode(out, S3E023) {
 		t.Fatalf("%+v", out)
+	}
+}
+
+func TestUploadObject_GroupTooBig(t *testing.T) {
+	m, _ := newTestUploader(&fakeS3{head: func(string) error { return notFound() }})
+	make50 := func(n int) []models.UploadObj {
+		items := make([]models.UploadObj, n)
+		for i := range items {
+			items[i] = models.UploadObj{Path: "missing", RelKey: fmt.Sprintf("d/%d", i)}
+		}
+		return items
+	}
+
+	out := m.uploadObject(models.UploadObjInput{ConnectionId: "conn", ObjList: make50(maxFilesPerFolder + 1)})
+	if out.Result || !hasCode(out, S3E018) || out.MessageList[0].Params["folder"] != "d" {
+		t.Fatalf("%+v", out)
+	}
+	if m.busy.Load() {
+		t.Fatal("busy must not be taken")
+	}
+
+	// Exactly maxFilesPerFolder is accepted (the files are missing, so each reports an error).
+	out = m.uploadObject(models.UploadObjInput{ConnectionId: "conn", ObjList: make50(maxFilesPerFolder)})
+	if !out.Result || hasCode(out, S3E018) || len(out.MessageList) != maxFilesPerFolder {
+		t.Fatalf("%+v", out)
+	}
+}
+
+func TestUploadObject_TooManyLarge(t *testing.T) {
+	useLargeFileSize(t, 100)
+	dir := t.TempDir()
+	fake := &fakeS3{
+		head:   func(string) error { return notFound() },
+		create: func() error { return errBoom }, // the large files fail fast
+	}
+	m, _ := newTestUploader(fake)
+	items := func(n int) []models.UploadObj {
+		list := make([]models.UploadObj, n)
+		for i := range list {
+			list[i] = models.UploadObj{
+				Path:   writeFile(t, dir, fmt.Sprintf("f%d.bin", i), largeFileSize+1),
+				RelKey: fmt.Sprintf("d/f%d.bin", i),
+			}
+		}
+		return list
+	}
+
+	out := m.uploadObject(models.UploadObjInput{ConnectionId: "conn", ObjList: items(largeFileMaxCount + 1)})
+	if out.Result || !hasCode(out, S3E022) {
+		t.Fatalf("%+v", out)
+	}
+
+	// Exactly largeFileMaxCount large files in a group is accepted.
+	out = m.uploadObject(models.UploadObjInput{ConnectionId: "conn", ObjList: items(largeFileMaxCount)})
+	if !out.Result || hasCode(out, S3E022) || len(out.MessageList) != largeFileMaxCount {
+		t.Fatalf("%+v", out)
+	}
+
+	// The same number of large files split over two groups is accepted too.
+	list := items(largeFileMaxCount + 1)
+	list[0].RelKey = "other/f0.bin"
+	out = m.uploadObject(models.UploadObjInput{ConnectionId: "conn", ObjList: list})
+	if !out.Result || hasCode(out, S3E022) {
+		t.Fatalf("%+v", out)
+	}
+}
+
+func TestGroupUploadItems(t *testing.T) {
+	items := []models.UploadObj{
+		{RelKey: "a.txt"}, {RelKey: "d/x"}, {RelKey: "d/e/y"}, {RelKey: "b.txt"}, {RelKey: "d/z"},
+	}
+	groups, violation := groupUploadItems(items)
+	want := [][]int{{0, 3}, {1, 4}, {2}}
+	if violation != nil || !reflect.DeepEqual(groups, want) {
+		t.Fatalf("groups=%v violation=%v", groups, violation)
+	}
+}
+
+// trackPut returns a put hook that records the most concurrent calls and holds each call
+// until release is closed (or the context ends).
+func trackPut(running, peak *atomic.Int32, release <-chan struct{}) func(context.Context, *s3.PutObjectInput) error {
+	return func(ctx context.Context, _ *s3.PutObjectInput) error {
+		n := running.Add(1)
+		defer running.Add(-1)
+		for {
+			p := peak.Load()
+			if n <= p || peak.CompareAndSwap(p, n) {
+				break
+			}
+		}
+		select {
+		case <-release:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+		return nil
+	}
+}
+
+func TestUploadObject_SharedLimit(t *testing.T) {
+	dir := t.TempDir()
+	var running, peak atomic.Int32
+	release := make(chan struct{})
+	fake := &fakeS3{head: func(string) error { return notFound() }, put: trackPut(&running, &peak, release)}
+	m, _ := newTestUploader(fake)
+
+	// 4 groups of 5 files: 20 files, but only uploadFileConcurrency may run at once.
+	var list []models.UploadObj
+	for g := range 4 {
+		for i := range 5 {
+			rel := fmt.Sprintf("g%d/f%d.txt", g, i)
+			list = append(list, models.UploadObj{Path: writeFile(t, dir, rel, 2), RelKey: rel})
+		}
+	}
+
+	done := make(chan models.Output[any])
+	go func() { done <- m.uploadObject(models.UploadObjInput{ConnectionId: "conn", ObjList: list}) }()
+
+	// Wait until the limit is reached, give extra goroutines a chance to wrongly start.
+	deadline := time.After(5 * time.Second)
+	for running.Load() < uploadFileConcurrency {
+		select {
+		case <-deadline:
+			t.Fatalf("running=%d", running.Load())
+		case <-time.After(time.Millisecond):
+		}
+	}
+	time.Sleep(50 * time.Millisecond)
+	close(release)
+
+	select {
+	case out := <-done:
+		if !out.Result || len(out.MessageList) != 20 || hasCode(out, S3E017) {
+			t.Fatalf("%+v", codes(out))
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("upload did not finish")
+	}
+	if peak.Load() != uploadFileConcurrency || len(fake.putKeys) != 20 {
+		t.Fatalf("peak=%d puts=%d", peak.Load(), len(fake.putKeys))
+	}
+	if m.busy.Load() {
+		t.Fatal("busy must be released")
+	}
+}
+
+func TestUploadObject_CanceledWaiting(t *testing.T) {
+	dir := t.TempDir()
+	var running, peak atomic.Int32
+	fake := &fakeS3{head: func(string) error { return notFound() }, put: trackPut(&running, &peak, nil)}
+	m, _ := newTestUploader(fake)
+
+	var list []models.UploadObj
+	for i := range uploadFileConcurrency + 3 {
+		rel := fmt.Sprintf("g%d/f.txt", i%2)
+		rel = fmt.Sprintf("%s%d", rel, i)
+		list = append(list, models.UploadObj{Path: writeFile(t, dir, rel, 2), RelKey: rel})
+	}
+
+	done := make(chan models.Output[any])
+	go func() { done <- m.uploadObject(models.UploadObjInput{ConnectionId: "conn", ObjList: list}) }()
+
+	deadline := time.After(5 * time.Second)
+	for running.Load() < uploadFileConcurrency {
+		select {
+		case <-deadline:
+			t.Fatalf("running=%d", running.Load())
+		case <-time.After(time.Millisecond):
+		}
+	}
+	// The remaining 3 files wait for a slot; canceling must release them without a leak.
+	m.cancelAllUploads()
+	select {
+	case out := <-done:
+		if len(out.MessageList) != len(list) {
+			t.Fatalf("messages=%d", len(out.MessageList))
+		}
+		for _, c := range codes(out) {
+			if c != S3W004 {
+				t.Fatalf("codes=%v", codes(out))
+			}
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("upload was not canceled")
+	}
+	if len(fake.putKeys) != uploadFileConcurrency {
+		t.Fatalf("puts=%d", len(fake.putKeys))
 	}
 }
 
@@ -399,65 +602,6 @@ func TestUploadObject_EventsCanceled(t *testing.T) {
 	checkLifecycle(t, host, models.UploadStatusCanceled)
 }
 
-func TestUploadObject_LargeFile(t *testing.T) {
-	dir := t.TempDir()
-	small := writeFile(t, dir, "small.txt", 4)
-	large := writeFile(t, dir, "large.bin", largeFileSize+1)
-	// The large file fails fast, so no 5 GiB is read.
-	fake := &fakeS3{
-		head:   func(string) error { return notFound() },
-		create: func() error { return errBoom },
-	}
-	m, _ := newTestUploader(fake)
-
-	out := m.uploadObject(models.UploadObjInput{
-		ConnectionId: "conn",
-		ObjList:      []models.UploadObj{{Path: small}, {Path: large}},
-	})
-	got := codes(out)
-	if !out.Result || len(got) != 2 || got[0] != S3W007 || got[1] != S3E017 {
-		t.Fatalf("codes=%v", got)
-	}
-	if len(fake.putKeys) != 0 {
-		t.Fatalf("the small file must not be uploaded: %v", fake.putKeys)
-	}
-}
-
-func TestUploadObject_LargeFileAlone(t *testing.T) {
-	large := writeFile(t, t.TempDir(), "large.bin", largeFileSize+1)
-	fake := &fakeS3{
-		head:   func(string) error { return notFound() },
-		create: func() error { return errBoom },
-	}
-	m, _ := newTestUploader(fake)
-
-	out := m.uploadObject(models.UploadObjInput{
-		ConnectionId: "conn",
-		ObjList:      []models.UploadObj{{Path: large}},
-	})
-	if got := codes(out); hasCode(out, S3W007) || len(got) != 1 || got[0] != S3E017 {
-		t.Fatalf("codes=%v", got)
-	}
-}
-
-func TestLimitToLargest(t *testing.T) {
-	dir := t.TempDir()
-	small := models.UploadObj{Path: writeFile(t, dir, "small", 1)}
-	bigger := models.UploadObj{Path: writeFile(t, dir, "bigger", 9)}
-	missing := models.UploadObj{Path: dir + "/missing"}
-	large := models.UploadObj{Path: writeFile(t, dir, "large", largeFileSize+1)}
-
-	// Nothing over the limit: not limited (also covers a stat error and a smaller later item).
-	if _, limited := limitToLargest([]models.UploadObj{missing, bigger, small}); limited {
-		t.Fatal("should not be limited")
-	}
-	// A large file among smaller ones: it is the one kept.
-	got, limited := limitToLargest([]models.UploadObj{small, large, bigger})
-	if !limited || got.Path != large.Path {
-		t.Fatalf("got %+v limited=%v", got, limited)
-	}
-}
-
 func TestRenameKey(t *testing.T) {
 	if got := renameKey("a/b/c.txt", "id"); got != "a/b/id_c.txt" {
 		t.Fatal(got)
@@ -516,12 +660,14 @@ func TestHandleDrop(t *testing.T) {
 }
 
 func TestDropFiles(t *testing.T) {
+	useLargeFileSize(t, 100)
 	m, host := newTestUploader(&fakeS3{})
 	dir := t.TempDir()
 
-	for _, n := range []string{"1", "2", "3", "4", "5", "6"} {
-		writeFile(t, dir, "d/"+n, 1)
+	for i := range maxFilesPerFolder + 1 {
+		writeFile(t, dir, fmt.Sprintf("d/%03d", i), 1)
 	}
+	writeFile(t, dir, "d/sub/x", largeFileSize+1)
 
 	m.dropFiles("", []string{dir}) // dropped outside a tab
 	if len(host.events) != 0 {
@@ -534,12 +680,16 @@ func TestDropFiles(t *testing.T) {
 		t.Fatalf("events=%d", len(evs))
 	}
 	out := evs[0].data.(models.FilesDroppedOutput)
-	if out.TabId != "tab1" || len(out.Files) != maxUploadFiles || !out.Truncated ||
-		out.MaxFiles != maxUploadFiles || out.LargeFileSize != largeFileSize {
+	if out.TabId != "tab1" || out.MaxFilesPerFolder != maxFilesPerFolder || out.LargeFileSize != largeFileSize ||
+		out.LargeFileMaxCount != largeFileMaxCount || out.MaxTotalFiles != maxTotalFiles ||
+		out.TotalFiles != maxFilesPerFolder+2 || out.OverMaxTotal || out.Capped || len(out.Groups) != 2 {
 		t.Fatalf("%+v", out)
 	}
-	if !strings.HasPrefix(out.Files[0].RelKey, "d/") {
-		t.Fatalf("relKey=%s", out.Files[0].RelKey)
+	if g := out.Groups[0]; g.Name != "d" || !g.OverMaxFiles || !strings.HasPrefix(g.Files[0].RelKey, "d/") {
+		t.Fatalf("%+v", g)
+	}
+	if g := out.Groups[1]; g.Name != "d/sub" || g.LargeCount != 1 || !g.Files[0].IsLarge {
+		t.Fatalf("%+v", g)
 	}
 }
 

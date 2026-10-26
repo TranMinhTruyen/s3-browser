@@ -37,7 +37,7 @@ Thứ tự **bắt buộc, tuần tự**: Go → bindings → Frontend → verif
 8. **Frontend**: chỉ sau bước 7, gọi `react-frontend` với các task frontend, kèm phần "API cho frontend" mà `go-backend` trả về.
    - Nếu sprint chỉ có task backend hoặc chỉ có task frontend thì bỏ qua bước không cần.
 9. Gọi `verifier` để chạy build, lint, type-check.
-10. Gọi `code-reviewer` để review toàn bộ thay đổi, đối chiếu với `plan.md` và yêu cầu sprint.
+10. Gọi `code-reviewer` để review toàn bộ thay đổi, đối chiếu với `plan.md` và yêu cầu sprint chỉ gọi sau bước 9.
 11. Nếu verifier hoặc reviewer báo lỗi (bug, hoặc risk level medium trở lên), giao lại đúng agent phụ trách kèm danh sách lỗi cụ thể. Nếu lỗi nằm ở backend, sửa backend và sinh lại bindings **trước**, rồi mới sửa frontend. Sau đó quay lại bước 9. Lỗi mức low không cần quay vòng, chỉ ghi vào báo cáo.
 12. Đếm số vòng. **Sau vòng thứ 3 mà vẫn còn lỗi thì dừng**, báo người dùng các lỗi còn lại và hỏi hướng xử lý.
 13. Đối chiếu lại từng mục trong yêu cầu sprint: mục nào đã làm, mục nào bỏ sót, mục nào không thể triển khai và lý do.

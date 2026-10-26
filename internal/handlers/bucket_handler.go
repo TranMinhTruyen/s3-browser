@@ -26,12 +26,12 @@ func NewBucketHandler(app *application.App, logger *slog.Logger, bucket *bucket.
 func (h *BucketHandler) ConnectS3(
 	input models.ConnectionProfileInput,
 	isTestConn bool,
-	isManualConnect bool,
+	isExistingProfile bool,
 ) models.Output[models.ConnectOutput] {
 	if isTestConn {
 		return h.bucket.TestConnection(input)
 	}
-	return h.bucket.Connect(input, isManualConnect)
+	return h.bucket.Connect(input, isExistingProfile)
 }
 
 func (h *BucketHandler) ConnectS3ByProfile(connectionId string) models.Output[models.ConnectOutput] {
@@ -64,44 +64,51 @@ func (h *BucketHandler) DownloadObject(input models.DownloadObjInput) models.Out
 	return h.bucket.DownloadObject(input)
 }
 
-func (m *BucketHandler) CancelDownloadOne(id string) models.Output[any] {
-	return m.bucket.CancelDownloadOne(id)
+func (h *BucketHandler) CancelDownloadOne(id string) models.Output[any] {
+	return h.bucket.CancelDownloadOne(id)
 }
 
-func (m *BucketHandler) CancelAllDownloads() models.Output[any] {
-	return m.bucket.CancelAllDownloads()
+func (h *BucketHandler) CancelAllDownloads() models.Output[any] {
+	return h.bucket.CancelAllDownloads()
 }
 
-func (m *BucketHandler) CancelUploadOne(id string) models.Output[any] {
-	return m.bucket.CancelUploadOne(id)
+func (h *BucketHandler) CancelUploadOne(id string) models.Output[any] {
+	return h.bucket.CancelUploadOne(id)
 }
 
-func (m *BucketHandler) CancelAllUploads() models.Output[any] {
-	return m.bucket.CancelAllUploads()
+func (h *BucketHandler) CancelAllUploads() models.Output[any] {
+	return h.bucket.CancelAllUploads()
 }
 
-func (m *BucketHandler) DeleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
-	return m.bucket.DeleteObject(ctx, input)
+func (h *BucketHandler) DeleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
+	return h.bucket.DeleteObject(ctx, input)
 }
 
-func (m *BucketHandler) GetDownloadHistory(
+func (h *BucketHandler) DeletePrefix(
+	ctx context.Context,
+	input models.DeletePrefixInput,
+) models.Output[models.DeletePrefixOutput] {
+	return h.bucket.DeletePrefix(ctx, input)
+}
+
+func (h *BucketHandler) GetDownloadHistory(
 	input models.DownloadHistoryInput,
 ) models.Output[models.DownloadHistoryOutput] {
-	return m.bucket.GetDownloadHistory(input)
+	return h.bucket.GetDownloadHistory(input)
 }
 
-func (m *BucketHandler) OpenDownloadDest(fileName, path string) models.Output[any] {
-	return m.bucket.OpenDownloadDest(fileName, path)
+func (h *BucketHandler) OpenDownloadDest(fileName, path string) models.Output[any] {
+	return h.bucket.OpenDownloadDest(fileName, path)
 }
 
-func (m *BucketHandler) UploadObject(input models.UploadObjInput) models.Output[any] {
-	return m.bucket.UploadObject(input)
+func (h *BucketHandler) UploadObject(input models.UploadObjInput) models.Output[any] {
+	return h.bucket.UploadObject(input)
 }
 
 // FilesDropped is the main window's WindowFilesDropped listener, not a frontend API:
 // wails:ignore keeps it out of the generated bindings.
 //
 //wails:ignore
-func (m *BucketHandler) FilesDropped(event *application.WindowEvent) {
-	m.bucket.HandleFilesDropped(event)
+func (h *BucketHandler) FilesDropped(event *application.WindowEvent) {
+	h.bucket.HandleFilesDropped(event)
 }

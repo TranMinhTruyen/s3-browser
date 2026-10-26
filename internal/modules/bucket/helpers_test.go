@@ -1,7 +1,6 @@
 package bucket
 
 import (
-	"S3Browser/models"
 	"context"
 	"errors"
 	"io"
@@ -146,8 +145,8 @@ func newTestUploader(client s3Uploader) (*submoduleUploaderMng, *fakeHost) {
 	return &submoduleUploaderMng{
 		logger: slog.New(slog.DiscardHandler),
 		host:   host,
-		getClient: func(id string) (s3Uploader, bool) {
-			return client, id == "conn"
+		getClient: func(id string) (s3Uploader, func(), bool) {
+			return client, func() {}, id == "conn"
 		},
 	}, host
 }
@@ -172,11 +171,18 @@ func writeFile(t *testing.T, dir, rel string, size int64) string {
 	return p
 }
 
-// walkDroppedForTest runs walkDropped with a high file limit and returns the skipped count.
+// walkDroppedForTest runs walkDropped and returns the skipped count.
 func walkDroppedForTest(dir string) int {
-	files := new([]models.DroppedFile)
-	skipped, _ := walkDropped(dir, files, 1000)
+	skipped, _ := walkDropped(dir, &dropCollector{index: map[string]int{}})
 	return skipped
 }
 
 var errBoom = errors.New("boom")
+
+// useLargeFileSize makes files over n bytes "large" for the test.
+func useLargeFileSize(t *testing.T, n int64) {
+	t.Helper()
+	old := largeFileSize
+	largeFileSize = n
+	t.Cleanup(func() { largeFileSize = old })
+}

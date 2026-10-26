@@ -3,7 +3,7 @@ import { schemaResolver, useForm } from '@mantine/form';
 import { ConnectS3 } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { CreateProfile, UpdateProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
 import { ConnectionProfileInput, ConnectionProfileOutput } from '@wails/S3Browser/models';
-import { SyntheticEvent, useRef, useState } from 'react';
+import { SyntheticEvent, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import z from 'zod';
 import awsLogo from '@/assets/images/aws.svg';
@@ -101,19 +101,19 @@ export default createMantineModal<ConnectModalProps, false>(
       }
     });
 
-    const handleConnect =
-      (isTestConnection: boolean = false) =>
-      async (value: ConnectionInfo) => {
+    const onSubmitConnect = useCallback(
+      async (value: ConnectionInfo, isTestConnection: boolean) => {
         const input: ConnectionProfileInput = {
           ...value,
           id: connectionProfile?.id ?? '',
           version: connectionProfile?.version ?? 1,
         };
+        const isExistingProfile = mode === 'manualconnect';
 
-        const output = await callIPC(ConnectS3, [input, isTestConnection, mode === 'manualconnect']);
+        const output = await callIPC(ConnectS3, [input, isTestConnection, isExistingProfile]);
 
         if (output && output.isConnected && !isTestConnection) {
-          if (mode === 'manualconnect' && connectionProfile?.id) {
+          if (isExistingProfile && connectionProfile?.id) {
             updateConnectionProfiles(connectionProfile.id, {
               ...connectionProfile,
               isConnected: output.isConnected,
@@ -121,59 +121,87 @@ export default createMantineModal<ConnectModalProps, false>(
           }
           mantine.handler.hide();
         }
-      };
+      },
+      [connectionProfile, mode, mantine.handler, updateConnectionProfiles]
+    );
 
-    const handleUpdateProfile = () => async (value: ConnectionInfo) => {
-      const confirmModal = await ConfirmModal.show({
-        type: 'info',
-        confirmCode: 'C000001',
-      });
-      if (confirmModal && connectionProfile) {
+    const onSubmitConnectProfile = useCallback(
+      (value: ConnectionInfo) => onSubmitConnect(value, false),
+      [onSubmitConnect]
+    );
+
+    const onSubmitTestConnection = useCallback(
+      (value: ConnectionInfo) => onSubmitConnect(value, true),
+      [onSubmitConnect]
+    );
+
+    const onSubmitUpdateProfile = useCallback(
+      async (value: ConnectionInfo) => {
+        const confirmModal = await ConfirmModal.show({
+          type: 'info',
+          confirmCode: 'C000001',
+        });
+        if (confirmModal && connectionProfile) {
+          const input: ConnectionProfileInput = {
+            ...value,
+            id: connectionProfile.id ?? '',
+            version: connectionProfile.version ?? 1,
+          };
+          const output = await callIPC(UpdateProfileById, [input]);
+          if (output?.id) {
+            form.setValues({ ...output });
+            updateConnectionProfiles(output.id, { ...output });
+          }
+        }
+      },
+      [connectionProfile, form, updateConnectionProfiles]
+    );
+
+    const onSubmitCreateProfile = useCallback(
+      async (value: ConnectionInfo) => {
         const input: ConnectionProfileInput = {
           ...value,
-          id: connectionProfile.id ?? '',
-          version: connectionProfile.version ?? 1,
+          id: createUUID(),
+          version: 1,
         };
-        const output = await callIPC(UpdateProfileById, [input]);
+        const output = await callIPC(CreateProfile, [input], {
+          showMessage: true,
+        });
         if (output?.id) {
-          form.setValues({ ...output });
           updateConnectionProfiles(output.id, { ...output });
+          mantine.handler.hide();
         }
-      }
-    };
+      },
+      [mantine.handler, updateConnectionProfiles]
+    );
 
-    const handleCreateProfile = () => async (value: ConnectionInfo) => {
-      const input: ConnectionProfileInput = {
-        ...value,
-        id: createUUID(),
-        version: 1,
-      };
-      const output = await callIPC(CreateProfile, [input], {
-        showMessage: true,
-      });
-      if (output?.id) {
-        updateConnectionProfiles(output.id, { ...output });
-        mantine.handler.hide();
-      }
-    };
-
-    const submitAs =
-      (action: 'connect' | 'profile', handler: (values: ConnectionInfo) => Promise<void>) =>
-      (event?: SyntheticEvent) => {
-        event?.preventDefault();
+    const submitAs = useCallback(
+      (action: 'connect' | 'profile', handler: (values: ConnectionInfo) => Promise<void>) => {
         actionRef.current = action;
         form.onSubmit(handler)();
-      };
+      },
+      [form]
+    );
 
-    const defaultSubmit =
-      mode === 'editProfile' || mode === 'createProfile'
-        ? submitAs('profile', mode === 'editProfile' ? handleUpdateProfile() : handleCreateProfile())
-        : submitAs('connect', handleConnect());
+    const onSubmitForm = useCallback(
+      (event: SyntheticEvent) => {
+        event.preventDefault();
+        if (mode === 'editProfile') submitAs('profile', onSubmitUpdateProfile);
+        else if (mode === 'createProfile') submitAs('profile', onSubmitCreateProfile);
+        else submitAs('connect', onSubmitConnectProfile);
+      },
+      [mode, submitAs, onSubmitUpdateProfile, onSubmitCreateProfile, onSubmitConnectProfile]
+    );
+
+    const onClickTestConnection = useCallback(
+      () => submitAs('connect', onSubmitTestConnection),
+      [submitAs, onSubmitTestConnection]
+    );
 
     return (
       <Modal.Root {...mantine.props} centered size="lg">
         <Modal.Overlay />
-        <form onSubmit={defaultSubmit}>
+        <form onSubmit={onSubmitForm}>
           <Modal.Content>
             <Modal.Header
               pos="relative"
@@ -301,7 +329,7 @@ export default createMantineModal<ConnectModalProps, false>(
             <Divider />
 
             <Group p="8px" justify="space-between">
-              <Button type="button" loading={form.submitting} onClick={submitAs('connect', handleConnect(true))}>
+              <Button type="button" loading={form.submitting} onClick={onClickTestConnection}>
                 {t('form.button.testConnection')}
               </Button>
 

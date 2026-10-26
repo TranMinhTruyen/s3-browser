@@ -5,6 +5,8 @@ import { createUUID } from '@/common/utils/stringUtils';
 interface TabDetail {
   profileId?: string | null;
   currentView: 'bucketList' | 'objectList';
+  // Bucket shown in the object list. Unset while in the bucket list.
+  bucket?: string;
   // Folder shown in the object list, e.g. "photos/2026/". Empty is the bucket root.
   prefix: string;
   selectionItem: string[];
@@ -24,9 +26,12 @@ interface TabListAction {
   updateTab: (tabId: string, patch: Partial<TabDetail>) => void;
   closeTab: (tabId: string) => void;
 
-  changeCurrentView: (tabId: string, currentView: 'bucketList' | 'objectList') => void;
+  // `bucket` is the bucket to open when switching to the object list.
+  changeCurrentView: (tabId: string, currentView: 'bucketList' | 'objectList', bucket?: string) => void;
   changePrefix: (tabId: string, prefix: string) => void;
   resetViewByProfile: (profileId: string) => void;
+  // For a deleted profile: tabs using it go back to the bucket list with no profile.
+  clearProfile: (profileId: string) => void;
 
   addSelectItem: (tabId: string, items: string[]) => void;
   removeSelectItem: (tabId: string, items: string[]) => void;
@@ -102,12 +107,13 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       );
     },
 
-    changeCurrentView: (tabId: string, currentView: 'bucketList' | 'objectList') => {
+    changeCurrentView: (tabId: string, currentView: 'bucketList' | 'objectList', bucket?: string) => {
       set(
         state => {
           const tab = state.tabList[tabId];
           if (tab) {
             tab.currentView = currentView;
+            tab.bucket = currentView === 'objectList' ? bucket : undefined;
             // Opening or leaving a bucket always starts from its root.
             tab.prefix = '';
             tab.selectionItem = [];
@@ -139,6 +145,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
           Object.values(state.tabList).forEach(tab => {
             if (tab.profileId === profileId) {
               tab.currentView = 'bucketList';
+              tab.bucket = undefined;
               tab.prefix = '';
               tab.selectionItem = [];
             }
@@ -146,6 +153,24 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
         },
         undefined,
         `${SCOPE}/resetViewByProfile`
+      );
+    },
+
+    clearProfile: (profileId: string) => {
+      set(
+        state => {
+          Object.values(state.tabList).forEach(tab => {
+            if (tab.profileId === profileId) {
+              tab.profileId = null;
+              tab.currentView = 'bucketList';
+              tab.bucket = undefined;
+              tab.prefix = '';
+              tab.selectionItem = [];
+            }
+          });
+        },
+        undefined,
+        `${SCOPE}/clearProfile`
       );
     },
 

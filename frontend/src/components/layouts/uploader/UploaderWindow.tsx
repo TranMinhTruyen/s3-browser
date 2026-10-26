@@ -1,9 +1,10 @@
-import { Affix, Box, CloseButton, Divider, Group, Paper, Stack, Text } from '@mantine/core';
+import { Affix, Box, CloseButton, Divider, Group, Paper, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { CancelAllUploads } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Events } from '@wailsio/runtime';
 import { Upload, X } from 'lucide-react';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/shallow';
 import { useDownloaderStore } from '@/common/stores/downloaderStore';
@@ -16,6 +17,8 @@ const EDGE = 16;
 const GAP = 16;
 const WINDOW_WIDTH = 400;
 const LIST_MAX_HEIGHT = 260;
+const ITEM_HEIGHT = 80;
+const ITEM_GAP = 8;
 
 function UploaderWindow() {
   const { t } = useTranslation('uploaderWindow');
@@ -65,6 +68,19 @@ function UploaderWindow() {
     };
   }, [finishUpload]);
 
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // React Compiler is disabled, so this compiler-only lint does not apply.
+  // oxlint-disable-next-line react/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: uploadItemIds.length,
+    getScrollElement: () => listRef.current,
+    estimateSize: () => ITEM_HEIGHT,
+    getItemKey: idx => uploadItemIds[idx],
+    gap: ITEM_GAP,
+    overscan: 5,
+  });
+
   const onClickCancelAll = useCallback(async () => {
     await callIPC(CancelAllUploads, []);
   }, []);
@@ -103,12 +119,24 @@ function UploaderWindow() {
 
         <Divider />
 
-        <Box p="8px" style={{ maxHeight: `${LIST_MAX_HEIGHT}px`, overflow: 'auto' }}>
-          <Stack gap="xs">
-            {uploadItemIds.map(id => (
-              <UploaderItem key={id} id={id} />
+        <Box ref={listRef} p="8px" style={{ maxHeight: `${LIST_MAX_HEIGHT}px`, overflow: 'auto' }}>
+          <div style={{ position: 'relative', height: virtualizer.getTotalSize(), width: '100%' }}>
+            {virtualizer.getVirtualItems().map(row => (
+              <div
+                key={row.key}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: ITEM_HEIGHT,
+                  transform: `translateY(${row.start}px)`,
+                }}
+              >
+                <UploaderItem id={uploadItemIds[row.index]} />
+              </div>
             ))}
-          </Stack>
+          </div>
         </Box>
       </Paper>
     </Affix>

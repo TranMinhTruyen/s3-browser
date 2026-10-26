@@ -37,8 +37,9 @@ func (h appHost) Emit(name string, data ...any) { h.app.Event.Emit(name, data...
 type submoduleUploaderMng struct {
 	logger *slog.Logger
 	host   uploadHost
-	// getClient returns the S3 client of a connection; ok is false if it isn't connected.
-	getClient func(connID string) (client s3Uploader, ok bool)
+	// getClient returns the S3 client of a connection and marks a transfer running on it
+	// until release is called; ok is false if it isn't connected.
+	getClient func(connID string) (client s3Uploader, release func(), ok bool)
 	jobs      sync.Map
 	// busy is set while an uploadObject call runs; only one runs at a time, across all tabs.
 	busy atomic.Bool
@@ -56,36 +57,38 @@ func newSubmoduleUploaderMng(
 	return &submoduleUploaderMng{
 		logger: logger.With("submodules", "uploader_mng"),
 		host:   appHost{app: app},
-		getClient: func(connID string) (s3Uploader, bool) {
-			conn, ok := global.GetConnContainer(connID)
+		getClient: func(connID string) (s3Uploader, func(), bool) {
+			conn, release, ok := global.AcquireConn(connID)
 			if !ok {
-				return nil, false
+				return nil, nil, false
 			}
-			return conn.Client, true
+			return conn.Client, release, true
 		},
 	}
 }
 
 type uploaderJob struct {
-	connID string
 	cancel context.CancelFunc
 }
 
 const (
+	// uploadFileConcurrency is the most files uploaded at the same time, across all groups.
 	uploadFileConcurrency = 5
-	// maxUploadFiles is the most files one uploadObject call accepts, and the most files
-	// a drop keeps. The frontend asks the user before trimming a larger drop to this many.
-	maxUploadFiles = 5
-	// largeFileSize is the size above which a file is "large" (5 GiB). If an upload holds
-	// a large file, only the largest file of the upload is sent.
-	largeFileSize int64 = 5 << 30
+	// maxFilesPerFolder is the most files uploaded from one folder (group).
+	maxFilesPerFolder = 50
+	// largeFileMaxCount is the most large files uploaded from one folder (group).
+	largeFileMaxCount = 4
+	// maxTotalFiles is the most files one drop or one uploadObject call holds.
+	maxTotalFiles = 1000
 )
 
+// largeFileSize is the size above which a file is "large" (10 GiB). It is a variable so
+// tests can lower it instead of creating 10 GiB files.
+var largeFileSize int64 = 10 << 30
+
 type uploadResult struct {
-	id   string
 	path string
 	key  string
-	size int64
 	err  error
 }
 
@@ -94,21 +97,23 @@ type uploadResult struct {
 // canceled or error. A failed or canceled file doesn't stop the others.
 // Only one call runs at a time; a call made while another runs is rejected.
 //
-// The size and key rules are enforced here and not only in the frontend:
-//   - more than maxUploadFiles items is rejected;
-//   - a RelKey that could leave the prefix is rejected;
-//   - if any item is larger than largeFileSize, only the largest item is uploaded
-//     (sizes are read from disk, not from the caller) and a warning is added.
+// The limits are enforced here and not only in the frontend. The items are grouped by the
+// folder of their RelKey, and the call is rejected if:
+//   - a RelKey could leave the prefix;
+//   - it holds more than maxTotalFiles items;
+//   - a group holds more than maxFilesPerFolder items;
+//   - a group holds more than largeFileMaxCount files over largeFileSize
+//     (sizes are read from disk, not from the caller).
 func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.Output[any] {
 	output := models.NewOutput[any]()
 
 	if len(input.ObjList) == 0 {
 		return output
 	}
-	if len(input.ObjList) > maxUploadFiles {
+	if len(input.ObjList) > maxTotalFiles {
 		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E018, "", map[string]any{
-				"max": maxUploadFiles,
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E023, "", map[string]any{
+				"max": maxTotalFiles,
 			}),
 		)
 	}
@@ -121,6 +126,11 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 			}),
 		)
 	}
+	groups, violation := groupUploadItems(items)
+	if violation != nil {
+		m.logger.Error("upload breaks a limit", slog.String("code", violation[0].MessageCode))
+		return output.ThrowError(violation...)
+	}
 	if !m.busy.CompareAndSwap(false, true) {
 		m.logger.Warn("another upload is running, skip")
 		return output.ThrowError(
@@ -129,21 +139,9 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 	}
 	defer m.busy.Store(false)
 
-	if largest, limited := limitToLargest(items); limited {
-		m.logger.Warn("upload holds a file over the size limit, upload the largest only",
-			slog.String("path", largest.Path))
-		// Warn only if other files are really dropped by this rule.
-		if len(items) > 1 {
-			output.AddMessage(
-				models.NewParamsMessage(cnst.MessageTypeWarn, cnst.Bucket, S3W007, "", map[string]any{
-					"name": filepath.Base(largest.Path),
-				}),
-			)
-		}
-		items = []models.UploadObj{largest}
-	}
-
-	client, ok := m.getClient(input.ConnectionId)
+	// Counts this call as a running transfer, so the profile can't be deleted meanwhile.
+	// All uploads finish inside this call (g.Wait below), so the release goes here.
+	client, releaseConn, ok := m.getClient(input.ConnectionId)
 	if !ok {
 		m.logger.Error("get connection profile failed")
 		return output.ThrowError(
@@ -152,6 +150,7 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 			}),
 		)
 	}
+	defer releaseConn()
 
 	// One context for the whole call, so cancelAllUploads also stops the key check
 	// below and the files that haven't started yet.
@@ -164,23 +163,43 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 	// so the keys can be picked below without a lock.
 	used := existingKeys(ctx, client, input.Bucket, prefix, items)
 
+	// Pick the ID and key of every item first, in order, so no lock is needed.
+	ids := make([]string, len(items))
+	for i := range items {
+		// The same ID is used for the job, the progress events and a renamed key.
+		ids[i] = utils.GenerateUUID()
+		items[i].Key = prefix + items[i].RelKey
+		if _, taken := used[items[i].RelKey]; taken {
+			items[i].Key = prefix + renameKey(items[i].RelKey, ids[i])
+		}
+		used[items[i].RelKey] = struct{}{}
+	}
+
 	// Each goroutine writes only its own index, so no lock is needed.
 	results := make([]uploadResult, len(items))
-	// A plain errgroup.Group (no shared context): one failed file must not cancel the others.
+	// One goroutine per group hands its files out, but all groups share one semaphore, so at
+	// most uploadFileConcurrency files upload at a time. A plain errgroup.Group (no shared
+	// context): one failed file must not cancel the others.
+	sem := make(chan struct{}, uploadFileConcurrency)
 	var g errgroup.Group
-	g.SetLimit(uploadFileConcurrency)
-	for i, item := range items {
-		// The same ID is used for the job, the progress events and a renamed key.
-		id := utils.GenerateUUID()
-		item.Key = prefix + item.RelKey
-		if _, taken := used[item.RelKey]; taken {
-			item.Key = prefix + renameKey(item.RelKey, id)
-		}
-		used[item.RelKey] = struct{}{}
-
-		// Always return nil: errors are reported per file through results.
+	for _, indexes := range groups {
 		g.Go(func() error {
-			results[i] = m.uploadOne(ctx, id, input.ConnectionId, client, input.Bucket, item)
+			var wg sync.WaitGroup
+			defer wg.Wait()
+			for _, i := range indexes {
+				select {
+				case sem <- struct{}{}:
+				case <-ctx.Done():
+					// Canceled while waiting: uploadOne reports it without uploading.
+					results[i] = m.uploadOne(ctx, ids[i], client, input.Bucket, items[i])
+					continue
+				}
+				wg.Add(1)
+				go func() {
+					defer func() { <-sem; wg.Done() }()
+					results[i] = m.uploadOne(ctx, ids[i], client, input.Bucket, items[i])
+				}()
+			}
 			return nil
 		})
 	}
@@ -233,22 +252,51 @@ func cleanUploadItems(items []models.UploadObj) (clean []models.UploadObj, badPa
 	return clean, ""
 }
 
-// limitToLargest implements the large file rule: if any item is bigger than largeFileSize
-// it returns limited = true and the biggest item (the first one on a tie); otherwise
-// limited = false. Sizes are read from disk; an item that can't be read counts as 0.
-func limitToLargest(items []models.UploadObj) (largest models.UploadObj, limited bool) {
-	var maxSize int64 = -1
-	for _, item := range items {
-		var size int64
-		if info, err := os.Stat(item.Path); err == nil {
-			size = info.Size()
+// groupUploadItems groups the indexes of items by the folder of their RelKey, in order of
+// first appearance, and checks the per group limits. Sizes are read from disk; a file that
+// can't be read counts as small (the upload reports it). If a limit is broken it returns
+// the error message for it.
+func groupUploadItems(items []models.UploadObj) (groups [][]int, violation []models.Message) {
+	pos := map[string]int{}
+	names := []string{}
+	for i, item := range items {
+		dir := relKeyDir(item.RelKey)
+		p, ok := pos[dir]
+		if !ok {
+			p = len(groups)
+			pos[dir] = p
+			names = append(names, dir)
+			groups = append(groups, nil)
 		}
-		if size > maxSize {
-			maxSize = size
-			largest = item
+		groups[p] = append(groups[p], i)
+	}
+
+	for p, indexes := range groups {
+		if len(indexes) > maxFilesPerFolder {
+			return nil, []models.Message{
+				models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E018, "", map[string]any{
+					"folder": names[p],
+					"max":    maxFilesPerFolder,
+				}),
+			}
+		}
+		large := 0
+		for _, i := range indexes {
+			if info, err := os.Stat(items[i].Path); err == nil && info.Size() > largeFileSize {
+				large++
+			}
+		}
+		if large > largeFileMaxCount {
+			return nil, []models.Message{
+				models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E022, "", map[string]any{
+					"folder": names[p],
+					"max":    largeFileMaxCount,
+					"size":   largeFileSize >> 30,
+				}),
+			}
 		}
 	}
-	return largest, maxSize > largeFileSize
+	return groups, nil
 }
 
 // renameKey puts id in front of the file name of relKey, keeping its folders:
@@ -285,20 +333,25 @@ func (m *submoduleUploaderMng) handleDrop(ctx dropContext) {
 	m.dropFiles(target.Attributes["data-tab-id"], ctx.DroppedFiles())
 }
 
-// dropFiles expands the dropped paths (folders included) into at most maxUploadFiles
-// files and sends them to the frontend. An empty tabID (a drop outside a tab) is ignored.
+// dropFiles expands the dropped paths (folders included) into groups of files and sends
+// them to the frontend, with the limits it must apply. An empty tabID (a drop outside a
+// tab) is ignored.
 func (m *submoduleUploaderMng) dropFiles(tabID string, dropped []string) {
 	if tabID == "" {
 		return
 	}
-	files, truncated, skipped := expandDropped(dropped, maxUploadFiles)
+	res := expandDropped(dropped)
 	m.host.Emit(EventFilesDropped, models.FilesDroppedOutput{
-		TabId:         tabID,
-		Files:         files,
-		Truncated:     truncated,
-		Skipped:       skipped,
-		MaxFiles:      maxUploadFiles,
-		LargeFileSize: largeFileSize,
+		TabId:             tabID,
+		Groups:            res.groups,
+		Skipped:           res.skipped,
+		TotalFiles:        res.total,
+		OverMaxTotal:      res.overTotal,
+		Capped:            res.capped,
+		MaxFilesPerFolder: maxFilesPerFolder,
+		LargeFileSize:     largeFileSize,
+		LargeFileMaxCount: largeFileMaxCount,
+		MaxTotalFiles:     maxTotalFiles,
 	})
 }
 
@@ -306,7 +359,7 @@ func (m *submoduleUploaderMng) dropFiles(tabID string, dropped []string) {
 // events while uploading. If the job was canceled, the result's error is context.Canceled.
 func (m *submoduleUploaderMng) uploadOne(
 	parent context.Context,
-	id, connID string,
+	id string,
 	client s3Uploader,
 	bucket string,
 	item models.UploadObj,
@@ -314,7 +367,7 @@ func (m *submoduleUploaderMng) uploadOne(
 	ctx, cancel := context.WithCancel(parent)
 
 	// Register the job so it can be canceled; remove it when the upload ends.
-	m.jobs.Store(id, uploaderJob{connID: connID, cancel: cancel})
+	m.jobs.Store(id, uploaderJob{cancel: cancel})
 	defer func() { cancel(); m.jobs.Delete(id) }()
 
 	// The size is for the UI only (uploadFile reads it again from the open file); a stat
@@ -332,10 +385,9 @@ func (m *submoduleUploaderMng) uploadOne(
 	})
 
 	// A batch canceled before this file started (e.g. during the key check) sends nothing.
-	var size int64
 	err := ctx.Err()
 	if err == nil {
-		size, err = uploadFile(ctx, client, bucket, item.Key, item.Path, func(done, total int64) {
+		_, err = uploadFile(ctx, client, bucket, item.Key, item.Path, func(done, total int64) {
 			m.host.Emit(
 				EventUploadObjectProgress,
 				models.UploadProgressOutput{UploadId: id, Uploaded: done, Total: total},
@@ -358,7 +410,7 @@ func (m *submoduleUploaderMng) uploadOne(
 	}
 	m.host.Emit(EventUploadObjectFinished, models.UploadFinishedOutput{UploadId: id, Status: status})
 
-	return uploadResult{id: id, path: item.Path, key: item.Key, size: size, err: err}
+	return uploadResult{path: item.Path, key: item.Key, err: err}
 }
 
 // cancelUploadOne cancels the running upload with the given ID.

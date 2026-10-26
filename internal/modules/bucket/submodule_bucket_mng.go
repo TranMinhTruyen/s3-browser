@@ -47,12 +47,11 @@ func (m *submoduleBucketMng) listBucket(
 	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
 
 	if !ok {
-		output.AddMessage(
+		return output.ThrowError(
 			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
 				"name": input.ProfileName,
 			}),
 		)
-		return output
 	}
 
 	listBucketInput := &s3.ListBucketsInput{
@@ -71,12 +70,11 @@ func (m *submoduleBucketMng) listBucket(
 			return output
 		}
 
-		output.AddMessage(
+		return output.ThrowError(
 			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E007, err.Error(), map[string]any{
 				"name": input.ProfileName,
 			}),
 		)
-		return output
 	}
 
 	body := models.ListBucketOutput{

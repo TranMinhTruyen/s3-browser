@@ -1,9 +1,12 @@
 {
-  "title": "アップロードの確認",
-  "truncatedDescription": "{max} 個を超えるファイルがドロップされました。最初の {max} ファイルのみが対象です。",
-  "largeFileDescription": "{limit} を超えるファイルがあるため、最大のファイルのみアップロードされ、他のファイルはスキップされます:",
-  "listDescription": "次のファイルがアップロードされます:",
-  "upload": "アップロード",
-  "size": "サイズ",
-  "key": "キー"
+  "title": "アップロードするファイルを選択",
+  "description": "一部のフォルダーがアップロード上限を超えています。アップロードするファイルを選択してください。上限内のフォルダーはすべてアップロードされます。",
+  "cappedWarning": "フォルダーのスキャンが途中で停止したため、一覧が不完全な可能性があります。",
+  "rootFolder": "(直接ドロップされたファイル)",
+  "overMaxSection": "{max} 個を超えるファイルがあるフォルダー",
+  "overLargeSection": "大きなファイル（{size} 超）が {count} 個以上あるフォルダー",
+  "selectedCount": "{selected}/{max} ファイル",
+  "selectedLarge": "{selected}/{max} 大きなファイル",
+  "large": "大",
+  "upload": "アップロード"
 }

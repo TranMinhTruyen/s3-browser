@@ -8,6 +8,7 @@
     "C000002": "Please confirm that you want to delete this connection profile ?",
     "C000003": "Please disconnect before action!",
     "C000004": "Please confirm that you want to delete [{object}] ?",
-    "C000005": "Maximum item selected is 5!"
+    "C000005": "Maximum item selected is 5!",
+    "C000006": "Please confirm that you want to delete folder [{object}] and ALL of its contents? This action cannot be undone."
   }
 }

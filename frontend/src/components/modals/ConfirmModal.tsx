@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import { formatStringJson } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
+import { WARNING_BG_COLOR, WARNING_COLOR } from '@/components/modals/modalColors';
 
 type ConfirmModalProps = ModalProps & {
   type: 'info' | 'warning';
@@ -16,7 +17,7 @@ export default createMantineModal<ConfirmModalProps, boolean>(props => {
 
   const { t } = useTranslation('confirmModal');
 
-  const icon = type === 'info' ? <Info color="#2600fdbe" /> : <TriangleAlert color="#dfc21e" />;
+  const icon = type === 'info' ? <Info color="#2600fdbe" /> : <TriangleAlert color={WARNING_COLOR} />;
 
   const title = type === 'info' ? t('title.info') : t('title.warning');
 
@@ -30,11 +31,11 @@ export default createMantineModal<ConfirmModalProps, boolean>(props => {
           pos="relative"
           p="8px"
           mih="0px"
-          style={{ justifyContent: 'flex-end', backgroundColor: type === 'info' ? '#d0ebff' : '#f6ffd0' }}
+          style={{ justifyContent: 'flex-end', backgroundColor: type === 'info' ? '#d0ebff' : WARNING_BG_COLOR }}
         >
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
             {icon}
-            <Title order={4} style={{ color: type === 'info' ? '#2600fdbe' : '#dfc21e' }}>
+            <Title order={4} style={{ color: type === 'info' ? '#2600fdbe' : WARNING_COLOR }}>
               {title}
             </Title>
           </Group>

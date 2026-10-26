@@ -31,7 +31,7 @@ func NewKeyManager() (*KeyManager, error) {
 		}
 		key := make([]byte, 32)
 		if _, err := io.ReadFull(rand.Reader, key); err != nil {
-			return nil, fmt.Errorf("denerate key: %w", err)
+			return nil, fmt.Errorf("generate key: %w", err)
 		}
 		keyB64 = base64.StdEncoding.EncodeToString(key)
 		if err := keyring.Set(keyringService, keyringUser, keyB64); err != nil {

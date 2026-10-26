@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -57,9 +59,24 @@ func (m *submoduleCfgMng) buildClient(input models.ConnectionProfileInput) *glob
 	}
 
 	if input.Provider == "minio" {
-		admin, err := madmin.NewWithOptions(input.Endpoint, &madmin.Options{
+		// madmin wants a bare host, and the scheme decides whether TLS is used.
+		// An endpoint without a scheme (e.g. "localhost:9000") would not parse a host, so default to https.
+		endpoint := input.Endpoint
+		if !strings.Contains(endpoint, "://") {
+			endpoint = "https://" + endpoint
+		}
+		u, err := url.Parse(endpoint)
+		if err == nil && u.Host == "" {
+			err = errors.New("endpoint has no host")
+		}
+		if err != nil {
+			m.logger.Error("parse minio endpoint failed", slog.Any("error", err.Error()))
+			return conn
+		}
+
+		admin, err := madmin.NewWithOptions(u.Host, &madmin.Options{
 			Creds:     miniocredentials.NewStaticV4(input.AccessKey, input.SecretKey, ""),
-			Secure:    true,
+			Secure:    u.Scheme == "https",
 			Transport: transport,
 		})
 		if err != nil {

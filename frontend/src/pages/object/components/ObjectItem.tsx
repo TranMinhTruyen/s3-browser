@@ -9,7 +9,6 @@ import { useTabListStore } from '@/common/stores/tabListStore';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
-import ConfirmModal from '@/components/modals/ConfirmModal';
 import classes from '@/pages/object/page.module.css';
 
 type ObjectItemProps = {
@@ -17,11 +16,12 @@ type ObjectItemProps = {
   item: ObjectItemData;
   onToggleSelect: (key: string, checked: boolean) => void;
   onClickMenuButton: (objects: string[], action: 'download' | 'delete') => Promise<void>;
+  onClickDeleteFolder: (prefix: string, name: string) => Promise<void>;
   onOpenFolder: (prefix: string) => void;
 };
 
 function ObjectItem(props: ObjectItemProps) {
-  const { tabId, item, onToggleSelect, onClickMenuButton, onOpenFolder } = props;
+  const { tabId, item, onToggleSelect, onClickMenuButton, onClickDeleteFolder, onOpenFolder } = props;
 
   const { t } = useTranslation('object', { keyPrefix: 'page' });
 
@@ -30,19 +30,14 @@ function ObjectItem(props: ObjectItemProps) {
   const isSelected = useTabListStore(s => s.tabList[tabId]?.selectionItem.includes(item.key) ?? false);
   const isDeleting = useTabListStore(s => s.tabList[tabId]?.deletingItems.includes(item.key) ?? false);
 
-  const onClickDeleteButton = useCallback(async () => {
-    const confirmModal = await ConfirmModal.show({
-      type: 'warning',
-      confirmCode: 'C000004',
-      params: {
-        object: item.name,
-      },
-      size: 'md',
-    });
-    if (confirmModal) {
-      onClickMenuButton([item.key], 'delete');
-    }
-  }, [onClickMenuButton, item.key, item.name]);
+  // The confirmation is asked once, by ObjectListView.
+  const onClickDeleteButton = useCallback(() => {
+    onClickMenuButton([item.key], 'delete');
+  }, [onClickMenuButton, item.key]);
+
+  const onClickDeleteFolderButton = useCallback(() => {
+    onClickDeleteFolder(item.key, item.name);
+  }, [onClickDeleteFolder, item.key, item.name]);
 
   const onClickFolder = useCallback(() => {
     onOpenFolder(item.key);
@@ -67,7 +62,7 @@ function ObjectItem(props: ObjectItemProps) {
     onClickMenuButton([item.key], 'download');
   }, [onClickMenuButton, item.key]);
 
-  // A folder is only a key prefix: it can be opened, but not selected, downloaded or deleted.
+  // A folder is only a key prefix: it can be opened or deleted (with all its content), but not selected or downloaded.
   if (item.isFolder) {
     return (
       <Card padding="8px" orientation="horizontal" onClick={onClickFolder} className={classes.card}>
@@ -100,6 +95,30 @@ function ObjectItem(props: ObjectItemProps) {
           <Text size="xl" truncate="end" fw={500}>
             {item.name || '/'}
           </Text>
+        </Card.Section>
+        <Card.Section
+          onClick={onClickMenuSection}
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            minWidth: '56px',
+            justifyContent: 'center',
+          }}
+        >
+          <Menu width={200}>
+            <Menu.Target>
+              <ActionIcon loading={isDeleting}>
+                <Ellipsis />
+              </ActionIcon>
+            </Menu.Target>
+
+            <Menu.Dropdown>
+              <Menu.Item leftSection={<Trash size="16px" />} color="red" onClick={onClickDeleteFolderButton}>
+                {t('action.delete')}
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
         </Card.Section>
       </Card>
     );

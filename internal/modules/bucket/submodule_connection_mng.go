@@ -4,7 +4,6 @@ import (
 	"S3Browser/internal/modules/global"
 	"S3Browser/internal/modules/profile"
 	"S3Browser/internal/pkg/cnst"
-	"S3Browser/internal/pkg/utils"
 	"S3Browser/models"
 	"context"
 	"log/slog"
@@ -40,7 +39,7 @@ func newSubmoduleConnMng(
 }
 
 func (m *submoduleConnMng) testAction(input models.ConnectionProfileInput) models.Output[models.ConnectOutput] {
-	// Don't use app.Context for I/O because this context is cancelled only when the app shuts down.
+	// The app context is canceled only when the app shuts down, so always bound the I/O with a timeout.
 	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
 	defer cancel()
 
@@ -52,6 +51,8 @@ func (m *submoduleConnMng) testAction(input models.ConnectionProfileInput) model
 		return status
 	}
 
+	// A test connection is never kept.
+	c.Transport.CloseIdleConnections()
 	status.Body.IsConnected = true
 	status.AddMessage(
 		models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Bucket, S3S001, "", map[string]any{
@@ -63,9 +64,9 @@ func (m *submoduleConnMng) testAction(input models.ConnectionProfileInput) model
 
 func (m *submoduleConnMng) connectAction(
 	input models.ConnectionProfileInput,
-	isManualConnect bool,
+	isExistingProfile bool,
 ) models.Output[models.ConnectOutput] {
-	// Don't use app.Context for I/O because this context is cancelled only when the app shuts down.
+	// The app context is canceled only when the app shuts down, so always bound the I/O with a timeout.
 	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
 	defer cancel()
 
@@ -77,22 +78,21 @@ func (m *submoduleConnMng) connectAction(
 		return status
 	}
 
-	connectionId := utils.GenerateUUID()
-
-	if isManualConnect {
-		connectionId = input.Id
-	}
-
-	if !isManualConnect {
+	// An existing profile keeps its id; a new connection creates a profile and uses its id.
+	connectionId := input.Id
+	if !isExistingProfile {
 		createResult := m.profile.CreateProfile(input)
-		status.AddMessage(createResult.MessageList...)
-		if createResult.Result {
-			connectionId = createResult.Body.ID
-			m.app.Event.Emit(EventConnectSaveProfile, createResult.Body)
+		if !createResult.Result {
+			c.Transport.CloseIdleConnections()
+			status.Body.IsConnected = false
+			return status.ThrowError(createResult.MessageList...)
 		}
+		status.AddMessage(createResult.MessageList...)
+		connectionId = createResult.Body.ID
+		m.app.Event.Emit(EventConnectSaveProfile, createResult.Body)
 	}
 
-	m.global.PutConnContainer(connectionId, c)
+	m.replaceConn(connectionId, c)
 	status.Body.ConnectionId = connectionId
 	status.Body.IsConnected = true
 	status.AddMessage(
@@ -102,6 +102,13 @@ func (m *submoduleConnMng) connectAction(
 	)
 
 	return status
+}
+
+// replaceConn stores the connection and closes the idle transport of any previous one with the same id.
+func (m *submoduleConnMng) replaceConn(id string, c *global.S3Conn) {
+	if old := m.global.ReplaceConn(id, c); old != nil && old.Transport != nil {
+		old.Transport.CloseIdleConnections()
+	}
 }
 
 func (m *submoduleConnMng) profileConnectAction(connectionId string) models.Output[models.ConnectOutput] {
@@ -119,9 +126,10 @@ func (m *submoduleConnMng) profileConnectAction(connectionId string) models.Outp
 		SecretKey: profile.Body.SecretKey,
 		Region:    profile.Body.Region,
 		PathStyle: profile.Body.PathStyle,
+		Provider:  profile.Body.Provider,
 	}
 
-	// Don't use app.Context for I/O because this context is cancelled only when the app shuts down.
+	// The app context is canceled only when the app shuts down, so always bound the I/O with a timeout.
 	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
 	defer cancel()
 
@@ -133,7 +141,7 @@ func (m *submoduleConnMng) profileConnectAction(connectionId string) models.Outp
 		return output.ThrowError(status.MessageList...)
 	}
 
-	m.global.PutConnContainer(connectionId, c)
+	m.replaceConn(connectionId, c)
 
 	output.Body.ConnectionId = connectionId
 	output.Body.IsConnected = true
