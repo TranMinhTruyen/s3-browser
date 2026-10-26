@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(go vet *)",
+      "Bash(go build *)",
+      "Bash(go tool wails3 generate bindings *)",
+      "Bash(go tool sqlc *)",
+      "Bash(go tool golangci-lint *)",
+      "Bash(bunx oxlint *)",
+      "Bash(bunx biome *)",
+      "Bash(npx oxlint *)",
+      "Bash(npx biome *)",
+      "WebFetch(domain:v3.wails.io)"
+    ],
+    "deny": [
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(git reset *)",
+      "Bash(git checkout *)",
+      "Bash(git restore *)",
+      "Bash(git stash *)",
+      "Bash(git rebase *)",
+      "Bash(git merge *)",
+      "Bash(git clean *)",
+      "Edit(/internal/pkg/db/sqlc/**)",
+      "Edit(/frontend/bindings/**)",
+      "Edit(/frontend/node_modules/**)",
+      "Edit(/frontend/dist/**)",
+      "Edit(/build/bin/**)",
+      "Edit(/.claude/**)",
+      "Edit(/CLAUDE.md)",
+      "Edit(/go.sum)",
+      "Edit(**/.env)",
+      "Edit(**/.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)"
+    ]
+  }
+}
