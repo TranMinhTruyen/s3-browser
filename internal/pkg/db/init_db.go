@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -42,14 +43,14 @@ func InitDB(ctx context.Context, appName string) *sql.DB {
 	db.SetMaxOpenConns(1)
 
 	if err := db.PingContext(ctx); err != nil {
-		db.Close()
+		_ = db.Close() // already failing; the ping error is the one worth reporting
 		log.Fatalf("ping db: %s", err)
 	}
 
 	return db
 }
 
-func backupIfExists(path string) error {
+func backupIfExists(path string) (err error) {
 	src, err := os.Open(path)
 	if os.IsNotExist(err) {
 		return nil
@@ -57,13 +58,18 @@ func backupIfExists(path string) error {
 	if err != nil {
 		return fmt.Errorf("open db for backup: %w", err)
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }() // read-only file: close error is harmless
 
 	dst, err := os.Create(path + ".bak")
 	if err != nil {
 		return fmt.Errorf("create backup: %w", err)
 	}
-	defer dst.Close()
+	defer func() {
+		// a failed Close on a written file may mean lost data, so surface it
+		if closeErr := dst.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close backup: %w", closeErr))
+		}
+	}()
 
 	if _, err := io.Copy(dst, src); err != nil {
 		return fmt.Errorf("copy backup: %w", err)

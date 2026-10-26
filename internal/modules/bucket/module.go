@@ -86,6 +86,9 @@ var (
 	// Upload at most {max} files at a time.
 	S3E018 = "S3E018"
 
+	// Invalid upload path for file {name}.
+	S3E019 = "S3E019"
+
 	// Access bucket is limited.
 	S3W001 = "S3W001"
 
@@ -101,8 +104,11 @@ var (
 	// Another upload is running, please wait until it finishes.
 	S3W005 = "S3W005"
 
-	// Skipped {count} folder(s): only files can be uploaded.
+	// Skipped {count} item(s) that can't be uploaded (unreadable, symbolic link or not a regular file).
 	S3W006 = "S3W006"
+
+	// A file is over 5 GiB, only the largest file {name} is uploaded.
+	S3W007 = "S3W007"
 )
 
 type Module struct {
@@ -215,6 +221,17 @@ func (m *Module) CancelDownloadOne(id string) models.Output[any] {
 
 func (m *Module) CancelAllDownloads() models.Output[any] {
 	return m.submoduleDownloaderMng.cancelAllDownloads()
+}
+
+// CancelUploadOne cancels the running upload with the given ID.
+// Unknown or already finished IDs are ignored.
+func (m *Module) CancelUploadOne(id string) models.Output[any] {
+	return m.submoduleUploaderMng.cancelUploadOne(id)
+}
+
+// CancelAllUploads cancels every running upload.
+func (m *Module) CancelAllUploads() models.Output[any] {
+	return m.submoduleUploaderMng.cancelAllUploads()
 }
 
 func (m *Module) DeleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {

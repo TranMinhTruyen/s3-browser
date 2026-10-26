@@ -1,0 +1,11 @@
+{
+  "title": "Đang tải lên",
+  "label": {
+    "objectLbl": "Đối tượng",
+    "uploadedLbl": "Đã tải lên",
+    "remainingLbl": "Còn lại"
+  },
+  "action": {
+    "cancelAll": "Huỷ tất cả"
+  }
+}

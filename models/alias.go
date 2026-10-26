@@ -18,6 +18,7 @@ type (
 	Bucket                 = bucket.Bucket
 	ObjectItem             = bucket.ObjectItem
 	UploadObj              = bucket.UploadObj
+	DroppedFile            = bucket.DroppedFile
 	ConnectOutput          = bucket.ConnectOutput
 	ListBucketInput        = bucket.ListBucketInput
 	ListBucketOutput       = bucket.ListBucketOutput
@@ -32,6 +33,15 @@ type (
 	DeleteObjInput         = bucket.DeleteObjInput
 	UploadProgressOutput   = bucket.UploadProgressOutput
 	FilesDroppedOutput     = bucket.FilesDroppedOutput
+	UploadStartedOutput    = bucket.UploadStartedOutput
+	UploadFinishedOutput   = bucket.UploadFinishedOutput
+	UploadStatus           = bucket.UploadStatus
+)
+
+const (
+	UploadStatusSuccess  = bucket.UploadStatusSuccess
+	UploadStatusError    = bucket.UploadStatusError
+	UploadStatusCanceled = bucket.UploadStatusCanceled
 )
 
 // master

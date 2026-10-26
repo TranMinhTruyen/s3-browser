@@ -46,7 +46,7 @@ func (m *submoduleBucketMng) listBucket(
 
 	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
 
-	if ok == false {
+	if !ok {
 		output.AddMessage(
 			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
 				"name": input.ProfileName,

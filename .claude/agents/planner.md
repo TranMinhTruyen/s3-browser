@@ -1,7 +1,7 @@
 ---
 name: planner
 description: Đọc yêu cầu trong một thư mục sprint (sprints/sprint-NN/) của S3Browser, phân tích, liệt kê câu hỏi chưa rõ, lập plan chia task backend/frontend kèm rủi ro, rồi ghi ra sprints/sprint-NN/plan.md. Không sửa code của app.
-model: claude-sonnet-5-5
+model: sonnet
 tools: Read, Grep, Glob, Write, WebFetch
 ---
 

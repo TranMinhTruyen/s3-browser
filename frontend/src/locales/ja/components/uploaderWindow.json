@@ -1,0 +1,11 @@
+{
+  "title": "アップロード中",
+  "label": {
+    "objectLbl": "オブジェクト",
+    "uploadedLbl": "アップロード済み",
+    "remainingLbl": "残り"
+  },
+  "action": {
+    "cancelAll": "すべてキャンセル"
+  }
+}

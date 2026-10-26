@@ -20,11 +20,26 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// uploadHost is what the uploader needs from the application: a context that ends when
+// the app shuts down, and a way to send events to the frontend. Tests replace it.
+type uploadHost interface {
+	Context() context.Context
+	Emit(name string, data ...any)
+}
+
+// appHost is the uploadHost backed by the Wails application.
+type appHost struct{ app *application.App }
+
+func (h appHost) Context() context.Context { return h.app.Context() }
+
+func (h appHost) Emit(name string, data ...any) { h.app.Event.Emit(name, data...) }
+
 type submoduleUploaderMng struct {
 	logger *slog.Logger
-	app    *application.App
-	global *global.Module
-	jobs   sync.Map
+	host   uploadHost
+	// getClient returns the S3 client of a connection; ok is false if it isn't connected.
+	getClient func(connID string) (client s3Uploader, ok bool)
+	jobs      sync.Map
 	// busy is set while an uploadObject call runs; only one runs at a time, across all tabs.
 	busy atomic.Bool
 }
@@ -36,8 +51,14 @@ func newSubmoduleUploaderMng(
 ) *submoduleUploaderMng {
 	return &submoduleUploaderMng{
 		logger: logger.With("submodules", "uploader_mng"),
-		app:    app,
-		global: global,
+		host:   appHost{app: app},
+		getClient: func(connID string) (s3Uploader, bool) {
+			conn, ok := global.GetConnContainer(connID)
+			if !ok {
+				return nil, false
+			}
+			return conn.Client, true
+		},
 	}
 }
 
@@ -48,9 +69,12 @@ type uploaderJob struct {
 
 const (
 	uploadFileConcurrency = 5
-	// maxUploadFiles is the most files one uploadObject call accepts.
-	// The frontend asks the user before trimming a larger drop to this many.
-	maxUploadFiles = 6
+	// maxUploadFiles is the most files one uploadObject call accepts, and the most files
+	// a drop keeps. The frontend asks the user before trimming a larger drop to this many.
+	maxUploadFiles = 5
+	// largeFileSize is the size above which a file is "large" (5 GiB). If an upload holds
+	// a large file, only the largest file of the upload is sent.
+	largeFileSize int64 = 5 << 30
 )
 
 type uploadResult struct {
@@ -65,6 +89,12 @@ type uploadResult struct {
 // It blocks until all uploads finish and returns one message per item: success,
 // canceled or error. A failed or canceled file doesn't stop the others.
 // Only one call runs at a time; a call made while another runs is rejected.
+//
+// The size and key rules are enforced here and not only in the frontend:
+//   - more than maxUploadFiles items is rejected;
+//   - a RelKey that could leave the prefix is rejected;
+//   - if any item is larger than largeFileSize, only the largest item is uploaded
+//     (sizes are read from disk, not from the caller) and a warning is added.
 func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.Output[any] {
 	output := models.NewOutput[any]()
 
@@ -78,6 +108,15 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 			}),
 		)
 	}
+	items, badPath := cleanUploadItems(input.ObjList)
+	if badPath != "" {
+		m.logger.Error("invalid upload key", slog.String("path", badPath))
+		return output.ThrowError(
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E019, "", map[string]any{
+				"name": filepath.Base(badPath),
+			}),
+		)
+	}
 	if !m.busy.CompareAndSwap(false, true) {
 		m.logger.Warn("another upload is running, skip")
 		return output.ThrowError(
@@ -86,8 +125,21 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 	}
 	defer m.busy.Store(false)
 
-	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
+	if largest, limited := limitToLargest(items); limited {
+		m.logger.Warn("upload holds a file over the size limit, upload the largest only",
+			slog.String("path", largest.Path))
+		// Warn only if other files are really dropped by this rule.
+		if len(items) > 1 {
+			output.AddMessage(
+				models.NewParamsMessage(cnst.MessageTypeWarn, cnst.Bucket, S3W007, "", map[string]any{
+					"name": filepath.Base(largest.Path),
+				}),
+			)
+		}
+		items = []models.UploadObj{largest}
+	}
 
+	client, ok := m.getClient(input.ConnectionId)
 	if !ok {
 		m.logger.Error("get connection profile failed")
 		return output.ThrowError(
@@ -97,30 +149,29 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 		)
 	}
 
-	ctx := m.app.Context()
+	ctx := m.host.Context()
 	prefix := normalizePrefix(input.Prefix)
-	// Find which file names are already used as keys under prefix, before any upload
-	// starts, so the keys can be picked below without a lock.
-	used := existingKeys(ctx, s3Conn.Client, input.Bucket, prefix, input.ObjList)
+	// Find which keys (relative to prefix) are already used, before any upload starts,
+	// so the keys can be picked below without a lock.
+	used := existingKeys(ctx, client, input.Bucket, prefix, items)
 
 	// Each goroutine writes only its own index, so no lock is needed.
-	results := make([]uploadResult, len(input.ObjList))
+	results := make([]uploadResult, len(items))
 	// A plain errgroup.Group (no shared context): one failed file must not cancel the others.
 	var g errgroup.Group
 	g.SetLimit(uploadFileConcurrency)
-	for i, item := range input.ObjList {
+	for i, item := range items {
 		// The same ID is used for the job, the progress events and a renamed key.
 		id := utils.GenerateUUID()
-		name := filepath.Base(item.Path)
-		item.Key = prefix + name
-		if _, taken := used[name]; taken {
-			item.Key = prefix + id + "_" + name
+		item.Key = prefix + item.RelKey
+		if _, taken := used[item.RelKey]; taken {
+			item.Key = prefix + renameKey(item.RelKey, id)
 		}
-		used[name] = struct{}{}
+		used[item.RelKey] = struct{}{}
 
 		// Always return nil: errors are reported per file through results.
 		g.Go(func() error {
-			results[i] = m.uploadOne(ctx, id, input.ConnectionId, s3Conn.Client, input.Bucket, item)
+			results[i] = m.uploadOne(ctx, id, input.ConnectionId, client, input.Bucket, item)
 			return nil
 		})
 	}
@@ -158,35 +209,88 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 	return output
 }
 
+// cleanUploadItems returns a copy of items with a safe RelKey set on each. If a RelKey
+// is not safe it returns the path of that item as badPath.
+func cleanUploadItems(items []models.UploadObj) (clean []models.UploadObj, badPath string) {
+	clean = make([]models.UploadObj, len(items))
+	for i, item := range items {
+		rel, ok := cleanRelKey(item.RelKey, item.Path)
+		if !ok {
+			return nil, item.Path
+		}
+		item.RelKey = rel
+		clean[i] = item
+	}
+	return clean, ""
+}
+
+// limitToLargest implements the large file rule: if any item is bigger than largeFileSize
+// it returns limited = true and the biggest item (the first one on a tie); otherwise
+// limited = false. Sizes are read from disk; an item that can't be read counts as 0.
+func limitToLargest(items []models.UploadObj) (largest models.UploadObj, limited bool) {
+	var maxSize int64 = -1
+	for _, item := range items {
+		var size int64
+		if info, err := os.Stat(item.Path); err == nil {
+			size = info.Size()
+		}
+		if size > maxSize {
+			maxSize = size
+			largest = item
+		}
+	}
+	return largest, maxSize > largeFileSize
+}
+
+// renameKey puts id in front of the file name of relKey, keeping its folders:
+// "a/b/c.txt" -> "a/b/<id>_c.txt".
+func renameKey(relKey, id string) string {
+	dir, name := "", relKey
+	if i := strings.LastIndex(relKey, "/"); i >= 0 {
+		dir, name = relKey[:i+1], relKey[i+1:]
+	}
+	return dir + id + "_" + name
+}
+
+// dropContext is the part of the Wails window event context used for a drop.
+type dropContext interface {
+	DropTargetDetails() *application.DropTargetDetails
+	DroppedFiles() []string
+}
+
 // handleFilesDropped forwards files dropped on an object list to the frontend.
 // The drop target carries the tab ID in data-tab-id; drops elsewhere are ignored.
-// Only regular files are sent; folders and paths that can't be read are counted as skipped.
 func (m *submoduleUploaderMng) handleFilesDropped(event *application.WindowEvent) {
-	// ctx is nil for an event that didn't come from a real drop.
-	ctx := event.Context()
-	if ctx == nil {
-		return
+	// The context is nil for an event that didn't come from a real drop.
+	if ctx := event.Context(); ctx != nil {
+		m.handleDrop(ctx)
 	}
+}
+
+// handleDrop reads the drop target and the dropped paths from ctx and forwards them.
+func (m *submoduleUploaderMng) handleDrop(ctx dropContext) {
 	target := ctx.DropTargetDetails()
-	if target == nil || target.Attributes["data-tab-id"] == "" {
+	if target == nil {
 		return
 	}
+	m.dropFiles(target.Attributes["data-tab-id"], ctx.DroppedFiles())
+}
 
-	dropped := ctx.DroppedFiles()
-	out := models.FilesDroppedOutput{
-		TabId: target.Attributes["data-tab-id"],
-		Paths: make([]string, 0, len(dropped)),
+// dropFiles expands the dropped paths (folders included) into at most maxUploadFiles
+// files and sends them to the frontend. An empty tabID (a drop outside a tab) is ignored.
+func (m *submoduleUploaderMng) dropFiles(tabID string, dropped []string) {
+	if tabID == "" {
+		return
 	}
-	for _, p := range dropped {
-		info, err := os.Stat(p)
-		if err != nil || !info.Mode().IsRegular() {
-			out.Skipped++
-			continue
-		}
-		out.Paths = append(out.Paths, p)
-	}
-
-	m.app.Event.Emit(EventFilesDropped, out)
+	files, truncated, skipped := expandDropped(dropped, maxUploadFiles)
+	m.host.Emit(EventFilesDropped, models.FilesDroppedOutput{
+		TabId:         tabID,
+		Files:         files,
+		Truncated:     truncated,
+		Skipped:       skipped,
+		MaxFiles:      maxUploadFiles,
+		LargeFileSize: largeFileSize,
+	})
 }
 
 // uploadOne uploads a single file. It registers a cancelable job and emits progress
@@ -194,7 +298,7 @@ func (m *submoduleUploaderMng) handleFilesDropped(event *application.WindowEvent
 func (m *submoduleUploaderMng) uploadOne(
 	parent context.Context,
 	id, connID string,
-	client *s3.Client,
+	client s3Uploader,
 	bucket string,
 	item models.UploadObj,
 ) uploadResult {
@@ -204,8 +308,22 @@ func (m *submoduleUploaderMng) uploadOne(
 	m.jobs.Store(id, uploaderJob{connID: connID, cancel: cancel})
 	defer func() { cancel(); m.jobs.Delete(id) }()
 
+	// The size is for the UI only (uploadFile reads it again from the open file); a stat
+	// error is not fatal here because uploadFile reports it.
+	var total int64
+	if info, statErr := os.Stat(item.Path); statErr == nil {
+		total = info.Size()
+	}
+	m.host.Emit(EventUploadObjectStarted, models.UploadStartedOutput{
+		UploadId: id,
+		FileName: filepath.Base(item.Path),
+		Key:      item.Key,
+		Bucket:   bucket,
+		Total:    total,
+	})
+
 	size, err := uploadFile(ctx, client, bucket, item.Key, item.Path, func(done, total int64) {
-		m.app.Event.Emit(
+		m.host.Emit(
 			EventUploadObjectProgress,
 			models.UploadProgressOutput{UploadId: id, Uploaded: done, Total: total},
 		)
@@ -216,6 +334,15 @@ func (m *submoduleUploaderMng) uploadOne(
 	if err != nil && ctx.Err() != nil {
 		err = context.Canceled
 	}
+
+	status := models.UploadStatusSuccess
+	switch {
+	case errors.Is(err, context.Canceled):
+		status = models.UploadStatusCanceled
+	case err != nil:
+		status = models.UploadStatusError
+	}
+	m.host.Emit(EventUploadObjectFinished, models.UploadFinishedOutput{UploadId: id, Status: status})
 
 	return uploadResult{id: id, path: item.Path, key: item.Key, size: size, err: err}
 }
@@ -252,23 +379,22 @@ func normalizePrefix(p string) string {
 }
 
 // existingKeys checks, uploadFileConcurrency at a time, whether an object with key
-// prefix + file name already exists in bucket, for each item. Each distinct name is
-// checked once. It returns the file names (without prefix) except those the bucket
-// answered 404 for: a name that couldn't be checked is treated as existing, so its file
+// prefix + RelKey already exists in bucket, for each item. Each distinct RelKey is
+// checked once. It returns the RelKeys (without prefix) except those the bucket
+// answered 404 for: a key that couldn't be checked is treated as existing, so its file
 // gets a renamed key and nothing is overwritten.
 func existingKeys(
 	ctx context.Context,
-	client *s3.Client,
+	client s3Uploader,
 	bucket, prefix string,
 	items []models.UploadObj,
 ) map[string]struct{} {
 	var names []string
 	seen := make(map[string]struct{}, len(items))
 	for _, item := range items {
-		name := filepath.Base(item.Path)
-		if _, ok := seen[name]; !ok {
-			seen[name] = struct{}{}
-			names = append(names, name)
+		if _, ok := seen[item.RelKey]; !ok {
+			seen[item.RelKey] = struct{}{}
+			names = append(names, item.RelKey)
 		}
 	}
 

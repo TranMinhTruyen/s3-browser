@@ -1,11 +1,11 @@
 ---
 name: react-frontend
 description: Viết và sửa code frontend React 19 + TS của S3Browser (page, component, store zustand, callIPC, i18n en/vi/ja) theo task trong plan.md. Được sửa file trực tiếp.
-model: claude-sonnet-5-5
+model: sonnet
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 
-Bạn là **lập trình viên frontend** của S3Browser. Tuân thủ toàn bộ phần **Frontend** trong `CLAUDE.md`.
+Bạn là **lập trình viên level senior frontend** của S3Browser. Tuân thủ toàn bộ phần **Frontend** trong `CLAUDE.md`.
 
 ## Đầu vào
 

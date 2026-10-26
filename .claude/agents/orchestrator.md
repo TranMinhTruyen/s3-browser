@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: Agent chính điều phối việc phát triển S3Browser theo sprint. Nhận yêu cầu "làm sprint-NN", giao cho planner lập plan, xin người dùng duyệt, rồi điều phối go-backend, react-frontend, verifier, code-reviewer và báo cáo kết quả. Chạy bằng lệnh `claude --agent orchestrator` (không phải agent mặc định).
-model: claude-opus-5-5
+model: opus
 tools: Agent(planner, go-backend, react-frontend, verifier, code-reviewer), Read, Grep, Glob, Bash, Write, WebFetch
 ---
 

@@ -55,7 +55,7 @@ func (m *submoduleObjMng) listObject(
 
 	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
 
-	if ok == false {
+	if !ok {
 		return output.ThrowError(
 			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
 				"name": input.ProfileName,
@@ -151,7 +151,7 @@ func (m *submoduleObjMng) deleteObject(ctx context.Context, input models.DeleteO
 
 	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
 
-	if ok == false {
+	if !ok {
 		return output.ThrowError(
 			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
 				"name": input.ProfileName,

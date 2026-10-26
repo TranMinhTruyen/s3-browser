@@ -197,7 +197,7 @@ func (m *submoduleDownloaderMng) cancelAllDownloads() models.Output[any] {
 		m.logger.Info(fmt.Sprintf("download %s is canceled", k))
 		return true
 	})
-	m.logger.Info(fmt.Sprintf("all downloads is canceled"))
+	m.logger.Info("all downloads is canceled")
 	return models.NewOutput[any]()
 }
 

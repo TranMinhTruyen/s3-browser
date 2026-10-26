@@ -72,6 +72,14 @@ func (m *BucketHandler) CancelAllDownloads() models.Output[any] {
 	return m.bucket.CancelAllDownloads()
 }
 
+func (m *BucketHandler) CancelUploadOne(id string) models.Output[any] {
+	return m.bucket.CancelUploadOne(id)
+}
+
+func (m *BucketHandler) CancelAllUploads() models.Output[any] {
+	return m.bucket.CancelAllUploads()
+}
+
 func (m *BucketHandler) DeleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
 	return m.bucket.DeleteObject(ctx, input)
 }

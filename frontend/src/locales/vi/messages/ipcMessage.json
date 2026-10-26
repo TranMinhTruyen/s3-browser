@@ -27,12 +27,14 @@
     "S3E016": "Không thể mở tệp {name}",
     "S3E017": "Tải lên {name} thất bại.",
     "S3E018": "Chỉ được tải lên tối đa {max} file mỗi lần.",
+    "S3E019": "Đường dẫn tải lên của file {name} không hợp lệ.",
     "S3W001": "Quyền truy cập bucket bị giới hạn",
     "S3W002": "Đã hủy tải xuống object: {object}",
     "S3W003": "Cập nhật lịch sử tải xuống của {object} thất bại, vui lòng tải lại!",
     "S3W004": "Đã hủy tải lên {name}.",
     "S3W005": "Đang có tiến trình tải lên khác, vui lòng chờ hoàn tất.",
-    "S3W006": "Đã bỏ qua {count} thư mục: chỉ hỗ trợ tải lên file."
+    "S3W006": "Đã bỏ qua {count} mục không thể tải lên (không đọc được, liên kết tượng trưng hoặc không phải file thường).",
+    "S3W007": "Có file lớn hơn 5 GiB nên chỉ tải lên file lớn nhất {name}."
   },
   "master": {
     "MTE001": "Lỗi khi tải dữ liệu master"

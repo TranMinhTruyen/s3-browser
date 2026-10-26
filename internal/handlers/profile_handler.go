@@ -28,7 +28,9 @@ func (h *ProfileHandler) CreateProfile(
 	return h.profile.CreateProfile(profileInput)
 }
 
-func (h *ProfileHandler) UpdateProfileById(input models.ConnectionProfileInput) models.Output[models.ConnectionProfileOutput] {
+func (h *ProfileHandler) UpdateProfileById(
+	input models.ConnectionProfileInput,
+) models.Output[models.ConnectionProfileOutput] {
 	return h.profile.UpdateProfileById(input)
 }
 

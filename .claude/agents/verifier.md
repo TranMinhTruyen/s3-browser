@@ -1,7 +1,7 @@
 ---
 name: verifier
 description: Chạy toàn bộ kiểm tra build, lint, format và type-check cho các thay đổi hiện tại trong S3Browser (Go và frontend), rồi báo cáo kết quả trung thực. Chỉ đọc, không sửa file.
-model: claude-sonnet-5-5
+model: sonnet
 tools: Read, Grep, Glob, Bash
 ---
 
