@@ -85,3 +85,15 @@ func (m *BucketHandler) GetDownloadHistory(
 func (m *BucketHandler) OpenDownloadDest(fileName, path string) models.Output[any] {
 	return m.bucket.OpenDownloadDest(fileName, path)
 }
+
+func (m *BucketHandler) UploadObject(input models.UploadObjInput) models.Output[any] {
+	return m.bucket.UploadObject(input)
+}
+
+// FilesDropped is the main window's WindowFilesDropped listener, not a frontend API:
+// wails:ignore keeps it out of the generated bindings.
+//
+//wails:ignore
+func (m *BucketHandler) FilesDropped(event *application.WindowEvent) {
+	m.bucket.HandleFilesDropped(event)
+}

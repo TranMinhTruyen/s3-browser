@@ -12,6 +12,8 @@ const (
 	EventDownloadObjectProgress = "downloader:download-progress"
 	EventLoadDownloadHistory    = "downloader:load-download-history"
 	EventUploadObjectProgress   = "uploader:upload-progress"
+	// Emitted when files are dropped on a tab's object list; payload is FilesDroppedOutput
+	EventFilesDropped = "uploader:files-dropped"
 )
 
 // RegisterEvent must be called directly from init so the binding generator can
@@ -21,4 +23,5 @@ func init() {
 	application.RegisterEvent[models.DownloadProgressOutput](EventDownloadObjectProgress)
 	application.RegisterEvent[models.DownloadHistoryItem](EventLoadDownloadHistory)
 	application.RegisterEvent[models.UploadProgressOutput](EventUploadObjectProgress)
+	application.RegisterEvent[models.FilesDroppedOutput](EventFilesDropped)
 }

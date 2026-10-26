@@ -1,4 +1,4 @@
-import { Divider, Group, Paper, Stack, Tooltip } from '@mantine/core';
+import { Anchor, Breadcrumbs, Divider, Group, Paper, Stack, Text, Tooltip } from '@mantine/core';
 import { ConnectS3ByProfile } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ArrowLeft, BroomSparkles, Download, PlugZap, RefreshCw, Trash } from 'lucide-react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
@@ -12,6 +12,7 @@ import Combobox from '@/components/inputs/combobox/Combobox';
 import ConnectModal from '@/components/modals/ConnectModal';
 import BucketListView, { BucketListViewRef } from '@/pages/bucket/components/views/BucketListView';
 import ObjectListView, { ObjectListViewRef } from '@/pages/bucket/components/views/ObjectListView';
+import classes from '@/pages/bucket/page.module.css';
 
 type TabDetailProps = {
   tabId: string;
@@ -26,6 +27,7 @@ function TabDetail(props: TabDetailProps) {
 
   const selectedProfileId = useTabListStore(s => s.tabList[tabId]?.profileId ?? null);
   const tabView = useTabListStore(s => s.tabList[tabId]?.currentView ?? 'bucketList');
+  const prefix = useTabListStore(s => s.tabList[tabId]?.prefix ?? '');
   const connectionProfiles = useProfileStore(s => s.connectionProfiles);
   const bucketListRef = useRef<BucketListViewRef>(null);
   const objectListRef = useRef<ObjectListViewRef>(null);
@@ -49,6 +51,7 @@ function TabDetail(props: TabDetailProps) {
   const updateTab = useTabListStore(s => s.updateTab);
   const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
   const changeCurrentView = useTabListStore(s => s.changeCurrentView);
+  const changePrefix = useTabListStore(s => s.changePrefix);
   const clearSelectItem = useTabListStore(s => s.clearSelectItem);
 
   const onCLickConnect = useCallback(async () => {
@@ -77,11 +80,11 @@ function TabDetail(props: TabDetailProps) {
       return objectListRef.current?.onRefresh?.();
     }
     return bucketListRef.current?.onRefresh?.();
-  },[currentView, clearSelectItem, tabId]);
+  }, [currentView, clearSelectItem, tabId]);
 
   const onChangeSelectProfile = useCallback(
     (value: string | null) => {
-      updateTab(tabId, { profileId: value, currentView: 'bucketList' });
+      updateTab(tabId, { profileId: value, currentView: 'bucketList', prefix: '', selectionItem: [] });
     },
     [tabId, updateTab]
   );
@@ -95,6 +98,23 @@ function TabDetail(props: TabDetailProps) {
     },
     [tabId, changeCurrentView]
   );
+
+  // Go up one folder; at the bucket root, go back to the bucket list.
+  const onClickBack = useCallback(() => {
+    if (!prefix) {
+      changeCurrentView(tabId, 'bucketList');
+      return;
+    }
+    // "a/b/" -> "a/", "a/" -> "". Only the last "/" is dropped, so "a//" -> "a/" keeps the empty-named folder.
+    const parent = prefix.slice(0, -1);
+    changePrefix(tabId, parent.slice(0, parent.lastIndexOf('/') + 1));
+  }, [prefix, tabId, changeCurrentView, changePrefix]);
+
+  // One crumb per folder in the prefix, each pointing to that folder's own prefix.
+  const breadcrumbs = useMemo(() => {
+    const parts = prefix ? prefix.slice(0, -1).split('/') : [];
+    return parts.map((name, i) => ({ name: name || '/', prefix: parts.slice(0, i + 1).join('/') + '/' }));
+  }, [prefix]);
 
   const onClickDownloadSelected = useCallback(() => {
     return objectListRef.current?.onClickMenuButton?.(selectedItems, 'download');
@@ -155,8 +175,8 @@ function TabDetail(props: TabDetailProps) {
 
           {currentView === 'objectList' ? (
             <>
-              <Tooltip label="Back to bucket">
-                <ActionIcon onClick={() => changeCurrentView(tabId, 'bucketList')}>
+              <Tooltip label={prefix ? 'Back to parent folder' : 'Back to bucket'}>
+                <ActionIcon onClick={onClickBack}>
                   <ArrowLeft />
                 </ActionIcon>
               </Tooltip>
@@ -187,8 +207,42 @@ function TabDetail(props: TabDetailProps) {
 
       <Divider />
 
+      {currentView === 'objectList' ? (
+        <>
+          <Group gap="xs" p="4px" style={{ flexShrink: 0 }}>
+            <Breadcrumbs separatorMargin="4px" style={{ minWidth: 0, flexWrap: 'wrap' }}>
+              {prefix ? (
+                <Anchor onClick={() => changePrefix(tabId, '')}>{selectedBucket}</Anchor>
+              ) : (
+                <Text fw={500}>{selectedBucket}</Text>
+              )}
+              {breadcrumbs.map((crumb, i) =>
+                i === breadcrumbs.length - 1 ? (
+                  <Text key={crumb.prefix} fw={500}>
+                    {crumb.name}
+                  </Text>
+                ) : (
+                  <Anchor key={crumb.prefix} onClick={() => changePrefix(tabId, crumb.prefix)}>
+                    {crumb.name}
+                  </Anchor>
+                )
+              )}
+            </Breadcrumbs>
+          </Group>
+
+          <Divider />
+        </>
+      ) : null}
+
       {/* View */}
-      <Paper ref={scrollRef} p="8px" style={{ flex: 1, minHeight: 0, overflow: 'auto', position: 'relative' }}>
+      <Paper
+        ref={scrollRef}
+        p="8px"
+        className={classes.dropZone}
+        data-file-drop-target={currentView === 'objectList' ? '' : undefined}
+        data-tab-id={tabId}
+        style={{ flex: 1, minHeight: 0, overflow: 'auto', position: 'relative' }}
+      >
         <Stack gap="8px">{renderView}</Stack>
       </Paper>
     </Paper>

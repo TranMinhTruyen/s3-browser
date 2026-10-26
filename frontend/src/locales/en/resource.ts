@@ -4,6 +4,7 @@ import inputs from '@/locales/en/components/inputs.json';
 import confirmModal from '@/locales/en/components/modals/confirmModal.json';
 import connectModal from '@/locales/en/components/modals/connectModal.json';
 import historyModal from '@/locales/en/components/modals/historyModal.json';
+import uploadLimitModal from '@/locales/en/components/modals/uploadLimitModal.json';
 import connectionProfiles from '@/locales/en/components/navbar/connectionProfiles.json';
 import ipcMessage from '@/locales/en/messages/ipcMessage.json';
 import validateMessage from '@/locales/en/messages/validateMessage.json';
@@ -16,6 +17,7 @@ const englishResource: ResourceLanguage = {
   connectModal: connectModal,
   confirmModal: confirmModal,
   historyModal: historyModal,
+  uploadLimitModal: uploadLimitModal,
   connectionProfiles: connectionProfiles,
   bucket: {
     page: bucketPage,

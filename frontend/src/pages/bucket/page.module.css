@@ -28,3 +28,10 @@
 .card:hover .label {
   color: #3b48ff;
 }
+
+/* The Wails runtime adds file-drop-target-active while files are dragged over the drop target. */
+.dropZone:global(.file-drop-target-active) {
+  outline: 2px dashed #3b48ff;
+  outline-offset: -4px;
+  background-color: rgba(59, 72, 255, 0.05);
+}

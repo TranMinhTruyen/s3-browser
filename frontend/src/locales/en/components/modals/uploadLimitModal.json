@@ -1,0 +1,5 @@
+{
+  "title": "Too many files",
+  "description": "You dropped {total} files. Only {max} files can be uploaded at a time, so only these {max} files will be uploaded:",
+  "upload": "Upload"
+}

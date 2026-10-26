@@ -8,6 +8,7 @@
     "S3S003": "Hồ sơ: {name} ngắt kết nối thành công",
     "S3S004": "Tải xuống {object} thành công, thư mục lưu: {dest}",
     "S3S005": "Xóa {object} thành công",
+    "S3S006": "Tải lên {name} thành công, key {key}.",
     "S3E001": "Access key hoặc secret key không hợp lệ với endpoint này",
     "S3E002": "Endpoint từ chối kết nối",
     "S3E003": "Hết thời gian chờ khi kết nối tới endpoint, hãy kiểm tra địa chỉ và máy chủ có đang chạy hay không",
@@ -24,9 +25,14 @@
     "S3E014": "Tệp {name} không tồn tại",
     "S3E015": "Không thể truy cập tệp {name}",
     "S3E016": "Không thể mở tệp {name}",
+    "S3E017": "Tải lên {name} thất bại.",
+    "S3E018": "Chỉ được tải lên tối đa {max} file mỗi lần.",
     "S3W001": "Quyền truy cập bucket bị giới hạn",
     "S3W002": "Đã hủy tải xuống object: {object}",
-    "S3W003": "Cập nhật lịch sử tải xuống của {object} thất bại, vui lòng tải lại!"
+    "S3W003": "Cập nhật lịch sử tải xuống của {object} thất bại, vui lòng tải lại!",
+    "S3W004": "Đã hủy tải lên {name}.",
+    "S3W005": "Đang có tiến trình tải lên khác, vui lòng chờ hoàn tất.",
+    "S3W006": "Đã bỏ qua {count} thư mục: chỉ hỗ trợ tải lên file."
   },
   "master": {
     "MTE001": "Lỗi khi tải dữ liệu master"

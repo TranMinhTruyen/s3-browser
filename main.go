@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 //go:embed all:frontend/dist
@@ -41,7 +42,7 @@ func main() {
 	mainApp.RegisterService(application.NewService(app.MasterHandler))
 	mainApp.RegisterService(application.NewService(app.ProfileHandler))
 
-	mainApp.Window.NewWithOptions(application.WebviewWindowOptions{
+	mainWindow := mainApp.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:                  cfg.Name,
 		MinWidth:               1024,
 		MinHeight:              768,
@@ -50,6 +51,8 @@ func main() {
 		OpenInspectorOnStartup: DevMode,
 		EnableFileDrop:         true,
 	})
+	// Files dropped on an element with data-file-drop-target arrive here, with their full paths.
+	mainWindow.OnWindowEvent(events.Common.WindowFilesDropped, app.BucketHandler.FilesDropped)
 
 	if err := mainApp.Run(); err != nil {
 		println("error:", err.Error())

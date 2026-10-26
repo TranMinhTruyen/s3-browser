@@ -1,13 +1,26 @@
 import { Center, Loader } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { DeleteObject, DownloadObject, GetListObject } from '@wails/S3Browser/internal/handlers/buckethandler';
+import {
+  DeleteObject,
+  DownloadObject,
+  GetListObject,
+  UploadObject,
+} from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
-import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
+import { FilesDroppedOutput, ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
+import { Events } from '@wailsio/runtime';
 import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
+import { formatStringJson } from '@/common/utils/stringUtils';
 import ConfirmModal from '@/components/modals/ConfirmModal';
+import UploadLimitModal from '@/components/modals/UploadLimitModal';
+import i18n from '@/locales/i18n';
 import ObjectItem from '@/pages/bucket/components/ObjectItem';
+
+// Must match maxUploadFiles in the Go uploader.
+const MAX_UPLOAD_FILES = 6;
 
 export type ObjectListViewRef = {
   onRefresh?: () => Promise<void>;
@@ -36,10 +49,13 @@ function ObjectListView(props: ObjectListViewProps) {
   const requestCtrl = useRef<AbortController>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  const prefix = useTabListStore(s => s.tabList[tabId]?.prefix ?? '');
+  const changePrefix = useTabListStore(s => s.changePrefix);
   const addSelectItem = useTabListStore(s => s.addSelectItem);
   const removeSelectItem = useTabListStore(s => s.removeSelectItem);
   const clearSelectItem = useTabListStore(s => s.clearSelectItem);
   const setDeleting = useTabListStore(s => s.setDeleting);
+  const setUploadingTab = useTabListStore(s => s.setUploadingTab);
 
   const startRequest = useCallback(() => {
     requestCtrl.current?.abort();
@@ -58,7 +74,7 @@ function ObjectListView(props: ObjectListViewProps) {
             connectionId,
             profileName,
             bucket,
-            prefix: '',
+            prefix,
             nextCursor: cursor,
             limit: 10,
           },
@@ -68,7 +84,7 @@ function ObjectListView(props: ObjectListViewProps) {
         }
       );
     },
-    [bucket, profileName, connectionId]
+    [bucket, prefix, profileName, connectionId]
   );
 
   const loadFirstPage = useCallback(async () => {
@@ -99,11 +115,13 @@ function ObjectListView(props: ObjectListViewProps) {
     setIsLoadingMore(false);
   }, [nextCursor, handleGetListObject, startRequest]);
 
+  // Also runs when the prefix changes, because loadFirstPage depends on it.
   useEffect(() => {
     if (!connectionId || !bucket) return;
     setObjectDatas([]);
+    scrollRef.current?.scrollTo({ top: 0 });
     loadFirstPage();
-  }, [connectionId, bucket, loadFirstPage]);
+  }, [connectionId, bucket, loadFirstPage, scrollRef]);
 
   // Cancel any running request when the view unmounts.
   useEffect(
@@ -121,8 +139,12 @@ function ObjectListView(props: ObjectListViewProps) {
   }, [scrollRef.current, loadFirstPage]);
 
   const onClickMenuButton = useCallback(
-    async (objects: string[], action: 'download' | 'delete') => {
+    async (keys: string[], action: 'download' | 'delete') => {
       if (!connectionId || !bucket) return;
+      // Folder keys end with "/". Downloading one fails, and deleting one would remove only
+      // the folder marker, not the files in it, so they are never sent.
+      const objects = keys.filter(key => !key.endsWith('/'));
+      if (objects.length === 0) return;
       if (objects.length > 5) {
         ConfirmModal.show({
           type: 'warning',
@@ -167,6 +189,75 @@ function ObjectListView(props: ObjectListViewProps) {
     },
     [tabId, addSelectItem, removeSelectItem]
   );
+
+  const onOpenFolder = useCallback((folder: string) => changePrefix(tabId, folder), [changePrefix, tabId]);
+
+  // An upload can outlive this render (the user may open another folder meanwhile) or the
+  // view itself, so it refreshes through these refs: the list currently shown, if still mounted.
+  const onRefreshRef = useRef(onRefresh);
+  onRefreshRef.current = onRefresh;
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const onFilesDropped = useCallback(
+    async ({ paths, skipped }: FilesDroppedOutput) => {
+      if (!connectionId || !bucket) return;
+      if (skipped > 0) {
+        toast.warning(formatStringJson(i18n.t('ipcMessage:bucket.S3W006'), { count: skipped }));
+      }
+      if (paths.length === 0) return;
+
+      const isBusy = () => useTabListStore.getState().uploadingTabId !== null;
+      const warnBusy = () => toast.warning(i18n.t('ipcMessage:bucket.S3W005'));
+      if (isBusy()) {
+        warnBusy();
+        return;
+      }
+
+      let files = paths;
+      if (paths.length > MAX_UPLOAD_FILES) {
+        files = paths.slice(0, MAX_UPLOAD_FILES);
+        const confirmed = await UploadLimitModal.show({ files, total: paths.length, max: MAX_UPLOAD_FILES });
+        if (!confirmed) return;
+        // Another tab may have started an upload while the modal was open.
+        if (isBusy()) {
+          warnBusy();
+          return;
+        }
+      }
+
+      setUploadingTab(tabId);
+      try {
+        // The backend sends one success / canceled / error message per file, shown by callIPC.
+        await callIPC(UploadObject, [
+          { connectionId, profileName, bucket, prefix, objList: files.map(path => ({ path })) },
+        ]);
+        if (isMountedRef.current) {
+          await onRefreshRef.current();
+        }
+      } finally {
+        setUploadingTab(null);
+      }
+    },
+    [bucket, connectionId, prefix, profileName, setUploadingTab, tabId]
+  );
+
+  useEffect(() => {
+    const unsubscribe = Events.On('uploader:files-dropped', e => {
+      // Every open tab listens; only the tab the files were dropped on handles them.
+      if (e.data?.tabId === tabId) {
+        onFilesDropped(e.data);
+      }
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [onFilesDropped, tabId]);
 
   useImperativeHandle(
     ref,
@@ -226,6 +317,7 @@ function ObjectListView(props: ObjectListViewProps) {
             item={objectList[row.index]}
             onToggleSelect={onToggleSelect}
             onClickMenuButton={onClickMenuButton}
+            onOpenFolder={onOpenFolder}
           />
         </div>
       ))}
