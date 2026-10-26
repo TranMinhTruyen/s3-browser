@@ -20,12 +20,13 @@ package bucket
 // handleDrop: nil target / target                        TestHandleDrop
 // dropFiles: no tab / with tab                           TestDropFiles
 // uploadOne: ok / canceled / error                       TestUploadObject_*
+//   canceled before start (no upload)                    TestUploadObject_CanceledDuringKeyCheck
 //   stat ok / stat error (total 0)                       TestUploadObject_EventsSuccess / _EventsMissingFile
 //   started -> progress -> finished order, status
 //   success / error / canceled                           TestUploadObject_Events{Success,Error,Canceled}
 //   started carries the renamed key                      TestUploadObject_EventsSuccess
 // cancelUploadOne: known / unknown id                    TestCancelUploads
-// cancelAllUploads                                       TestCancelUploads
+// cancelAllUploads: jobs / running batch (key check)      TestCancelUploads / TestUploadObject_CanceledDuringKeyCheck
 // normalizePrefix: empty, no slash, with slash, "\"      TestNormalizePrefix
 // existingKeys: 404 / other error / duplicate key        TestUploadObject_Success
 //
@@ -235,6 +236,40 @@ func TestUploadObject_Canceled(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("upload was not canceled")
+	}
+}
+
+func TestUploadObject_CanceledDuringKeyCheck(t *testing.T) {
+	p := writeFile(t, t.TempDir(), "a.txt", 4)
+	checking := make(chan struct{})
+	release := make(chan struct{})
+	fake := &fakeS3{
+		head: func(string) error {
+			close(checking)
+			<-release
+			return notFound()
+		},
+	}
+	m, _ := newTestUploader(fake)
+
+	done := make(chan models.Output[any])
+	go func() {
+		done <- m.uploadObject(models.UploadObjInput{ConnectionId: "conn", ObjList: []models.UploadObj{{Path: p}}})
+	}()
+
+	<-checking
+	m.cancelAllUploads()
+	close(release)
+	select {
+	case out := <-done:
+		if !hasCode(out, S3W004) || len(fake.putKeys) != 0 {
+			t.Fatalf("out=%+v put=%v", out, fake.putKeys)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("upload was not canceled")
+	}
+	if m.batchCancel != nil {
+		t.Fatal("batchCancel must be cleared after the call")
 	}
 }
 

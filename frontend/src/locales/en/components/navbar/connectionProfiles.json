@@ -4,5 +4,10 @@
     "disconnect": "Disconnect",
     "edit": "Edit",
     "delete": "Delete"
+  },
+  "tooltip": {
+    "connect": "Connect",
+    "createProfile": "Create connection profile",
+    "refresh": "Refresh connection profile list"
   }
 }

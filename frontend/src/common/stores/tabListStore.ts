@@ -214,11 +214,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
     reset: () => {
       invalidateLoads(SCOPE);
       const id = createUUID();
-      set(
-        { activeTab: id, tabList: { [id]: newTab() } },
-        undefined,
-        `${SCOPE}/reset`
-      );
+      set({ activeTab: id, tabList: { [id]: newTab() } }, undefined, `${SCOPE}/reset`);
     },
   }),
   SCOPE

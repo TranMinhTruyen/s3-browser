@@ -4,9 +4,11 @@ package bucket
 //
 // uploadFile
 //   progress == nil -> no-op / progress given     TestUploadFile_Small (nil) / _Progress
-//   os.Open error                                 TestUploadFile_OpenError
+//   os.Lstat error                                TestUploadFile_OpenError
+//   not a regular file (dir / symlink)            TestUploadFile_NotRegular / _Symlink
 //   stat error                                    TestUploadFile_StatError
-//   not a regular file                            TestUploadFile_NotRegular
+//   os.Open error, not regular after Open         not unit tested (only if the file changes
+//                                                 between Lstat and Open)
 //   size < minUploadPartSize (single) / multipart TestUploadFile_Small / TestUploadFile_Multipart
 //   upload error / success                        TestUploadFile_PutError / _Small
 // putSingle (returns the PutObject error)         TestUploadFile_PutError
@@ -78,6 +80,19 @@ func TestUploadFile_StatError(t *testing.T) {
 	t.Cleanup(func() { statFile = old })
 
 	if _, err := uploadFile(context.Background(), &fakeS3{}, "b", "k", p, nil); !errors.Is(err, errBoom) {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestUploadFile_Symlink(t *testing.T) {
+	dir := t.TempDir()
+	target := writeFile(t, dir, "a.txt", 1)
+	link := filepath.Join(dir, "link.txt")
+	if err := os.Symlink(target, link); err != nil {
+		t.Skipf("cannot create symlink: %v", err)
+	}
+	_, err := uploadFile(context.Background(), &fakeS3{}, "b", "k", link, nil)
+	if err == nil || !strings.Contains(err.Error(), "not a regular file") {
 		t.Fatalf("err=%v", err)
 	}
 }

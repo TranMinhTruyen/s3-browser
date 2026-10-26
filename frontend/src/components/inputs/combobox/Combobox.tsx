@@ -14,6 +14,7 @@ import { GetInputPropsReturnType } from '@mantine/form';
 import { useElementSize, useUncontrolled } from '@mantine/hooks';
 import { CheckIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useFieldError } from '@/common/hooks/useFieldError';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
 
@@ -50,6 +51,7 @@ const ComboboxOption = memo(function ComboboxOption({
 });
 
 function Combobox(props: ComboboxProps) {
+  const { t } = useTranslation();
   const {
     label,
     data,
@@ -133,7 +135,7 @@ function Combobox(props: ComboboxProps) {
               <CloseButton
                 size="sm"
                 variant="transparent"
-                aria-label="Clear region"
+                aria-label={t('common:button.clear')}
                 onMouseDown={event => event.preventDefault()}
                 onClick={event => {
                   event.stopPropagation();

@@ -42,6 +42,10 @@ type submoduleUploaderMng struct {
 	jobs      sync.Map
 	// busy is set while an uploadObject call runs; only one runs at a time, across all tabs.
 	busy atomic.Bool
+	// batchCancel cancels the running uploadObject call, including its key check;
+	// nil when no call runs.
+	batchMu     sync.Mutex
+	batchCancel context.CancelFunc
 }
 
 func newSubmoduleUploaderMng(
@@ -149,7 +153,12 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 		)
 	}
 
-	ctx := m.host.Context()
+	// One context for the whole call, so cancelAllUploads also stops the key check
+	// below and the files that haven't started yet.
+	ctx, cancel := context.WithCancel(m.host.Context())
+	m.setBatchCancel(cancel)
+	defer func() { m.setBatchCancel(nil); cancel() }()
+
 	prefix := normalizePrefix(input.Prefix)
 	// Find which keys (relative to prefix) are already used, before any upload starts,
 	// so the keys can be picked below without a lock.
@@ -322,12 +331,17 @@ func (m *submoduleUploaderMng) uploadOne(
 		Total:    total,
 	})
 
-	size, err := uploadFile(ctx, client, bucket, item.Key, item.Path, func(done, total int64) {
-		m.host.Emit(
-			EventUploadObjectProgress,
-			models.UploadProgressOutput{UploadId: id, Uploaded: done, Total: total},
-		)
-	})
+	// A batch canceled before this file started (e.g. during the key check) sends nothing.
+	var size int64
+	err := ctx.Err()
+	if err == nil {
+		size, err = uploadFile(ctx, client, bucket, item.Key, item.Path, func(done, total int64) {
+			m.host.Emit(
+				EventUploadObjectProgress,
+				models.UploadProgressOutput{UploadId: id, Uploaded: done, Total: total},
+			)
+		})
+	}
 
 	// If the context was canceled, report context.Canceled instead of whatever error
 	// the S3 call returned.
@@ -357,8 +371,21 @@ func (m *submoduleUploaderMng) cancelUploadOne(id string) models.Output[any] {
 	return models.NewOutput[any]()
 }
 
-// cancelAllUploads cancels every running upload.
+// setBatchCancel stores the cancel func of the running uploadObject call (nil when it ends).
+func (m *submoduleUploaderMng) setBatchCancel(cancel context.CancelFunc) {
+	m.batchMu.Lock()
+	m.batchCancel = cancel
+	m.batchMu.Unlock()
+}
+
+// cancelAllUploads cancels every running upload, and the running uploadObject call
+// (its key check and the files not started yet).
 func (m *submoduleUploaderMng) cancelAllUploads() models.Output[any] {
+	m.batchMu.Lock()
+	if m.batchCancel != nil {
+		m.batchCancel()
+	}
+	m.batchMu.Unlock()
 	m.jobs.Range(func(k, v any) bool {
 		v.(uploaderJob).cancel()
 		m.logger.Info(fmt.Sprintf("upload %s is canceled", k))

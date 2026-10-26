@@ -82,7 +82,7 @@ Ngày: 2026-10-26. Số vòng B4: 2/3. Kết luận review: **ĐẠT** (vòng 1 
 
 # Bổ sung sau sprint
 
-Ngày: 2026-10-26. Ba việc này người dùng yêu cầu thêm sau R2, nằm ngoài tiêu chí chấp nhận của sprint.
+Ngày: 2026-10-26. Các việc này người dùng yêu cầu thêm sau R2, nằm ngoài tiêu chí chấp nhận của sprint.
 
 ## 1. Bổ sung tool vào `go.mod`
 - Thêm `golangci-lint` (`github.com/golangci/golangci-lint/v2/cmd/golangci-lint`) và `sqlc` (`github.com/sqlc-dev/sqlc/cmd/sqlc`) vào khối `tool (...)`, cạnh `wails3`. Như vậy `go.mod` đã khớp với CLAUDE.md §4.
@@ -99,10 +99,95 @@ Sau khi có golangci-lint, lần chạy đầu báo 15 lỗi. Các lỗi này đ
 - **Đã sửa:** gán đủ ba field này trong `NewApp`.
 - **Bổ sung:** `Shutdown` gọi thêm `a.BucketHandler.CancelAllUploads()`, để upload đang chạy được huỷ khi tắt app (trước đây chỉ huỷ download).
 
+## 4. Nút "Huỷ tất cả" trên DownloaderWindow
+- Thêm nút huỷ tất cả (icon `X` màu đỏ) vào header của `DownloaderWindow`, cạnh nút đóng. Nút này giống nút trên `UploaderWindow`. Bấm nút sẽ gọi binding `CancelAllDownloads`, có sẵn từ trước. Backend huỷ mọi download **đang chạy**; file đã tải xong không bị ảnh hưởng.
+- Chỉ sửa frontend; backend không thay đổi.
+- File sửa: `frontend/src/components/layouts/downloader/DownloaderWindow.tsx`, `frontend/src/locales/{en,vi,ja}/resource.ts`.
+- File mới: `frontend/src/locales/{en,vi,ja}/components/downloaderWindow.json` (`title`, `action.cancelAll`). Tiêu đề "Downloading" trước đây hard-code, giờ đã đi qua i18n.
+
+## 5. Bổ sung i18n cho các màn hình còn hard-code
+Đã quét toàn bộ `frontend/src` và chuyển mọi chuỗi UI hard-code sang i18n (en, vi, ja). Giữ nguyên các chuỗi là tên riêng hoặc mã: `AWS`, `MinIO`, `EN`/`VI`/`JA`.
+
+| Màn hình / component | Chuỗi đã chuyển | Namespace |
+|---|---|---|
+| `pages/bucket/components/TabDetail.tsx` | Tooltip Connect, Refresh … | `bucket.page` → `tooltip.*` |
+| `pages/bucket/components/TabDetail.tsx` (phần chỉ hiện khi xem object list) | Back to parent folder / bucket, Clear / Download / Delete selected, "object list" | `object.page` → `tooltip.*` |
+| `pages/object/components/ObjectItem.tsx` | Size, Last Modified, menu Download / Delete | `object.page` → `label.*`, `action.*` |
+| `pages/bucket/components/BucketItem.tsx` | Create date: | `bucket.page` → `label.createDate` |
+| `pages/bucket/Page.tsx` | aria-label Close tab | `bucket.page` → `tooltip.closeTab` |
+| `components/layouts/downloader/DownloaderItem.tsx` | Object, Downloaded, Remaining | `downloaderWindow` → `label.*` |
+| `components/layouts/navbar/components/HeaderButtonGroup.tsx` | Tooltip Connect, Create connection profile, Refresh connection profile list | `connectionProfiles` → `tooltip.*` |
+| `components/layouts/MainLayout.tsx` | Tooltip Download history | dùng lại `historyModal:title` |
+| `components/inputs/combobox/Combobox.tsx`, `RegionCombobox.tsx` | aria-label "Clear region" | `common:button.clear` (key mới) |
+
+- Tooltip Refresh trước đây ghép chuỗi `` `Refresh ${…}` ``, nên không dịch được đúng thứ tự từ (ví dụ tiếng Nhật). Giờ dùng template `tooltip.refresh` với tham số `{target}`, điền qua `formatStringJson`.
+- Combobox dùng chung trước đây có aria-label "Clear region" bị sai nghĩa với combobox không phải region. Giờ đổi thành "Clear" chung.
+- File locale sửa (×3 ngôn ngữ): `common.json`, `components/navbar/connectionProfiles.json`, `components/downloaderWindow.json`, `pages/bucket/page.json`, `resource.ts`.
+- File locale mới (×3 ngôn ngữ): `pages/object/page.json`, đăng ký thành namespace `object.page`. Object list là page riêng, nên key của nó không để chung với `bucket.page`.
+
+### Tách object list ra khỏi page bucket
+Object list là page riêng, nên code, CSS và i18n của nó được tách khỏi `pages/bucket`:
+- **Chuyển file** (chỉ đổi vị trí, nội dung giữ nguyên trừ import):
+  - `pages/bucket/components/ObjectItem.tsx` → `pages/object/components/ObjectItem.tsx`
+  - `pages/bucket/components/views/ObjectListView.tsx` → `pages/object/components/views/ObjectListView.tsx`
+- **CSS:** file mới `pages/object/page.module.css` chứa `card`, `iconSection`, `label`, `dropZone`. `pages/bucket/page.module.css` chỉ giữ `card` và `iconSection`, vì `BucketItem` chỉ dùng hai class này.
+- **Import:** `TabDetail` lấy `dropZone` từ CSS của object (drop zone chỉ bật khi đang xem object list). `UploadLimitModal` lấy `label` từ CSS của object.
+- **i18n:** `TabDetail` dùng thêm `tObject` (namespace `object.page`) cho các tooltip của object list. Tooltip Refresh chọn `target` theo view hiện tại.
+- Các đường dẫn `ObjectListView.tsx` / `ObjectItem.tsx` ghi ở phần R1 và R2 phía trên là vị trí cũ.
+
+### Tách phần tab thành component layout
+Mục tiêu: `pages/bucket` và `pages/object` chỉ chứa view và component riêng của chúng. Phần tab dùng chung được chuyển vào layout.
+- **File mới `components/layouts/tab/TabLayout.tsx`**: phần thanh tab trước đây nằm trong `pages/bucket/Page.tsx`, gồm danh sách tab, nút đóng tab, nút thêm tab, cuộn đến tab đang chọn và khung panel. Mỗi panel render `TabDetail`.
+- **Chuyển file:**
+  - `pages/bucket/components/TabLabel.tsx` → `components/layouts/tab/components/TabLabel.tsx`
+  - `pages/bucket/components/TabDetail.tsx` → `components/layouts/tab/components/TabDetail.tsx` (header gồm chọn profile, Connect, Refresh, Back, breadcrumb, thao tác trên mục đã chọn, rồi chuyển giữa `BucketListView` và `ObjectListView`)
+- **Xoá `pages/bucket/Page.tsx`.** Route `/` trong `components/router/RouterItem.tsx` giờ lazy-load thẳng `TabLayout`.
+- **Cấu trúc `pages` sau khi tách:**
+  - `pages/bucket`: `components/BucketItem.tsx`, `components/views/BucketListView.tsx`, `page.module.css`
+  - `pages/object`: `components/ObjectItem.tsx`, `components/views/ObjectListView.tsx`, `page.module.css`
+- **Sửa nhỏ:** hàm đóng tab trước đây viết dạng curry, không bọc `useCallback`. Giờ đổi thành `onClickCloseTab`, có bọc `useCallback`, theo đúng quy ước.
+- **i18n:** namespace mới `tabLayout` (`locales/{en,vi,ja}/components/tabLayout.json`, có đăng ký trong `resource.ts`) gồm `title.defaultTabName`, `tooltip.closeTab`, `tooltip.connect`, `tooltip.refresh`. Các key này đã được xoá khỏi `bucket.page`, nên `bucket.page` giờ chỉ còn `tooltip.bucketList` và `label.createDate`. `TabDetail` dùng `tabLayout` cho header chung, `bucket.page` / `object.page` cho các chuỗi riêng của từng view.
+
+## 6. Sửa lỗi sau review (code-reviewer + verifier)
+**Frontend:**
+- **Lỗi verifier:**
+  - Format biome của `common/stores/tabListStore.ts`.
+  - `confirmModal.json` bản vi/ja dùng sai key `confirmText`, đã đổi thành `confirmCode`.
+  - Thêm `C000005` còn thiếu.
+- **`TabDetail.tsx`:**
+  - Trước đây select nguyên object `connectionProfiles`, giờ đổi sang selector hẹp:
+    - danh sách tên dùng `useShallow`;
+    - profile đang chọn lấy riêng.
+  - Đổi tên `onCLickConnect` thành `onClickConnect`.
+  - Thêm `onClickClearSelected` và `onClickBreadcrumb`, bọc `useCallback`.
+- **Bọc `useCallback` cho mọi handler:**
+  - `HeaderButtonGroup.tsx`: `onClickConnect`, `onClickCreateProfile`, `onClickRefresh`.
+  - `BucketItem.tsx`: `onClickBucket`.
+  - `ObjectItem.tsx`: `onClickFolder`, `onClickCard`, `onChangeCheckbox`, `onClickMenuSection`, `onClickDownloadButton`.
+
+**Backend (`internal/modules/bucket`):**
+- **Huỷ được trong giai đoạn kiểm tra key.**
+  - Trước đây `cancelAllUploads` chỉ huỷ được các job đã vào `uploadOne`. Nếu bấm huỷ lúc `existingKeys` đang gọi `HeadObject`, upload vẫn tiếp tục.
+  - Giờ `uploadObject` tạo một context cho cả lần gọi, lưu cancel vào `batchCancel` (có `batchMu` bảo vệ). `cancelAllUploads` gọi thêm cancel này.
+  - Trong `uploadOne`, nếu context đã bị huỷ trước khi file bắt đầu, file đó không được gửi lên mà báo `S3W004` (canceled).
+- **Chặn symlink:** `uploadFile` gọi `os.Lstat` trước `os.Open`, nên symlink bị từ chối thay vì bị đi theo. Kiểm tra `IsRegular` sau khi `Open` vẫn được giữ.
+- **Sửa comment** trong `cleanRelKey` (`uploader_expand.go`): comment ghi thiếu ký tự `\`.
+- **Test mới:**
+  - `TestUploadObject_CanceledDuringKeyCheck`.
+  - `TestUploadFile_Symlink`: bị skip trên Windows nếu không có quyền tạo symlink.
+  - Đã cập nhật bảng nhánh C1 ở đầu file test.
+
+**Không sửa, có lý do:**
+- `S3W006`: reviewer báo không dùng, nhưng frontend `ObjectListView` có dùng để báo số file bị bỏ qua.
+- `normalizePrefix` với `..`: không gây hại, vì S3 coi `..` là ký tự thường trong key.
+- `handleDrop` chạy đồng bộ: chấp nhận được.
+- Ngoại lệ context cho upload: upload dùng `app.Context()` thay vì ctx của IPC, cần ghi vào CLAUDE.md. Người dùng tự cập nhật, vì file này bị chặn ghi.
+
 ## Kết quả kiểm tra
 - `go tool golangci-lint run ./...`: **0 issues**.
 - `gofmt -l`, `go build ./...`, `go vet ./...`, `go test -count=1 ./...`: **pass**.
+- Mục 4, 5, 6: biome, oxlint, `tsc.exe --noEmit`: **pass**. Quét lại bằng grep không còn chuỗi UI hard-code.
 
 ## Còn lại
-- Chưa chạy app thật để xác nhận tắt app không còn panic.
-- Các mục "Chưa làm / lưu ý" ở R1 (1, 3–6) và R2 (1–4) vẫn còn nguyên.
+- Chưa chạy app thật để xác nhận tắt app không còn panic, để thử nút huỷ tất cả download, và để xem bản dịch hiển thị ở cả 3 ngôn ngữ.
+- Các mục "Chưa làm / lưu ý" ở R1 (1, 3–6) và R2 (1–3) vẫn còn. R2 mục 4 (chuỗi hard-code) đã xử lý ở mục 5.

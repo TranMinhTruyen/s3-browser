@@ -5,6 +5,7 @@
     "refresh": "再読み込み",
     "connect": "接続",
     "cancel": "キャンセル",
-    "OK": "OK"
+    "OK": "OK",
+    "clear": "クリア"
   }
 }

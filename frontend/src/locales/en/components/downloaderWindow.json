@@ -1,0 +1,11 @@
+{
+  "title": "Downloading",
+  "action": {
+    "cancelAll": "Cancel all"
+  },
+  "label": {
+    "objectLbl": "Object",
+    "downloadedLbl": "Downloaded",
+    "remainingLbl": "Remaining"
+  }
+}

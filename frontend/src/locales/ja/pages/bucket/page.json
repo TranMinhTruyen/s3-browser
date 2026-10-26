@@ -1,9 +1,8 @@
 {
-  "title": {
-    "defaultTabName": "新しいプロファイル"
-  },
   "tooltip": {
-    "bucketList": "バケット一覧",
-    "objectList": "オブジェクト一覧"
+    "bucketList": "バケット一覧"
+  },
+  "label": {
+    "createDate": "作成日:"
   }
 }

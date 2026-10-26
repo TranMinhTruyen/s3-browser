@@ -1,9 +1,8 @@
 {
-  "title": {
-    "defaultTabName": "New profile"
-  },
   "tooltip": {
-    "bucketList": "bucket list",
-    "objectList": "object list"
+    "bucketList": "bucket list"
+  },
+  "label": {
+    "createDate": "Create date:"
   }
 }

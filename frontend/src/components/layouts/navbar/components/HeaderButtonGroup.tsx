@@ -1,37 +1,44 @@
 import { Group, Stack, Tooltip } from '@mantine/core';
 import { ListPlus, PlugZap, RefreshCw } from 'lucide-react';
+import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useProfileStore } from '@/common/stores/profileStore';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import ConnectModal from '@/components/modals/ConnectModal';
 
 function HeaderButtonGroup() {
+  const { t } = useTranslation('connectionProfiles');
   const loadConnectionProfiles = useProfileStore(s => s.loadConnectionProfiles);
 
-  const handleAddConnectionProfile = (mode: 'connect' | 'createProfile') => () => {
-    ConnectModal.show({ mode: mode });
-  };
+  const onClickConnect = useCallback(() => {
+    ConnectModal.show({ mode: 'connect' });
+  }, []);
 
-  const handleRefresh = async () => {
+  const onClickCreateProfile = useCallback(() => {
+    ConnectModal.show({ mode: 'createProfile' });
+  }, []);
+
+  const onClickRefresh = useCallback(async () => {
     await loadConnectionProfiles();
-  };
+  }, [loadConnectionProfiles]);
 
   return (
     <Stack p="8px">
       <Group gap="xs">
-        <Tooltip label="Connect">
-          <ActionIcon onClick={handleAddConnectionProfile('connect')}>
+        <Tooltip label={t('tooltip.connect')}>
+          <ActionIcon onClick={onClickConnect}>
             <PlugZap />
           </ActionIcon>
         </Tooltip>
 
-        <Tooltip label="Create connection profile">
-          <ActionIcon onClick={handleAddConnectionProfile('createProfile')}>
+        <Tooltip label={t('tooltip.createProfile')}>
+          <ActionIcon onClick={onClickCreateProfile}>
             <ListPlus />
           </ActionIcon>
         </Tooltip>
 
-        <Tooltip label="Refresh connection profile list">
-          <ActionIcon onClick={handleRefresh} ml="auto">
+        <Tooltip label={t('tooltip.refresh')}>
+          <ActionIcon onClick={onClickRefresh} ml="auto">
             <RefreshCw />
           </ActionIcon>
         </Tooltip>
