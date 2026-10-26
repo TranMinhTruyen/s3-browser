@@ -14,11 +14,6 @@ type Message struct {
 	ErrorDetail string         `json:"errorDetail,omitempty"`
 }
 
-func (m *Message) New() *Message {
-	m.Order = time.Now().Format(cnst.FullDateTimeFormatPattern)
-	return m
-}
-
 func NewMessage(messageType string, moduleName string, code string, errorDetail string) Message {
 	return Message{
 		Order:       time.Now().Format(cnst.FullDateTimeFormatPattern),
@@ -27,11 +22,6 @@ func NewMessage(messageType string, moduleName string, code string, errorDetail 
 		MessageCode: code,
 		ErrorDetail: errorDetail,
 	}
-}
-
-func NewErrorMessage(moduleName string, code string, errorDetail string) Message {
-	message := NewMessage(cnst.MessageTypeError, moduleName, code, errorDetail)
-	return message
 }
 
 func NewParamsMessage(

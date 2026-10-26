@@ -3,11 +3,9 @@ package bucket
 import (
 	"S3Browser/internal/modules/global"
 	"S3Browser/internal/pkg/cnst"
-	"S3Browser/internal/pkg/db/sqlc"
 	"S3Browser/internal/pkg/utils"
 	"S3Browser/models"
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -49,19 +47,19 @@ func newSubmoduleDownloaderMng(
 }
 
 type downloaderJob struct {
-	connID string
 	cancel context.CancelFunc
 }
 
 type downloadResult struct {
-	key    string
-	dest   string
-	err    error
-	update *sqlc.UpdateStatusDownloadHistoryByIdParams
+	key  string
+	dest string
+	err  error
+	// history is the final history record to save; nil if the record couldn't be created.
+	history *models.DownloadHistoryItem
 }
 
-// concurrency limits both the objects downloaded at once and the parts fetched at once per object.
-const concurrency = 6
+// downloadConcurrency limits both the objects downloaded at once and the parts fetched at once per object.
+const downloadConcurrency = 6
 
 // downloadObject asks the user where to save, then downloads every object in input.Objects.
 //   - One object: a "Save file" dialog is shown and the object is written to the chosen path.
@@ -73,7 +71,9 @@ const concurrency = 6
 func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) models.Output[any] {
 	output := models.NewOutput[any]()
 
-	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
+	// Counts this call as a running transfer, so the profile can't be deleted meanwhile.
+	// All downloads finish inside this call (g.Wait below), so the release goes here.
+	s3Conn, releaseConn, ok := m.global.AcquireConn(input.ConnectionId)
 
 	if !ok {
 		m.logger.Error("get connection profile failed")
@@ -83,6 +83,7 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 			}),
 		)
 	}
+	defer releaseConn()
 
 	var (
 		destDir string
@@ -113,14 +114,14 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 	}
 
 	tm := transfermanager.New(s3Conn.Client, func(o *transfermanager.Options) {
-		o.Concurrency = concurrency
+		o.Concurrency = downloadConcurrency
 	})
 
 	// Buffered so goroutines never block on send; results are read only after g.Wait().
 	results := make(chan downloadResult, len(input.Objects))
 	// A plain errgroup.Group (no shared context): one failed object must not cancel the others.
 	var g errgroup.Group
-	g.SetLimit(concurrency)
+	g.SetLimit(downloadConcurrency)
 	// A single object goes to the exact path the user chose (the dialog already asked
 	// about overwriting); objects saved into a folder must not replace files already there.
 	multi := len(input.Objects) > 1
@@ -138,9 +139,9 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 		// Always return nil: errors are reported per object through results.
 		g.Go(func() error {
 			defer release()
-			r := m.downloadOne(m.app.Context(), id, input.ConnectionId, tm, input.Bucket, key, dest)
+			r := m.downloadOne(m.app.Context(), id, tm, input.Bucket, key, dest)
 			r.dest = dest
-			if r.update != nil {
+			if r.history != nil {
 				m.finishHistory(&r)
 			}
 			results <- r
@@ -164,7 +165,7 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 		case errors.Is(r.err, context.Canceled):
 			m.logger.Warn(fmt.Sprintf("Download object: %s is canceled", r.key))
 			output.AddMessage(
-				models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3W002, "", map[string]any{
+				models.NewParamsMessage(cnst.MessageTypeWarn, cnst.Bucket, S3W002, "", map[string]any{
 					"object": r.key,
 				}),
 			)
@@ -266,14 +267,14 @@ func suffixedPath(p, suffix string) string {
 // the caller does that with finishHistory.
 func (m *submoduleDownloaderMng) downloadOne(
 	parent context.Context,
-	id, connID string,
+	id string,
 	tm *transfermanager.Client,
 	bucket, key, dest string,
 ) downloadResult {
 	ctx, cancel := context.WithCancel(parent)
 
 	// Register the job so it can be canceled; remove it when the download ends.
-	m.jobs.Store(id, downloaderJob{connID: connID, cancel: cancel})
+	m.jobs.Store(id, downloaderJob{cancel: cancel})
 	defer func() { cancel(); m.jobs.Delete(id) }()
 
 	saved, err := m.submoduleDownloadHistoryMng.createDownloadHistory(models.DownloadHistoryItem{
@@ -308,33 +309,29 @@ func (m *submoduleDownloaderMng) downloadOne(
 		}
 	}
 
+	// The destination is only recorded for a finished download.
+	destPath := ""
+	if err == nil {
+		destPath = saved.DestPath
+	}
+
 	return downloadResult{
 		key: key,
 		err: err,
-		update: &sqlc.UpdateStatusDownloadHistoryByIdParams{
+		history: &models.DownloadHistoryItem{
 			ID:       id,
-			DestPath: sql.NullString{String: saved.DestPath, Valid: err == nil},
+			DestPath: destPath,
 			Status:   status,
-			Size:     sql.NullFloat64{Float64: float64(size), Valid: size > 0},
+			Size:     float64(size),
 			Version:  saved.Version,
 		},
 	}
 }
 
-// finishHistory writes the final status from r.update to the history record and
+// finishHistory writes the final status from r.history to the history record and
 // notifies the frontend. If the update fails, the error replaces r.err.
 func (m *submoduleDownloaderMng) finishHistory(r *downloadResult) {
-	destPath := ""
-	if r.update.DestPath.Valid {
-		destPath = r.update.DestPath.String
-	}
-	updated, err := m.submoduleDownloadHistoryMng.updateDownloadHistory(models.DownloadHistoryItem{
-		ID:       r.update.ID,
-		DestPath: destPath,
-		Status:   r.update.Status,
-		Size:     r.update.Size.Float64,
-		Version:  r.update.Version,
-	})
+	updated, err := m.submoduleDownloadHistoryMng.updateDownloadHistory(*r.history)
 
 	if err != nil {
 		r.err = err

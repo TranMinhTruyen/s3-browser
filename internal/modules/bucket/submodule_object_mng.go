@@ -18,9 +18,16 @@ import (
 
 type submoduleObjMng struct {
 	logger *slog.Logger
-	app    *application.App
 	global *global.Module
+	// getDeleter returns the S3 client of a connection; ok is false if it isn't connected.
+	// It sits next to global as the seam tests replace with a fake client.
+	getDeleter func(connID string) (client s3Deleter, ok bool)
+	// appContext returns the app lifetime context. Tests replace it so they don't need a running app.
+	appContext func() context.Context
 }
+
+// deleteConcurrency limits the objects deleted (or head-checked) at once.
+const deleteConcurrency = 6
 
 func newSubmoduleObjMng(
 	app *application.App,
@@ -29,8 +36,15 @@ func newSubmoduleObjMng(
 ) *submoduleObjMng {
 	return &submoduleObjMng{
 		logger: logger.With("submodules", "object_mng"),
-		app:    app,
 		global: global,
+		getDeleter: func(connID string) (s3Deleter, bool) {
+			conn, ok := global.GetConnContainer(connID)
+			if !ok {
+				return nil, false
+			}
+			return conn.Client, true
+		},
+		appContext: app.Context,
 	}
 }
 
@@ -48,7 +62,7 @@ func (m *submoduleObjMng) listObject(
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 	// Wails detaches the call context from the app lifetime, so also stop on app shutdown.
-	stop := context.AfterFunc(m.app.Context(), cancel)
+	stop := context.AfterFunc(m.appContext(), cancel)
 	defer stop()
 
 	output := models.NewOutput[models.ListObjectOutput]()
@@ -83,21 +97,18 @@ func (m *submoduleObjMng) listObject(
 			return output
 		}
 
-		apiErr := UnwrapAwsError(err)
-		output.AddMessage(
+		return output.ThrowError(
 			models.NewParamsMessage(
 				cnst.MessageTypeError,
 				cnst.Bucket,
-				S3E006,
-				apiErr,
+				S3E008,
+				UnwrapAwsError(err),
 				map[string]any{
 					"name":   input.ProfileName,
 					"bucket": input.Bucket,
 				},
 			),
 		)
-		output.Result = false
-		return output
 	}
 
 	body := models.ListObjectOutput{
@@ -144,7 +155,7 @@ func (m *submoduleObjMng) deleteObject(ctx context.Context, input models.DeleteO
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 	// Wails detaches the call context from the app lifetime, so also stop on app shutdown.
-	stop := context.AfterFunc(m.app.Context(), cancel)
+	stop := context.AfterFunc(m.appContext(), cancel)
 	defer stop()
 
 	output := models.NewOutput[any]()
@@ -160,10 +171,12 @@ func (m *submoduleObjMng) deleteObject(ctx context.Context, input models.DeleteO
 	}
 
 	var g errgroup.Group
-	g.SetLimit(concurrency)
+	g.SetLimit(deleteConcurrency)
 	result := make(chan deleteResult, len(input.Objects))
 	for _, key := range input.Objects {
 		g.Go(func() error {
+			// S3 DeleteObject succeeds even when the key doesn't exist, so HeadObject first
+			// to report an error for a key that is already gone.
 			_, err := s3Conn.Client.HeadObject(ctx, &s3.HeadObjectInput{
 				Bucket: aws.String(input.Bucket),
 				Key:    aws.String(key),

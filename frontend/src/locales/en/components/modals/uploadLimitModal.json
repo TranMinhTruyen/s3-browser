@@ -1,9 +1,12 @@
 {
-  "title": "Confirm upload",
-  "truncatedDescription": "The drop has more than {max} files. Only the first {max} files are kept.",
-  "largeFileDescription": "A file is larger than {limit}, so only the largest file is uploaded and the other files are skipped:",
-  "listDescription": "These files will be uploaded:",
-  "upload": "Upload",
-  "size": "Size",
-  "key": "Key"
+  "title": "Choose files to upload",
+  "description": "Some folders exceed the upload limits. Choose the files to upload; folders within the limits are uploaded in full.",
+  "cappedWarning": "The folder scan stopped early, so the list may be incomplete.",
+  "rootFolder": "(files dropped directly)",
+  "overMaxSection": "Folders with more than {max} files",
+  "overLargeSection": "Folders with {count} or more large files (over {size})",
+  "selectedCount": "{selected}/{max} files",
+  "selectedLarge": "{selected}/{max} large files",
+  "large": "Large",
+  "upload": "Upload"
 }

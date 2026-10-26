@@ -8,6 +8,7 @@
     "C000002": "Bạn có chắc chắn muốn xóa hồ sơ kết nối này không?",
     "C000003": "Vui lòng ngắt kết nối trước khi thực hiện!",
     "C000004": "Bạn có chắc chắn muốn xóa [{object}] không?",
-    "C000005": "Chỉ được chọn tối đa 5 mục!"
+    "C000005": "Chỉ được chọn tối đa 5 mục!",
+    "C000006": "Bạn có chắc chắn muốn xóa thư mục [{object}] và TOÀN BỘ nội dung bên trong không? Thao tác này không thể hoàn tác."
   }
 }

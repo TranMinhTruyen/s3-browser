@@ -3,7 +3,7 @@ import { ConnectS3ByProfile, Disconnect } from '@wails/S3Browser/internal/handle
 import { DeleteProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
 import { Events } from '@wailsio/runtime';
 import { Cable, PlugZap, SquarePen, Trash, Unplug } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionProfile, useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
@@ -25,8 +25,10 @@ function ConnectionProfiles() {
   const loadConnectionProfiles = useProfileStore(s => s.loadConnectionProfiles);
   const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
   const deleteConnectionProfiles = useProfileStore(s => s.deleteConnectionProfiles);
+  const getConnectionProfileById = useProfileStore(s => s.getConnectionProfileById);
   const reset = useProfileStore(s => s.reset);
   const resetViewByProfile = useTabListStore(s => s.resetViewByProfile);
+  const clearProfile = useTabListStore(s => s.clearProfile);
 
   useEffect(() => {
     loadConnectionProfiles();
@@ -48,83 +50,106 @@ function ConnectionProfiles() {
     };
   }, [updateConnectionProfiles]);
 
-  const onClickOpenConnectModal = (value: ConnectionProfile, mode: 'manualconnect' | 'editProfile') => {
+  const onClickOpenConnectModal = useCallback((value: ConnectionProfile, mode: 'manualconnect' | 'editProfile') => {
     ConnectModal.show({
       mode: mode,
       connectionProfile: { ...value },
     });
-  };
+  }, []);
 
-  const onClickConnect = (key: string, value: ConnectionProfile) => async () => {
-    if (!value || value.isConnected || connectingRef.current.has(key)) return;
-    if (autoConnectDoneRef.current && !value.secretKey) {
-      onClickOpenConnectModal(value, 'manualconnect');
-      return;
-    }
-    connectingRef.current.add(key);
-    setConnectingKeys(new Set(connectingRef.current));
-    try {
-      const output = await callIPC(ConnectS3ByProfile, [key]);
-      if (output?.isConnected) {
-        updateConnectionProfiles(key, { ...value, isConnected: true });
-      }
-    } finally {
-      connectingRef.current.delete(key);
-      setConnectingKeys(new Set(connectingRef.current));
-    }
-  };
-
-  const onClickDisconnect = (key: string, value: ConnectionProfile) => async () => {
-    if (!value || !value.isConnected || connectingRef.current.has(key)) return;
-    connectingRef.current.add(key);
-    setConnectingKeys(new Set(connectingRef.current));
-    try {
-      const output = await callIPC(Disconnect, [key]);
-      if (output) {
-        updateConnectionProfiles(key, { ...value, isConnected: false });
-        resetViewByProfile(key);
-      }
-    } finally {
-      connectingRef.current.delete(key);
-      setConnectingKeys(new Set(connectingRef.current));
-    }
-  };
-
-  const onClickEditProfile = (value: ConnectionProfile) => () => {
-    onClickOpenConnectModal(value, 'editProfile');
-  };
-
-  const onClickDeleteProfile = (key: string, value: ConnectionProfile) => async () => {
-    if (value.isConnected) {
-      const confirmModal = await ConfirmModal.show({
-        type: 'warning',
-        confirmCode: 'C000003',
-      });
-      if (confirmModal) {
-        await onClickDisconnect(key, value)();
-      } else {
+  const onClickConnect = useCallback(
+    (key: string, value: ConnectionProfile) => async () => {
+      if (!value || value.isConnected || connectingRef.current.has(key)) return;
+      if (autoConnectDoneRef.current && !value.secretKey) {
+        onClickOpenConnectModal(value, 'manualconnect');
         return;
       }
-    }
+      connectingRef.current.add(key);
+      setConnectingKeys(new Set(connectingRef.current));
+      try {
+        const output = await callIPC(ConnectS3ByProfile, [key]);
+        if (output?.isConnected) {
+          updateConnectionProfiles(key, { ...value, isConnected: true });
+        }
+      } finally {
+        connectingRef.current.delete(key);
+        setConnectingKeys(new Set(connectingRef.current));
+      }
+    },
+    [onClickOpenConnectModal, updateConnectionProfiles]
+  );
 
-    const confirmModal = await ConfirmModal.show({
-      type: 'warning',
-      confirmCode: 'C000002',
-    });
-    if (confirmModal && value.id) {
+  const onClickDisconnect = useCallback(
+    (key: string, value: ConnectionProfile) => async () => {
+      if (!value || !value.isConnected || connectingRef.current.has(key)) return;
+      connectingRef.current.add(key);
+      setConnectingKeys(new Set(connectingRef.current));
+      try {
+        const output = await callIPC(Disconnect, [key]);
+        if (output) {
+          updateConnectionProfiles(key, { ...value, isConnected: false });
+          resetViewByProfile(key);
+        }
+      } finally {
+        connectingRef.current.delete(key);
+        setConnectingKeys(new Set(connectingRef.current));
+      }
+    },
+    [updateConnectionProfiles, resetViewByProfile]
+  );
+
+  const onClickEditProfile = useCallback(
+    (value: ConnectionProfile) => () => {
+      onClickOpenConnectModal(value, 'editProfile');
+    },
+    [onClickOpenConnectModal]
+  );
+
+  const onClickDeleteProfile = useCallback(
+    (key: string, value: ConnectionProfile) => async () => {
+      if (!value.id || connectingRef.current.has(key)) return;
+
+      // The backend disconnects before deleting and refuses while transfers are running,
+      // so the connection is kept if the delete is rejected.
+      if (value.isConnected) {
+        const confirmDisconnect = await ConfirmModal.show({
+          type: 'warning',
+          confirmCode: 'C000003',
+        });
+        if (!confirmDisconnect) return;
+      }
+
+      const confirmDelete = await ConfirmModal.show({
+        type: 'warning',
+        confirmCode: 'C000002',
+      });
+      if (!confirmDelete) return;
+
       const output = await callIPC(DeleteProfileById, [{ ...value }]);
       if (output) {
         deleteConnectionProfiles(value.id);
+        clearProfile(value.id);
+        return;
       }
-    }
-  };
 
-  const onClickMenuChange = (key: string) => (opened: boolean) => {
-    setOpenedMenuKey(prev => {
-      if (opened) return key;
-      return prev === key ? null : prev;
-    });
-  };
+      // Rejected for running transfers keeps the connection; a DB failure has already disconnected it.
+      await loadConnectionProfiles();
+      if (value.isConnected && !getConnectionProfileById(key)?.isConnected) {
+        resetViewByProfile(key);
+      }
+    },
+    [deleteConnectionProfiles, clearProfile, loadConnectionProfiles, getConnectionProfileById, resetViewByProfile]
+  );
+
+  const onClickMenuChange = useCallback(
+    (key: string) => (opened: boolean) => {
+      setOpenedMenuKey(prev => {
+        if (opened) return key;
+        return prev === key ? null : prev;
+      });
+    },
+    []
+  );
 
   useEffect(() => {
     if (autoConnectDoneRef.current) return;

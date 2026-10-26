@@ -19,6 +19,7 @@ type (
 	ObjectItem             = bucket.ObjectItem
 	UploadObj              = bucket.UploadObj
 	DroppedFile            = bucket.DroppedFile
+	DroppedGroup           = bucket.DroppedGroup
 	ConnectOutput          = bucket.ConnectOutput
 	ListBucketInput        = bucket.ListBucketInput
 	ListBucketOutput       = bucket.ListBucketOutput
@@ -31,6 +32,8 @@ type (
 	DownloadHistoryInput   = bucket.DownloadHistoryInput
 	DownloadHistoryOutput  = bucket.DownloadHistoryOutput
 	DeleteObjInput         = bucket.DeleteObjInput
+	DeletePrefixInput      = bucket.DeletePrefixInput
+	DeletePrefixOutput     = bucket.DeletePrefixOutput
 	UploadProgressOutput   = bucket.UploadProgressOutput
 	FilesDroppedOutput     = bucket.FilesDroppedOutput
 	UploadStartedOutput    = bucket.UploadStartedOutput
@@ -67,10 +70,4 @@ var (
 // wraper func
 func NewOutput[T any]() Output[T] {
 	return common.NewOutput[T]()
-}
-
-func NewMessages() *Message {
-	m := &Message{}
-	m.New()
-	return m
 }

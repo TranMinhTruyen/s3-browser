@@ -1,9 +1,12 @@
 {
-  "title": "Xác nhận tải lên",
-  "truncatedDescription": "Bạn đã thả nhiều hơn {max} file. Chỉ giữ {max} file đầu tiên.",
-  "largeFileDescription": "Có file lớn hơn {limit}, nên chỉ file lớn nhất được tải lên và các file khác bị bỏ qua:",
-  "listDescription": "Các file sau sẽ được tải lên:",
-  "upload": "Tải lên",
-  "size": "Dung lượng",
-  "key": "Khóa"
+  "title": "Chọn file để tải lên",
+  "description": "Một số thư mục vượt giới hạn tải lên. Hãy chọn các file cần tải lên; thư mục trong giới hạn sẽ được tải lên đầy đủ.",
+  "cappedWarning": "Việc quét thư mục dừng sớm nên danh sách có thể chưa đầy đủ.",
+  "rootFolder": "(file thả trực tiếp)",
+  "overMaxSection": "Thư mục có hơn {max} file",
+  "overLargeSection": "Thư mục có từ {count} file lớn trở lên (lớn hơn {size})",
+  "selectedCount": "{selected}/{max} file",
+  "selectedLarge": "{selected}/{max} file lớn",
+  "large": "Lớn",
+  "upload": "Tải lên"
 }

@@ -32,6 +32,9 @@ var (
 	// Upload file {name} success, key {key}.
 	S3S006 = "S3S006"
 
+	// Deleted {count} object(s) under folder {prefix}.
+	S3S007 = "S3S007"
+
 	// Access key or secret key is not valid for this endpoint.
 	S3E001 = "S3E001"
 
@@ -83,11 +86,23 @@ var (
 	// Upload file {name} error.
 	S3E017 = "S3E017"
 
-	// Upload at most {max} files at a time.
+	// Folder {folder} has more than {max} files to upload.
 	S3E018 = "S3E018"
 
 	// Invalid upload path for file {name}.
 	S3E019 = "S3E019"
+
+	// Invalid folder {prefix}, it can't be deleted.
+	S3E020 = "S3E020"
+
+	// Delete folder {prefix} error: {failed} object(s) failed, {deleted} deleted.
+	S3E021 = "S3E021"
+
+	// Folder {folder} has more than {max} files over {size} GiB to upload.
+	S3E022 = "S3E022"
+
+	// Upload at most {max} files at a time.
+	S3E023 = "S3E023"
 
 	// Access bucket is limited.
 	S3W001 = "S3W001"
@@ -107,7 +122,7 @@ var (
 	// Skipped {count} item(s) that can't be uploaded (unreadable, symbolic link or not a regular file).
 	S3W006 = "S3W006"
 
-	// A file is over 5 GiB, only the largest file {name} is uploaded.
+	// The drop holds more than {max} files, the files after the first {max} are ignored.
 	S3W007 = "S3W007"
 )
 
@@ -156,12 +171,14 @@ func NewModule(
 }
 
 // Connect opens a connection to an S3-compatible endpoint using the given input.
-// isManualConnect indicates whether the connection was triggered directly by
-// the user (true) or by an automatic flow (false).
+// If isExistingProfile is true, input is an already saved profile (the user typed the
+// secret key themselves): it connects with input.Id and creates no profile.
+// If false, input is a new connection: a profile is created from it, and if that fails
+// the connection is dropped.
 // On success, the connection is kept for subsequent bucket/object operations.
-func (m *Module) Connect(input models.ConnectionProfileInput, isManualConnect bool,
+func (m *Module) Connect(input models.ConnectionProfileInput, isExistingProfile bool,
 ) models.Output[models.ConnectOutput] {
-	return m.submoduleConnMng.connectAction(input, isManualConnect)
+	return m.submoduleConnMng.connectAction(input, isExistingProfile)
 }
 
 // TestConnection checks whether the given credentials and endpoint are valid
@@ -236,6 +253,16 @@ func (m *Module) CancelAllUploads() models.Output[any] {
 
 func (m *Module) DeleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
 	return m.submoduleObjMng.deleteObject(ctx, input)
+}
+
+// DeletePrefix deletes every object under input.Prefix (the folder, its sub folders
+// and the folder marker). Only current versions are deleted. An empty prefix or "/"
+// is rejected so a whole bucket can't be deleted. ctx is the call context.
+func (m *Module) DeletePrefix(
+	ctx context.Context,
+	input models.DeletePrefixInput,
+) models.Output[models.DeletePrefixOutput] {
+	return m.submoduleObjMng.deletePrefix(ctx, input)
 }
 
 func (m *Module) GetDownloadHistory(input models.DownloadHistoryInput) models.Output[models.DownloadHistoryOutput] {

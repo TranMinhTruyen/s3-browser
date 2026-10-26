@@ -22,14 +22,14 @@ var (
 	// Error get all connnection profile
 	PFE003 = "PFE003"
 
-	// Error while update profile
-	PFE004 = "PFE004"
-
 	// Update profile [{name}] error
 	PFE005 = "PFE005"
 
 	// Delete profile [{name}] error
 	PFE006 = "PFE006"
+
+	// Profile [{name}] has uploads or downloads in progress, cannot delete
+	PFE007 = "PFE007"
 
 	// Add new profile [{name}] success
 	PFS001 = "PFS001"
@@ -131,6 +131,7 @@ func (m *Module) CreateProfile(
 
 func (m *Module) UpdateProfileById(input models.ConnectionProfileInput) models.Output[models.ConnectionProfileOutput] {
 	output := models.NewOutput[models.ConnectionProfileOutput]()
+	// Intentional: with SavePassword=false the stored secret is overwritten with an empty one.
 	encryptedSecret := ""
 
 	if input.SavePassword {
@@ -167,7 +168,7 @@ func (m *Module) UpdateProfileById(input models.ConnectionProfileInput) models.O
 		output.Result = false
 		output.AddMessage(
 			models.NewParamsMessage(cnst.MessageTypeError, cnst.Profile, PFE005, err.Error(), map[string]any{
-				"name": result.Name.String,
+				"name": input.Name,
 			}),
 		)
 		return output
@@ -189,30 +190,44 @@ func (m *Module) UpdateProfileById(input models.ConnectionProfileInput) models.O
 		Version:     result.Version,
 	}
 
-	output.AddMessage(models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Bucket, PFS002, "", map[string]any{
+	output.AddMessage(models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Profile, PFS002, "", map[string]any{
 		"name": result.Name.String,
 	}))
 
 	return output
 }
 
+// DeleteProfileById closes the profile's active connection (if any), then deletes the profile.
+// Result is false if the profile couldn't be deleted.
 func (m *Module) DeleteProfileById(input models.ConnectionProfileInput) models.Output[bool] {
 	output := models.NewOutput[bool]()
-	output.Body = true
+
+	// Closed outside the container's lock, as RemoveConnIfIdle requires.
+	conn, removed, busy := m.global.RemoveConnIfIdle(input.Id)
+	if busy {
+		m.logger.Warn("delete profile refused, transfers in progress", "connectionId", input.Id)
+		return output.ThrowError(
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Profile, PFE007, "", map[string]any{
+				"name": input.Name,
+			}),
+		)
+	}
+	if removed {
+		conn.Transport.CloseIdleConnections()
+	}
 
 	err := m.q.DeleteConnectionProfileById(m.app.Context(), input.Id)
 
 	if err != nil {
 		m.logger.Error("delete connection profile failed", "connectionId", input.Id, "error", err)
-		output.Body = false
-		output.AddMessage(
+		return output.ThrowError(
 			models.NewParamsMessage(cnst.MessageTypeError, cnst.Profile, PFE006, err.Error(), map[string]any{
 				"name": input.Name,
 			}),
 		)
-		return output
 	}
 
+	output.Body = true
 	output.AddMessage(models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Profile, PFS003, "", map[string]any{
 		"name": input.Name,
 	}))
@@ -242,18 +257,19 @@ func (m *Module) GetConnectionProfileById(connectionID string) models.Output[mod
 	}
 
 	output.Body = models.ConnectionProfileOutput{
-		ID:        result.ID,
-		Name:      result.Name.String,
-		Color:     result.Color.String,
-		Provider:  result.Provider,
-		Endpoint:  result.Endpoint,
-		Region:    result.Region,
-		AccessKey: result.AccessKey,
-		SecretKey: decrypted,
-		PathStyle: result.PathStyle.Bool,
-		CreatedAt: result.CreatedAt.Time,
-		UpdatedAt: result.UpdatedAt.Time,
-		Version:   result.Version,
+		ID:          result.ID,
+		Name:        result.Name.String,
+		Color:       result.Color.String,
+		Provider:    result.Provider,
+		Endpoint:    result.Endpoint,
+		Region:      result.Region,
+		AccessKey:   result.AccessKey,
+		SecretKey:   decrypted,
+		PathStyle:   result.PathStyle.Bool,
+		AutoConnect: result.AutoConnect.Bool,
+		CreatedAt:   result.CreatedAt.Time,
+		UpdatedAt:   result.UpdatedAt.Time,
+		Version:     result.Version,
 	}
 
 	return output

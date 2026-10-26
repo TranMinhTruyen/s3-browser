@@ -64,7 +64,7 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 	}
 }
 
-// Clean up when shutdow app
+// Clean up when shutting down the app
 func (a *App) Shutdown() {
 	a.BucketHandler.CancelAllDownloads()
 	a.BucketHandler.CancelAllUploads()

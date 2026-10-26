@@ -16,7 +16,7 @@ type ProfileHandler struct {
 
 func NewProfileHandler(app *application.App, logger *slog.Logger, profile *profile.Module) *ProfileHandler {
 	return &ProfileHandler{
-		logger:  logger.With("component", "master_handler"),
+		logger:  logger.With("component", "profile_handler"),
 		app:     app,
 		profile: profile,
 	}

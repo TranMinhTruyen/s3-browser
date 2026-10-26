@@ -46,6 +46,7 @@ File này được Claude Code tự động load cho session chính và mọi su
 
 ### Output và message
 - Mọi handler trả về `models.Output[T]` (`Result`, `MessageList`, `Body`). Tạo bằng `models.NewOutput[T]()`, dùng `output.AddMessage(...)`, `output.ThrowError(...)`.
+- Lỗi luôn trả về bằng `return output.ThrowError(msg)` (đặt `Result=false` và thêm message); không tự gán `Result=false` rồi `AddMessage`. Cảnh báo dùng `cnst.MessageTypeWarn`, không dùng `MessageTypeError`.
 - Message: `models.NewMessage` / `models.NewParamsMessage(cnst.MessageTypeX, cnst.<Module>, CODE, errorDetail, params)`.
 - Mã message khai báo dạng `var` ở đầu `module.go`, comment là nội dung message. Format `<PREFIX><S|E|W><NNN>` (ví dụ `S3S001`, `S3E006`, `PFE001`, `MTE001`).
 - Mỗi mã mới **phải có key** trong `frontend/src/locales/{en,vi,ja}/messages/ipcMessage.json`.
@@ -103,6 +104,7 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 - Namespace theo component/page trong `frontend/src/locales/<lang>/...`, đăng ký trong `resource.ts` của **cả 3 ngôn ngữ** (en, vi, ja).
 
 ### Lệnh (chạy trong `frontend/`)
-- Format: biome (2 spaces, single quotes, semicolons, width 120, trailingCommas es5, arrowParens asNeeded, import groups).
+- Format/check: Windows `node_modules/.bin/biome.exe check <paths>`, macOS/Linux `node_modules/.bin/biome check <paths>`. Không dùng `npx biome` (resolve nhầm sang package `biome@0.3.3`). File luôn lưu LF (theo `.gitattributes` và `biome.json`).
+- Quy tắc format biome: (2 spaces, single quotes, semicolons, width 120, trailingCommas es5, arrowParens asNeeded, import groups).
 - Lint: `npx oxlint <paths>` (theo `.oxlintrc.json`).
 - Type-check: Windows `node_modules/.bin/tsc.exe --noEmit`, macOS/Linux `node_modules/.bin/tsc --noEmit`. Không dùng `npx tsc` (không resolve được ở đây).

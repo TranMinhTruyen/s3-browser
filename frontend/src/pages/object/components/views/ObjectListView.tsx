@@ -2,6 +2,7 @@ import { Center, Loader } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   DeleteObject,
+  DeletePrefix,
   DownloadObject,
   GetListObject,
   UploadObject,
@@ -18,6 +19,14 @@ import ConfirmModal from '@/components/modals/ConfirmModal';
 import UploadLimitModal from '@/components/modals/UploadLimitModal';
 import i18n from '@/locales/i18n';
 import ObjectItem from '@/pages/object/components/ObjectItem';
+
+// Download or delete is refused above this many objects at once.
+const MAX_OBJECTS_PER_ACTION = 5;
+// Objects fetched per page.
+const OBJECT_PAGE_SIZE = 10;
+// Row height before measuring, and the gap between rows.
+const ROW_ESTIMATE_SIZE = 104;
+const ROW_GAP = 8;
 
 export type ObjectListViewRef = {
   onRefresh?: () => Promise<void>;
@@ -73,7 +82,7 @@ function ObjectListView(props: ObjectListViewProps) {
             bucket,
             prefix,
             nextCursor: cursor,
-            limit: 10,
+            limit: OBJECT_PAGE_SIZE,
           },
         ],
         {
@@ -133,7 +142,7 @@ function ObjectListView(props: ObjectListViewProps) {
     setObjectDatas([]);
     await loadFirstPage();
     scrollRef.current?.scrollTo({ top: 0 });
-  }, [scrollRef.current, loadFirstPage]);
+  }, [scrollRef, loadFirstPage]);
 
   const onClickMenuButton = useCallback(
     async (keys: string[], action: 'download' | 'delete') => {
@@ -142,7 +151,7 @@ function ObjectListView(props: ObjectListViewProps) {
       // the folder marker, not the files in it, so they are never sent.
       const objects = keys.filter(key => !key.endsWith('/'));
       if (objects.length === 0) return;
-      if (objects.length > 5) {
+      if (objects.length > MAX_OBJECTS_PER_ACTION) {
         ConfirmModal.show({
           type: 'warning',
           confirmCode: 'C000005',
@@ -153,7 +162,7 @@ function ObjectListView(props: ObjectListViewProps) {
         case 'download':
           await callIPC(DownloadObject, [{ connectionId: connectionId, profileName, bucket, objects }]);
           break;
-        default:
+        case 'delete': {
           const confirmModal = await ConfirmModal.show({
             type: 'warning',
             confirmCode: 'C000004',
@@ -172,10 +181,37 @@ function ObjectListView(props: ObjectListViewProps) {
             }
           }
           break;
+        }
       }
       clearSelectItem(tabId);
     },
     [bucket, profileName, connectionId, onRefresh, setDeleting, tabId, clearSelectItem]
+  );
+
+  const onClickDeleteFolder = useCallback(
+    async (folderKey: string, name: string) => {
+      if (!connectionId || !bucket) return;
+      // Already being deleted: ignore a repeated click.
+      if (useTabListStore.getState().tabList[tabId]?.deletingItems?.includes(folderKey)) return;
+      const confirmed = await ConfirmModal.show({
+        type: 'warning',
+        confirmCode: 'C000006',
+        params: {
+          object: name || folderKey,
+        },
+        size: 'md',
+      });
+      if (!confirmed) return;
+      setDeleting(tabId, [folderKey], true);
+      try {
+        await callIPC(DeletePrefix, [{ connectionId, profileName, bucket, prefix: folderKey }]);
+        // Refresh even on failure or cancel: part of the folder may already be deleted.
+        await onRefresh();
+      } finally {
+        setDeleting(tabId, [folderKey], false);
+      }
+    },
+    [bucket, profileName, connectionId, onRefresh, setDeleting, tabId]
   );
 
   const onToggleSelect = useCallback(
@@ -202,12 +238,25 @@ function ObjectListView(props: ObjectListViewProps) {
   }, []);
 
   const onFilesDropped = useCallback(
-    async ({ files: dropped, truncated, skipped, maxFiles, largeFileSize }: FilesDroppedOutput) => {
+    async ({
+      groups,
+      skipped,
+      overMaxTotal,
+      capped,
+      maxFilesPerFolder,
+      largeFileSize,
+      largeFileMaxCount,
+      maxTotalFiles,
+    }: FilesDroppedOutput) => {
       if (!connectionId || !bucket) return;
       if (skipped > 0) {
         toast.warning(formatStringJson(i18n.t('ipcMessage:bucket.S3W006'), { count: skipped }));
       }
-      if (dropped.length === 0) return;
+      if (overMaxTotal) {
+        toast.warning(formatStringJson(i18n.t('ipcMessage:bucket.S3W007'), { max: maxTotalFiles }));
+      }
+      let files = groups.flatMap(group => group.files);
+      if (files.length === 0) return;
 
       const isBusy = () => useTabListStore.getState().uploadingTabId !== null;
       const warnBusy = () => toast.warning(i18n.t('ipcMessage:bucket.S3W005'));
@@ -216,19 +265,24 @@ function ObjectListView(props: ObjectListViewProps) {
         return;
       }
 
-      // Over the large-file limit only the largest file is uploaded (all others are skipped).
-      const hasLargeFile = dropped.some(f => f.size > largeFileSize);
-      const largeFile = hasLargeFile ? dropped.reduce((max, f) => (f.size > max.size ? f : max)) : undefined;
-      const files = largeFile ? [largeFile] : dropped;
-
-      if (truncated || largeFile) {
-        const confirmed = await UploadLimitModal.show({ files, truncated, max: maxFiles, largeFileSize, largeFile });
-        if (!confirmed) return;
+      // A group over a limit needs the user to choose which files to upload.
+      if (groups.some(group => group.overMaxFiles || group.overLargeCount)) {
+        const chosen = await UploadLimitModal.show({
+          groups,
+          maxFilesPerFolder,
+          largeFileSize,
+          largeFileMaxCount,
+          capped,
+        });
+        if (!chosen || chosen.length === 0) return;
+        files = chosen;
         // Another tab may have started an upload while the modal was open.
         if (isBusy()) {
           warnBusy();
           return;
         }
+      } else if (capped) {
+        toast.warning(i18n.t('uploadLimitModal:cappedWarning'));
       }
 
       setUploadingTab(tabId);
@@ -280,9 +334,9 @@ function ObjectListView(props: ObjectListViewProps) {
   const virtualizer = useVirtualizer({
     count: objectList.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 104,
+    estimateSize: () => ROW_ESTIMATE_SIZE,
     getItemKey: idx => objectList[idx].key,
-    gap: 8,
+    gap: ROW_GAP,
     overscan: 5,
     scrollMargin,
   });
@@ -317,6 +371,7 @@ function ObjectListView(props: ObjectListViewProps) {
             item={objectList[row.index]}
             onToggleSelect={onToggleSelect}
             onClickMenuButton={onClickMenuButton}
+            onClickDeleteFolder={onClickDeleteFolder}
             onOpenFolder={onOpenFolder}
           />
         </div>

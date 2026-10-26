@@ -1,7 +1,7 @@
 import { Anchor, Breadcrumbs, Divider, Group, Paper, Stack, Text, Tooltip } from '@mantine/core';
 import { ConnectS3ByProfile } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ArrowLeft, BroomSparkles, Download, PlugZap, RefreshCw, Trash } from 'lucide-react';
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { MouseEvent, memo, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useProfileStore } from '@/common/stores/profileStore';
@@ -29,10 +29,9 @@ function TabDetail(props: TabDetailProps) {
   const { t: tBucket } = useTranslation('bucket', { keyPrefix: 'page' });
   const { t: tObject } = useTranslation('object', { keyPrefix: 'page' });
 
-  const [selectedBucket, setSelectedBucket] = useState<string | undefined>(undefined);
-
   const selectedProfileId = useTabListStore(s => s.tabList[tabId]?.profileId ?? null);
   const tabView = useTabListStore(s => s.tabList[tabId]?.currentView ?? 'bucketList');
+  const selectedBucket = useTabListStore(s => s.tabList[tabId]?.bucket);
   const prefix = useTabListStore(s => s.tabList[tabId]?.prefix ?? '');
   // Only id -> name, so a profile change that keeps its name does not re-render every tab.
   const profileNames = useProfileStore(
@@ -98,7 +97,13 @@ function TabDetail(props: TabDetailProps) {
 
   const onChangeSelectProfile = useCallback(
     (value: string | null) => {
-      updateTab(tabId, { profileId: value, currentView: 'bucketList', prefix: '', selectionItem: [] });
+      updateTab(tabId, {
+        profileId: value,
+        currentView: 'bucketList',
+        bucket: undefined,
+        prefix: '',
+        selectionItem: [],
+      });
     },
     [tabId, updateTab]
   );
@@ -106,8 +111,7 @@ function TabDetail(props: TabDetailProps) {
   const onChangeSelectBucket = useCallback(
     (bucketName: string | undefined) => {
       if (bucketName) {
-        changeCurrentView(tabId, 'objectList');
-        setSelectedBucket(bucketName);
+        changeCurrentView(tabId, 'objectList', bucketName);
       }
     },
     [tabId, changeCurrentView]
@@ -134,9 +138,10 @@ function TabDetail(props: TabDetailProps) {
     clearSelectItem(tabId);
   }, [clearSelectItem, tabId]);
 
+  // The crumb's folder prefix is stored in data-prefix ("" is the bucket root).
   const onClickBreadcrumb = useCallback(
-    (crumbPrefix: string) => {
-      changePrefix(tabId, crumbPrefix);
+    (e: MouseEvent<HTMLElement>) => {
+      changePrefix(tabId, e.currentTarget.dataset.prefix ?? '');
     },
     [changePrefix, tabId]
   );
@@ -149,7 +154,7 @@ function TabDetail(props: TabDetailProps) {
     return objectListRef.current?.onClickMenuButton?.(selectedItems, 'delete');
   }, [selectedItems]);
 
-  const renderView = (
+  const viewContent = (
     <>
       <Stack gap="8px" display={currentView === 'bucketList' ? undefined : 'none'}>
         <BucketListView
@@ -241,7 +246,9 @@ function TabDetail(props: TabDetailProps) {
           <Group gap="xs" p="4px" style={{ flexShrink: 0 }}>
             <Breadcrumbs separatorMargin="4px" style={{ minWidth: 0, flexWrap: 'wrap' }}>
               {prefix ? (
-                <Anchor onClick={() => onClickBreadcrumb('')}>{selectedBucket}</Anchor>
+                <Anchor data-prefix="" onClick={onClickBreadcrumb}>
+                  {selectedBucket}
+                </Anchor>
               ) : (
                 <Text fw={500}>{selectedBucket}</Text>
               )}
@@ -251,7 +258,7 @@ function TabDetail(props: TabDetailProps) {
                     {crumb.name}
                   </Text>
                 ) : (
-                  <Anchor key={crumb.prefix} onClick={() => onClickBreadcrumb(crumb.prefix)}>
+                  <Anchor key={crumb.prefix} data-prefix={crumb.prefix} onClick={onClickBreadcrumb}>
                     {crumb.name}
                   </Anchor>
                 )
@@ -272,7 +279,7 @@ function TabDetail(props: TabDetailProps) {
         data-tab-id={tabId}
         style={{ flex: 1, minHeight: 0, overflow: 'auto', position: 'relative' }}
       >
-        <Stack gap="8px">{renderView}</Stack>
+        <Stack gap="8px">{viewContent}</Stack>
       </Paper>
     </Paper>
   );
