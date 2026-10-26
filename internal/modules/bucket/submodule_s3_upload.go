@@ -65,6 +65,12 @@ func uploadFile(
 	if progress == nil {
 		progress = func(int64, int64) {} // allow callers that don't track progress
 	}
+	// Lstat first so a symlink is rejected instead of followed.
+	if info, err := os.Lstat(path); err != nil {
+		return 0, err
+	} else if !info.Mode().IsRegular() {
+		return 0, fmt.Errorf("%s is not a regular file", path)
+	}
 
 	f, err := os.Open(path)
 	if err != nil {

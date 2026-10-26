@@ -3,16 +3,20 @@ import { ConnectS3ByProfile } from '@wails/S3Browser/internal/handlers/buckethan
 import { ArrowLeft, BroomSparkles, Download, PlugZap, RefreshCw, Trash } from 'lucide-react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
-import { isNullOrEmpty } from '@/common/utils/stringUtils';
+import { formatStringJson, isNullOrEmpty } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import Combobox from '@/components/inputs/combobox/Combobox';
 import ConnectModal from '@/components/modals/ConnectModal';
 import BucketListView, { BucketListViewRef } from '@/pages/bucket/components/views/BucketListView';
-import ObjectListView, { ObjectListViewRef } from '@/pages/bucket/components/views/ObjectListView';
-import classes from '@/pages/bucket/page.module.css';
+import ObjectListView, { ObjectListViewRef } from '@/pages/object/components/views/ObjectListView';
+import classes from '@/pages/object/page.module.css';
+
+// Stable fallback so the selector does not return a new array on every call.
+const EMPTY_SELECTION: string[] = [];
 
 type TabDetailProps = {
   tabId: string;
@@ -21,27 +25,37 @@ type TabDetailProps = {
 function TabDetail(props: TabDetailProps) {
   const { tabId } = props;
 
-  const { t } = useTranslation('bucket', { keyPrefix: 'page' });
+  const { t } = useTranslation('tabLayout');
+  const { t: tBucket } = useTranslation('bucket', { keyPrefix: 'page' });
+  const { t: tObject } = useTranslation('object', { keyPrefix: 'page' });
 
   const [selectedBucket, setSelectedBucket] = useState<string | undefined>(undefined);
 
   const selectedProfileId = useTabListStore(s => s.tabList[tabId]?.profileId ?? null);
   const tabView = useTabListStore(s => s.tabList[tabId]?.currentView ?? 'bucketList');
   const prefix = useTabListStore(s => s.tabList[tabId]?.prefix ?? '');
-  const connectionProfiles = useProfileStore(s => s.connectionProfiles);
+  // Only id -> name, so a profile change that keeps its name does not re-render every tab.
+  const profileNames = useProfileStore(
+    useShallow(s =>
+      Object.fromEntries(Object.entries(s.connectionProfiles).map(([key, value]) => [key, value?.name ?? '']))
+    )
+  );
+  const selectedProfile = useProfileStore(s =>
+    selectedProfileId ? s.connectionProfiles[selectedProfileId] : undefined
+  );
   const bucketListRef = useRef<BucketListViewRef>(null);
   const objectListRef = useRef<ObjectListViewRef>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const isConnected = !!selectedProfileId && !!connectionProfiles[selectedProfileId]?.isConnected;
+  const isConnected = !!selectedProfile?.isConnected;
   const currentView = isConnected ? tabView : 'bucketList';
-  const selectedItems = useTabListStore(s => s.tabList[tabId]?.selectionItem ?? []);
+  const selectedItems = useTabListStore(s => s.tabList[tabId]?.selectionItem ?? EMPTY_SELECTION);
   const optionsData = useMemo(
     () =>
-      Object.entries(connectionProfiles).map(([key, value]) => ({
-        name: value?.name ?? '',
+      Object.entries(profileNames).map(([key, name]) => ({
+        name,
         value: key,
       })),
-    [connectionProfiles]
+    [profileNames]
   );
   const hasDeletingSelected = useTabListStore(s => {
     const tab = s.tabList[tabId];
@@ -54,10 +68,10 @@ function TabDetail(props: TabDetailProps) {
   const changePrefix = useTabListStore(s => s.changePrefix);
   const clearSelectItem = useTabListStore(s => s.clearSelectItem);
 
-  const onCLickConnect = useCallback(async () => {
+  const onClickConnect = useCallback(async () => {
     if (isNullOrEmpty(selectedProfileId)) return;
 
-    const profile = connectionProfiles[selectedProfileId];
+    const profile = selectedProfile;
 
     if (!profile || profile.isConnected) return;
     if (!profile.accessKey) {
@@ -72,7 +86,7 @@ function TabDetail(props: TabDetailProps) {
     if (output?.isConnected) {
       updateConnectionProfiles(selectedProfileId, { ...profile, isConnected: true });
     }
-  }, [connectionProfiles, updateConnectionProfiles, selectedProfileId]);
+  }, [selectedProfile, updateConnectionProfiles, selectedProfileId]);
 
   const onClickRefresh = useCallback(() => {
     if (currentView === 'objectList') {
@@ -116,6 +130,17 @@ function TabDetail(props: TabDetailProps) {
     return parts.map((name, i) => ({ name: name || '/', prefix: parts.slice(0, i + 1).join('/') + '/' }));
   }, [prefix]);
 
+  const onClickClearSelected = useCallback(() => {
+    clearSelectItem(tabId);
+  }, [clearSelectItem, tabId]);
+
+  const onClickBreadcrumb = useCallback(
+    (crumbPrefix: string) => {
+      changePrefix(tabId, crumbPrefix);
+    },
+    [changePrefix, tabId]
+  );
+
   const onClickDownloadSelected = useCallback(() => {
     return objectListRef.current?.onClickMenuButton?.(selectedItems, 'download');
   }, [selectedItems]);
@@ -128,7 +153,7 @@ function TabDetail(props: TabDetailProps) {
     <>
       <Stack gap="8px" display={currentView === 'bucketList' ? undefined : 'none'}>
         <BucketListView
-          profile={isConnected ? connectionProfiles[selectedProfileId] : null}
+          profile={isConnected ? selectedProfile : null}
           active={currentView === 'bucketList'}
           scrollRef={scrollRef}
           onSelectBucket={onChangeSelectBucket}
@@ -139,7 +164,7 @@ function TabDetail(props: TabDetailProps) {
         <Stack gap="8px">
           <ObjectListView
             tabId={tabId}
-            profile={isConnected ? connectionProfiles[selectedProfileId] : null}
+            profile={isConnected ? selectedProfile : null}
             bucket={selectedBucket}
             scrollRef={scrollRef}
             ref={objectListRef}
@@ -161,13 +186,17 @@ function TabDetail(props: TabDetailProps) {
             style={{ width: '200px' }}
           />
 
-          <Tooltip label="Connect">
-            <ActionIcon onClick={onCLickConnect} disabled={isConnected || !selectedProfileId}>
+          <Tooltip label={t('tooltip.connect')}>
+            <ActionIcon onClick={onClickConnect} disabled={isConnected || !selectedProfileId}>
               <PlugZap />
             </ActionIcon>
           </Tooltip>
 
-          <Tooltip label={`Refresh ${t(`tooltip.${currentView}`)}`}>
+          <Tooltip
+            label={formatStringJson(t('tooltip.refresh'), {
+              target: currentView === 'objectList' ? tObject('tooltip.objectList') : tBucket('tooltip.bucketList'),
+            })}
+          >
             <ActionIcon onClick={onClickRefresh} disabled={!isConnected}>
               <RefreshCw />
             </ActionIcon>
@@ -175,7 +204,7 @@ function TabDetail(props: TabDetailProps) {
 
           {currentView === 'objectList' ? (
             <>
-              <Tooltip label={prefix ? 'Back to parent folder' : 'Back to bucket'}>
+              <Tooltip label={prefix ? tObject('tooltip.backToParent') : tObject('tooltip.backToBucket')}>
                 <ActionIcon onClick={onClickBack}>
                   <ArrowLeft />
                 </ActionIcon>
@@ -183,17 +212,17 @@ function TabDetail(props: TabDetailProps) {
 
               {selectedItems.length > 0 ? (
                 <Group gap="xs" ml="auto">
-                  <Tooltip label="Clear selected">
-                    <ActionIcon onClick={() => clearSelectItem(tabId)} disabled={hasDeletingSelected}>
+                  <Tooltip label={tObject('tooltip.clearSelected')}>
+                    <ActionIcon onClick={onClickClearSelected} disabled={hasDeletingSelected}>
                       <BroomSparkles />
                     </ActionIcon>
                   </Tooltip>
-                  <Tooltip label="Download selected">
+                  <Tooltip label={tObject('tooltip.downloadSelected')}>
                     <ActionIcon onClick={onClickDownloadSelected} disabled={hasDeletingSelected}>
                       <Download />
                     </ActionIcon>
                   </Tooltip>
-                  <Tooltip label="Delete selected">
+                  <Tooltip label={tObject('tooltip.deleteSelected')}>
                     <ActionIcon onClick={onClickDeleteSelected} color="red">
                       <Trash />
                     </ActionIcon>
@@ -212,7 +241,7 @@ function TabDetail(props: TabDetailProps) {
           <Group gap="xs" p="4px" style={{ flexShrink: 0 }}>
             <Breadcrumbs separatorMargin="4px" style={{ minWidth: 0, flexWrap: 'wrap' }}>
               {prefix ? (
-                <Anchor onClick={() => changePrefix(tabId, '')}>{selectedBucket}</Anchor>
+                <Anchor onClick={() => onClickBreadcrumb('')}>{selectedBucket}</Anchor>
               ) : (
                 <Text fw={500}>{selectedBucket}</Text>
               )}
@@ -222,7 +251,7 @@ function TabDetail(props: TabDetailProps) {
                     {crumb.name}
                   </Text>
                 ) : (
-                  <Anchor key={crumb.prefix} onClick={() => changePrefix(tabId, crumb.prefix)}>
+                  <Anchor key={crumb.prefix} onClick={() => onClickBreadcrumb(crumb.prefix)}>
                     {crumb.name}
                   </Anchor>
                 )

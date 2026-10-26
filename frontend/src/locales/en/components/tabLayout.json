@@ -1,0 +1,10 @@
+{
+  "title": {
+    "defaultTabName": "New profile"
+  },
+  "tooltip": {
+    "closeTab": "Close tab",
+    "connect": "Connect",
+    "refresh": "Refresh {target}"
+  }
+}

@@ -3,13 +3,14 @@ import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
 import dayjs from 'dayjs';
 import { Download, Ellipsis, Folder, Trash } from 'lucide-react';
 import { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import ConfirmModal from '@/components/modals/ConfirmModal';
-import classes from '@/pages/bucket/page.module.css';
+import classes from '@/pages/object/page.module.css';
 
 type ObjectItemProps = {
   tabId: string;
@@ -21,6 +22,8 @@ type ObjectItemProps = {
 
 function ObjectItem(props: ObjectItemProps) {
   const { tabId, item, onToggleSelect, onClickMenuButton, onOpenFolder } = props;
+
+  const { t } = useTranslation('object', { keyPrefix: 'page' });
 
   // Subscribe to this row's own selection only (a boolean), so toggling one row
   // does not re-render the others.
@@ -41,10 +44,33 @@ function ObjectItem(props: ObjectItemProps) {
     }
   }, [onClickMenuButton, item.key, item.name]);
 
+  const onClickFolder = useCallback(() => {
+    onOpenFolder(item.key);
+  }, [onOpenFolder, item.key]);
+
+  const onClickCard = useCallback(() => {
+    onToggleSelect(item.key, !isSelected);
+  }, [onToggleSelect, item.key, isSelected]);
+
+  const onChangeCheckbox = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onToggleSelect(item.key, e.currentTarget.checked);
+    },
+    [onToggleSelect, item.key]
+  );
+
+  const onClickMenuSection = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  const onClickDownloadButton = useCallback(() => {
+    onClickMenuButton([item.key], 'download');
+  }, [onClickMenuButton, item.key]);
+
   // A folder is only a key prefix: it can be opened, but not selected, downloaded or deleted.
   if (item.isFolder) {
     return (
-      <Card padding="8px" orientation="horizontal" onClick={() => onOpenFolder(item.key)} className={classes.card}>
+      <Card padding="8px" orientation="horizontal" onClick={onClickFolder} className={classes.card}>
         <Card.Section
           inheritPadding
           px="8px"
@@ -80,12 +106,7 @@ function ObjectItem(props: ObjectItemProps) {
   }
 
   return (
-    <Card
-      padding="8px"
-      orientation="horizontal"
-      onClick={() => onToggleSelect(item.key, !isSelected)}
-      className={classes.card}
-    >
+    <Card padding="8px" orientation="horizontal" onClick={onClickCard} className={classes.card}>
       <Card.Section
         inheritPadding
         px="8px"
@@ -98,11 +119,7 @@ function ObjectItem(props: ObjectItemProps) {
           justifyContent: 'center',
         }}
       >
-        <CheckBoxInput
-          styles={{ input: { cursor: 'pointer' } }}
-          checked={isSelected}
-          onChange={e => onToggleSelect(item.key, e.currentTarget.checked)}
-        />
+        <CheckBoxInput styles={{ input: { cursor: 'pointer' } }} checked={isSelected} onChange={onChangeCheckbox} />
       </Card.Section>
       <Card.Section
         inheritPadding
@@ -121,14 +138,14 @@ function ObjectItem(props: ObjectItemProps) {
           <Group gap="xl">
             <Box miw="100px">
               <Text span className={classes.label}>
-                Size
+                {t('label.size')}
               </Text>
               <Text>{formatFileSize(item.size)}</Text>
             </Box>
 
             <Box miw="100px">
               <Text span className={classes.label}>
-                Last Modified
+                {t('label.lastModified')}
               </Text>
               <Text>{dayjs(item.lastModified).format(FULL_DATE_TIME_FORMAT)}</Text>
             </Box>
@@ -137,7 +154,7 @@ function ObjectItem(props: ObjectItemProps) {
       </Card.Section>
 
       <Card.Section
-        onClick={e => e.stopPropagation()}
+        onClick={onClickMenuSection}
         style={{
           flexShrink: 0,
           display: 'flex',
@@ -154,11 +171,11 @@ function ObjectItem(props: ObjectItemProps) {
           </Menu.Target>
 
           <Menu.Dropdown>
-            <Menu.Item leftSection={<Download size="16px" />} onClick={() => onClickMenuButton([item.key], 'download')}>
-              Download
+            <Menu.Item leftSection={<Download size="16px" />} onClick={onClickDownloadButton}>
+              {t('action.download')}
             </Menu.Item>
             <Menu.Item leftSection={<Trash size="16px" />} color="red" onClick={onClickDeleteButton}>
-              Delete
+              {t('action.delete')}
             </Menu.Item>
           </Menu.Dropdown>
         </Menu>

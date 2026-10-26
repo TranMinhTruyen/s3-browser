@@ -134,7 +134,7 @@ func cleanRelKey(relKey, path string) (string, bool) {
 	if relKey == "" {
 		relKey = filepath.Base(path)
 	}
-	// '' and ':' are banned because only Windows is supported (Q11); review this when
+	// '\' and ':' are banned because only Windows is supported (Q11); review this when
 	// macOS/Linux are supported, where they are valid file name characters.
 	if strings.ContainsAny(relKey, `\:`) {
 		return "", false

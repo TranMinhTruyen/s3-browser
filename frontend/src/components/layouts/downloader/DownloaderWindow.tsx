@@ -1,14 +1,19 @@
 import { Affix, Box, CloseButton, Divider, Group, Paper, Stack, Text } from '@mantine/core';
 import { useElementSize } from '@mantine/hooks';
+import { CancelAllDownloads } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Events } from '@wailsio/runtime';
-import { Download } from 'lucide-react';
-import { useEffect } from 'react';
+import { Download, X } from 'lucide-react';
+import { useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/shallow';
 import { selectDownloadingIds, useDownloaderStore } from '@/common/stores/downloaderStore';
+import { callIPC } from '@/common/utils/ipcUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import DownloaderItem from '@/components/layouts/downloader/DownloaderItem';
 
 function DownloaderWindow() {
+  const { t } = useTranslation('downloaderWindow');
+
   const visible = useDownloaderStore(s => s.windowVisible);
   const openWindow = useDownloaderStore(s => s.openWindow);
   const closeWindow = useDownloaderStore(s => s.closeWindow);
@@ -51,6 +56,10 @@ function DownloaderWindow() {
     setWindowSize(rendered ? { width, height } : { width: 0, height: 0 });
   }, [rendered, width, height, setWindowSize]);
 
+  const onClickCancelAll = useCallback(async () => {
+    await callIPC(CancelAllDownloads, []);
+  }, []);
+
   return rendered ? (
     <>
       {!visible ? (
@@ -64,8 +73,13 @@ function DownloaderWindow() {
         <Affix ref={sizeRef} position={{ bottom: 16, right: 16 }}>
           <Paper w="400px" withBorder style={{ overflow: 'hidden' }}>
             <Group p="xs" justify="space-between">
-              <Text>Downloading</Text>
-              <CloseButton onClick={closeWindow} ml="auto" />
+              <Text>{t('title')}</Text>
+              <Group gap="xs">
+                <ActionIcon color="red" size="md" onClick={onClickCancelAll} title={t('action.cancelAll')}>
+                  <X />
+                </ActionIcon>
+                <CloseButton onClick={closeWindow} />
+              </Group>
             </Group>
 
             <Divider />

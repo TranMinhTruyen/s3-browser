@@ -3,6 +3,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { CancelDownloadOne } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { X } from 'lucide-react';
 import { memo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDownloaderStore } from '@/common/stores/downloaderStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
@@ -14,6 +15,7 @@ type DownloaderItemProps = {
 
 function DownloaderItem(props: DownloaderItemProps) {
   const { id } = props;
+  const { t } = useTranslation('downloaderWindow');
 
   const [expanded, handlerExpanded] = useDisclosure(false);
 
@@ -51,18 +53,20 @@ function DownloaderItem(props: DownloaderItemProps) {
       </Card.Section>
 
       <Card.Section inheritPadding px="xs" style={{ flex: 1, minWidth: 0, padding: '8px' }}>
-        <Text truncate="end">Object: {item?.fileName}</Text>
+        <Text truncate="end">
+          {t('label.objectLbl')}: {item?.fileName}
+        </Text>
         <Group>
           <Box>
             <Text size="xs" c="dimmed">
-              Downloaded
+              {t('label.downloadedLbl')}
             </Text>
             <Text>{formatFileSize(item.downloaded)}</Text>
           </Box>
 
           <Box>
             <Text size="xs" c="dimmed">
-              Remaining
+              {t('label.remainingLbl')}
             </Text>
             <Text>{formatFileSize(item.total - item.downloaded)}</Text>
           </Box>

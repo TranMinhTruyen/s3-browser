@@ -1,0 +1,10 @@
+{
+  "title": {
+    "defaultTabName": "Hồ sơ mới"
+  },
+  "tooltip": {
+    "closeTab": "Đóng tab",
+    "connect": "Kết nối",
+    "refresh": "Làm mới {target}"
+  }
+}

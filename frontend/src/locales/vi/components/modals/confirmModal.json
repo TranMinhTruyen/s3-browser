@@ -3,10 +3,11 @@
     "info": "Thông tin",
     "warning": "Cảnh báo"
   },
-  "confirmText": {
+  "confirmCode": {
     "C000001": "Bạn có chắc chắn muốn cập nhật hồ sơ kết nối này không?",
     "C000002": "Bạn có chắc chắn muốn xóa hồ sơ kết nối này không?",
     "C000003": "Vui lòng ngắt kết nối trước khi thực hiện!",
-    "C000004": "Bạn có chắc chắn muốn xóa [{object}] không?"
+    "C000004": "Bạn có chắc chắn muốn xóa [{object}] không?",
+    "C000005": "Chỉ được chọn tối đa 5 mục!"
   }
 }

@@ -1,13 +1,16 @@
 import { CloseButton, Group, Paper, Scroller, Tabs } from '@mantine/core';
 import { Plus } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import ActionIcon from '@/components/buttons/ActionIcon';
-import TabDetail from '@/pages/bucket/components/TabDetail';
-import TabLabel from '@/pages/bucket/components/TabLabel';
+import TabDetail from '@/components/layouts/tab/components/TabDetail';
+import TabLabel from '@/components/layouts/tab/components/TabLabel';
 
-function Page() {
+function TabLayout() {
+  const { t } = useTranslation('tabLayout');
+
   const activeTab = useTabListStore(s => s.activeTab);
   const tabIds = useTabListStore(useShallow(s => Object.keys(s.tabList)));
 
@@ -15,10 +18,13 @@ function Page() {
   const closeTab = useTabListStore(s => s.closeTab);
   const setActiveTab = useTabListStore(s => s.setActiveTab);
 
-  const handleCloseTab = (tabId: string) => (e: React.MouseEvent) => {
-    e.stopPropagation();
-    closeTab(tabId);
-  };
+  const onClickCloseTab = useCallback(
+    (tabId: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      closeTab(tabId);
+    },
+    [closeTab]
+  );
 
   const scrollerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -56,9 +62,9 @@ function Page() {
                   <CloseButton
                     component="span"
                     role="button"
-                    aria-label="Close tab"
+                    aria-label={t('tooltip.closeTab')}
                     size="xs"
-                    onClick={handleCloseTab(key)}
+                    onClick={e => onClickCloseTab(key, e)}
                     style={{ flexShrink: 0 }}
                   />
                 )}
@@ -86,4 +92,4 @@ function Page() {
     </Tabs>
   );
 }
-export default Page;
+export default TabLayout;

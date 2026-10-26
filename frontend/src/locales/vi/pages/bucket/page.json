@@ -1,9 +1,8 @@
 {
-  "title": {
-    "defaultTabName": "Hồ sơ mới"
-  },
   "tooltip": {
-    "bucketList": "danh sách bucket",
-    "objectList": "danh sách object"
+    "bucketList": "danh sách bucket"
+  },
+  "label": {
+    "createDate": "Ngày tạo:"
   }
 }

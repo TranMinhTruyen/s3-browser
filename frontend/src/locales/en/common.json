@@ -5,6 +5,7 @@
     "refresh": "Refresh",
     "connect": "Connect",
     "cancel": "Cancel",
-    "OK": "OK"
+    "OK": "OK",
+    "clear": "Clear"
   }
 }

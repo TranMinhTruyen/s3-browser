@@ -1,0 +1,10 @@
+{
+  "title": {
+    "defaultTabName": "新しいプロファイル"
+  },
+  "tooltip": {
+    "closeTab": "タブを閉じる",
+    "connect": "接続",
+    "refresh": "{target}を再読み込み"
+  }
+}

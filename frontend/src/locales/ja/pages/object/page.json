@@ -1,0 +1,18 @@
+{
+  "tooltip": {
+    "objectList": "オブジェクト一覧",
+    "backToParent": "親フォルダに戻る",
+    "backToBucket": "バケット一覧に戻る",
+    "clearSelected": "選択を解除",
+    "downloadSelected": "選択項目をダウンロード",
+    "deleteSelected": "選択項目を削除"
+  },
+  "label": {
+    "size": "サイズ",
+    "lastModified": "最終更新日時"
+  },
+  "action": {
+    "download": "ダウンロード",
+    "delete": "削除"
+  }
+}

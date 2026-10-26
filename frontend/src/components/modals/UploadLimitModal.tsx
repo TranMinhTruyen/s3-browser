@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import { formatFileSize, formatStringJson } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
-import classes from '@/pages/bucket/page.module.css';
+import classes from '@/pages/object/page.module.css';
 
 type UploadLimitModalProps = ModalProps & {
   // Files that will be uploaded (already trimmed to max, or just the largest file).

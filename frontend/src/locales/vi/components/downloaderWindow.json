@@ -1,0 +1,11 @@
+{
+  "title": "Đang tải xuống",
+  "action": {
+    "cancelAll": "Huỷ tất cả"
+  },
+  "label": {
+    "objectLbl": "Đối tượng",
+    "downloadedLbl": "Đã tải xuống",
+    "remainingLbl": "Còn lại"
+  }
+}

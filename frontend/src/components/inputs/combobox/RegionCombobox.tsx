@@ -120,7 +120,7 @@ function RegionCombobox(props: RegionComboboxProps) {
               <CloseButton
                 size="sm"
                 variant="transparent"
-                aria-label="Clear region"
+                aria-label={t('common:button.clear')}
                 onMouseDown={event => event.preventDefault()}
                 onClick={event => {
                   event.stopPropagation();

@@ -4,7 +4,7 @@ import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 
 function TabLabel({ tabId }: { tabId: string }) {
-  const { t } = useTranslation('bucket', { keyPrefix: 'page' });
+  const { t } = useTranslation('tabLayout');
 
   const profileId = useTabListStore(s => s.tabList[tabId]?.profileId);
   const profile = useProfileStore(s => (profileId ? s.connectionProfiles[profileId] : undefined));

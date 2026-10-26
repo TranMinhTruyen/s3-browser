@@ -17,7 +17,7 @@ import { formatStringJson } from '@/common/utils/stringUtils';
 import ConfirmModal from '@/components/modals/ConfirmModal';
 import UploadLimitModal from '@/components/modals/UploadLimitModal';
 import i18n from '@/locales/i18n';
-import ObjectItem from '@/pages/bucket/components/ObjectItem';
+import ObjectItem from '@/pages/object/components/ObjectItem';
 
 export type ObjectListViewRef = {
   onRefresh?: () => Promise<void>;
