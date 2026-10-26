@@ -101,8 +101,22 @@ func (m *submoduleObjMng) listObject(
 	}
 
 	body := models.ListObjectOutput{
-		ObjectList: make([]models.ObjectItem, 0, len(objects.Contents)),
+		ObjectList: make([]models.ObjectItem, 0, len(objects.CommonPrefixes)+len(objects.Contents)),
 		NextCursor: objects.NextContinuationToken,
+	}
+
+	// With Delimiter "/", S3 groups the keys below each sub-folder into CommonPrefixes.
+	// List them first, as folders.
+	for _, p := range objects.CommonPrefixes {
+		key := aws.ToString(p.Prefix)
+		if key == "" {
+			continue
+		}
+		body.ObjectList = append(body.ObjectList, models.ObjectItem{
+			Key:      key,
+			Name:     strings.TrimSuffix(strings.TrimPrefix(key, input.Prefix), "/"),
+			IsFolder: true,
+		})
 	}
 
 	// S3-compatible providers may omit optional fields, so read them via aws.ToX instead of dereferencing.

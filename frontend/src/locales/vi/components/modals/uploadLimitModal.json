@@ -1,0 +1,5 @@
+{
+  "title": "Quá nhiều file",
+  "description": "Bạn đã thả {total} file. Mỗi lần chỉ tải lên được {max} file, nên chỉ {max} file sau sẽ được tải lên:",
+  "upload": "Tải lên"
+}

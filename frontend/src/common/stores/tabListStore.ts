@@ -5,6 +5,8 @@ import { createUUID } from '@/common/utils/stringUtils';
 interface TabDetail {
   profileId?: string | null;
   currentView: 'bucketList' | 'objectList';
+  // Folder shown in the object list, e.g. "photos/2026/". Empty is the bucket root.
+  prefix: string;
   selectionItem: string[];
   deletingItems: string[];
 }
@@ -12,6 +14,8 @@ interface TabDetail {
 interface TabListState {
   activeTab: string;
   tabList: Record<string, TabDetail>;
+  // Tab whose upload is running. Only one upload runs at a time, across all tabs.
+  uploadingTabId: string | null;
 }
 
 interface TabListAction {
@@ -21,6 +25,7 @@ interface TabListAction {
   closeTab: (tabId: string) => void;
 
   changeCurrentView: (tabId: string, currentView: 'bucketList' | 'objectList') => void;
+  changePrefix: (tabId: string, prefix: string) => void;
   resetViewByProfile: (profileId: string) => void;
 
   addSelectItem: (tabId: string, items: string[]) => void;
@@ -28,6 +33,7 @@ interface TabListAction {
   clearSelectItem: (tabId: string) => void;
 
   setDeleting: (tabId: string, items: string[], deleting: boolean) => void;
+  setUploadingTab: (tabId: string | null) => void;
 
   reset: () => void;
 }
@@ -35,16 +41,15 @@ interface TabListAction {
 const SCOPE = 'tabList';
 const initialId = createUUID();
 
+const newTab = (): TabDetail => ({ currentView: 'bucketList', prefix: '', selectionItem: [], deletingItems: [] });
+
 export const useTabListStore = createAppStore<TabListState & TabListAction>(
   (set, get) => ({
     activeTab: initialId,
     tabList: {
-      [initialId]: {
-        currentView: 'bucketList',
-        selectionItem: [],
-        deletingItems: [],
-      },
+      [initialId]: newTab(),
     },
+    uploadingTabId: null,
 
     setActiveTab: (tabId: string | null) => {
       if (!tabId) return;
@@ -57,7 +62,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
         state => ({
           tabList: {
             ...state.tabList,
-            [tabId]: { currentView: 'bucketList', selectionItem: [], deletingItems: [] },
+            [tabId]: newTab(),
           },
           activeTab: tabId,
         }),
@@ -103,11 +108,28 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
           const tab = state.tabList[tabId];
           if (tab) {
             tab.currentView = currentView;
+            // Opening or leaving a bucket always starts from its root.
+            tab.prefix = '';
             tab.selectionItem = [];
           }
         },
         undefined,
         `${SCOPE}/changeCurrentView`
+      );
+    },
+
+    changePrefix: (tabId: string, prefix: string) => {
+      set(
+        state => {
+          const tab = state.tabList[tabId];
+          if (tab) {
+            tab.prefix = prefix;
+            // Selected keys belong to the previous folder and are no longer visible.
+            tab.selectionItem = [];
+          }
+        },
+        undefined,
+        `${SCOPE}/changePrefix`
       );
     },
 
@@ -117,6 +139,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
           Object.values(state.tabList).forEach(tab => {
             if (tab.profileId === profileId) {
               tab.currentView = 'bucketList';
+              tab.prefix = '';
               tab.selectionItem = [];
             }
           });
@@ -183,11 +206,16 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       );
     },
 
+    setUploadingTab: (tabId: string | null) => {
+      set({ uploadingTabId: tabId }, undefined, `${SCOPE}/setUploadingTab`);
+    },
+
+    // uploadingTabId is kept: an upload already sent to the backend keeps running.
     reset: () => {
       invalidateLoads(SCOPE);
       const id = createUUID();
       set(
-        { activeTab: id, tabList: { [id]: { currentView: 'bucketList', selectionItem: [], deletingItems: [] } } },
+        { activeTab: id, tabList: { [id]: newTab() } },
         undefined,
         `${SCOPE}/reset`
       );

@@ -1,7 +1,7 @@
 import { Box, Card, Group, Menu, Stack, Text } from '@mantine/core';
 import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
 import dayjs from 'dayjs';
-import { Download, Ellipsis, Trash } from 'lucide-react';
+import { Download, Ellipsis, Folder, Trash } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
 import { useTabListStore } from '@/common/stores/tabListStore';
@@ -16,10 +16,11 @@ type ObjectItemProps = {
   item: ObjectItemData;
   onToggleSelect: (key: string, checked: boolean) => void;
   onClickMenuButton: (objects: string[], action: 'download' | 'delete') => Promise<void>;
+  onOpenFolder: (prefix: string) => void;
 };
 
 function ObjectItem(props: ObjectItemProps) {
-  const { tabId, item, onToggleSelect, onClickMenuButton } = props;
+  const { tabId, item, onToggleSelect, onClickMenuButton, onOpenFolder } = props;
 
   // Subscribe to this row's own selection only (a boolean), so toggling one row
   // does not re-render the others.
@@ -39,6 +40,44 @@ function ObjectItem(props: ObjectItemProps) {
       onClickMenuButton([item.key], 'delete');
     }
   }, [onClickMenuButton, item.key, item.name]);
+
+  // A folder is only a key prefix: it can be opened, but not selected, downloaded or deleted.
+  if (item.isFolder) {
+    return (
+      <Card padding="8px" orientation="horizontal" onClick={() => onOpenFolder(item.key)} className={classes.card}>
+        <Card.Section
+          inheritPadding
+          px="8px"
+          withBorder
+          className={classes.iconSection}
+          style={{
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Folder size="20px" />
+        </Card.Section>
+        <Card.Section
+          inheritPadding
+          px="md"
+          py="md"
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          {/* A key like "a//b" has a folder with an empty name. */}
+          <Text size="xl" truncate="end" fw={500}>
+            {item.name || '/'}
+          </Text>
+        </Card.Section>
+      </Card>
+    );
+  }
 
   return (
     <Card

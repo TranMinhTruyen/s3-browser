@@ -29,6 +29,9 @@ var (
 	// Delete file {object} success.
 	S3S005 = "S3S005"
 
+	// Upload file {name} success, key {key}.
+	S3S006 = "S3S006"
+
 	// Access key or secret key is not valid for this endpoint.
 	S3E001 = "S3E001"
 
@@ -77,6 +80,12 @@ var (
 	// File {name} can't open.
 	S3E016 = "S3E016"
 
+	// Upload file {name} error.
+	S3E017 = "S3E017"
+
+	// Upload at most {max} files at a time.
+	S3E018 = "S3E018"
+
 	// Access bucket is limited.
 	S3W001 = "S3W001"
 
@@ -85,6 +94,15 @@ var (
 
 	// Update download history failed: {object} please reload!
 	S3W003 = "S3W003"
+
+	// Upload file {name} is canceled.
+	S3W004 = "S3W004"
+
+	// Another upload is running, please wait until it finishes.
+	S3W005 = "S3W005"
+
+	// Skipped {count} folder(s): only files can be uploaded.
+	S3W006 = "S3W006"
 )
 
 type Module struct {
@@ -98,6 +116,7 @@ type Module struct {
 	submoduleBucketMng          *submoduleBucketMng
 	submoduleObjMng             *submoduleObjMng
 	submoduleDownloaderMng      *submoduleDownloaderMng
+	submoduleUploaderMng        *submoduleUploaderMng
 }
 
 func NewModule(
@@ -113,6 +132,7 @@ func NewModule(
 	submoduleBucketMng := newSubmoduleBucketMng(app, logger, global)
 	submoduleObjMng := newSubmoduleObjMng(app, logger, global)
 	submoduleDownloaderMng := newSubmoduleDownloaderMng(app, logger, global, submoduleDownloadHistoryMng)
+	submoduleUploaderMng := newSubmoduleUploaderMng(app, logger, global)
 
 	return &Module{
 		logger:  logger.With("modules", "bucket"),
@@ -125,6 +145,7 @@ func NewModule(
 		submoduleBucketMng:          submoduleBucketMng,
 		submoduleObjMng:             submoduleObjMng,
 		submoduleDownloaderMng:      submoduleDownloaderMng,
+		submoduleUploaderMng:        submoduleUploaderMng,
 	}
 }
 
@@ -206,4 +227,14 @@ func (m *Module) GetDownloadHistory(input models.DownloadHistoryInput) models.Ou
 
 func (m *Module) OpenDownloadDest(fileName, path string) models.Output[any] {
 	return m.submoduleDownloadHistoryMng.openDownloadDest(fileName, path)
+}
+
+func (m *Module) UploadObject(input models.UploadObjInput) models.Output[any] {
+	return m.submoduleUploaderMng.uploadObject(input)
+}
+
+// HandleFilesDropped is the window's WindowFilesDropped listener. It forwards the
+// dropped files to the frontend tab they were dropped on.
+func (m *Module) HandleFilesDropped(event *application.WindowEvent) {
+	m.submoduleUploaderMng.handleFilesDropped(event)
 }

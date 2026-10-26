@@ -17,6 +17,7 @@ type (
 type (
 	Bucket                 = bucket.Bucket
 	ObjectItem             = bucket.ObjectItem
+	UploadObj              = bucket.UploadObj
 	ConnectOutput          = bucket.ConnectOutput
 	ListBucketInput        = bucket.ListBucketInput
 	ListBucketOutput       = bucket.ListBucketOutput
@@ -24,11 +25,13 @@ type (
 	ListObjectOutput       = bucket.ListObjectOutput
 	DownloadProgressOutput = bucket.DownloadProgressOutput
 	DownloadObjInput       = bucket.DownloadObjInput
+	UploadObjInput         = bucket.UploadObjInput
 	DownloadHistoryItem    = bucket.DownloadHistoryItem
 	DownloadHistoryInput   = bucket.DownloadHistoryInput
 	DownloadHistoryOutput  = bucket.DownloadHistoryOutput
 	DeleteObjInput         = bucket.DeleteObjInput
 	UploadProgressOutput   = bucket.UploadProgressOutput
+	FilesDroppedOutput     = bucket.FilesDroppedOutput
 )
 
 // master

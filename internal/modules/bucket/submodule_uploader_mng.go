@@ -2,24 +2,20 @@ package bucket
 
 import (
 	"S3Browser/internal/modules/global"
+	"S3Browser/internal/pkg/cnst"
 	"S3Browser/internal/pkg/utils"
 	"S3Browser/models"
 	"context"
 	"errors"
 	"fmt"
-	"io"
-	"io/fs"
 	"log/slog"
-	"mime"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"golang.org/x/sync/errgroup"
 )
@@ -29,6 +25,8 @@ type submoduleUploaderMng struct {
 	app    *application.App
 	global *global.Module
 	jobs   sync.Map
+	// busy is set while an uploadObject call runs; only one runs at a time, across all tabs.
+	busy atomic.Bool
 }
 
 func newSubmoduleUploaderMng(
@@ -50,19 +48,10 @@ type uploaderJob struct {
 
 const (
 	uploadFileConcurrency = 5
-	uploadPartConcurrency = 4
-	// minUploadPartSize is the smallest part size. Files smaller than this are sent in
-	// a single PutObject. S3 requires every part except the last to be at least 5 MiB.
-	minUploadPartSize = 8 << 20
-	// maxUploadParts is the S3 limit on the number of parts in one multipart upload.
-	maxUploadParts = 10000
+	// maxUploadFiles is the most files one uploadObject call accepts.
+	// The frontend asks the user before trimming a larger drop to this many.
+	maxUploadFiles = 6
 )
-
-// uploadItem is one local file to upload and the object key to store it under.
-type uploadItem struct {
-	path string
-	key  string
-}
 
 type uploadResult struct {
 	id   string
@@ -72,42 +61,132 @@ type uploadResult struct {
 	err  error
 }
 
-// uploadFiles uploads every item to bucket, uploadFileConcurrency files at a time.
-// It blocks until all uploads finish and returns one result per item, in the same order.
-// A failed or canceled file doesn't stop the others.
-func (m *submoduleUploaderMng) uploadFiles(connID, bucket string, items []uploadItem) ([]uploadResult, error) {
-	s3Conn, ok := m.global.GetConnContainer(connID)
+// uploadObject uploads every item to bucket, uploadFileConcurrency files at a time.
+// It blocks until all uploads finish and returns one message per item: success,
+// canceled or error. A failed or canceled file doesn't stop the others.
+// Only one call runs at a time; a call made while another runs is rejected.
+func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.Output[any] {
+	output := models.NewOutput[any]()
+
+	if len(input.ObjList) == 0 {
+		return output
+	}
+	if len(input.ObjList) > maxUploadFiles {
+		return output.ThrowError(
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E018, "", map[string]any{
+				"max": maxUploadFiles,
+			}),
+		)
+	}
+	if !m.busy.CompareAndSwap(false, true) {
+		m.logger.Warn("another upload is running, skip")
+		return output.ThrowError(
+			models.NewParamsMessage(cnst.MessageTypeWarn, cnst.Bucket, S3W005, "", nil),
+		)
+	}
+	defer m.busy.Store(false)
+
+	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
+
 	if !ok {
-		return nil, fmt.Errorf("connection %s not found", connID)
+		m.logger.Error("get connection profile failed")
+		return output.ThrowError(
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
+				"name": input.ProfileName,
+			}),
+		)
 	}
 
+	ctx := m.app.Context()
+	prefix := normalizePrefix(input.Prefix)
+	// Find which file names are already used as keys under prefix, before any upload
+	// starts, so the keys can be picked below without a lock.
+	used := existingKeys(ctx, s3Conn.Client, input.Bucket, prefix, input.ObjList)
+
 	// Each goroutine writes only its own index, so no lock is needed.
-	results := make([]uploadResult, len(items))
+	results := make([]uploadResult, len(input.ObjList))
 	// A plain errgroup.Group (no shared context): one failed file must not cancel the others.
 	var g errgroup.Group
 	g.SetLimit(uploadFileConcurrency)
-	for i, item := range items {
-		// The same ID is used for the job and the progress events.
+	for i, item := range input.ObjList {
+		// The same ID is used for the job, the progress events and a renamed key.
 		id := utils.GenerateUUID()
+		name := filepath.Base(item.Path)
+		item.Key = prefix + name
+		if _, taken := used[name]; taken {
+			item.Key = prefix + id + "_" + name
+		}
+		used[name] = struct{}{}
+
 		// Always return nil: errors are reported per file through results.
 		g.Go(func() error {
-			results[i] = m.uploadOne(m.app.Context(), id, connID, s3Conn.Client, bucket, item)
+			results[i] = m.uploadOne(ctx, id, input.ConnectionId, s3Conn.Client, input.Bucket, item)
 			return nil
 		})
 	}
 	_ = g.Wait()
 
+	// Turn each result into a message for the frontend.
 	for _, r := range results {
+		name := filepath.Base(r.path)
 		switch {
 		case r.err == nil:
-			m.logger.Info(fmt.Sprintf("Upload file %s success, key %s", r.path, r.key))
+			m.logger.Info(fmt.Sprintf("upload file %s success, key %s", r.path, r.key))
+			output.AddMessage(
+				models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Bucket, S3S006, "", map[string]any{
+					"name": name,
+					"key":  r.key,
+				}),
+			)
 		case errors.Is(r.err, context.Canceled):
-			m.logger.Warn(fmt.Sprintf("Upload file %s is canceled", r.path))
+			m.logger.Warn(fmt.Sprintf("upload file %s is canceled", r.path))
+			output.AddMessage(
+				models.NewParamsMessage(cnst.MessageTypeWarn, cnst.Bucket, S3W004, "", map[string]any{
+					"name": name,
+				}),
+			)
 		default:
-			m.logger.Error(fmt.Sprintf("Upload file %s error", r.path), slog.Any("detail", r.err.Error()))
+			m.logger.Error(fmt.Sprintf("upload file %s error", r.path), slog.Any("detail", r.err.Error()))
+			output.AddMessage(
+				models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E017, r.err.Error(), map[string]any{
+					"name": name,
+				}),
+			)
 		}
 	}
-	return results, nil
+
+	return output
+}
+
+// handleFilesDropped forwards files dropped on an object list to the frontend.
+// The drop target carries the tab ID in data-tab-id; drops elsewhere are ignored.
+// Only regular files are sent; folders and paths that can't be read are counted as skipped.
+func (m *submoduleUploaderMng) handleFilesDropped(event *application.WindowEvent) {
+	// ctx is nil for an event that didn't come from a real drop.
+	ctx := event.Context()
+	if ctx == nil {
+		return
+	}
+	target := ctx.DropTargetDetails()
+	if target == nil || target.Attributes["data-tab-id"] == "" {
+		return
+	}
+
+	dropped := ctx.DroppedFiles()
+	out := models.FilesDroppedOutput{
+		TabId: target.Attributes["data-tab-id"],
+		Paths: make([]string, 0, len(dropped)),
+	}
+	for _, p := range dropped {
+		info, err := os.Stat(p)
+		if err != nil || !info.Mode().IsRegular() {
+			out.Skipped++
+			continue
+		}
+		out.Paths = append(out.Paths, p)
+	}
+
+	m.app.Event.Emit(EventFilesDropped, out)
 }
 
 // uploadOne uploads a single file. It registers a cancelable job and emits progress
@@ -117,7 +196,7 @@ func (m *submoduleUploaderMng) uploadOne(
 	id, connID string,
 	client *s3.Client,
 	bucket string,
-	item uploadItem,
+	item models.UploadObj,
 ) uploadResult {
 	ctx, cancel := context.WithCancel(parent)
 
@@ -125,7 +204,7 @@ func (m *submoduleUploaderMng) uploadOne(
 	m.jobs.Store(id, uploaderJob{connID: connID, cancel: cancel})
 	defer func() { cancel(); m.jobs.Delete(id) }()
 
-	size, err := uploadFile(ctx, client, bucket, item.key, item.path, func(done, total int64) {
+	size, err := uploadFile(ctx, client, bucket, item.Key, item.Path, func(done, total int64) {
 		m.app.Event.Emit(
 			EventUploadObjectProgress,
 			models.UploadProgressOutput{UploadId: id, Uploaded: done, Total: total},
@@ -138,7 +217,7 @@ func (m *submoduleUploaderMng) uploadOne(
 		err = context.Canceled
 	}
 
-	return uploadResult{id: id, path: item.path, key: item.key, size: size, err: err}
+	return uploadResult{id: id, path: item.Path, key: item.Key, size: size, err: err}
 }
 
 // cancelUploadOne cancels the running upload with the given ID.
@@ -162,247 +241,56 @@ func (m *submoduleUploaderMng) cancelAllUploads() models.Output[any] {
 	return models.NewOutput[any]()
 }
 
-// collectUploadItems turns dropped paths into upload items. A file is stored as
-// prefix+<file name>; a folder is walked and each file inside it is stored as
-// prefix+<folder name>/<path inside the folder>, so the folder structure is kept.
-// Anything that isn't a regular file or a folder (symlink, device...) is skipped.
-// prefix must be empty or end with "/".
-func collectUploadItems(paths []string, prefix string) ([]uploadItem, error) {
-	var items []uploadItem
-	for _, p := range paths {
-		p = filepath.Clean(p)
-		// Keys are relative to the parent, so they start with the dropped file or folder name.
-		base := filepath.Dir(p)
-		err := filepath.WalkDir(p, func(cur string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			// Folders return nil here too, which keeps walking into them.
-			if !d.Type().IsRegular() {
-				return nil
-			}
-			rel, err := filepath.Rel(base, cur)
-			if err != nil {
-				return err
-			}
-			items = append(items, uploadItem{path: cur, key: prefix + filepath.ToSlash(rel)})
-			return nil
-		})
-		if err != nil {
-			return nil, err
-		}
+// normalizePrefix turns p into the form used for keys: no leading "/", and a trailing
+// "/" unless it is empty (the bucket root). Windows separators are converted to "/".
+func normalizePrefix(p string) string {
+	p = strings.TrimLeft(strings.ReplaceAll(p, `\`, "/"), "/")
+	if p != "" && !strings.HasSuffix(p, "/") {
+		p += "/"
 	}
-	return items, nil
+	return p
 }
 
-// uploadFile uploads the file at path to bucket/key and returns its size.
-// Files smaller than minUploadPartSize are sent with one PutObject; larger files are
-// sent as a multipart upload with uploadPartConcurrency parts in flight.
-// progress is called periodically with the bytes sent so far and the file size.
-// On failure or cancellation, no object is created and no parts are left on the server.
-func uploadFile(
+// existingKeys checks, uploadFileConcurrency at a time, whether an object with key
+// prefix + file name already exists in bucket, for each item. Each distinct name is
+// checked once. It returns the file names (without prefix) except those the bucket
+// answered 404 for: a name that couldn't be checked is treated as existing, so its file
+// gets a renamed key and nothing is overwritten.
+func existingKeys(
 	ctx context.Context,
 	client *s3.Client,
-	bucket, key, path string,
-	progress func(done, total int64),
-) (int64, error) {
-	if progress == nil {
-		progress = func(int64, int64) {} // allow callers that don't track progress
-	}
-
-	f, err := os.Open(path)
-	if err != nil {
-		return 0, err
-	}
-	defer f.Close()
-
-	info, err := f.Stat()
-	if err != nil {
-		return 0, err
-	}
-	if !info.Mode().IsRegular() {
-		return 0, fmt.Errorf("%s is not a regular file", path)
-	}
-	size := info.Size()
-
-	var sent atomic.Int64
-	stop := reportEvery(200*time.Millisecond, func() {
-		progress(min(sent.Load(), size), size)
-	})
-	defer stop()
-
-	contentType := mime.TypeByExtension(filepath.Ext(path))
-	if size < minUploadPartSize {
-		err = putSingle(ctx, client, bucket, key, contentType, io.NewSectionReader(f, 0, size), &sent)
-	} else {
-		err = putMultipart(ctx, client, bucket, key, contentType, f, size, &sent)
-	}
-	if err != nil {
-		return 0, err
-	}
-	return size, nil
-}
-
-// putSingle uploads body as one object with a single PutObject request.
-func putSingle(
-	ctx context.Context,
-	client *s3.Client,
-	bucket, key, contentType string,
-	body *io.SectionReader,
-	sent *atomic.Int64,
-) error {
-	_, err := client.PutObject(ctx, &s3.PutObjectInput{
-		Bucket:            &bucket,
-		Key:               &key,
-		Body:              &progressReader{r: body, sent: sent},
-		ContentLength:     aws.Int64(body.Size()),
-		ContentType:       nonEmpty(contentType),
-		ChecksumAlgorithm: types.ChecksumAlgorithmCrc32,
-	})
-	return err
-}
-
-// putMultipart uploads f (size bytes) as a multipart upload:
-//  1. CreateMultipartUpload starts the upload and returns its ID.
-//  2. The parts are read straight from f (no buffering in memory) and sent in parallel.
-//     If one part fails, the others are canceled.
-//  3. CompleteMultipartUpload joins the parts into the object.
-//
-// If any step fails or ctx is canceled, the upload is aborted so S3 deletes the parts
-// already stored (they take space, and are billed, until then).
-func putMultipart(
-	ctx context.Context,
-	client *s3.Client,
-	bucket, key, contentType string,
-	f *os.File,
-	size int64,
-	sent *atomic.Int64,
-) (err error) {
-	partSize := uploadPartSize(size)
-	partCount := int((size + partSize - 1) / partSize)
-
-	// Step 1: start the upload.
-	created, err := client.CreateMultipartUpload(ctx, &s3.CreateMultipartUploadInput{
-		Bucket:            &bucket,
-		Key:               &key,
-		ContentType:       nonEmpty(contentType),
-		ChecksumAlgorithm: types.ChecksumAlgorithmCrc32,
-	})
-	if err != nil {
-		return err
-	}
-	uploadID := created.UploadId
-
-	defer func() {
-		if err == nil {
-			return
+	bucket, prefix string,
+	items []models.UploadObj,
+) map[string]struct{} {
+	var names []string
+	seen := make(map[string]struct{}, len(items))
+	for _, item := range items {
+		name := filepath.Base(item.Path)
+		if _, ok := seen[name]; !ok {
+			seen[name] = struct{}{}
+			names = append(names, name)
 		}
-		// ctx may already be canceled, so the abort gets its own short-lived context.
-		abortCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
-		defer cancel()
-		if _, abortErr := client.AbortMultipartUpload(abortCtx, &s3.AbortMultipartUploadInput{
-			Bucket:   &bucket,
-			Key:      &key,
-			UploadId: uploadID,
-		}); abortErr != nil {
-			err = errors.Join(err, fmt.Errorf("abort multipart upload: %w", abortErr))
-		}
-	}()
+	}
 
-	// Step 2: send the parts. Each goroutine writes only its own index in parts.
-	// io.SectionReader reads with ReadAt, so the parts can share f safely.
-	parts := make([]types.CompletedPart, partCount)
-	g, gctx := errgroup.WithContext(ctx)
-	g.SetLimit(uploadPartConcurrency)
-	for i := range partCount {
-		// A part failed or the upload was canceled: don't start the remaining parts.
-		if gctx.Err() != nil {
-			break
-		}
-		num := int32(i + 1)
-		off := int64(i) * partSize
-		n := min(partSize, size-off)
+	// Each goroutine writes only its own index, so no lock is needed.
+	errs := make([]error, len(names))
+	var g errgroup.Group
+	g.SetLimit(uploadFileConcurrency)
+	for i, name := range names {
 		g.Go(func() error {
-			out, err := client.UploadPart(gctx, &s3.UploadPartInput{
-				Bucket:            &bucket,
-				Key:               &key,
-				UploadId:          uploadID,
-				PartNumber:        aws.Int32(num),
-				Body:              &progressReader{r: io.NewSectionReader(f, off, n), sent: sent},
-				ContentLength:     aws.Int64(n),
-				ChecksumAlgorithm: types.ChecksumAlgorithmCrc32,
-			})
-			if err != nil {
-				return fmt.Errorf("upload part %d: %w", num, err)
-			}
-			parts[i] = types.CompletedPart{
-				ETag:          out.ETag,
-				PartNumber:    aws.Int32(num),
-				ChecksumCRC32: out.ChecksumCRC32,
-			}
+			key := prefix + name
+			_, errs[i] = client.HeadObject(ctx, &s3.HeadObjectInput{Bucket: &bucket, Key: &key})
 			return nil
 		})
 	}
-	if err = g.Wait(); err != nil {
-		return err
+	_ = g.Wait()
+
+	existing := make(map[string]struct{}, len(items))
+	for i, name := range names {
+		if errs[i] != nil && UnwrapAwsError(errs[i]) == "NotFound" {
+			continue
+		}
+		existing[name] = struct{}{}
 	}
-	// The loop may have stopped early without any part failing (ctx canceled).
-	if err = ctx.Err(); err != nil {
-		return err
-	}
-
-	// Step 3: join the parts into the object.
-	_, err = client.CompleteMultipartUpload(ctx, &s3.CompleteMultipartUploadInput{
-		Bucket:          &bucket,
-		Key:             &key,
-		UploadId:        uploadID,
-		MultipartUpload: &types.CompletedMultipartUpload{Parts: parts},
-	})
-	return err
-}
-
-// uploadPartSize returns the part size for a file of the given size: minUploadPartSize,
-// or more when the file would otherwise need more than maxUploadParts parts
-// (above ~78 GiB), rounded up to a whole MiB.
-func uploadPartSize(size int64) int64 {
-	partSize := int64(minUploadPartSize)
-	if need := (size + maxUploadParts - 1) / maxUploadParts; need > partSize {
-		partSize = (need + 1<<20 - 1) &^ (1<<20 - 1)
-	}
-	return partSize
-}
-
-// progressReader reads from r and keeps sent up to date with how far into r it is.
-// The SDK may read a body more than once (to compute a checksum or signature, or on a
-// retry) and seeks back to the start before each pass, so the reader adds the bytes it
-// reads and takes them off again when it seeks back. This way sent never counts a byte twice.
-type progressReader struct {
-	r    io.ReadSeeker
-	sent *atomic.Int64
-	pos  int64
-}
-
-func (p *progressReader) Read(b []byte) (int, error) {
-	n, err := p.r.Read(b)
-	p.pos += int64(n)
-	p.sent.Add(int64(n))
-	return n, err
-}
-
-func (p *progressReader) Seek(offset int64, whence int) (int64, error) {
-	pos, err := p.r.Seek(offset, whence)
-	if err != nil {
-		return pos, err
-	}
-	p.sent.Add(pos - p.pos)
-	p.pos = pos
-	return pos, nil
-}
-
-// nonEmpty returns nil for "", so an unknown content type isn't sent as an empty header.
-func nonEmpty(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
+	return existing
 }

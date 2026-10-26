@@ -8,6 +8,7 @@
     "S3S003": "Profile: {name} disconnect success.",
     "S3S004": "Download file {object} success, destination {dest}.",
     "S3S005": "Delete file {object} success.",
+    "S3S006": "Upload file {name} success, key {key}.",
     "S3E001": "Access key or secret key is not valid for this endpoint.",
     "S3E002": "The endpoint rejected.",
     "S3E003": "Timed out reaching the endpoint, check the address and whether the server is running.",
@@ -24,9 +25,14 @@
     "S3E014": "File {name} not exist.",
     "S3E015": "File {name} can't access.",
     "S3E016": "File {name} can't open.",
+    "S3E017": "Upload file {name} error.",
+    "S3E018": "Upload at most {max} files at a time.",
     "S3W001": "Access bucket is limited.",
     "S3W002": "Download object: {object} is canceled.",
-    "S3W003": "Update download history failed: {object} please reload!"
+    "S3W003": "Update download history failed: {object} please reload!",
+    "S3W004": "Upload file {name} is canceled.",
+    "S3W005": "Another upload is running, please wait until it finishes.",
+    "S3W006": "Skipped {count} folder(s): only files can be uploaded."
   },
   "master": {
     "MTE001": "Error while loading master data."
