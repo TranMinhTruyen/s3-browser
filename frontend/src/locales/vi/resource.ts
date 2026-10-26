@@ -6,6 +6,7 @@ import connectModal from '@/locales/vi/components/modals/connectModal.json';
 import historyModal from '@/locales/vi/components/modals/historyModal.json';
 import uploadLimitModal from '@/locales/vi/components/modals/uploadLimitModal.json';
 import connectionProfiles from '@/locales/vi/components/navbar/connectionProfiles.json';
+import uploaderWindow from '@/locales/vi/components/uploaderWindow.json';
 import ipcMessage from '@/locales/vi/messages/ipcMessage.json';
 import validateMessage from '@/locales/vi/messages/validateMessage.json';
 import bucketPage from '@/locales/vi/pages/bucket/page.json';
@@ -23,5 +24,6 @@ const vietnameseResource: ResourceLanguage = {
     page: bucketPage,
   },
   inputs: inputs,
+  uploaderWindow: uploaderWindow,
 };
 export default vietnameseResource;

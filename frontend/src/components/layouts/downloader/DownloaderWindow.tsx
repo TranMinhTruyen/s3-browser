@@ -1,5 +1,5 @@
 import { Affix, Box, CloseButton, Divider, Group, Paper, Stack, Text } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
+import { useElementSize } from '@mantine/hooks';
 import { Events } from '@wailsio/runtime';
 import { Download } from 'lucide-react';
 import { useEffect } from 'react';
@@ -9,11 +9,15 @@ import ActionIcon from '@/components/buttons/ActionIcon';
 import DownloaderItem from '@/components/layouts/downloader/DownloaderItem';
 
 function DownloaderWindow() {
-  const [visible, handlers] = useDisclosure();
-  // `handlers` is a new object every render; its methods are stable.
-  const openWindow = handlers.open;
+  const visible = useDownloaderStore(s => s.windowVisible);
+  const openWindow = useDownloaderStore(s => s.openWindow);
+  const closeWindow = useDownloaderStore(s => s.closeWindow);
+
+  const setWindowSize = useDownloaderStore(s => s.setWindowSize);
+  const { ref: sizeRef, width, height } = useElementSize();
 
   const downloadItemIds = useDownloaderStore(useShallow(selectDownloadingIds));
+  const rendered = downloadItemIds.length > 0;
   const addDownloadItems = useDownloaderStore(s => s.upsertDownloadItems);
   const setDownloadProgess = useDownloaderStore(s => s.setDownloadProgess);
 
@@ -42,21 +46,26 @@ function DownloaderWindow() {
     };
   }, [setDownloadProgess]);
 
-  return downloadItemIds.length > 0 ? (
+  // Publish the measured size for UploaderWindow; reset to 0 when nothing is rendered.
+  useEffect(() => {
+    setWindowSize(rendered ? { width, height } : { width: 0, height: 0 });
+  }, [rendered, width, height, setWindowSize]);
+
+  return rendered ? (
     <>
       {!visible ? (
-        <Affix style={{ bottom: '16px', right: '16px' }}>
-          <ActionIcon onClick={handlers.open} size="xl">
+        <Affix ref={sizeRef} style={{ bottom: '16px', right: '16px' }}>
+          <ActionIcon onClick={openWindow} size="xl">
             <Download />
           </ActionIcon>
         </Affix>
       ) : null}
       {visible && (
-        <Affix position={{ bottom: 16, right: 16 }}>
+        <Affix ref={sizeRef} position={{ bottom: 16, right: 16 }}>
           <Paper w="400px" withBorder style={{ overflow: 'hidden' }}>
             <Group p="xs" justify="space-between">
               <Text>Downloading</Text>
-              <CloseButton onClick={handlers.close} ml="auto" />
+              <CloseButton onClick={closeWindow} ml="auto" />
             </Group>
 
             <Divider />

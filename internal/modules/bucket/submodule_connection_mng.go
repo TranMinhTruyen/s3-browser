@@ -79,11 +79,11 @@ func (m *submoduleConnMng) connectAction(
 
 	connectionId := utils.GenerateUUID()
 
-	if isManualConnect == true {
+	if isManualConnect {
 		connectionId = input.Id
 	}
 
-	if isManualConnect == false {
+	if !isManualConnect {
 		createResult := m.profile.CreateProfile(input)
 		status.AddMessage(createResult.MessageList...)
 		if createResult.Result {

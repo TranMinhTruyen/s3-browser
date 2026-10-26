@@ -6,6 +6,7 @@ import connectModal from '@/locales/en/components/modals/connectModal.json';
 import historyModal from '@/locales/en/components/modals/historyModal.json';
 import uploadLimitModal from '@/locales/en/components/modals/uploadLimitModal.json';
 import connectionProfiles from '@/locales/en/components/navbar/connectionProfiles.json';
+import uploaderWindow from '@/locales/en/components/uploaderWindow.json';
 import ipcMessage from '@/locales/en/messages/ipcMessage.json';
 import validateMessage from '@/locales/en/messages/validateMessage.json';
 import bucketPage from '@/locales/en/pages/bucket/page.json';
@@ -23,5 +24,6 @@ const englishResource: ResourceLanguage = {
     page: bucketPage,
   },
   inputs: inputs,
+  uploaderWindow: uploaderWindow,
 };
 export default englishResource;

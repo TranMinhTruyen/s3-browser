@@ -14,6 +14,10 @@ const (
 	EventUploadObjectProgress   = "uploader:upload-progress"
 	// Emitted when files are dropped on a tab's object list; payload is FilesDroppedOutput
 	EventFilesDropped = "uploader:files-dropped"
+	// Emitted before a file starts uploading; payload is UploadStartedOutput
+	EventUploadObjectStarted = "uploader:upload-started"
+	// Emitted when a file's upload ends; payload is UploadFinishedOutput
+	EventUploadObjectFinished = "uploader:upload-finished"
 )
 
 // RegisterEvent must be called directly from init so the binding generator can
@@ -24,4 +28,6 @@ func init() {
 	application.RegisterEvent[models.DownloadHistoryItem](EventLoadDownloadHistory)
 	application.RegisterEvent[models.UploadProgressOutput](EventUploadObjectProgress)
 	application.RegisterEvent[models.FilesDroppedOutput](EventFilesDropped)
+	application.RegisterEvent[models.UploadStartedOutput](EventUploadObjectStarted)
+	application.RegisterEvent[models.UploadFinishedOutput](EventUploadObjectFinished)
 }

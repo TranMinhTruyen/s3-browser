@@ -6,11 +6,17 @@ export type DownloadItem = DownloadHistoryItem & DownloadProgressOutput;
 
 interface DownloaderState {
   downloadItems: Record<string, DownloadItem>;
+  windowVisible: boolean;
+  /** Measured size of the visible downloader (window or button); 0 when not rendered. */
+  windowSize: { width: number; height: number };
 }
 
 interface DownloaderAction {
   upsertDownloadItems: (inputs: DownloadHistoryItem[]) => void;
   setDownloadProgess: (input: DownloadProgressOutput) => void;
+  openWindow: () => void;
+  closeWindow: () => void;
+  setWindowSize: (size: { width: number; height: number }) => void;
   reset: () => void;
 }
 
@@ -19,6 +25,21 @@ const SCOPE = 'downloader';
 export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAction>(
   (set, get) => ({
     downloadItems: {},
+    windowVisible: false,
+    windowSize: { width: 0, height: 0 },
+
+    openWindow: () => {
+      set({ windowVisible: true }, undefined, `${SCOPE}/openWindow`);
+    },
+
+    closeWindow: () => {
+      set({ windowVisible: false }, undefined, `${SCOPE}/closeWindow`);
+    },
+
+    setWindowSize: size => {
+      if (size.width === get().windowSize.width && size.height === get().windowSize.height) return;
+      set({ windowSize: size }, undefined, `${SCOPE}/setWindowSize`);
+    },
 
     upsertDownloadItems: (inputs: DownloadHistoryItem[]) => {
       set(
@@ -61,6 +82,8 @@ export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAct
       set(
         {
           downloadItems: {},
+          windowVisible: false,
+          windowSize: { width: 0, height: 0 },
         },
         undefined,
         `${SCOPE}/reset`

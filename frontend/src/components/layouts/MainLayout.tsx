@@ -4,6 +4,7 @@ import { Outlet } from 'react-router-dom';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import DownloaderWindow from '@/components/layouts/downloader/DownloaderWindow';
 import LeftNavbar from '@/components/layouts/navbar/LeftNavbar';
+import UploaderWindow from '@/components/layouts/uploader/UploaderWindow';
 import HistoryModal from '@/components/modals/HistoryModal';
 import i18n from '@/locales/i18n';
 
@@ -59,6 +60,7 @@ function MainLayout() {
         </Splitter>
 
         <DownloaderWindow />
+        <UploaderWindow />
       </AppShell.Main>
     </AppShell>
   );

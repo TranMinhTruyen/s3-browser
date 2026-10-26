@@ -1,5 +1,9 @@
 {
-  "title": "Quá nhiều file",
-  "description": "Bạn đã thả {total} file. Mỗi lần chỉ tải lên được {max} file, nên chỉ {max} file sau sẽ được tải lên:",
-  "upload": "Tải lên"
+  "title": "Xác nhận tải lên",
+  "truncatedDescription": "Bạn đã thả nhiều hơn {max} file. Chỉ giữ {max} file đầu tiên.",
+  "largeFileDescription": "Có file lớn hơn {limit}, nên chỉ file lớn nhất được tải lên và các file khác bị bỏ qua:",
+  "listDescription": "Các file sau sẽ được tải lên:",
+  "upload": "Tải lên",
+  "size": "Dung lượng",
+  "key": "Khóa"
 }

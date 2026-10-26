@@ -36,10 +36,10 @@ func download(
 	}
 	defer func() {
 		// if already closed at the end of the function, this just returns an ignored error
-		f.Close()
+		_ = f.Close()
 		if err != nil {
 			// failed or canceled: delete the temporary file
-			os.Remove(part)
+			_ = os.Remove(part)
 		}
 	}()
 

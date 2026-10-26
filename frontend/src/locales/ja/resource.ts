@@ -6,6 +6,7 @@ import connectModal from '@/locales/ja/components/modals/connectModal.json';
 import historyModal from '@/locales/ja/components/modals/historyModal.json';
 import uploadLimitModal from '@/locales/ja/components/modals/uploadLimitModal.json';
 import connectionProfiles from '@/locales/ja/components/navbar/connectionProfiles.json';
+import uploaderWindow from '@/locales/ja/components/uploaderWindow.json';
 import ipcMessage from '@/locales/ja/messages/ipcMessage.json';
 import validateMessage from '@/locales/ja/messages/validateMessage.json';
 import bucketPage from '@/locales/ja/pages/bucket/page.json';
@@ -23,5 +24,6 @@ const japaneseResource: ResourceLanguage = {
     page: bucketPage,
   },
   inputs: inputs,
+  uploaderWindow: uploaderWindow,
 };
 export default japaneseResource;

@@ -1,5 +1,9 @@
 {
-  "title": "Too many files",
-  "description": "You dropped {total} files. Only {max} files can be uploaded at a time, so only these {max} files will be uploaded:",
-  "upload": "Upload"
+  "title": "Confirm upload",
+  "truncatedDescription": "The drop has more than {max} files. Only the first {max} files are kept.",
+  "largeFileDescription": "A file is larger than {limit}, so only the largest file is uploaded and the other files are skipped:",
+  "listDescription": "These files will be uploaded:",
+  "upload": "Upload",
+  "size": "Size",
+  "key": "Key"
 }

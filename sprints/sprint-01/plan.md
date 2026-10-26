@@ -103,3 +103,31 @@ i18n key mới (en/vi/ja): `uploadLimitModal` (sửa nội dung `description`, t
 - **Q9:** Cảnh báo dùng modal.
 - **Q10:** Được đổi payload `FilesDroppedOutput`/`UploadObj`, miễn đúng nghiệp vụ và dễ bảo trì.
 - **Q11:** Tạm thời chỉ Windows.
+
+---
+
+# R2: UploaderWindow
+
+## Hiện trạng
+- `DownloaderWindow` (`frontend/src/components/layouts/downloader/`) render trong `MainLayout`, dùng `Affix` ở **góc dưới phải** (bottom 16, right 16). Mở: `Paper` 400px, danh sách `DownloaderItem` (RingProgress, hover hiện nút huỷ). Đóng: `ActionIcon` icon Download. Chỉ render khi có item `DOWNLOADING`. Cờ mở/đóng là `useDisclosure` cục bộ.
+- Item download thêm qua event `downloader:load-download-history`, tiến độ qua `downloader:download-progress`.
+- Upload: backend đã emit `uploader:upload-progress` (`{uploadId, uploaded, total}`), có `cancelUploadOne`/`cancelAllUploads`. Frontend chưa nghe event này; ID upload sinh ở backend nên frontend không biết tên file ứng với `uploadId`.
+
+## Quyết định của người dùng (2026-10-26)
+- Chỉ có upload: UploaderWindow ở góc dưới phải (chỗ Downloader). Có cả hai: Uploader window mở nằm bên trái Downloader window; Uploader đóng thì button nằm phía trên Downloader (button hoặc window).
+- Tính năng: nút huỷ từng file (hover, như DownloaderItem) + nút huỷ tất cả trên header. Không lưu lịch sử upload vào DB.
+- File xong/lỗi/huỷ: item biến mất ngay; hết file thì window/button ẩn. Kết quả vẫn báo bằng toast như hiện tại.
+- Không tách component dùng chung, không refactor Downloader; chỉ sửa tối thiểu: chuyển cờ mở/đóng của DownloaderWindow từ `useDisclosure` sang `downloaderStore` (giao diện/hành vi giữ nguyên).
+- Unit test Go C1 cho phần mới trong `internal/modules/bucket`. Chỉ Windows.
+
+## Task
+- BE1: event `uploader:upload-started` (`{uploadId, fileName, key, bucket, total}`) và `uploader:upload-finished` (`{uploadId, status: success|error|canceled}`), model trong `models/bucket`, alias, `RegisterEvent`; emit trong `uploadOne`.
+- BE2: test C1 cho các nhánh mới; sinh bindings.
+- FE1: `uploaderStore` (zustand, SCOPE, start/progress/finish/reset, selector id đang upload).
+- FE2: `downloaderStore` thêm cờ `windowVisible` + action; `DownloaderWindow` dùng cờ này thay `useDisclosure`.
+- FE3: `UploaderWindow` + `UploaderItem` (nút huỷ từng file → `CancelUploadOne`, nút huỷ tất cả → `CancelAllUploads`), đặt trong `MainLayout`, tính vị trí theo trạng thái Downloader.
+- FE4: i18n en/vi/ja, đăng ký namespace trong `resource.ts`.
+
+## Rủi ro
+- Tần suất event progress khi 5 file song song → kiểm tra throttle để UI không giật.
+- Event `upload-started` phải tới trước `upload-progress` (emit tuần tự trong cùng goroutine nên giữ thứ tự).

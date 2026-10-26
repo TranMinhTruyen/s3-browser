@@ -17,7 +17,6 @@ import (
 // App struct
 type App struct {
 	logger *slog.Logger
-	cfg    Config
 	sqlDb  *sql.DB
 	app    *application.App
 
@@ -32,7 +31,9 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 
 	sqlDb := db.InitDB(app.Context(), cfg.Name)
 	if err := db.RunMigrations(app.Context(), sqlDb); err != nil {
-		sqlDb.Close()
+		if closeErr := sqlDb.Close(); closeErr != nil {
+			log.Error("close db failed", "error", closeErr)
+		}
 		log.Error("failed to run migrations", "error", err)
 		panic(err)
 	}
@@ -54,6 +55,9 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 	masterHandler := handlers.NewMasterHandler(app, logger, masterModule)
 
 	return &App{
+		logger:         log,
+		sqlDb:          sqlDb,
+		app:            app,
 		BucketHandler:  bucketHandler,
 		MasterHandler:  masterHandler,
 		ProfileHandler: profileHandler,
@@ -63,6 +67,7 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 // Clean up when shutdow app
 func (a *App) Shutdown() {
 	a.BucketHandler.CancelAllDownloads()
+	a.BucketHandler.CancelAllUploads()
 	a.BucketHandler.DisconnectAll()
 	a.app.Event.Reset()
 	if a.sqlDb != nil {
