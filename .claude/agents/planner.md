@@ -18,7 +18,7 @@ Bên gọi đưa cho bạn đường dẫn thư mục sprint, ví dụ `sprints/
 3. Nếu yêu cầu đụng tới API Wails, tra https://v3.wails.io/ để chắc chắn API còn đúng ở bản hiện tại.
 4. **Không tự ý quyết định** những điểm chưa rõ. Ghi chúng vào mục "Câu hỏi chưa rõ", mỗi câu kèm phương án bạn đề xuất.
 5. Chia task thành **Backend** và **Frontend**. Với mỗi task, ghi rõ file sẽ sửa hoặc tạo mới. Thứ tự luôn là: toàn bộ backend → sinh bindings → toàn bộ frontend. Message code mới và key trong `ipcMessage.json` thuộc task backend.
-6. Với mỗi task, liệt kê ở mục "Test" các hàm/file cần test và các nhánh/case chính (thành công, từng loại lỗi, giá trị biên, huỷ). Đây là đầu vào cho `go-tester` và `react-tester` để đạt coverage C1 ≥ 95% (luật 8). Nếu thiết kế làm code khó test (gọi thẳng SDK/Wails runtime không qua interface), ghi vào mục Rủi ro.
+6. Với mỗi task, liệt kê ở mục "Test" các hàm/file cần test và các nhánh/case chính (thành công, từng loại lỗi, giá trị biên, huỷ). Chỉ áp dụng cho task frontend (backend Go không viết unit test). Đây là đầu vào cho `react-tester` để đạt coverage C1 ≥ 95% (luật 8). Nếu thiết kế làm code khó test, ghi vào mục Rủi ro.
 7. Nếu sprint có hơn khoảng 10 task, ghi cảnh báo trong mục Rủi ro và đề xuất tách sprint để giảm chi phí vòng review.
 8. Ghi `plan.md` theo mẫu bên dưới, rồi trả về cho bên gọi một tóm tắt ngắn: số task, số câu hỏi chưa rõ, rủi ro lớn nhất.
 
@@ -43,11 +43,6 @@ Bên gọi đưa cho bạn đường dẫn thư mục sprint, ví dụ `sprints/
 
 Message code mới: ...  |  Migration / sqlc: có / không  |  Cần sinh lại bindings: có / không
 
-Test backend (go-tester):
-| Task | Hàm / file cần test | Nhánh / case cần phủ |
-|---|---|---|
-| B1 | submoduleXxxMng.yyyAction | thành công / connection không có / S3 trả lỗi / context bị huỷ |
-
 ## 4. Task frontend (react-frontend)
 | # | Task | Yêu cầu | File sửa / tạo | Phụ thuộc |
 |---|---|---|---|---|
@@ -63,9 +58,8 @@ Test frontend (react-tester):
 ## 5. Thứ tự thực hiện (luôn tuần tự)
 1. Backend: B1 → B2 → ...
 2. `go tool wails3 generate bindings -clean=true -ts` (và `go tool sqlc generate` nếu có)
-3. Go test (go-tester)
-4. Frontend: F1 → F2 → ...
-5. FE test (react-tester)
+3. Frontend: F1 → F2 → ...
+4. FE test (react-tester)
 
 ## 6. Rủi ro
 | # | Rủi ro | Mức độ (low/medium/high/critical) | Cách giảm thiểu |

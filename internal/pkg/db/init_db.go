@@ -1,6 +1,7 @@
 package db
 
 import (
+	"S3Browser/internal/pkg/portable"
 	"context"
 	"database/sql"
 	"errors"
@@ -14,14 +15,9 @@ import (
 )
 
 func InitDB(ctx context.Context, appName string) *sql.DB {
-	configDir, err := os.UserConfigDir()
+	appDir, err := portable.DataDir(appName)
 	if err != nil {
-		log.Fatalf("failed to get user config dir: %v", err)
-	}
-
-	appDir := filepath.Join(configDir, appName)
-	if err := os.MkdirAll(appDir, 0o755); err != nil {
-		log.Fatalf("failed to create app dir %s: %v", appDir, err)
+		log.Fatalf("failed to get app data dir: %v", err)
 	}
 
 	dbPath := filepath.Join(appDir, "data.db")

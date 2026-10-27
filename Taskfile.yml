@@ -18,6 +18,11 @@ tasks:
     cmds:
       - task: "{{.GOOS}}:build"
 
+  build:portable:
+    summary: Builds the Windows portable package (needs WEBVIEW2_DIR=<WebView2 Fixed Version folder>)
+    cmds:
+      - task: windows:build:portable
+
   build:debug:
     summary: Builds a debuggable dev binary (no inlining/optimisation, for Delve)
     cmds:
@@ -42,8 +47,3 @@ tasks:
     summary: Runs only the frontend dev server
     cmds:
       - task: common:dev:frontend
-
-  test:go:coverage:
-    summary: Runs Go tests for internal/modules and fails when statement coverage is below the threshold
-    cmds:
-      - go run ./scripts/checkcoverage {{.CLI_ARGS}}

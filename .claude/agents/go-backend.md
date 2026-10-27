@@ -30,7 +30,7 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task (ví dụ `B1, B
 7. Tự kiểm tra trước khi trả về: `go vet ./...`, `go build ./...`, `go tool golangci-lint run ./...`.
 8. Gặp điểm chưa rõ trong plan thì dừng task đó, ghi vào mục "Cần hỏi người dùng" và trả về, không tự đoán.
 9. Không commit, không push, không chạy lệnh git làm thay đổi working tree.
-10. Unit test do `go-tester` viết **sau** bạn. Bạn không cần viết test mới, nhưng phải viết code **test được**: phụ thuộc S3/MinIO/Wails qua interface hẹp (như `s3Uploader`, `appHost`), không gọi thẳng `application.Get()` trong logic. Nếu bạn đổi hành vi làm test cũ fail, sửa test cũ cho khớp plan và ghi rõ trong kết quả. Khi được giao lại do "Lỗi cho go-backend" hoặc "Cần refactor để test được", sửa code chứ không sửa test của `go-tester`.
+10. Backend Go hiện **không** viết unit test: không tạo file `*_test.go`.
 
 ## Kết quả trả về
 
