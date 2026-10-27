@@ -60,6 +60,13 @@ func (h *BucketHandler) GetListObject(
 	return h.bucket.GetListObject(ctx, input)
 }
 
+func (h *BucketHandler) GetObjectDetail(
+	ctx context.Context,
+	input models.ObjectDetailInput,
+) models.Output[models.ObjectDetailOutput] {
+	return h.bucket.GetObjectDetail(ctx, input)
+}
+
 func (h *BucketHandler) DownloadObject(input models.DownloadObjInput) models.Output[any] {
 	return h.bucket.DownloadObject(input)
 }

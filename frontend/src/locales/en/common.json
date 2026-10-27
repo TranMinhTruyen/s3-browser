@@ -6,6 +6,7 @@
     "connect": "Connect",
     "cancel": "Cancel",
     "OK": "OK",
-    "clear": "Clear"
+    "clear": "Clear",
+    "close": "Close"
   }
 }

@@ -20,15 +20,6 @@
   border-color: #3b48ff;
 }
 
-.label {
-  color: var(--mantine-color-dimmed);
-  transition: color 150ms ease;
-}
-
-.card:hover .label {
-  color: #3b48ff;
-}
-
 /* The Wails runtime adds file-drop-target-active while files are dragged over the drop target. */
 .dropZone:global(.file-drop-target-active) {
   outline: 2px dashed #3b48ff;

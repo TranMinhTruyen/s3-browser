@@ -116,7 +116,7 @@ export default createMantineModal<{}, false>(props => {
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
             <Title order={4}>{t('title')}</Title>
           </Group>
-          <Modal.CloseButton size="md" />
+          <Modal.CloseButton size="md" aria-label={t('common:button.close')} />
         </Modal.Header>
 
         <Divider />

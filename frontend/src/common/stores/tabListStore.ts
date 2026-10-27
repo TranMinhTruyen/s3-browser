@@ -1,3 +1,4 @@
+import type { ObjectItem } from '@wails/S3Browser/models/bucket';
 import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
 import { createUUID } from '@/common/utils/stringUtils';
@@ -11,6 +12,8 @@ interface TabDetail {
   prefix: string;
   selectionItem: string[];
   deletingItems: string[];
+  // Object shown in the detail drawer. Unset when the drawer is closed.
+  detailItem?: ObjectItem;
 }
 
 interface TabListState {
@@ -36,6 +39,9 @@ interface TabListAction {
   addSelectItem: (tabId: string, items: string[]) => void;
   removeSelectItem: (tabId: string, items: string[]) => void;
   clearSelectItem: (tabId: string) => void;
+
+  openDetail: (tabId: string, item: ObjectItem) => void;
+  closeDetail: (tabId: string) => void;
 
   setDeleting: (tabId: string, items: string[], deleting: boolean) => void;
   setUploadingTab: (tabId: string | null) => void;
@@ -117,6 +123,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
             // Opening or leaving a bucket always starts from its root.
             tab.prefix = '';
             tab.selectionItem = [];
+            tab.detailItem = undefined;
           }
         },
         undefined,
@@ -132,6 +139,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
             tab.prefix = prefix;
             // Selected keys belong to the previous folder and are no longer visible.
             tab.selectionItem = [];
+            tab.detailItem = undefined;
           }
         },
         undefined,
@@ -148,6 +156,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
               tab.bucket = undefined;
               tab.prefix = '';
               tab.selectionItem = [];
+              tab.detailItem = undefined;
             }
           });
         },
@@ -166,6 +175,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
               tab.bucket = undefined;
               tab.prefix = '';
               tab.selectionItem = [];
+              tab.detailItem = undefined;
             }
           });
         },
@@ -205,12 +215,32 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       set(
         state => {
           const tab = state.tabList[tabId];
-          if (tab) {
-            tab.selectionItem = [];
-          }
+          if (tab) tab.selectionItem = [];
         },
         undefined,
         `${SCOPE}/clearSelectItem`
+      );
+    },
+
+    openDetail: (tabId: string, item: ObjectItem) => {
+      set(
+        state => {
+          const tab = state.tabList[tabId];
+          if (tab) tab.detailItem = item;
+        },
+        undefined,
+        `${SCOPE}/openDetail`
+      );
+    },
+
+    closeDetail: (tabId: string) => {
+      set(
+        state => {
+          const tab = state.tabList[tabId];
+          if (tab) tab.detailItem = undefined;
+        },
+        undefined,
+        `${SCOPE}/closeDetail`
       );
     },
 

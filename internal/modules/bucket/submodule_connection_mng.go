@@ -48,7 +48,7 @@ func (m *submoduleConnMng) testAction(input models.ConnectionProfileInput) model
 
 	if err != nil {
 		status.Body.IsConnected = false
-		return status
+		return status.ThrowError()
 	}
 
 	// A test connection is never kept.
@@ -75,7 +75,7 @@ func (m *submoduleConnMng) connectAction(
 
 	if err != nil {
 		status.Body.IsConnected = false
-		return status
+		return status.ThrowError()
 	}
 
 	// An existing profile keeps its id; a new connection creates a profile and uses its id.

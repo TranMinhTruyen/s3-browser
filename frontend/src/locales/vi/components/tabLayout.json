@@ -5,6 +5,7 @@
   "tooltip": {
     "closeTab": "Đóng tab",
     "connect": "Kết nối",
-    "refresh": "Làm mới {target}"
+    "refresh": "Làm mới {target}",
+    "addTab": "Thêm tab"
   }
 }

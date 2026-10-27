@@ -22,6 +22,8 @@ type submoduleObjMng struct {
 	// getDeleter returns the S3 client of a connection; ok is false if it isn't connected.
 	// It sits next to global as the seam tests replace with a fake client.
 	getDeleter func(connID string) (client s3Deleter, ok bool)
+	// getHeader returns the S3 client used to read object headers; ok is false if it isn't connected.
+	getHeader func(connID string) (client s3Header, ok bool)
 	// appContext returns the app lifetime context. Tests replace it so they don't need a running app.
 	appContext func() context.Context
 }
@@ -38,6 +40,13 @@ func newSubmoduleObjMng(
 		logger: logger.With("submodules", "object_mng"),
 		global: global,
 		getDeleter: func(connID string) (s3Deleter, bool) {
+			conn, ok := global.GetConnContainer(connID)
+			if !ok {
+				return nil, false
+			}
+			return conn.Client, true
+		},
+		getHeader: func(connID string) (s3Header, bool) {
 			conn, ok := global.GetConnContainer(connID)
 			if !ok {
 				return nil, false
@@ -207,7 +216,8 @@ func (m *submoduleObjMng) deleteObject(ctx context.Context, input models.DeleteO
 
 	for item := range result {
 		if item.err != nil {
-			output.AddMessage(
+			// Keep going so every key still gets its own message; Result stays false.
+			output.ThrowError(
 				models.NewParamsMessage(
 					cnst.MessageTypeError,
 					cnst.Bucket,

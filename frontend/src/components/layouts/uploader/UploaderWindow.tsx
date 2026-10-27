@@ -94,7 +94,7 @@ function UploaderWindow() {
     const bottom = EDGE + (hasDownloader ? downloaderHeight + GAP : 0);
     return (
       <Affix position={{ bottom, right: EDGE }}>
-        <ActionIcon onClick={handlers.open} size="xl">
+        <ActionIcon onClick={handlers.open} size="xl" aria-label={t('title')}>
           <Upload />
         </ActionIcon>
       </Affix>
@@ -110,10 +110,16 @@ function UploaderWindow() {
         <Group p="xs" justify="space-between">
           <Text>{t('title')}</Text>
           <Group gap="xs">
-            <ActionIcon color="red" size="md" onClick={onClickCancelAll} title={t('action.cancelAll')}>
+            <ActionIcon
+              color="red"
+              size="md"
+              onClick={onClickCancelAll}
+              title={t('action.cancelAll')}
+              aria-label={t('action.cancelAll')}
+            >
               <X />
             </ActionIcon>
-            <CloseButton onClick={handlers.close} />
+            <CloseButton onClick={handlers.close} aria-label={t('action.close')} />
           </Group>
         </Group>
 

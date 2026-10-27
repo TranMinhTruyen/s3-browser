@@ -5,11 +5,8 @@
     "backToBucket": "Quay lại danh sách bucket",
     "clearSelected": "Bỏ chọn",
     "downloadSelected": "Tải xuống mục đã chọn",
-    "deleteSelected": "Xoá mục đã chọn"
-  },
-  "label": {
-    "size": "Dung lượng",
-    "lastModified": "Sửa đổi lần cuối"
+    "deleteSelected": "Xoá mục đã chọn",
+    "moreActions": "Thao tác khác"
   },
   "action": {
     "download": "Tải xuống",

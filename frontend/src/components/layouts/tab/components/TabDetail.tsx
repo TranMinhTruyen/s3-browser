@@ -10,9 +10,10 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { formatStringJson, isNullOrEmpty } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import Combobox from '@/components/inputs/combobox/Combobox';
+import ObjectDetailDrawer from '@/components/layouts/tab/components/ObjectDetailDrawer';
 import ConnectModal from '@/components/modals/ConnectModal';
-import BucketListView, { BucketListViewRef } from '@/pages/bucket/components/views/BucketListView';
-import ObjectListView, { ObjectListViewRef } from '@/pages/object/components/views/ObjectListView';
+import BucketListView, { BucketListViewRef } from '@/pages/bucket/BucketListView';
+import ObjectListView, { ObjectListViewRef } from '@/pages/object/ObjectListView';
 import classes from '@/pages/object/page.module.css';
 
 // Stable fallback so the selector does not return a new array on every call.
@@ -42,11 +43,16 @@ function TabDetail(props: TabDetailProps) {
   const selectedProfile = useProfileStore(s =>
     selectedProfileId ? s.connectionProfiles[selectedProfileId] : undefined
   );
+  const hasDetail = useTabListStore(s => !!s.tabList[tabId]?.detailItem);
   const bucketListRef = useRef<BucketListViewRef>(null);
   const objectListRef = useRef<ObjectListViewRef>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isConnected = !!selectedProfile?.isConnected;
   const currentView = isConnected ? tabView : 'bucketList';
+  const refreshLabel = formatStringJson(t('tooltip.refresh'), {
+    target: currentView === 'objectList' ? tObject('tooltip.objectList') : tBucket('tooltip.bucketList'),
+  });
+  const backLabel = prefix ? tObject('tooltip.backToParent') : tObject('tooltip.backToBucket');
   const selectedItems = useTabListStore(s => s.tabList[tabId]?.selectionItem ?? EMPTY_SELECTION);
   const optionsData = useMemo(
     () =>
@@ -192,25 +198,25 @@ function TabDetail(props: TabDetailProps) {
           />
 
           <Tooltip label={t('tooltip.connect')}>
-            <ActionIcon onClick={onClickConnect} disabled={isConnected || !selectedProfileId}>
+            <ActionIcon
+              onClick={onClickConnect}
+              aria-label={t('tooltip.connect')}
+              disabled={isConnected || !selectedProfileId}
+            >
               <PlugZap />
             </ActionIcon>
           </Tooltip>
 
-          <Tooltip
-            label={formatStringJson(t('tooltip.refresh'), {
-              target: currentView === 'objectList' ? tObject('tooltip.objectList') : tBucket('tooltip.bucketList'),
-            })}
-          >
-            <ActionIcon onClick={onClickRefresh} disabled={!isConnected}>
+          <Tooltip label={refreshLabel}>
+            <ActionIcon onClick={onClickRefresh} aria-label={refreshLabel} disabled={!isConnected}>
               <RefreshCw />
             </ActionIcon>
           </Tooltip>
 
           {currentView === 'objectList' ? (
             <>
-              <Tooltip label={prefix ? tObject('tooltip.backToParent') : tObject('tooltip.backToBucket')}>
-                <ActionIcon onClick={onClickBack}>
+              <Tooltip label={backLabel}>
+                <ActionIcon onClick={onClickBack} aria-label={backLabel}>
                   <ArrowLeft />
                 </ActionIcon>
               </Tooltip>
@@ -218,17 +224,29 @@ function TabDetail(props: TabDetailProps) {
               {selectedItems.length > 0 ? (
                 <Group gap="xs" ml="auto">
                   <Tooltip label={tObject('tooltip.clearSelected')}>
-                    <ActionIcon onClick={onClickClearSelected} disabled={hasDeletingSelected}>
+                    <ActionIcon
+                      onClick={onClickClearSelected}
+                      aria-label={tObject('tooltip.clearSelected')}
+                      disabled={hasDeletingSelected}
+                    >
                       <BroomSparkles />
                     </ActionIcon>
                   </Tooltip>
                   <Tooltip label={tObject('tooltip.downloadSelected')}>
-                    <ActionIcon onClick={onClickDownloadSelected} disabled={hasDeletingSelected}>
+                    <ActionIcon
+                      onClick={onClickDownloadSelected}
+                      aria-label={tObject('tooltip.downloadSelected')}
+                      disabled={hasDeletingSelected}
+                    >
                       <Download />
                     </ActionIcon>
                   </Tooltip>
                   <Tooltip label={tObject('tooltip.deleteSelected')}>
-                    <ActionIcon onClick={onClickDeleteSelected} color="red">
+                    <ActionIcon
+                      onClick={onClickDeleteSelected}
+                      aria-label={tObject('tooltip.deleteSelected')}
+                      color="red"
+                    >
                       <Trash />
                     </ActionIcon>
                   </Tooltip>
@@ -270,17 +288,27 @@ function TabDetail(props: TabDetailProps) {
         </>
       ) : null}
 
-      {/* View */}
-      <Paper
-        ref={scrollRef}
-        p="8px"
-        className={classes.dropZone}
-        data-file-drop-target={currentView === 'objectList' ? '' : undefined}
-        data-tab-id={tabId}
-        style={{ flex: 1, minHeight: 0, overflow: 'auto', position: 'relative' }}
-      >
-        <Stack gap="8px">{viewContent}</Stack>
-      </Paper>
+      {/* View: the list scrolls on its own, the detail drawer is a fixed sibling on the right of the tab */}
+      <Group gap={0} wrap="nowrap" align="stretch" style={{ flex: 1, minHeight: 0 }}>
+        <Paper
+          ref={scrollRef}
+          p="8px"
+          className={classes.dropZone}
+          data-file-drop-target={currentView === 'objectList' ? '' : undefined}
+          data-tab-id={tabId}
+          style={{ flex: 1, minWidth: 0, overflow: 'auto', position: 'relative' }}
+        >
+          <Stack gap="8px">{viewContent}</Stack>
+        </Paper>
+        {currentView === 'objectList' && hasDetail && selectedProfile?.id && selectedBucket ? (
+          <ObjectDetailDrawer
+            tabId={tabId}
+            connectionId={selectedProfile.id}
+            profileName={selectedProfile.name}
+            bucket={selectedBucket}
+          />
+        ) : null}
+      </Group>
     </Paper>
   );
 }

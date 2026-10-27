@@ -33,6 +33,8 @@
     "S3E021": "Delete folder {prefix} error: {failed} object(s) failed, {deleted} deleted.",
     "S3E022": "Folder {folder} has more than {max} files over {size} GiB to upload.",
     "S3E023": "Upload at most {max} files at a time.",
+    "S3E024": "Get object {key} detail error, profile: {name}, bucket: {bucket}.",
+    "S3E025": "Invalid object key {key}.",
     "S3W001": "Access bucket is limited.",
     "S3W002": "Download object: {object} is canceled.",
     "S3W003": "Update download history failed: {object} please reload!",

@@ -5,7 +5,7 @@ import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { Bucket } from '@wails/S3Browser/models/bucket';
 import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { callIPC } from '@/common/utils/ipcUtils';
-import BucketItem from '@/pages/bucket/components/BucketItem';
+import BucketItem from '@/pages/bucket/BucketItem';
 
 export type BucketListViewRef = {
   onRefresh?: () => Promise<void>;

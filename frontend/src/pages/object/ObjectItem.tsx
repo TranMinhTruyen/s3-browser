@@ -1,12 +1,9 @@
-import { Box, Card, Group, Menu, Stack, Text } from '@mantine/core';
+import { Card, Menu, Text } from '@mantine/core';
 import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
-import dayjs from 'dayjs';
 import { Download, Ellipsis, Folder, Trash } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
 import { useTabListStore } from '@/common/stores/tabListStore';
-import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import classes from '@/pages/object/page.module.css';
@@ -14,6 +11,7 @@ import classes from '@/pages/object/page.module.css';
 type ObjectItemProps = {
   tabId: string;
   item: ObjectItemData;
+  onOpenDetail: (item: ObjectItemData) => void;
   onToggleSelect: (key: string, checked: boolean) => void;
   onClickMenuButton: (objects: string[], action: 'download' | 'delete') => Promise<void>;
   onClickDeleteFolder: (prefix: string, name: string) => Promise<void>;
@@ -21,7 +19,7 @@ type ObjectItemProps = {
 };
 
 function ObjectItem(props: ObjectItemProps) {
-  const { tabId, item, onToggleSelect, onClickMenuButton, onClickDeleteFolder, onOpenFolder } = props;
+  const { tabId, item, onOpenDetail, onToggleSelect, onClickMenuButton, onClickDeleteFolder, onOpenFolder } = props;
 
   const { t } = useTranslation('object', { keyPrefix: 'page' });
 
@@ -44,8 +42,8 @@ function ObjectItem(props: ObjectItemProps) {
   }, [onOpenFolder, item.key]);
 
   const onClickCard = useCallback(() => {
-    onToggleSelect(item.key, !isSelected);
-  }, [onToggleSelect, item.key, isSelected]);
+    onOpenDetail(item);
+  }, [onOpenDetail, item]);
 
   const onChangeCheckbox = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -91,7 +89,6 @@ function ObjectItem(props: ObjectItemProps) {
             alignItems: 'center',
           }}
         >
-          {/* A key like "a//b" has a folder with an empty name. */}
           <Text size="xl" truncate="end" fw={500}>
             {item.name || '/'}
           </Text>
@@ -108,7 +105,7 @@ function ObjectItem(props: ObjectItemProps) {
         >
           <Menu width={200}>
             <Menu.Target>
-              <ActionIcon loading={isDeleting}>
+              <ActionIcon loading={isDeleting} aria-label={t('tooltip.moreActions')}>
                 <Ellipsis />
               </ActionIcon>
             </Menu.Target>
@@ -131,6 +128,7 @@ function ObjectItem(props: ObjectItemProps) {
         px="8px"
         withBorder
         className={classes.iconSection}
+        onClick={onClickMenuSection}
         style={{
           flexShrink: 0,
           display: 'flex',
@@ -143,6 +141,7 @@ function ObjectItem(props: ObjectItemProps) {
       <Card.Section
         inheritPadding
         px="md"
+        py="md"
         style={{
           flex: 1,
           minWidth: 0,
@@ -150,26 +149,9 @@ function ObjectItem(props: ObjectItemProps) {
           alignItems: 'center',
         }}
       >
-        <Stack>
-          <Text size="xl" truncate="end" fw={500}>
-            {item.name}
-          </Text>
-          <Group gap="xl">
-            <Box miw="100px">
-              <Text span className={classes.label}>
-                {t('label.size')}
-              </Text>
-              <Text>{formatFileSize(item.size)}</Text>
-            </Box>
-
-            <Box miw="100px">
-              <Text span className={classes.label}>
-                {t('label.lastModified')}
-              </Text>
-              <Text>{dayjs(item.lastModified).format(FULL_DATE_TIME_FORMAT)}</Text>
-            </Box>
-          </Group>
-        </Stack>
+        <Text size="xl" truncate="end" fw={500}>
+          {item.name}
+        </Text>
       </Card.Section>
 
       <Card.Section
@@ -184,7 +166,7 @@ function ObjectItem(props: ObjectItemProps) {
       >
         <Menu width={200}>
           <Menu.Target>
-            <ActionIcon loading={isDeleting}>
+            <ActionIcon loading={isDeleting} aria-label={t('tooltip.moreActions')}>
               <Ellipsis />
             </ActionIcon>
           </Menu.Target>

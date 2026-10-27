@@ -7,6 +7,7 @@ import connectModal from '@/locales/vi/components/modals/connectModal.json';
 import historyModal from '@/locales/vi/components/modals/historyModal.json';
 import uploadLimitModal from '@/locales/vi/components/modals/uploadLimitModal.json';
 import connectionProfiles from '@/locales/vi/components/navbar/connectionProfiles.json';
+import objectDetailDrawer from '@/locales/vi/components/objectDetailDrawer.json';
 import tabLayout from '@/locales/vi/components/tabLayout.json';
 import uploaderWindow from '@/locales/vi/components/uploaderWindow.json';
 import ipcMessage from '@/locales/vi/messages/ipcMessage.json';
@@ -31,6 +32,7 @@ const vietnameseResource: ResourceLanguage = {
   },
   inputs: inputs,
   downloaderWindow: downloaderWindow,
+  objectDetailDrawer: objectDetailDrawer,
   tabLayout: tabLayout,
   uploaderWindow: uploaderWindow,
 };

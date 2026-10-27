@@ -42,3 +42,8 @@ tasks:
     summary: Runs only the frontend dev server
     cmds:
       - task: common:dev:frontend
+
+  test:go:coverage:
+    summary: Runs Go tests for internal/modules and fails when statement coverage is below the threshold
+    cmds:
+      - go run ./scripts/checkcoverage {{.CLI_ARGS}}

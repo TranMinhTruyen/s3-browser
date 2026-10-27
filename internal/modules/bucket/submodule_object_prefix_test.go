@@ -14,6 +14,8 @@ package bucket
 //   fallback per key error                                  TestDeletePrefix_FallbackError
 //   list error                                              TestDeletePrefix_ListError
 //   ctx canceled -> Result=false, no message                TestDeletePrefix_Canceled
+//   ctx canceled during DeleteObjects                       TestDeletePrefix_CanceledInBatch
+//   ctx canceled during the DeleteObject fallback           TestDeletePrefix_CanceledInFallback
 //   nothing under the prefix -> success with 0              TestDeletePrefix_Empty
 
 import (
@@ -43,6 +45,8 @@ type fakeDeleter struct {
 	perKeyErrs map[string]string // DeleteObjects Errors, by key
 	singleErr  map[string]error  // DeleteObject errors, by key
 	onList     func()
+	onBatch    func() // runs before DeleteObjects checks its context
+	onSingle   func() // runs inside DeleteObject
 
 	listCalls   int
 	batchSizes  []int
@@ -113,6 +117,9 @@ func (f *fakeDeleter) DeleteObjects(
 ) (*s3.DeleteObjectsOutput, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if f.onBatch != nil {
+		f.onBatch()
+	}
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -143,6 +150,9 @@ func (f *fakeDeleter) DeleteObject(
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.singleCalls++
+	if f.onSingle != nil {
+		f.onSingle()
+	}
 	k := aws.ToString(in.Key)
 	if err := f.singleErr[k]; err != nil {
 		return nil, err
@@ -332,5 +342,26 @@ func TestDeletePrefix_Canceled(t *testing.T) {
 	}
 	if len(f.keys) == 0 {
 		t.Fatal("should have stopped before deleting everything")
+	}
+}
+
+func TestDeletePrefix_CanceledInBatch(t *testing.T) {
+	f := newFakeDeleter("a/1", "a/2")
+	ctx, cancel := context.WithCancel(context.Background())
+	f.onBatch = cancel
+	out := newTestObjMng(f).deletePrefix(ctx, prefixInput("a/"))
+	if out.Result || len(out.MessageList) != 0 || len(f.keys) != 2 {
+		t.Fatalf("%+v keys=%d", out, len(f.keys))
+	}
+}
+
+func TestDeletePrefix_CanceledInFallback(t *testing.T) {
+	f := newFakeDeleter("a/1", "a/2")
+	f.batchErr = &fakeAPIErr{"NotImplemented"}
+	ctx, cancel := context.WithCancel(context.Background())
+	f.onSingle = cancel
+	out := newTestObjMng(f).deletePrefix(ctx, prefixInput("a/"))
+	if out.Result || len(out.MessageList) != 0 {
+		t.Fatalf("%+v", out)
 	}
 }

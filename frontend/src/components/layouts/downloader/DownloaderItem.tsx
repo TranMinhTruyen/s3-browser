@@ -84,7 +84,7 @@ function DownloaderItem(props: DownloaderItemProps) {
         }}
       >
         <Center w="48px" h="100%">
-          <ActionIcon color="red" onClick={onClickCancelDownload}>
+          <ActionIcon color="red" onClick={onClickCancelDownload} aria-label={t('action.cancel')}>
             <X />
           </ActionIcon>
         </Center>

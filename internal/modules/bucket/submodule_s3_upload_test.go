@@ -7,7 +7,8 @@ package bucket
 //   os.Lstat error                                TestUploadFile_OpenError
 //   not a regular file (dir / symlink)            TestUploadFile_NotRegular / _Symlink
 //   stat error                                    TestUploadFile_StatError
-//   os.Open error, not regular after Open         not unit tested (only if the file changes
+//   not regular after Open (statFile seam)        TestUploadFile_NotRegularAfterOpen
+//   os.Open error                                 not unit tested (only if the file vanishes
 //                                                 between Lstat and Open)
 //   size < minUploadPartSize (single) / multipart TestUploadFile_Small / TestUploadFile_Multipart
 //   upload error / success                        TestUploadFile_PutError / _Small
@@ -81,6 +82,23 @@ func TestUploadFile_StatError(t *testing.T) {
 
 	if _, err := uploadFile(context.Background(), &fakeS3{}, "b", "k", p, nil); !errors.Is(err, errBoom) {
 		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestUploadFile_NotRegularAfterOpen(t *testing.T) {
+	p := writeFile(t, t.TempDir(), "a.txt", 1)
+	old := statFile
+	// Lstat sees a regular file, but the opened handle reports a directory.
+	statFile = func(*os.File) (os.FileInfo, error) { return os.Stat(t.TempDir()) }
+	t.Cleanup(func() { statFile = old })
+
+	fake := &fakeS3{}
+	_, err := uploadFile(context.Background(), fake, "b", "k", p, nil)
+	if err == nil || !strings.Contains(err.Error(), p+" is not a regular file") {
+		t.Fatalf("err=%v", err)
+	}
+	if len(fake.putKeys) != 0 {
+		t.Fatalf("nothing must be uploaded, putKeys=%v", fake.putKeys)
 	}
 }
 

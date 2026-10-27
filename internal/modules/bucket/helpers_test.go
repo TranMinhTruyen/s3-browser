@@ -2,15 +2,26 @@ package bucket
 
 import (
 	"context"
+	"database/sql"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 
+	"S3Browser/internal/modules/global"
+	"S3Browser/internal/pkg/utils"
+	"S3Browser/models"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/zalando/go-keyring"
 )
 
 // fakeS3 is an in-memory s3Uploader. Every hook is optional; a nil hook succeeds.
@@ -185,4 +196,69 @@ func useLargeFileSize(t *testing.T, n int64) {
 	old := largeFileSize
 	largeFileSize = n
 	t.Cleanup(func() { largeFileSize = old })
+}
+
+// newS3Server starts a fake S3 endpoint that is closed when the test ends.
+func newS3Server(t *testing.T, h http.HandlerFunc) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewServer(h)
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+// newTestS3Conn returns a connection whose client talks to endpoint without retrying.
+func newTestS3Conn(endpoint string) *global.S3Conn {
+	tr := &http.Transport{}
+	client := s3.NewFromConfig(aws.Config{
+		Credentials:      credentials.NewStaticCredentialsProvider("ak", "sk", ""),
+		Region:           "us-east-1",
+		HTTPClient:       &http.Client{Transport: tr},
+		RetryMaxAttempts: 1,
+	}, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String(endpoint)
+		o.UsePathStyle = true
+	})
+	return &global.S3Conn{ProfileName: "prof", Client: client, Transport: tr}
+}
+
+// writeS3Error answers with an S3 XML error. Use a 4xx status so the SDK does not retry.
+func writeS3Error(w http.ResponseWriter, status int, code string) {
+	w.WriteHeader(status)
+	_, _ = fmt.Fprintf(w, "<Error><Code>%s</Code><Message>%s</Message></Error>", code, code)
+}
+
+// writeXML answers 200 with an XML body.
+func writeXML(w http.ResponseWriter, body string) {
+	w.Header().Set("Content-Type", "application/xml")
+	_, _ = io.WriteString(w, body)
+}
+
+// codesOf returns the message codes in order.
+func codesOf(msgs []models.Message) []string {
+	out := make([]string, 0, len(msgs))
+	for _, m := range msgs {
+		out = append(out, m.MessageCode)
+	}
+	return out
+}
+
+// closedDB returns a migrated database that is already closed, so every query on it fails.
+func closedDB(t *testing.T) *sql.DB {
+	t.Helper()
+	sqlDB := newTestDB(t)
+	if err := sqlDB.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return sqlDB
+}
+
+// mustKeyManager returns a KeyManager backed by the mock keyring.
+func mustKeyManager(t *testing.T) *utils.KeyManager {
+	t.Helper()
+	keyring.MockInit()
+	km, err := utils.NewKeyManager()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return km
 }

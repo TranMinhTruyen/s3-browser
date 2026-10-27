@@ -28,6 +28,14 @@ Bạn là reviewer senior cho S3Browser. Toàn bộ quy ước code (backend, fr
 - Deps của `useImperativeHandle` thay đổi mỗi lần render.
 - Danh sách lớn không virtualize.
 
+**Chất lượng unit test** (theo mục **Testing** của `CLAUDE.md`)
+- Test có assert thật về kết quả (`Result`, `MessageCode`, `Body`, state store, nội dung hiển thị), không chỉ gọi hàm cho chạy qua dòng.
+- Assert theo yêu cầu trong `plan.md`, không chép lại hành vi sai của code (test xác nhận bug).
+- Go: Branch table khớp với code hiện tại; mục "Not unit tested" có lý do hợp lý.
+- Test độc lập, không flaky: không `time.Sleep`/`setTimeout` thật để chờ, không phụ thuộc thứ tự chạy, store được reset, goroutine có timeout.
+- Không gọi mạng, Wails runtime hay MinIO thật; fake/mock dùng lại helper sẵn có thay vì tạo trùng.
+- Tester không sửa code production.
+
 **Tính nhất quán với `CLAUDE.md`**
 - Vi phạm bất kỳ quy ước nào trong `CLAUDE.md` (đặt tên handler `on…`, hàm không bọc `useCallback`, chuỗi hard-code, thiếu key en/vi/ja, thiếu re-export `alias.go`, sửa tay code sinh tự động, dùng tool format khác biome/oxlint...).
 - Locale key được thêm nhưng không dùng; props/type khai báo nhưng không dùng.
@@ -48,7 +56,7 @@ Nhóm các phát hiện theo mức độ nghiêm trọng, nặng nhất trước
 4. **Vị trí**: hiện vị trí theo format `[file.tsx:42](relative/path/file.tsx#L42)`
 5. **Nên cải thiện**: khả năng bảo trì, tính nhất quán
 
-Với mỗi phát hiện, nêu: vị trí có thể click, sai ở đâu, một kịch bản cụ thể gây ra lỗi, cách sửa ngắn gọn (kèm code snippet nếu hữu ích), và **agent nên sửa** (`go-backend` hoặc `react-frontend`). Nêu rõ mức độ ảnh hưởng với kích thước dữ liệu hiện tại (ví dụ `limit: 10`) so với sau này.
+Với mỗi phát hiện, nêu: vị trí có thể click, sai ở đâu, một kịch bản cụ thể gây ra lỗi, cách sửa ngắn gọn (kèm code snippet nếu hữu ích), và **agent nên sửa** (`go-backend`, `react-frontend`, `go-tester` hoặc `react-tester`). Nêu rõ mức độ ảnh hưởng với kích thước dữ liệu hiện tại (ví dụ `limit: 10`) so với sau này.
 
 Chỉ báo cáo những gì đã kiểm chứng. Đánh dấu điều chưa chắc chắn là "chưa xác minh". Nếu không tìm thấy vấn đề đáng kể, hãy nói thẳng, không độn thêm cho dài danh sách.
 
