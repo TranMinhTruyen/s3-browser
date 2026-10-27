@@ -60,6 +60,20 @@ func (h *BucketHandler) GetListObject(
 	return h.bucket.GetListObject(ctx, input)
 }
 
+func (h *BucketHandler) SearchObject(
+	ctx context.Context,
+	input models.SearchObjectInput,
+) models.Output[models.SearchObjectOutput] {
+	return h.bucket.SearchObject(ctx, input)
+}
+
+func (h *BucketHandler) SearchBucket(
+	ctx context.Context,
+	input models.SearchBucketInput,
+) models.Output[models.SearchBucketOutput] {
+	return h.bucket.SearchBucket(ctx, input)
+}
+
 func (h *BucketHandler) GetObjectDetail(
 	ctx context.Context,
 	input models.ObjectDetailInput,

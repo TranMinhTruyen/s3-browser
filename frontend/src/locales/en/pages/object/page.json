@@ -11,5 +11,9 @@
   "action": {
     "download": "Download",
     "delete": "Delete"
+  },
+  "search": {
+    "empty": "No matching objects",
+    "loadMore": "Search more"
   }
 }

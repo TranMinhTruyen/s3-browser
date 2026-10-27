@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConnectS3ByProfile } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
@@ -12,22 +12,24 @@ import ConnectModal from '@/components/modals/ConnectModal';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
 type BucketStubProps = {
+  keyword?: string;
   profile?: { id?: string } | null;
   active: boolean;
   onSelectBucket: (bucket?: string) => void;
   ref: Ref<unknown>;
 };
-type ObjectStubProps = { bucket?: string; ref: Ref<unknown> };
+type ObjectStubProps = { bucket?: string; keyword?: string; ref: Ref<unknown> };
 
 const h = vi.hoisted(() => ({ bucketRefresh: vi.fn(), objectRefresh: vi.fn(), menu: vi.fn() }));
 
 // The two list views are tested on their own: here they are stubs exposing their ref and callbacks.
 vi.mock('@/pages/bucket/BucketListView', () => ({
-  default: function BucketListViewStub({ profile, active, onSelectBucket, ref }: BucketStubProps) {
+  default: function BucketListViewStub({ profile, active, keyword, onSelectBucket, ref }: BucketStubProps) {
     useImperativeHandle(ref, () => ({ onRefresh: h.bucketRefresh }), []);
     return (
       <div>
         <span>{`bucket list profile=${profile?.id ?? 'none'} active=${active}`}</span>
+        <span>{`bucket keyword=[${keyword}]`}</span>
         <button type="button" onClick={() => onSelectBucket('my-bucket')}>
           pick bucket
         </button>
@@ -39,9 +41,14 @@ vi.mock('@/pages/bucket/BucketListView', () => ({
   },
 }));
 vi.mock('@/pages/object/ObjectListView', () => ({
-  default: function ObjectListViewStub({ bucket, ref }: ObjectStubProps) {
+  default: function ObjectListViewStub({ bucket, keyword, ref }: ObjectStubProps) {
     useImperativeHandle(ref, () => ({ onRefresh: h.objectRefresh, onClickMenuButton: h.menu }), []);
-    return <div>{`object list bucket=${bucket}`}</div>;
+    return (
+      <div>
+        <span>{`object list bucket=${bucket}`}</span>
+        <span>{`keyword=[${keyword}]`}</span>
+      </div>
+    );
   },
 }));
 vi.mock('@/components/layouts/tab/components/ObjectDetailDrawer', () => ({
@@ -318,6 +325,204 @@ describe('TabDetail', () => {
       setTab({ currentView: 'objectList', bucket: 'b' });
       setup();
       expect(screen.queryByText(/^drawer/)).not.toBeInTheDocument();
+    });
+
+    describe('search', () => {
+      const searchBox = () => screen.getByPlaceholderText('Search by key');
+      const objectTab = (patch: Record<string, unknown> = {}) =>
+        setTab({ currentView: 'objectList', bucket: 'b', ...patch });
+
+      it('is shown in the bucket list with its own placeholder', () => {
+        setTab();
+        setProfile({ isConnected: true });
+        setup();
+        expect(screen.getByPlaceholderText('Search by name')).toBeInTheDocument();
+        expect(screen.queryByPlaceholderText('Search by key')).not.toBeInTheDocument();
+        expect(btn('Search')).toBeEnabled();
+      });
+
+      it('is disabled in the bucket list while not connected', () => {
+        setTab();
+        setProfile({ isConnected: false });
+        setup();
+        expect(screen.getByPlaceholderText('Search by name')).toBeDisabled();
+        expect(btn('Search')).toBeDisabled();
+      });
+
+      describe('in the bucket list', () => {
+        const nameBox = () => screen.getByPlaceholderText('Search by name');
+        beforeEach(() => {
+          setProfile({ isConnected: true });
+          setTab({ selectionItem: ['k'] });
+        });
+
+        it('applies the keyword to the bucket list only, without touching the selection', async () => {
+          const user = setup();
+          expect(screen.getByText('bucket keyword=[]')).toBeInTheDocument();
+          await user.type(nameBox(), ' foo {Enter}');
+          expect(screen.getByText('bucket keyword=[foo]')).toBeInTheDocument();
+          expect(tab().selectionItem).toEqual(['k']);
+        });
+
+        it('refreshes the bucket list when the same keyword is submitted again', async () => {
+          const user = setup();
+          await user.type(nameBox(), 'foo{Enter}');
+          expect(h.bucketRefresh).not.toHaveBeenCalled();
+          await user.click(btn('Search'));
+          expect(h.bucketRefresh).toHaveBeenCalledTimes(1);
+          expect(h.objectRefresh).not.toHaveBeenCalled();
+          expect(screen.getByText('bucket keyword=[foo]')).toBeInTheDocument();
+        });
+
+        it('clears the keyword without touching the selection', async () => {
+          const user = setup();
+          await user.type(nameBox(), 'foo{Enter}');
+          await user.click(btn('Clear search'));
+          expect(screen.getByText('bucket keyword=[]')).toBeInTheDocument();
+          expect(nameBox()).toHaveValue('');
+          expect(tab().selectionItem).toEqual(['k']);
+        });
+
+        it('gives the bucket list no keyword while the object list is shown, and drops it on return', async () => {
+          const user = setup();
+          await user.type(nameBox(), 'foo{Enter}');
+          await user.click(screen.getByText('pick bucket'));
+          expect(screen.getByText('bucket keyword=[]')).toBeInTheDocument();
+          expect(screen.getByText('keyword=[]')).toBeInTheDocument();
+          act(() => useTabListStore.getState().changeCurrentView(TAB, 'bucketList'));
+          expect(screen.getByText('bucket keyword=[]')).toBeInTheDocument();
+          expect(nameBox()).toHaveValue('');
+        });
+      });
+
+      it('applies the keyword to the object list and clears the selection', async () => {
+        objectTab({ selectionItem: ['k'] });
+        const user = setup();
+        expect(screen.getByText('keyword=[]')).toBeInTheDocument();
+        await user.type(searchBox(), ' foo {Enter}');
+        expect(screen.getByText('keyword=[foo]')).toBeInTheDocument();
+        expect(tab().selectionItem).toEqual([]);
+      });
+
+      it('searches with the search button', async () => {
+        objectTab();
+        const user = setup();
+        await user.type(searchBox(), 'bar');
+        await user.click(btn('Search'));
+        expect(screen.getByText('keyword=[bar]')).toBeInTheDocument();
+      });
+
+      it('clears the keyword with the clear button or by submitting empty text', async () => {
+        objectTab();
+        const user = setup();
+        await user.type(searchBox(), 'foo{Enter}');
+        await user.click(btn('Clear search'));
+        expect(screen.getByText('keyword=[]')).toBeInTheDocument();
+        expect(searchBox()).toHaveValue('');
+
+        await user.type(searchBox(), 'foo{Enter}');
+        expect(screen.getByText('keyword=[foo]')).toBeInTheDocument();
+        await user.clear(searchBox());
+        await user.type(searchBox(), '{Enter}');
+        expect(screen.getByText('keyword=[]')).toBeInTheDocument();
+      });
+
+      it('changes nothing when cleared without an applied keyword', async () => {
+        objectTab({ selectionItem: ['k'] });
+        const user = setup();
+        await user.type(searchBox(), '{Enter}');
+        await user.type(searchBox(), 'foo');
+        await user.click(btn('Clear search'));
+        expect(screen.getByText('keyword=[]')).toBeInTheDocument();
+        expect(searchBox()).toHaveValue('');
+        expect(tab().selectionItem).toEqual(['k']);
+        expect(h.objectRefresh).not.toHaveBeenCalled();
+      });
+
+      it('clears the selection on clear only when a keyword is applied', async () => {
+        objectTab({ selectionItem: ['k'] });
+        const user = setup();
+        // Empty Enter with no keyword: selection stays.
+        await user.type(searchBox(), '{Enter}');
+        expect(tab().selectionItem).toEqual(['k']);
+        // Text typed but never applied, then cleared: selection stays.
+        await user.type(searchBox(), 'foo');
+        await user.click(btn('Clear search'));
+        expect(tab().selectionItem).toEqual(['k']);
+        // Applied keyword, then cleared: selection is cleared.
+        await user.type(searchBox(), 'foo{Enter}');
+        useTabListStore.getState().addSelectItem(TAB, ['k2']);
+        expect(tab().selectionItem).toEqual(['k2']);
+        await user.click(btn('Clear search'));
+        expect(tab().selectionItem).toEqual([]);
+      });
+
+      it('searches again from the first page when the same keyword is submitted', async () => {
+        objectTab();
+        const user = setup();
+        await user.type(searchBox(), 'foo{Enter}');
+        expect(h.objectRefresh).not.toHaveBeenCalled();
+        useTabListStore.getState().addSelectItem(TAB, ['k']);
+        await user.click(btn('Search'));
+        expect(h.objectRefresh).toHaveBeenCalledTimes(1);
+        expect(screen.getByText('keyword=[foo]')).toBeInTheDocument();
+        expect(tab().selectionItem).toEqual([]);
+      });
+
+      it('does not refresh when the keyword differs from the applied one', async () => {
+        objectTab();
+        const user = setup();
+        await user.type(searchBox(), 'foo{Enter}');
+        await user.type(searchBox(), 'x{Enter}');
+        expect(screen.getByText('keyword=[foox]')).toBeInTheDocument();
+        expect(h.objectRefresh).not.toHaveBeenCalled();
+      });
+
+      it('is disabled while the profile is not connected', () => {
+        setProfile({ isConnected: false });
+        objectTab();
+        setup();
+        // Disconnected tabs fall back to the bucket list: its search box is shown but disabled.
+        expect(screen.queryByPlaceholderText('Search by key')).not.toBeInTheDocument();
+        expect(screen.getByPlaceholderText('Search by name')).toBeDisabled();
+      });
+
+      it.each([
+        ['folder', () => useTabListStore.getState().changePrefix(TAB, 'x/')],
+        ['bucket', () => useTabListStore.getState().changeCurrentView(TAB, 'objectList', 'other')],
+      ])('resets the keyword when the %s changes', async (_name, change) => {
+        objectTab();
+        const user = setup();
+        await user.type(searchBox(), 'foo{Enter}');
+        expect(screen.getByText('keyword=[foo]')).toBeInTheDocument();
+
+        act(() => change());
+        await waitFor(() => expect(screen.getByText('keyword=[]')).toBeInTheDocument());
+        expect(searchBox()).toHaveValue('');
+      });
+
+      it('starts without a keyword when the same bucket is opened again after leaving the object list', async () => {
+        objectTab();
+        const user = setup();
+        await user.type(searchBox(), 'foo{Enter}');
+        act(() => useTabListStore.getState().changeCurrentView(TAB, 'bucketList'));
+        expect(screen.getByPlaceholderText('Search by name')).toBeInTheDocument();
+        act(() => useTabListStore.getState().changeCurrentView(TAB, 'objectList', 'b'));
+        expect(screen.getByText('keyword=[]')).toBeInTheDocument();
+        expect(searchBox()).toHaveValue('');
+      });
+
+      it('resets the keyword when the profile changes', async () => {
+        objectTab();
+        const user = setup();
+        await user.type(searchBox(), 'foo{Enter}');
+        useProfileStore.setState({
+          connectionProfiles: { p1: profile({ isConnected: true }), p2: profile({ id: 'p2', isConnected: true }) },
+        });
+        act(() => useTabListStore.getState().updateTab(TAB, { profileId: 'p2' }));
+        await waitFor(() => expect(screen.getByText('keyword=[]')).toBeInTheDocument());
+        expect(searchBox()).toHaveValue('');
+      });
     });
 
     it('does not show the drawer in the bucket list', () => {

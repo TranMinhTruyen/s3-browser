@@ -5,6 +5,7 @@ import {
   DeletePrefix,
   DownloadObject,
   GetListObject,
+  SearchObject,
   UploadObject,
 } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
@@ -36,6 +37,7 @@ vi.mock('@wailsio/runtime', async importOriginal => {
 });
 vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
   GetListObject: vi.fn(),
+  SearchObject: vi.fn(),
   DeleteObject: vi.fn(),
   DeletePrefix: vi.fn(),
   DownloadObject: vi.fn(),
@@ -61,19 +63,28 @@ const confirmMock = vi.mocked(ConfirmModal.show);
 
 const page = (objectList: ObjectItem[], nextCursor = '') => ({ objectList, nextCursor }) as never;
 
-function renderList({ withProfile = true, bucket = 'bkt' as string | null } = {}) {
+function renderList({
+  withProfile = true,
+  bucket = 'bkt' as string | null,
+  keyword = undefined as string | undefined,
+} = {}) {
   const scrollRef = { current: document.createElement('div') } as RefObject<HTMLElement | null>;
   const ref = createRef<ObjectListViewRef>();
-  const view = renderWithProviders(
+  const element = (kw?: string, connected = withProfile, bkt = bucket) => (
     <ObjectListView
       tabId={TAB_ID}
-      bucket={bucket ?? undefined}
-      profile={withProfile ? profile : null}
+      bucket={bkt ?? undefined}
+      profile={connected ? profile : null}
       scrollRef={scrollRef}
+      keyword={kw}
       ref={ref}
     />
   );
-  return { user: userEvent.setup(), ref, scrollRef, ...view };
+  const view = renderWithProviders(element(keyword));
+  const setKeyword = (kw?: string) => view.rerender(element(kw));
+  const disconnect = (kw?: string) => view.rerender(element(kw, false));
+  const setBucket = (bkt: string) => view.rerender(element(keyword, withProfile, bkt));
+  return { user: userEvent.setup(), ref, scrollRef, setKeyword, disconnect, setBucket, ...view };
 }
 
 const cardOf = (name: string) => screen.getByText(name).closest<HTMLElement>('.mantine-Card-root')!;
@@ -548,6 +559,211 @@ describe('ObjectListView', () => {
       await waitFor(() =>
         expect(confirmMock).toHaveBeenCalledWith(expect.objectContaining({ params: { object: 'x//' } }))
       );
+    });
+  });
+
+  describe('search', () => {
+    const searchMock = vi.mocked(SearchObject);
+    const searchArgs = (patch: Record<string, unknown> = {}) => ({
+      connectionId: 'conn',
+      profileName: 'my-profile',
+      bucket: 'bkt',
+      prefix: 'dir/',
+      keyword: 'kw',
+      nextCursor: '',
+      ...patch,
+    });
+
+    beforeEach(() => {
+      searchMock.mockResolvedValue(page([fileA]));
+    });
+
+    it('searches with the keyword instead of listing', async () => {
+      renderList({ keyword: 'kw' });
+      expect(await screen.findByText('a.txt')).toBeInTheDocument();
+      expect(searchMock).toHaveBeenCalledExactlyOnceWith(searchArgs());
+      expect(listMock).not.toHaveBeenCalled();
+    });
+
+    it('reloads the first page when the keyword is applied and when it is cleared', async () => {
+      const { setKeyword } = renderList();
+      await screen.findByText('a.txt');
+      searchMock.mockResolvedValue(page([fileB]));
+      setKeyword('kw');
+      expect(await screen.findByText('b.txt')).toBeInTheDocument();
+      expect(screen.queryByText('a.txt')).not.toBeInTheDocument();
+      setKeyword(undefined);
+      expect(await screen.findByText('a.txt')).toBeInTheDocument();
+      expect(listMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('follows nextCursor and drops keys that overlap the previous page', async () => {
+      searchMock.mockResolvedValueOnce(page([fileA], 'c1')).mockResolvedValueOnce(page([fileA, fileB]));
+      renderList({ keyword: 'kw' });
+      expect(await screen.findByText('b.txt')).toBeInTheDocument();
+      expect(screen.getAllByText('a.txt')).toHaveLength(1);
+      expect(searchMock).toHaveBeenLastCalledWith(searchArgs({ nextCursor: 'c1' }));
+      expect(searchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('shows the empty message when nothing matches and no cursor is left', async () => {
+      searchMock.mockResolvedValue(page([]));
+      renderList({ keyword: 'kw' });
+      expect(await screen.findByText('No matching objects')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Search more' })).not.toBeInTheDocument();
+    });
+
+    it('does not show the empty message for a normal empty folder', async () => {
+      listMock.mockResolvedValue(page([]));
+      renderList();
+      await waitFor(() => expect(listMock).toHaveBeenCalled());
+      await act(async () => {});
+      expect(screen.queryByText('No matching objects')).not.toBeInTheDocument();
+    });
+
+    it('does not show the empty message while the first search page is loading', async () => {
+      searchMock.mockImplementation(() => new Promise(() => {}) as never);
+      renderList({ keyword: 'kw' });
+      await waitFor(() => expect(searchMock).toHaveBeenCalled());
+      expect(screen.queryByText('No matching objects')).not.toBeInTheDocument();
+      expect(document.querySelector('.mantine-Loader-root')).toBeInTheDocument();
+    });
+
+    it('treats a next cursor equal to the one just sent as the end', async () => {
+      searchMock.mockResolvedValueOnce(page([fileA], 'c1')).mockResolvedValueOnce(page([fileB], 'c1'));
+      renderList({ keyword: 'kw' });
+      expect(await screen.findByText('b.txt')).toBeInTheDocument();
+      await act(async () => {});
+      expect(searchMock).toHaveBeenCalledTimes(2);
+      expect(screen.queryByRole('button', { name: 'Search more' })).not.toBeInTheDocument();
+    });
+
+    it('treats an empty search page with the same cursor as the end', async () => {
+      searchMock.mockResolvedValueOnce(page([fileA], 'c1')).mockResolvedValueOnce(page([], 'c1'));
+      renderList({ keyword: 'kw' });
+      await waitFor(() => expect(searchMock).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      expect(searchMock).toHaveBeenCalledTimes(2);
+      expect(screen.getByText('a.txt')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Search more' })).not.toBeInTheDocument();
+    });
+
+    it('hides the first-page loader when the connection is lost', async () => {
+      searchMock.mockImplementation(() => new Promise(() => {}) as never);
+      const { disconnect } = renderList({ keyword: 'kw' });
+      await waitFor(() => expect(document.querySelector('.mantine-Loader-root')).toBeInTheDocument());
+      disconnect('kw');
+      expect(document.querySelector('.mantine-Loader-root')).not.toBeInTheDocument();
+    });
+
+    // The old cursor still sits in state for one render after the source changes, with the list near its end.
+    const many = Array.from({ length: 6 }, (_, i) => new ObjectItem({ key: `f${i}`, name: `f${i}` }));
+    const searchCursors = () => searchMock.mock.calls.map(c => (c[0] as { nextCursor: string }).nextCursor);
+    const listCursors = () => listMock.mock.calls.map(c => (c[0] as { nextCursor: string }).nextCursor);
+
+    it('never sends the list cursor to the search when the keyword is applied', async () => {
+      virtual.endIndex = 0;
+      listMock.mockResolvedValue(page(many, 'list-cursor'));
+      searchMock.mockResolvedValue(page([fileB]));
+      const { setKeyword } = renderList();
+      await screen.findByText('f5');
+      virtual.endIndex = null;
+      setKeyword('kw');
+      expect(await screen.findByText('b.txt')).toBeInTheDocument();
+      await act(async () => {});
+      expect(searchCursors()).toEqual(['']);
+      expect(document.querySelector('.mantine-Loader-root')).not.toBeInTheDocument();
+    });
+
+    it('never sends the search cursor to the list when the keyword is cleared', async () => {
+      virtual.endIndex = 0;
+      searchMock.mockResolvedValue(page(many, 'search-cursor'));
+      listMock.mockResolvedValue(page([fileB]));
+      const { setKeyword } = renderList({ keyword: 'kw' });
+      await screen.findByText('f5');
+      virtual.endIndex = null;
+      setKeyword(undefined);
+      expect(await screen.findByText('b.txt')).toBeInTheDocument();
+      await act(async () => {});
+      expect(listCursors()).toEqual(['']);
+    });
+
+    it.each([['prefix', () => useTabListStore.getState().changePrefix(TAB_ID, 'other/')]])(
+      'never sends the old cursor to the new %s',
+      async (_name, change) => {
+        virtual.endIndex = 0;
+        listMock.mockResolvedValueOnce(page(many, 'old-cursor')).mockResolvedValue(page([fileB]));
+        renderList();
+        await screen.findByText('f5');
+        virtual.endIndex = null;
+        act(() => change());
+        expect(await screen.findByText('b.txt')).toBeInTheDocument();
+        await act(async () => {});
+        expect(listCursors()).toEqual(['', '']);
+        expect(listMock).toHaveBeenLastCalledWith(expect.objectContaining({ prefix: 'other/' }));
+      }
+    );
+
+    it('never sends the old cursor to the new bucket', async () => {
+      virtual.endIndex = 0;
+      listMock.mockResolvedValueOnce(page(many, 'old-cursor')).mockResolvedValue(page([fileB]));
+      const { setBucket } = renderList();
+      await screen.findByText('f5');
+      virtual.endIndex = null;
+      setBucket('bkt2');
+      expect(await screen.findByText('b.txt')).toBeInTheDocument();
+      await act(async () => {});
+      expect(listCursors()).toEqual(['', '']);
+      expect(listMock).toHaveBeenLastCalledWith(expect.objectContaining({ bucket: 'bkt2' }));
+    });
+
+    it('does not auto-load an empty search page with a cursor; the button continues it', async () => {
+      searchMock.mockResolvedValueOnce(page([], 'c1')).mockResolvedValueOnce(page([fileB]));
+      const { user } = renderList({ keyword: 'kw' });
+      const more = await screen.findByRole('button', { name: 'Search more' });
+      await act(async () => {});
+      expect(searchMock).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText('No matching objects')).not.toBeInTheDocument();
+
+      await user.click(more);
+      expect(await screen.findByText('b.txt')).toBeInTheDocument();
+      expect(searchMock).toHaveBeenLastCalledWith(searchArgs({ nextCursor: 'c1' }));
+      expect(screen.queryByRole('button', { name: 'Search more' })).not.toBeInTheDocument();
+    });
+
+    it('offers the button after the next page failed and retries with it', async () => {
+      searchMock.mockResolvedValueOnce(page([fileA], 'c1')).mockRejectedValueOnce(new Error('boom'));
+      const { user } = renderList({ keyword: 'kw' });
+      const more = await screen.findByRole('button', { name: 'Search more' });
+      expect(searchMock).toHaveBeenCalledTimes(2);
+
+      searchMock.mockResolvedValueOnce(page([fileB]));
+      await user.click(more);
+      expect(await screen.findByText('b.txt')).toBeInTheDocument();
+      expect(searchMock).toHaveBeenCalledTimes(3);
+      expect(searchMock).toHaveBeenLastCalledWith(searchArgs({ nextCursor: 'c1' }));
+    });
+
+    it('has no search button when not searching, even after a failed page', async () => {
+      listMock.mockResolvedValueOnce(page([fileA], 'c1')).mockRejectedValueOnce(new Error('boom'));
+      renderList();
+      await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      expect(screen.queryByRole('button', { name: 'Search more' })).not.toBeInTheDocument();
+    });
+
+    it('refresh searches again from the first page', async () => {
+      const { ref } = renderList({ keyword: 'kw' });
+      await screen.findByText('a.txt');
+      await act(async () => ref.current?.onRefresh?.());
+      expect(searchMock).toHaveBeenCalledTimes(2);
+      expect(searchMock).toHaveBeenLastCalledWith(searchArgs());
+      expect(listMock).not.toHaveBeenCalled();
+    });
+
+    it('searches nothing without a connection', () => {
+      renderList({ keyword: 'kw', withProfile: false });
+      expect(searchMock).not.toHaveBeenCalled();
     });
   });
 

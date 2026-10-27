@@ -6,6 +6,12 @@
     "closeTab": "Đóng tab",
     "connect": "Kết nối",
     "refresh": "Làm mới {target}",
-    "addTab": "Thêm tab"
+    "addTab": "Thêm tab",
+    "search": "Tìm kiếm",
+    "clearSearch": "Xoá tìm kiếm"
+  },
+  "search": {
+    "placeholderObject": "Tìm theo key",
+    "placeholderBucket": "Tìm theo tên"
   }
 }

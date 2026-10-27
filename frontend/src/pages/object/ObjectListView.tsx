@@ -1,10 +1,11 @@
-import { Center, Loader } from '@mantine/core';
+import { Center, Loader, Text } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   DeleteObject,
   DeletePrefix,
   DownloadObject,
   GetListObject,
+  SearchObject,
   UploadObject,
 } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
@@ -12,10 +13,12 @@ import { FilesDroppedOutput, ObjectItem as ObjectItemData } from '@wails/S3Brows
 import { Output } from '@wails/S3Browser/models/common';
 import { Events } from '@wailsio/runtime';
 import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { formatStringJson } from '@/common/utils/stringUtils';
+import Button from '@/components/buttons/Button';
 import ConfirmModal from '@/components/modals/ConfirmModal';
 import UploadLimitModal from '@/components/modals/UploadLimitModal';
 import i18n from '@/locales/i18n';
@@ -41,16 +44,26 @@ type ObjectListViewProps = {
   bucket?: string;
   profile?: ConnectionProfileOutput | null;
   scrollRef: RefObject<HTMLElement | null>;
+  // Applied search keyword; empty means the normal lazy-loaded list.
+  keyword?: string;
   ref?: Ref<ObjectListViewRef>;
 };
 
 function ObjectListView(props: ObjectListViewProps) {
-  const { tabId, bucket, profile, scrollRef, ref } = props;
+  const { tabId, bucket, profile, scrollRef, keyword = '', ref } = props;
+
+  const { t } = useTranslation('object', { keyPrefix: 'page' });
 
   const [objectDatas, setObjectDatas] = useState<ObjectItemData[]>([]);
   const [nextCursor, setNextCursor] = useState('');
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
+  // The list the cursor belongs to. Right after the source changes, nextCursor still holds the old list's
+  // cursor until the new first page lands, and sending it to the new source would break the request.
+  const [cursorKey, setCursorKey] = useState('');
+  const [isLoadingFirst, setIsLoadingFirst] = useState(false);
+  // True once the first page of the current list has loaded, so an empty search result can be told from loading.
+  const [isLoaded, setIsLoaded] = useState(false);
   const [scrollMargin, setScrollMargin] = useState(0);
 
   const connectionId = profile?.id;
@@ -59,6 +72,7 @@ function ObjectListView(props: ObjectListViewProps) {
   const listRef = useRef<HTMLDivElement>(null);
 
   const prefix = useTabListStore(s => s.tabList[tabId]?.prefix ?? '');
+  const listKey = `${connectionId}|${bucket}|${prefix}|${keyword}`;
   const changePrefix = useTabListStore(s => s.changePrefix);
   const addSelectItem = useTabListStore(s => s.addSelectItem);
   const removeSelectItem = useTabListStore(s => s.removeSelectItem);
@@ -75,9 +89,15 @@ function ObjectListView(props: ObjectListViewProps) {
     return ctrl;
   }, []);
 
+  // Lists the folder, or searches it when a keyword is applied. Both return the same shape.
   const handleGetListObject = useCallback(
     (cursor: string, signal?: AbortSignal) => {
       if (!connectionId || !bucket) return Promise.resolve(undefined);
+      if (keyword) {
+        return callIPC(SearchObject, [{ connectionId, profileName, bucket, prefix, keyword, nextCursor: cursor }], {
+          signal,
+        });
+      }
       return callIPC(
         GetListObject,
         [
@@ -95,7 +115,7 @@ function ObjectListView(props: ObjectListViewProps) {
         }
       );
     },
-    [bucket, prefix, profileName, connectionId]
+    [bucket, prefix, profileName, connectionId, keyword]
   );
 
   const loadFirstPage = useCallback(async () => {
@@ -103,13 +123,19 @@ function ObjectListView(props: ObjectListViewProps) {
     setNextCursor('');
     setIsLoadingMore(false);
     setLoadMoreError(false);
+    setIsLoaded(false);
+    setIsLoadingFirst(true);
     // Aborting cancels the request on the Go side too, not only the state update.
     const output = await handleGetListObject('', ctrl.signal);
-    if (output && !ctrl.signal.aborted) {
+    if (ctrl.signal.aborted) return;
+    if (output) {
       setObjectDatas(output.objectList);
       setNextCursor(output.nextCursor ?? '');
+      setCursorKey(listKey);
+      setIsLoaded(true);
     }
-  }, [handleGetListObject, startRequest]);
+    setIsLoadingFirst(false);
+  }, [handleGetListObject, startRequest, listKey]);
 
   // Closes the drawer when the object it shows is one of the deleted keys or inside a deleted folder.
   const closeDetailIfDeleted = useCallback(
@@ -142,15 +168,22 @@ function ObjectListView(props: ObjectListViewProps) {
     const output = await handleGetListObject(nextCursor, ctrl.signal);
     if (ctrl.signal.aborted) return;
     if (output) {
-      setObjectDatas(prev => [...prev, ...output.objectList]);
-      setNextCursor(output.nextCursor ?? '');
+      // A search cursor can overlap the previous page, so drop keys already shown.
+      setObjectDatas(prev => {
+        const seen = new Set(prev.map(item => item.key));
+        const added = output.objectList.filter(item => !seen.has(item.key));
+        // Nothing new: keep the same array so the list does not re-render.
+        return added.length > 0 ? [...prev, ...added] : prev;
+      });
+      // A cursor equal to the one just sent would make auto-load repeat forever: treat it as the end.
+      setNextCursor(output.nextCursor === nextCursor ? '' : (output.nextCursor ?? ''));
     } else {
       setLoadMoreError(true);
     }
     setIsLoadingMore(false);
   }, [nextCursor, handleGetListObject, startRequest]);
 
-  // Also runs when the prefix changes, because loadFirstPage depends on it.
+  // Also runs when the prefix or keyword changes, because loadFirstPage depends on them.
   useEffect(() => {
     if (!connectionId || !bucket) return;
     setObjectDatas([]);
@@ -172,6 +205,11 @@ function ObjectListView(props: ObjectListViewProps) {
     await loadFirstPage();
     scrollRef.current?.scrollTo({ top: 0 });
   }, [scrollRef, loadFirstPage]);
+
+  const onClickLoadMore = useCallback(() => {
+    setLoadMoreError(false);
+    return loadNextPage();
+  }, [loadNextPage]);
 
   const onClickMenuButton = useCallback(
     async (keys: string[], action: 'download' | 'delete') => {
@@ -383,15 +421,34 @@ function ObjectListView(props: ObjectListViewProps) {
 
   useEffect(() => {
     // After a failed page, wait for Refresh instead of retrying in a loop.
-    if (!nextCursor || isLoadingMore || loadMoreError) return;
+    if (!nextCursor || isLoadingMore || loadMoreError || cursorKey !== listKey) return;
+    // An empty search has nothing to scroll: the user continues it with the "load more" button.
+    if (keyword && objectList.length === 0) return;
     // Load the next page once only 2 items are left below the viewport.
     if (lastVisibleIndex >= objectList.length - 1 - 2) {
       loadNextPage();
     }
-  }, [lastVisibleIndex, objectList.length, nextCursor, isLoadingMore, loadMoreError, loadNextPage]);
+  }, [
+    lastVisibleIndex,
+    objectList.length,
+    nextCursor,
+    isLoadingMore,
+    loadMoreError,
+    keyword,
+    cursorKey,
+    listKey,
+    loadNextPage,
+  ]);
+
+  const isEmpty = objectList.length === 0;
+  const showEmpty = !!keyword && isLoaded && isEmpty && !nextCursor;
+  // Retry after a failed page, or continue a search that found nothing yet.
+  const showLoadMore = !!keyword && !!nextCursor && !isLoadingMore && (isEmpty || loadMoreError);
+  // With no rows the list has no height, so the footer flows normally instead of hanging below the rows.
+  const footerStyle = isEmpty ? { width: '100%' } : { position: 'absolute' as const, top: '100%', width: '100%' };
 
   return (
-    <div ref={listRef} style={{ position: 'relative', height: virtualizer.getTotalSize() }}>
+    <div ref={listRef} style={{ position: 'relative', height: isEmpty ? undefined : virtualizer.getTotalSize() }}>
       {virtualItems.map(row => (
         <div
           key={row.key}
@@ -414,9 +471,19 @@ function ObjectListView(props: ObjectListViewProps) {
           />
         </div>
       ))}
-      {isLoadingMore ? (
-        <Center style={{ position: 'absolute', top: '100%', width: '100%' }} py="8px">
+      {isLoadingMore || (isLoadingFirst && keyword && connectionId && bucket) ? (
+        <Center style={footerStyle} py="8px">
           <Loader size="sm" />
+        </Center>
+      ) : null}
+      {showEmpty ? (
+        <Center style={footerStyle} py="8px">
+          <Text c="dimmed">{t('search.empty')}</Text>
+        </Center>
+      ) : null}
+      {showLoadMore ? (
+        <Center style={footerStyle} py="8px">
+          <Button onClick={onClickLoadMore}>{t('search.loadMore')}</Button>
         </Center>
       ) : null}
     </div>

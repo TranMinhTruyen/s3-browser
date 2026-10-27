@@ -110,6 +110,15 @@ var (
 	// Invalid object key {key}.
 	S3E025 = "S3E025"
 
+	// Search object error, profile: {name}, bucket: {bucket}.
+	S3E026 = "S3E026"
+
+	// Search bucket error, profile: {name}.
+	S3E027 = "S3E027"
+
+	// Search keyword must not be empty.
+	S3E028 = "S3E028"
+
 	// Access bucket is limited.
 	S3W001 = "S3W001"
 
@@ -142,6 +151,7 @@ type Module struct {
 	submoduleConnMng            *submoduleConnMng
 	submoduleBucketMng          *submoduleBucketMng
 	submoduleObjMng             *submoduleObjMng
+	submoduleSearchMng          *submoduleSearchMng
 	submoduleDownloaderMng      *submoduleDownloaderMng
 	submoduleUploaderMng        *submoduleUploaderMng
 }
@@ -158,6 +168,7 @@ func NewModule(
 	submoduleConnMng := newSubmoduleConnMng(app, logger, global, profileModule, submoduleCfgMng)
 	submoduleBucketMng := newSubmoduleBucketMng(app, logger, global)
 	submoduleObjMng := newSubmoduleObjMng(app, logger, global)
+	submoduleSearchMng := newSubmoduleSearchMng(app, logger, global)
 	submoduleDownloaderMng := newSubmoduleDownloaderMng(app, logger, global, submoduleDownloadHistoryMng)
 	submoduleUploaderMng := newSubmoduleUploaderMng(app, logger, global)
 
@@ -171,6 +182,7 @@ func NewModule(
 		submoduleConnMng:            submoduleConnMng,
 		submoduleBucketMng:          submoduleBucketMng,
 		submoduleObjMng:             submoduleObjMng,
+		submoduleSearchMng:          submoduleSearchMng,
 		submoduleDownloaderMng:      submoduleDownloaderMng,
 		submoduleUploaderMng:        submoduleUploaderMng,
 	}
@@ -232,6 +244,28 @@ func (m *Module) GetListObject(
 	input models.ListObjectInput,
 ) models.Output[models.ListObjectOutput] {
 	return m.submoduleObjMng.listObject(ctx, input)
+}
+
+// SearchObject scans the folder input.Prefix (no recursion) for keys containing input.Keyword
+// (case-insensitive) and returns at most 100 matches per call, scanning at most 20 pages.
+// Pass the returned NextCursor back in input.NextCursor to continue; an empty NextCursor means
+// nothing is left to scan. An empty keyword is rejected. ctx is the call context.
+func (m *Module) SearchObject(
+	ctx context.Context,
+	input models.SearchObjectInput,
+) models.Output[models.SearchObjectOutput] {
+	return m.submoduleSearchMng.searchObject(ctx, input)
+}
+
+// SearchBucket scans the buckets of the connection for names containing input.Keyword
+// (case-insensitive) and returns at most 100 matches per call, scanning at most 20 pages.
+// Pass the returned NextCursor (opaque) back in input.NextCursor to continue; an empty NextCursor
+// means nothing is left to scan. An empty keyword or an invalid cursor is rejected. ctx is the call context.
+func (m *Module) SearchBucket(
+	ctx context.Context,
+	input models.SearchBucketInput,
+) models.Output[models.SearchBucketOutput] {
+	return m.submoduleSearchMng.searchBucket(ctx, input)
 }
 
 // GetObjectDetail returns the content type, storage class and user metadata of the object

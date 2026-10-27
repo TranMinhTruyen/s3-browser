@@ -11,5 +11,9 @@
   "action": {
     "download": "Tải xuống",
     "delete": "Xoá"
+  },
+  "search": {
+    "empty": "Không có object phù hợp",
+    "loadMore": "Tìm tiếp"
   }
 }

@@ -1,10 +1,12 @@
-import { Center, Loader } from '@mantine/core';
+import { Center, Loader, Text } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { GetListBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
+import { GetListBucket, SearchBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { Bucket } from '@wails/S3Browser/models/bucket';
 import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { callIPC } from '@/common/utils/ipcUtils';
+import Button from '@/components/buttons/Button';
 import BucketItem from '@/pages/bucket/BucketItem';
 
 export type BucketListViewRef = {
@@ -15,21 +17,32 @@ type BucketListViewProps = {
   profile?: ConnectionProfileOutput | null;
   active: boolean;
   scrollRef: RefObject<HTMLElement | null>;
+  // Applied search keyword; empty means the normal lazy-loaded list.
+  keyword?: string;
   onSelectBucket?: (bucketName: string | undefined) => void;
   ref?: Ref<BucketListViewRef>;
 };
 
 function BucketListView(props: BucketListViewProps) {
-  const { profile, active, scrollRef, onSelectBucket, ref } = props;
+  const { profile, active, scrollRef, keyword = '', onSelectBucket, ref } = props;
+
+  const { t } = useTranslation('bucket', { keyPrefix: 'page' });
 
   const [bucketDatas, setBucketDatas] = useState<Bucket[]>([]);
   const [nextCursor, setNextCursor] = useState('');
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
+  // The list the cursor belongs to. Right after the source changes, nextCursor still holds the old list's
+  // cursor until the new first page lands, and sending it to the new source would break the request.
+  const [cursorKey, setCursorKey] = useState('');
+  const [isLoadingFirst, setIsLoadingFirst] = useState(false);
+  // True once the first page of the current list has loaded, so an empty search result can be told from loading.
+  const [isLoaded, setIsLoaded] = useState(false);
   const [scrollMargin, setScrollMargin] = useState(0);
 
   const connectionId = profile?.id;
   const profileName = profile?.name;
+  const listKey = `${connectionId}|${keyword}`;
   const requestCtrl = useRef<AbortController>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -40,12 +53,16 @@ function BucketListView(props: BucketListViewProps) {
     return ctrl;
   }, []);
 
+  // Lists the buckets, or searches them when a keyword is applied. Both return the same shape.
   const handleGetListBucket = useCallback(
     (cursor: string, signal?: AbortSignal) => {
       if (!connectionId) return Promise.resolve(undefined);
+      if (keyword) {
+        return callIPC(SearchBucket, [{ connectionId, profileName, keyword, nextCursor: cursor }], { signal });
+      }
       return callIPC(GetListBucket, [{ connectionId, profileName, nextCursor: cursor, limit: 10 }], { signal });
     },
-    [profileName, connectionId]
+    [profileName, connectionId, keyword]
   );
 
   const loadFirstPage = useCallback(async () => {
@@ -53,13 +70,19 @@ function BucketListView(props: BucketListViewProps) {
     setNextCursor('');
     setIsLoadingMore(false);
     setLoadMoreError(false);
+    setIsLoaded(false);
+    setIsLoadingFirst(true);
     // Aborting cancels the request on the Go side too, not only the state update.
     const output = await handleGetListBucket('', ctrl.signal);
-    if (output && !ctrl.signal.aborted) {
+    if (ctrl.signal.aborted) return;
+    if (output) {
       setBucketDatas(output.bucketList ?? []);
       setNextCursor(output.nextCursor ?? '');
+      setCursorKey(listKey);
+      setIsLoaded(true);
     }
-  }, [handleGetListBucket, startRequest]);
+    setIsLoadingFirst(false);
+  }, [handleGetListBucket, startRequest, listKey]);
 
   const loadNextPage = useCallback(async () => {
     if (!nextCursor) return;
@@ -68,14 +91,22 @@ function BucketListView(props: BucketListViewProps) {
     const output = await handleGetListBucket(nextCursor, ctrl.signal);
     if (ctrl.signal.aborted) return;
     if (output) {
-      setBucketDatas(prev => [...prev, ...(output.bucketList ?? [])]);
-      setNextCursor(output.nextCursor ?? '');
+      // A search cursor can overlap the previous page, so drop names already shown.
+      setBucketDatas(prev => {
+        const seen = new Set(prev.map(item => item.name));
+        const added = (output.bucketList ?? []).filter(item => !seen.has(item.name));
+        // Nothing new: keep the same array so the list does not re-render.
+        return added.length > 0 ? [...prev, ...added] : prev;
+      });
+      // A cursor equal to the one just sent would make auto-load repeat forever: treat it as the end.
+      setNextCursor(output.nextCursor === nextCursor ? '' : (output.nextCursor ?? ''));
     } else {
       setLoadMoreError(true);
     }
     setIsLoadingMore(false);
   }, [nextCursor, handleGetListBucket, startRequest]);
 
+  // Also runs when the keyword changes, because loadFirstPage depends on it.
   useEffect(() => {
     if (!connectionId) return;
     setBucketDatas([]);
@@ -90,6 +121,11 @@ function BucketListView(props: BucketListViewProps) {
     await loadFirstPage();
     scrollRef.current?.scrollTo({ top: 0 });
   }, [scrollRef, loadFirstPage]);
+
+  const onClickLoadMore = useCallback(() => {
+    setLoadMoreError(false);
+    return loadNextPage();
+  }, [loadNextPage]);
 
   useImperativeHandle(ref, () => ({ onRefresh }), [onRefresh]);
 
@@ -119,15 +155,35 @@ function BucketListView(props: BucketListViewProps) {
 
   useEffect(() => {
     // After a failed page, wait for Refresh instead of retrying in a loop.
-    if (!active || !nextCursor || isLoadingMore || loadMoreError) return;
+    if (!active || !nextCursor || isLoadingMore || loadMoreError || cursorKey !== listKey) return;
+    // An empty search has nothing to scroll: the user continues it with the "load more" button.
+    if (keyword && bucketList.length === 0) return;
     // Load the next page once only 2 items are left below the viewport.
     if (lastVisibleIndex >= bucketList.length - 1 - 2) {
       loadNextPage();
     }
-  }, [active, lastVisibleIndex, bucketList.length, nextCursor, isLoadingMore, loadMoreError, loadNextPage]);
+  }, [
+    active,
+    lastVisibleIndex,
+    bucketList.length,
+    nextCursor,
+    isLoadingMore,
+    loadMoreError,
+    keyword,
+    cursorKey,
+    listKey,
+    loadNextPage,
+  ]);
+
+  const isEmpty = bucketList.length === 0;
+  const showEmpty = !!keyword && isLoaded && isEmpty && !nextCursor;
+  // Retry after a failed page, or continue a search that found nothing yet.
+  const showLoadMore = !!keyword && !!nextCursor && !isLoadingMore && (isEmpty || loadMoreError);
+  // With no rows the list has no height, so the footer flows normally instead of hanging below the rows.
+  const footerStyle = isEmpty ? { width: '100%' } : { position: 'absolute' as const, top: '100%', width: '100%' };
 
   return (
-    <div ref={listRef} style={{ position: 'relative', height: virtualizer.getTotalSize() }}>
+    <div ref={listRef} style={{ position: 'relative', height: isEmpty ? undefined : virtualizer.getTotalSize() }}>
       {virtualItems.map(row => (
         <div
           key={row.key}
@@ -142,9 +198,19 @@ function BucketListView(props: BucketListViewProps) {
           <BucketItem item={bucketList[row.index]} onSelectBucket={onSelectBucket} />
         </div>
       ))}
-      {isLoadingMore ? (
-        <Center style={{ position: 'absolute', top: '100%', width: '100%' }} py="8px">
+      {isLoadingMore || (isLoadingFirst && keyword && connectionId) ? (
+        <Center style={footerStyle} py="8px">
           <Loader size="sm" />
+        </Center>
+      ) : null}
+      {showEmpty ? (
+        <Center style={footerStyle} py="8px">
+          <Text c="dimmed">{t('search.empty')}</Text>
+        </Center>
+      ) : null}
+      {showLoadMore ? (
+        <Center style={footerStyle} py="8px">
+          <Button onClick={onClickLoadMore}>{t('search.loadMore')}</Button>
         </Center>
       ) : null}
     </div>

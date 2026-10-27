@@ -13,7 +13,11 @@
       "Bash(bunx biome *)",
       "Bash(npx oxlint *)",
       "Bash(npx biome *)",
-      "WebFetch(domain:v3.wails.io)"
+      "WebFetch(domain:v3.wails.io)",
+      "Bash(node_modules/.bin/tsc.exe *)",
+      "Bash(node_modules/.bin/biome.exe *)",
+      "Bash(node_modules/.bin/vitest.exe *)",
+      "Bash(go tool wails3 *)"
     ],
     "deny": [
       "Bash(git commit *)",

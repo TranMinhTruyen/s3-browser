@@ -6,6 +6,12 @@
     "closeTab": "タブを閉じる",
     "connect": "接続",
     "refresh": "{target}を再読み込み",
-    "addTab": "タブを追加"
+    "addTab": "タブを追加",
+    "search": "検索",
+    "clearSearch": "検索をクリア"
+  },
+  "search": {
+    "placeholderObject": "キーで検索",
+    "placeholderBucket": "名前で検索"
   }
 }

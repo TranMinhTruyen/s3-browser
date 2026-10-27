@@ -4,5 +4,9 @@
   },
   "label": {
     "createDate": "作成日:"
+  },
+  "search": {
+    "empty": "一致するバケットがありません",
+    "loadMore": "さらに検索"
   }
 }

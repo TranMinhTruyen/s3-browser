@@ -1,6 +1,6 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { GetListBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
+import { GetListBucket, SearchBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { Bucket } from '@wails/S3Browser/models/bucket';
 import { createRef, RefObject } from 'react';
@@ -28,7 +28,7 @@ vi.mock('@tanstack/react-virtual', () => ({
     range: count === 0 ? null : { startIndex: 0, endIndex: virtual.endIndex ?? count - 1 },
   }),
 }));
-vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({ GetListBucket: vi.fn() }));
+vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({ GetListBucket: vi.fn(), SearchBucket: vi.fn() }));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn() }));
 
 const profile = { id: 'conn', name: 'my-profile' } as ConnectionProfileOutput;
@@ -43,15 +43,24 @@ let queue: unknown[] = [];
 function renderList({
   profile: p = profile,
   active = true,
+  keyword,
 }: {
   profile?: ConnectionProfileOutput | null;
   active?: boolean;
+  keyword?: string;
 } = {}) {
   const scrollRef = { current: document.createElement('div') } as RefObject<HTMLElement | null>;
   const ref = createRef<BucketListViewRef>();
   const onSelectBucket = vi.fn();
-  const ui = (pr: ConnectionProfileOutput | null | undefined) => (
-    <BucketListView profile={pr} active={active} scrollRef={scrollRef} onSelectBucket={onSelectBucket} ref={ref} />
+  const ui = (pr: ConnectionProfileOutput | null | undefined, kw = keyword) => (
+    <BucketListView
+      profile={pr}
+      active={active}
+      scrollRef={scrollRef}
+      keyword={kw}
+      onSelectBucket={onSelectBucket}
+      ref={ref}
+    />
   );
   const view = renderWithProviders(ui(p));
   return {
@@ -60,6 +69,7 @@ function renderList({
     scrollRef,
     onSelectBucket,
     rerenderWith: (pr: ConnectionProfileOutput | null) => view.rerender(ui(pr)),
+    setKeyword: (kw?: string) => view.rerender(ui(p, kw)),
   };
 }
 
@@ -247,5 +257,191 @@ describe('BucketListView', () => {
     await act(async () => pending[0](page([b('stale')])));
     expect(screen.getByText('fresh')).toBeInTheDocument();
     expect(screen.queryByText('stale')).not.toBeInTheDocument();
+  });
+
+  describe('search', () => {
+    const args = (nextCursor = '') => [{ connectionId: 'conn', profileName: 'my-profile', keyword: 'kw', nextCursor }];
+    const searchCalls = () => callIPCMock.mock.calls.filter(c => c[0] === SearchBucket);
+    const noMoreButton = () => expect(screen.queryByRole('button', { name: 'Search more' })).not.toBeInTheDocument();
+    const loader = () => document.querySelector('.mantine-Loader-root');
+
+    it('searches with the keyword instead of listing', async () => {
+      renderList({ keyword: 'kw' });
+      expect(await screen.findByText('alpha')).toBeInTheDocument();
+      expect(callIPCMock).toHaveBeenCalledExactlyOnceWith(SearchBucket, args(), { signal: expect.any(AbortSignal) });
+    });
+
+    it('lists again when the keyword is cleared and searches when it is applied', async () => {
+      queue = [page([b('alpha')])];
+      const { setKeyword } = renderList();
+      await screen.findByText('alpha');
+      queue = [page([b('found')])];
+      setKeyword('kw');
+      expect(await screen.findByText('found')).toBeInTheDocument();
+      expect(screen.queryByText('alpha')).not.toBeInTheDocument();
+      expect(callIPCMock.mock.calls.at(-1)?.[0]).toBe(SearchBucket);
+      queue = [page([b('alpha')])];
+      setKeyword('');
+      expect(await screen.findByText('alpha')).toBeInTheDocument();
+      expect(callIPCMock.mock.calls.at(-1)?.[0]).toBe(GetListBucket);
+    });
+
+    it('cancels the previous request when the keyword changes', async () => {
+      const signals: AbortSignal[] = [];
+      callIPCMock.mockImplementation((async (_f: unknown, _a: unknown, o: { signal: AbortSignal }) => {
+        signals.push(o.signal);
+        return new Promise(() => {});
+      }) as never);
+      const { setKeyword } = renderList();
+      await waitFor(() => expect(signals).toHaveLength(1));
+      setKeyword('kw');
+      await waitFor(() => expect(signals).toHaveLength(2));
+      expect(signals[0].aborted).toBe(true);
+      expect(signals[1].aborted).toBe(false);
+    });
+
+    it('follows nextCursor and drops names already shown', async () => {
+      queue = [page([b('alpha')], 'c1'), page([b('alpha'), b('beta')])];
+      renderList({ keyword: 'kw' });
+      expect(await screen.findByText('beta')).toBeInTheDocument();
+      expect(screen.getAllByText('alpha')).toHaveLength(1);
+      expect(searchCalls()).toHaveLength(2);
+      expect(searchCalls()[1][1]).toEqual(args('c1'));
+    });
+
+    it('treats a returned cursor equal to the one sent as the end', async () => {
+      queue = [page([b('alpha')], 'c1'), page([b('beta')], 'c1')];
+      renderList({ keyword: 'kw' });
+      expect(await screen.findByText('beta')).toBeInTheDocument();
+      await act(async () => {});
+      expect(callIPCMock).toHaveBeenCalledTimes(2);
+      noMoreButton();
+    });
+
+    it('treats an empty page with the same cursor as the end', async () => {
+      queue = [page([b('alpha')], 'c1'), page([], 'c1')];
+      renderList({ keyword: 'kw' });
+      await waitFor(() => expect(callIPCMock).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      expect(callIPCMock).toHaveBeenCalledTimes(2);
+      expect(screen.getByText('alpha')).toBeInTheDocument();
+      noMoreButton();
+    });
+
+    it('shows the empty message when nothing matches and no cursor is left', async () => {
+      queue = [page([])];
+      renderList({ keyword: 'kw' });
+      expect(await screen.findByText('No matching buckets')).toBeInTheDocument();
+      noMoreButton();
+    });
+
+    it('does not show the empty message when not searching', async () => {
+      queue = [page([])];
+      renderList();
+      await waitFor(() => expect(callIPCMock).toHaveBeenCalled());
+      await act(async () => {});
+      expect(screen.queryByText('No matching buckets')).not.toBeInTheDocument();
+    });
+
+    it('does not show the empty message while the first search page loads', async () => {
+      callIPCMock.mockImplementation((() => new Promise(() => {})) as never);
+      renderList({ keyword: 'kw' });
+      await waitFor(() => expect(loader()).toBeInTheDocument());
+      expect(screen.queryByText('No matching buckets')).not.toBeInTheDocument();
+    });
+
+    it('shows no first-page loader when not searching', async () => {
+      callIPCMock.mockImplementation((() => new Promise(() => {})) as never);
+      renderList();
+      await waitFor(() => expect(callIPCMock).toHaveBeenCalled());
+      expect(loader()).not.toBeInTheDocument();
+    });
+
+    it('hides the first-page loader when the connection is lost', async () => {
+      callIPCMock.mockImplementation((() => new Promise(() => {})) as never);
+      const { rerenderWith } = renderList({ keyword: 'kw' });
+      await waitFor(() => expect(loader()).toBeInTheDocument());
+      rerenderWith(null);
+      expect(loader()).not.toBeInTheDocument();
+    });
+
+    // The old cursor still sits in state for one render after the source changes, with the list near its end.
+    it('never sends the list cursor to the search when the keyword is applied', async () => {
+      virtual.endIndex = 0;
+      callIPCMock.mockImplementation((async (f: unknown) =>
+        f === SearchBucket ? page([b('found')]) : page(['a', 'b', 'c', 'd', 'e'].map(b), 'list-cursor')) as never);
+      const { setKeyword } = renderList();
+      await screen.findByText('e');
+      virtual.endIndex = null;
+      setKeyword('kw');
+      expect(await screen.findByText('found')).toBeInTheDocument();
+      await act(async () => {});
+      expect(searchCalls()).toHaveLength(1);
+      expect(searchCalls()[0][1]).toEqual(args());
+      expect(loader()).not.toBeInTheDocument();
+    });
+
+    it('never sends the search cursor to the list when the keyword is cleared', async () => {
+      virtual.endIndex = 0;
+      callIPCMock.mockImplementation((async (f: unknown) =>
+        f === SearchBucket ? page(['a', 'b', 'c', 'd', 'e'].map(b), 'search-cursor') : page([b('listed')])) as never);
+      const { setKeyword } = renderList({ keyword: 'kw' });
+      await screen.findByText('e');
+      virtual.endIndex = null;
+      setKeyword('');
+      expect(await screen.findByText('listed')).toBeInTheDocument();
+      await act(async () => {});
+      const listCalls = callIPCMock.mock.calls.filter(c => c[0] === GetListBucket);
+      expect(listCalls).toHaveLength(1);
+      expect(listCalls[0][1]).toEqual([{ connectionId: 'conn', profileName: 'my-profile', nextCursor: '', limit: 10 }]);
+      expect(loader()).not.toBeInTheDocument();
+    });
+
+    it('does not auto-load an empty search page with a cursor; the button continues it', async () => {
+      queue = [page([], 'c1'), page([b('beta')])];
+      const user = userEvent.setup();
+      renderList({ keyword: 'kw' });
+      const more = await screen.findByRole('button', { name: 'Search more' });
+      await act(async () => {});
+      expect(callIPCMock).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText('No matching buckets')).not.toBeInTheDocument();
+      await user.click(more);
+      expect(await screen.findByText('beta')).toBeInTheDocument();
+      expect(callIPCMock.mock.calls[1][1]).toEqual(args('c1'));
+      noMoreButton();
+    });
+
+    it('offers the button after the next page failed and retries with it', async () => {
+      queue = [page([b('alpha')], 'c1'), null, page([b('beta')])];
+      const user = userEvent.setup();
+      renderList({ keyword: 'kw' });
+      const more = await screen.findByRole('button', { name: 'Search more' });
+      expect(callIPCMock).toHaveBeenCalledTimes(2);
+      await user.click(more);
+      expect(await screen.findByText('beta')).toBeInTheDocument();
+      expect(callIPCMock).toHaveBeenCalledTimes(3);
+      expect(callIPCMock.mock.calls[2][1]).toEqual(args('c1'));
+    });
+
+    it('has no search button when not searching, even after a failed page', async () => {
+      queue = [page([b('alpha')], 'c1'), null];
+      renderList();
+      await waitFor(() => expect(callIPCMock).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      noMoreButton();
+    });
+
+    it('refresh searches again from the first page', async () => {
+      const { ref } = renderList({ keyword: 'kw' });
+      await screen.findByText('alpha');
+      await act(async () => ref.current?.onRefresh?.());
+      expect(searchCalls()).toHaveLength(2);
+      expect(searchCalls()[1][1]).toEqual(args());
+    });
+
+    it('searches nothing without a connection', () => {
+      renderList({ keyword: 'kw', profile: null });
+      expect(callIPCMock).not.toHaveBeenCalled();
+    });
   });
 });
