@@ -26,9 +26,34 @@ tasks:
           EXTRA_TAGS: '{{.EXTRA_TAGS}}'
           OBFUSCATED: '{{.OBFUSCATED}}'
           GARBLE_ARGS: '{{.GARBLE_ARGS}}'
+          OUT_DIR: '{{.OUT_DIR}}'
     vars:
       # Default to CGO_ENABLED=0 if not explicitly set
       CGO_ENABLED: '{{.CGO_ENABLED | default "0"}}'
+
+  build:portable:
+    summary: Builds the portable package (exe + data/ + webview2/) into build/bin/S3Browser-portable
+    desc: |
+      Usage: go tool wails3 task build:portable WEBVIEW2_DIR=<folder with msedgewebview2.exe>
+      WEBVIEW2_DIR is the extracted WebView2 Fixed Version CAB downloaded from Microsoft.
+    preconditions:
+      - sh: "test -n '{{.WEBVIEW2_DIR}}'"
+        msg: "WEBVIEW2_DIR is required. Usage: go tool wails3 task build:portable WEBVIEW2_DIR=<folder with msedgewebview2.exe>"
+      - sh: "test -f '{{.WEBVIEW2_DIR}}/msedgewebview2.exe'"
+        msg: "WEBVIEW2_DIR '{{.WEBVIEW2_DIR}}' does not contain msedgewebview2.exe. Extract the WebView2 Fixed Version CAB and point to the folder that holds msedgewebview2.exe."
+    cmds:
+      # start from an empty package dir so stale files are never shipped
+      - cmd: powershell -NoProfile -Command "Remove-Item -Recurse -Force -ErrorAction SilentlyContinue '{{.PORTABLE_DIR}}'; New-Item -ItemType Directory -Force '{{.PORTABLE_DIR}}/data', '{{.PORTABLE_DIR}}/webview2' | Out-Null"
+        platforms: [windows]
+      - task: build
+        vars:
+          ARCH: '{{.ARCH}}'
+          EXTRA_TAGS: portable
+          OUT_DIR: '{{.PORTABLE_DIR}}'
+      - cmd: powershell -NoProfile -Command "Copy-Item -Recurse -Force -Path '{{.WEBVIEW2_DIR}}/*' -Destination '{{.PORTABLE_DIR}}/webview2'"
+        platforms: [windows]
+    vars:
+      PORTABLE_DIR: '{{.BIN_DIR}}/{{.APP_NAME}}-portable'
 
   build:native:
     summary: Builds the application using native Go cross-compilation
@@ -51,7 +76,7 @@ tasks:
       - task: generate:syso
         vars:
           ARCH: '{{.ARCH}}'
-      - '{{if eq .OBFUSCATED "true"}}garble {{.GARBLE_ARGS}} build{{else}}go build{{end}} {{.BUILD_FLAGS}} -o "{{.BIN_DIR}}/{{.APP_NAME}}.exe"'
+      - '{{if eq .OBFUSCATED "true"}}garble {{.GARBLE_ARGS}} build{{else}}go build{{end}} {{.BUILD_FLAGS}} -o "{{.OUT_DIR | default .BIN_DIR}}/{{.APP_NAME}}.exe"'
       - cmd: powershell Remove-item *.syso
         platforms: [windows]
       - cmd: rm -f *.syso

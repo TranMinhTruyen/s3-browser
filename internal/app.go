@@ -38,7 +38,7 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 		panic(err)
 	}
 
-	km, err := utils.NewKeyManager()
+	km, err := utils.NewKeyManager(cfg.Name)
 	if err != nil {
 		log.Error("generate key manager failed", "error", err)
 		panic(err)

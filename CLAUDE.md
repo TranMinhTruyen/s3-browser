@@ -20,21 +20,21 @@ File này được Claude Code tự động load cho session chính và mọi su
 5. Chỉ format/lint frontend bằng **biome** và **oxlint**, không dùng prettier/eslint.
 6. Gặp điểm chưa rõ giữa chừng thì **dừng task đó** và báo về, không tự đoán.
 7. Nếu thay đổi làm lệch quy ước trong file này, báo cho người dùng để cập nhật `CLAUDE.md` (agent không tự sửa file này).
-8. Luôn viết unit test cho backend Go và frontend, yêu cầu coverage C1 ≥ 95% cho mỗi file đã đổi (xem mục **Testing**). Test do `go-tester` và `react-tester` viết.
+8. Luôn viết unit test cho frontend, yêu cầu coverage C1 ≥ 95% cho mỗi file đã đổi (xem mục **Testing**). Test do `react-tester` viết. Backend Go hiện **không** viết unit test.
 
 ## 3. Quy trình xử lý một task (B1–B5)
 
-| Bước | Nội dung                                                                                                                                                                                                          | Agent phụ trách                                                                          |
-| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| B1   | Phân tích yêu cầu, liệt kê câu hỏi chưa rõ                                                                                                                                                                        | `planner`                                                                                |
-| B2   | Lập plan, chia task backend/frontend, liệt kê rủi ro                                                                                                                                                              | `planner`                                                                                |
-| B3   | Hỏi người dùng có triển khai không; chưa được đồng ý thì dừng                                                                                                                                                     | `orchestrator`                                                                           |
-| B4   | **Tuần tự**: Go → skill `wails3-bindings` (`go tool wails3 generate bindings -clean=true -ts`) → Go test → Frontend → FE test → verify → review. Lặp lại **tối đa 3 vòng**; quá 3 vòng thì dừng và hỏi người dùng | `go-backend`, `go-tester`, `react-frontend`, `react-tester`, `verifier`, `code-reviewer` |
-| B5   | Báo cáo: số dòng thêm/xoá, file sửa, file mới, phần chưa làm được                                                                                                                                                 | `orchestrator`                                                                           |
+| Bước | Nội dung                                                                                                                                                                                                | Agent phụ trách                                                             |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| B1   | Phân tích yêu cầu, liệt kê câu hỏi chưa rõ                                                                                                                                                              | `planner`                                                                   |
+| B2   | Lập plan, chia task backend/frontend, liệt kê rủi ro                                                                                                                                                    | `planner`                                                                   |
+| B3   | Hỏi người dùng có triển khai không; chưa được đồng ý thì dừng                                                                                                                                           | `orchestrator`                                                              |
+| B4   | **Tuần tự**: Go → skill `wails3-bindings` (`go tool wails3 generate bindings -clean=true -ts`) → Frontend → FE test → verify → review. Lặp lại **tối đa 3 vòng**; quá 3 vòng thì dừng và hỏi người dùng | `go-backend`, `react-frontend`, `react-tester`, `verifier`, `code-reviewer` |
+| B5   | Báo cáo: số dòng thêm/xoá, file sửa, file mới, phần chưa làm được                                                                                                                                       | `orchestrator`                                                              |
 - Yêu cầu lấy từ thư mục `sprints/sprint-NN/` (xem `sprints/README.md`), tạo bằng skill `/new-sprint <tên>`.
 - Làm theo sprint: chạy `claude --agent orchestrator`. Orchestrator **không** phải agent mặc định.
 - Sửa nhỏ: mở `claude` bình thường và gọi thẳng `go-backend` hoặc `react-frontend`.
-- Viết bù test cho code cũ: mở `claude` bình thường và gọi thẳng `go-tester` hoặc `react-tester` kèm package/thư mục cần test (ví dụ `dùng go-tester viết test cho internal/modules/bucket`).
+- Viết bù test cho code cũ: mở `claude` bình thường và gọi thẳng `react-tester` kèm thư mục cần test (ví dụ `dùng react-tester viết test cho frontend/src/pages/bucket`).
 - Không bao giờ chạy hai agent viết code song song.
 
 ## 4. Skill
@@ -137,21 +137,10 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 ### Chung
 
 - Ngưỡng: mỗi file production đã đổi trong sprint (hoặc trong phạm vi viết bù) đạt **C1 ≥ 95%**. Áp dụng cho cả file, kể cả code cũ trong file đó.
-- Loại trừ (FE thêm cả `frontend/src/test/**`): code sinh tự động (`internal/pkg/db/sqlc/**`, `frontend/bindings/**`), `main.go`, `frontend/src/main.tsx`, file locale, file chỉ khai báo model/type/hằng (`models/**`, `alias.go`, `*.d.ts`).
-- Test do `go-tester` / `react-tester` viết, chỉ sửa file test; agent code không sửa test của tester để cho qua. Nhánh không test được phải ghi rõ lý do.
-- Unit test không gọi mạng, MinIO/AWS thật hay Wails runtime thật.
-
-### Go
-
-- Chỉ dùng package `testing` chuẩn, table-driven; không dùng testify/gomock. Test cùng package (white-box), file `<tên>_test.go`.
-- Giả lập phụ thuộc bằng fake viết tay dựa trên interface hẹp (ví dụ `fakeS3`, `fakeHost` trong `internal/modules/bucket/helpers_test.go`). Code production phải phụ thuộc qua interface để test được.
-- Đầu mỗi file test có comment **Branch table (C1) for <file>.go**: liệt kê mọi nhánh của từng hàm và test phủ nhánh đó, cuối bảng ghi `Not unit tested: ... (lý do)`. Go chỉ đo được C0, nên C1 được kiểm bằng bảng này (verifier và code-reviewer đối chiếu với code).
-- Đo coverage (chạy ở `App/S3Browser`):
-  - `go test -race -count=1 -covermode=atomic -coverprofile="${TMPDIR:-/tmp}/s3b-cover.out" ./...`
-  - Từng file: `awk -F'[: ,]' 'NR>1{s[$1]+=$(NF-1); if($NF>0)c[$1]+=$(NF-1)} END{for(f in s) printf "%5.1f%% %s\n", 100*c[f]/s[f], f}' "${TMPDIR:-/tmp}/s3b-cover.out" | sort`
-  - Từng hàm: `go tool cover -func="${TMPDIR:-/tmp}/s3b-cover.out"`
-- Ngưỡng Go: **C0 ≥ 95%** (số đo) và **C1 ≥ 95%** (nhánh có test / tổng nhánh trong Branch table).
-- Code có goroutine: đồng bộ bằng channel/`WaitGroup` có timeout, không `time.Sleep` để chờ.
+- Phạm vi: chỉ frontend. Backend Go hiện không viết unit test.
+- Loại trừ: `frontend/src/test/**`, code sinh tự động (`frontend/bindings/**`), `frontend/src/main.tsx`, file locale, file chỉ khai báo type/hằng (`*.d.ts`).
+- Test do `react-tester` viết, chỉ sửa file test; agent code không sửa test của tester để cho qua. Nhánh không test được phải ghi rõ lý do.
+- Unit test không gọi mạng hay Wails runtime thật.
 
 ### Frontend
 

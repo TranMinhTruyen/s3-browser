@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"S3Browser/internal/pkg/portable"
 	"io"
 	"log/slog"
 	"os"
@@ -11,28 +12,31 @@ import (
 )
 
 func LogDir(appName string) (string, error) {
-	var base string
-	var err error
-
-	switch runtime.GOOS {
-	case "darwin":
-		home, e := os.UserHomeDir()
-		if e != nil {
-			return "", e
-		}
-		base = filepath.Join(home, "Library", "Logs")
-	default: // windows: %AppData%, linux: ~/.config
-		base, err = os.UserConfigDir()
-		if err != nil {
-			return "", err
-		}
+	base, err := logBase(appName)
+	if err != nil {
+		return "", err
 	}
 
-	dir := filepath.Join(base, appName, "logs")
+	dir := filepath.Join(base, "logs")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
 	return dir, nil
+}
+
+// logBase returns the directory that holds the "logs" folder.
+func logBase(appName string) (string, error) {
+	// portable: everything lives in <exe dir>/data, on every OS
+	if portable.Enabled || runtime.GOOS != "darwin" {
+		// windows: %AppData%/<appName>, linux: ~/.config/<appName>
+		return portable.DataDir(appName)
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, "Library", "Logs", appName), nil
 }
 
 type Config struct {

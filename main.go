@@ -3,8 +3,10 @@ package main
 import (
 	"S3Browser/internal"
 	"S3Browser/internal/pkg/logger"
+	"S3Browser/internal/pkg/portable"
 	"embed"
 	"log"
+	"path/filepath"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -15,6 +17,23 @@ var assets embed.FS
 
 //go:embed all:wails.json
 var wailsConfigJSON []byte
+
+// portableWindowsOptions points WebView2 at the runtime shipped next to the exe and keeps its profile in data/,
+// so the app writes nothing to %APPDATA%.
+func portableWindowsOptions(appName string) (application.WindowsOptions, error) {
+	webviewDir, err := portable.WebView2Dir()
+	if err != nil {
+		return application.WindowsOptions{}, err
+	}
+	dataDir, err := portable.DataDir(appName)
+	if err != nil {
+		return application.WindowsOptions{}, err
+	}
+	return application.WindowsOptions{
+		WebviewBrowserPath:  webviewDir,
+		WebviewUserDataPath: filepath.Join(dataDir, "webview"),
+	}, nil
+}
 
 func main() {
 	// Create an instance of the app structure
@@ -28,13 +47,20 @@ func main() {
 	}
 	defer closer.Close()
 
-	mainApp := application.New(application.Options{
+	options := application.Options{
 		Name: cfg.Name,
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},
 		Logger: appLogger,
-	})
+	}
+	if portable.Enabled {
+		options.Windows, err = portableWindowsOptions(cfg.Name)
+		if err != nil {
+			log.Fatalf("resolve portable paths error: %v", err)
+		}
+	}
+	mainApp := application.New(options)
 
 	app := internal.NewApp(mainApp, cfg, appLogger)
 	mainApp.OnShutdown(app.Shutdown)
