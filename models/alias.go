@@ -25,6 +25,10 @@ type (
 	ListBucketOutput       = bucket.ListBucketOutput
 	ListObjectInput        = bucket.ListObjectInput
 	ListObjectOutput       = bucket.ListObjectOutput
+	SearchObjectInput      = bucket.SearchObjectInput
+	SearchObjectOutput     = bucket.SearchObjectOutput
+	SearchBucketInput      = bucket.SearchBucketInput
+	SearchBucketOutput     = bucket.SearchBucketOutput
 	ObjectDetailInput      = bucket.ObjectDetailInput
 	ObjectDetailOutput     = bucket.ObjectDetailOutput
 	DownloadProgressOutput = bucket.DownloadProgressOutput

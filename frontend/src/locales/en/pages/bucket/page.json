@@ -4,5 +4,9 @@
   },
   "label": {
     "createDate": "Create date:"
+  },
+  "search": {
+    "empty": "No matching buckets",
+    "loadMore": "Search more"
   }
 }

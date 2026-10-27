@@ -1,4 +1,4 @@
-import { Box, CopyButton, Group, Loader, ScrollArea, Stack, Table, Text, Tooltip } from '@mantine/core';
+import { Box, CopyButton, DataList, Divider, Group, Loader, ScrollArea, Stack, Text, Tooltip } from '@mantine/core';
 import { GetObjectDetail } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ObjectDetailOutput } from '@wails/S3Browser/models/bucket';
 import dayjs from 'dayjs';
@@ -44,25 +44,28 @@ function DetailRow(props: DetailRowProps) {
   const { t } = useTranslation('objectDetailDrawer', { keyPrefix: 'tooltip' });
 
   return (
-    <Box>
-      <Text size="sm" c="dimmed">
-        {label}
-      </Text>
-      <Group gap="xs" wrap="nowrap" align="flex-start">
-        <Text style={{ overflowWrap: 'anywhere', flex: 1 }}>{value || EMPTY_VALUE}</Text>
-        {copyable && value ? (
-          <CopyButton value={value}>
-            {({ copied, copy }) => (
-              <Tooltip label={copied ? t('copied') : t('copy')}>
-                <ActionIcon size="sm" onClick={copy} aria-label={t('copy')}>
-                  {copied ? <Check size="14px" /> : <Copy size="14px" />}
-                </ActionIcon>
-              </Tooltip>
-            )}
-          </CopyButton>
-        ) : null}
-      </Group>
-    </Box>
+    <DataList.Item>
+      <DataList.ItemLabel>{label}</DataList.ItemLabel>
+      {/* Full width so the copy button always sits at the right edge, not right after the text. */}
+      <DataList.ItemValue w="100%">
+        <Group gap="xs" wrap="nowrap" align="flex-start">
+          <Text inherit style={{ overflowWrap: 'anywhere', flex: 1 }}>
+            {value || EMPTY_VALUE}
+          </Text>
+          {copyable && value ? (
+            <CopyButton value={value}>
+              {({ copied, copy }) => (
+                <Tooltip label={copied ? t('copied') : t('copy')}>
+                  <ActionIcon size="sm" onClick={copy} aria-label={t('copy')}>
+                    {copied ? <Check size="14px" /> : <Copy size="14px" />}
+                  </ActionIcon>
+                </Tooltip>
+              )}
+            </CopyButton>
+          ) : null}
+        </Group>
+      </DataList.ItemValue>
+    </DataList.Item>
   );
 }
 
@@ -133,14 +136,18 @@ function ObjectDetailDrawer(props: ObjectDetailDrawerProps) {
 
       <ScrollArea style={{ flex: 1, minHeight: 0 }}>
         <Stack gap="sm" p="8px">
-          <DetailRow label={t('label.name')} value={item.name} />
-          <DetailRow label={t('label.key')} value={item.key} copyable />
-          <DetailRow
-            label={t('label.size')}
-            value={`${formatFileSize(item.size)} (${t('unit.bytes', { size: item.size })})`}
-          />
-          <DetailRow label={t('label.lastModified')} value={formatDate(item.lastModified)} />
-          <DetailRow label={t('label.etag')} value={item.etag} copyable />
+          <DataList orientation="vertical" withDivider>
+            <DetailRow label={t('label.name')} value={item.name} />
+            <DetailRow label={t('label.key')} value={item.key} copyable />
+            <DetailRow
+              label={t('label.size')}
+              value={`${formatFileSize(item.size)} (${t('unit.bytes', { size: item.size })})`}
+            />
+            <DetailRow label={t('label.lastModified')} value={formatDate(item.lastModified)} />
+            <DetailRow label={t('label.etag')} value={item.etag} copyable />
+          </DataList>
+          {/* The lists are separate, so draw the divider between them; Stack's gap matches the list's gap. */}
+          <Divider />
 
           {state.status === 'loading' ? (
             <Group justify="center" py="md">
@@ -156,31 +163,31 @@ function ObjectDetailDrawer(props: ObjectDetailDrawerProps) {
           ) : null}
 
           {state.status === 'done' ? (
-            <>
+            <DataList orientation="vertical" withDivider>
               <DetailRow label={t('label.contentType')} value={state.detail.contentType} />
               {state.detail.storageClass ? (
                 <DetailRow label={t('label.storageClass')} value={state.detail.storageClass} />
               ) : null}
-              <Box>
-                <Text size="sm" c="dimmed">
-                  {t('label.metadata')}
-                </Text>
-                {metadata.length === 0 ? (
-                  <Text>{EMPTY_VALUE}</Text>
-                ) : (
-                  <Table withTableBorder withColumnBorders style={{ tableLayout: 'fixed' }}>
-                    <Table.Tbody>
+              <DataList.Item>
+                <DataList.ItemLabel>{t('label.metadata')}</DataList.ItemLabel>
+                <DataList.ItemValue>
+                  {metadata.length === 0 ? (
+                    EMPTY_VALUE
+                  ) : (
+                    <DataList labelWidth="40%">
                       {metadata.map(([key, value]) => (
-                        <Table.Tr key={key}>
-                          <Table.Td style={{ overflowWrap: 'anywhere' }}>{key}</Table.Td>
-                          <Table.Td style={{ overflowWrap: 'anywhere' }}>{value || EMPTY_VALUE}</Table.Td>
-                        </Table.Tr>
+                        <DataList.Item key={key}>
+                          <DataList.ItemLabel style={{ overflowWrap: 'anywhere' }}>{key}</DataList.ItemLabel>
+                          <DataList.ItemValue style={{ overflowWrap: 'anywhere' }}>
+                            {value || EMPTY_VALUE}
+                          </DataList.ItemValue>
+                        </DataList.Item>
                       ))}
-                    </Table.Tbody>
-                  </Table>
-                )}
-              </Box>
-            </>
+                    </DataList>
+                  )}
+                </DataList.ItemValue>
+              </DataList.Item>
+            </DataList>
           ) : null}
         </Stack>
       </ScrollArea>

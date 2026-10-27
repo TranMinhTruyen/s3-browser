@@ -1,7 +1,7 @@
 import { Anchor, Breadcrumbs, Divider, Group, Paper, Stack, Text, Tooltip } from '@mantine/core';
 import { ConnectS3ByProfile } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ArrowLeft, BroomSparkles, Download, PlugZap, RefreshCw, Trash } from 'lucide-react';
-import { MouseEvent, memo, useCallback, useMemo, useRef } from 'react';
+import { MouseEvent, memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 import { useProfileStore } from '@/common/stores/profileStore';
@@ -10,6 +10,7 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { formatStringJson, isNullOrEmpty } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import Combobox from '@/components/inputs/combobox/Combobox';
+import SearchInput from '@/components/inputs/SearchInput';
 import ObjectDetailDrawer from '@/components/layouts/tab/components/ObjectDetailDrawer';
 import ConnectModal from '@/components/modals/ConnectModal';
 import BucketListView, { BucketListViewRef } from '@/pages/bucket/BucketListView';
@@ -93,6 +94,35 @@ function TabDetail(props: TabDetailProps) {
     }
   }, [selectedProfile, updateConnectionProfiles, selectedProfileId]);
 
+  // The keyword only lives in the context (profile, bucket, folder, view) it was entered in. When the context
+  // changes it is dropped during render (before commit), so the list loads once and a later return to the
+  // same context starts without a keyword.
+  const searchContext = `${selectedProfileId}|${selectedBucket}|${prefix}|${currentView}`;
+  const [search, setSearch] = useState({ keyword: '', context: searchContext });
+  if (search.context !== searchContext) setSearch({ keyword: '', context: searchContext });
+  const keyword = search.context === searchContext ? search.keyword : '';
+
+  const onSearch = useCallback(
+    (value: string) => {
+      // Only the object list has a selection.
+      if (currentView === 'objectList') clearSelectItem(tabId);
+      // Same keyword: state would not change, so search again from the first page through the refresh path.
+      if (value === keyword) {
+        (currentView === 'objectList' ? objectListRef : bucketListRef).current?.onRefresh?.();
+        return;
+      }
+      setSearch({ keyword: value, context: searchContext });
+    },
+    [currentView, clearSelectItem, tabId, searchContext, keyword]
+  );
+
+  const onClearSearch = useCallback(() => {
+    // Selected files may not be in the unfiltered list's view anymore; skip when there is nothing to clear.
+    if (!keyword) return;
+    if (currentView === 'objectList') clearSelectItem(tabId);
+    setSearch({ keyword: '', context: searchContext });
+  }, [keyword, currentView, clearSelectItem, tabId, searchContext]);
+
   const onClickRefresh = useCallback(() => {
     if (currentView === 'objectList') {
       clearSelectItem(tabId);
@@ -167,6 +197,7 @@ function TabDetail(props: TabDetailProps) {
           profile={isConnected ? selectedProfile : null}
           active={currentView === 'bucketList'}
           scrollRef={scrollRef}
+          keyword={currentView === 'bucketList' ? keyword : ''}
           onSelectBucket={onChangeSelectBucket}
           ref={bucketListRef}
         />
@@ -178,6 +209,7 @@ function TabDetail(props: TabDetailProps) {
             profile={isConnected ? selectedProfile : null}
             bucket={selectedBucket}
             scrollRef={scrollRef}
+            keyword={keyword}
             ref={objectListRef}
           />
         </Stack>
@@ -212,6 +244,17 @@ function TabDetail(props: TabDetailProps) {
               <RefreshCw />
             </ActionIcon>
           </Tooltip>
+
+          <SearchInput
+            key={searchContext}
+            value={keyword}
+            placeholder={currentView === 'objectList' ? t('search.placeholderObject') : t('search.placeholderBucket')}
+            searchLabel={t('tooltip.search')}
+            clearLabel={t('tooltip.clearSearch')}
+            disabled={!isConnected}
+            onSearch={onSearch}
+            onClear={onClearSearch}
+          />
 
           {currentView === 'objectList' ? (
             <>

@@ -6,6 +6,12 @@
     "closeTab": "Close tab",
     "connect": "Connect",
     "refresh": "Refresh {target}",
-    "addTab": "Add tab"
+    "addTab": "Add tab",
+    "search": "Search",
+    "clearSearch": "Clear search"
+  },
+  "search": {
+    "placeholderObject": "Search by key",
+    "placeholderBucket": "Search by name"
   }
 }

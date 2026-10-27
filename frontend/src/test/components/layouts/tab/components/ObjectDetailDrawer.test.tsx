@@ -35,6 +35,16 @@ function renderDrawer() {
   return renderWithProviders(<ObjectDetailDrawer tabId={TAB_ID} connectionId="conn" profileName="p" bucket="bkt" />);
 }
 
+// [key, value] pairs of the nested metadata DataList, in rendered order.
+function metadataEntries() {
+  const metadataTerm = screen.getByText('Metadata');
+  const nested = metadataTerm.nextElementSibling!.querySelector('dl')!;
+  return Array.from(nested.querySelectorAll(':scope > div')).map(item => [
+    item.querySelector('dt')!.textContent,
+    item.querySelector('dd')!.textContent,
+  ]);
+}
+
 function openItem(item: ObjectItem) {
   act(() => useTabListStore.getState().openDetail(TAB_ID, item));
 }
@@ -68,8 +78,10 @@ describe('ObjectDetailDrawer', () => {
 
     expect(await screen.findByText('text/plain')).toBeInTheDocument();
     expect(screen.getByText('GLACIER')).toBeInTheDocument();
-    const cells = screen.getAllByRole('cell').map(c => c.textContent);
-    expect(cells).toEqual(['alpha', 'first', 'zeta', 'last']);
+    expect(metadataEntries()).toEqual([
+      ['alpha', 'first'],
+      ['zeta', 'last'],
+    ]);
   });
 
   it('shows "-" for empty values and empty metadata, and hides empty storage class', async () => {
@@ -179,6 +191,6 @@ describe('ObjectDetailDrawer', () => {
     renderDrawer();
 
     expect(await screen.findByText('empty')).toBeInTheDocument();
-    expect(screen.getAllByRole('cell').map(c => c.textContent)).toEqual(['empty', '-']);
+    expect(metadataEntries()).toEqual([['empty', '-']]);
   });
 });

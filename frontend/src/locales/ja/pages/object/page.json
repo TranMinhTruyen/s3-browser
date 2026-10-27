@@ -11,5 +11,9 @@
   "action": {
     "download": "ダウンロード",
     "delete": "削除"
+  },
+  "search": {
+    "empty": "一致するオブジェクトがありません",
+    "loadMore": "さらに検索"
   }
 }
