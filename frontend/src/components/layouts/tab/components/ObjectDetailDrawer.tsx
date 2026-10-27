@@ -1,0 +1,190 @@
+import { Box, CopyButton, Group, Loader, ScrollArea, Stack, Table, Text, Tooltip } from '@mantine/core';
+import { GetObjectDetail } from '@wails/S3Browser/internal/handlers/buckethandler';
+import { ObjectDetailOutput } from '@wails/S3Browser/models/bucket';
+import dayjs from 'dayjs';
+import { Check, Copy, X } from 'lucide-react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
+import { useTabListStore } from '@/common/stores/tabListStore';
+import { callIPC } from '@/common/utils/ipcUtils';
+import { formatFileSize } from '@/common/utils/stringUtils';
+import ActionIcon from '@/components/buttons/ActionIcon';
+import Button from '@/components/buttons/Button';
+
+const EMPTY_VALUE = '-';
+
+// Go's zero time (0001-01-01) means the backend has no date.
+const formatDate = (value: string) => {
+  const date = dayjs(value);
+  return date.isValid() && date.year() > 1 ? date.format(FULL_DATE_TIME_FORMAT) : undefined;
+};
+
+type ObjectDetailDrawerProps = {
+  tabId: string;
+  connectionId: string;
+  profileName?: string;
+  bucket: string;
+};
+
+// `key` is the object the state belongs to; a state of another key counts as loading.
+type DetailState =
+  | { key: string; status: 'loading' | 'error' }
+  | { key: string; status: 'done'; detail: ObjectDetailOutput };
+
+type DetailRowProps = {
+  label: string;
+  value?: string;
+  copyable?: boolean;
+};
+
+function DetailRow(props: DetailRowProps) {
+  const { label, value, copyable } = props;
+
+  const { t } = useTranslation('objectDetailDrawer', { keyPrefix: 'tooltip' });
+
+  return (
+    <Box>
+      <Text size="sm" c="dimmed">
+        {label}
+      </Text>
+      <Group gap="xs" wrap="nowrap" align="flex-start">
+        <Text style={{ overflowWrap: 'anywhere', flex: 1 }}>{value || EMPTY_VALUE}</Text>
+        {copyable && value ? (
+          <CopyButton value={value}>
+            {({ copied, copy }) => (
+              <Tooltip label={copied ? t('copied') : t('copy')}>
+                <ActionIcon size="sm" onClick={copy} aria-label={t('copy')}>
+                  {copied ? <Check size="14px" /> : <Copy size="14px" />}
+                </ActionIcon>
+              </Tooltip>
+            )}
+          </CopyButton>
+        ) : null}
+      </Group>
+    </Box>
+  );
+}
+
+function ObjectDetailDrawer(props: ObjectDetailDrawerProps) {
+  const { tabId, connectionId, profileName, bucket } = props;
+
+  const { t } = useTranslation('objectDetailDrawer');
+
+  const item = useTabListStore(s => s.tabList[tabId]?.detailItem);
+  const closeDetail = useTabListStore(s => s.closeDetail);
+
+  const [loaded, setLoaded] = useState<DetailState>({ key: '', status: 'loading' });
+  // Bumped by the retry button to run the request again for the same key.
+  const [reloadCount, setReloadCount] = useState(0);
+
+  const itemKey = item?.key;
+  // Drawer closed: forget the loaded detail, so reopening the same key does not flash stale data.
+  if (!itemKey && loaded.key !== '') setLoaded({ key: '', status: 'loading' });
+  // Never show the previous item's detail while the new one loads.
+  const state: DetailState = loaded.key === itemKey ? loaded : { key: itemKey ?? '', status: 'loading' };
+
+  // A new request per item: the cleanup aborts the previous one, so a late result never overwrites the new item.
+  useEffect(() => {
+    if (!itemKey) return;
+    const ctrl = new AbortController();
+    callIPC(GetObjectDetail, [{ connectionId, profileName, bucket, key: itemKey }], { signal: ctrl.signal }).then(
+      output => {
+        if (ctrl.signal.aborted) return;
+        setLoaded(output ? { key: itemKey, status: 'done', detail: output } : { key: itemKey, status: 'error' });
+      }
+    );
+    return () => ctrl.abort();
+  }, [connectionId, profileName, bucket, itemKey, reloadCount]);
+
+  const onClickClose = useCallback(() => closeDetail(tabId), [closeDetail, tabId]);
+  const onClickRetry = useCallback(() => {
+    setLoaded({ key: itemKey ?? '', status: 'loading' });
+    setReloadCount(c => c + 1);
+  }, [itemKey]);
+
+  const metadata = useMemo(
+    () =>
+      loaded.status === 'done' ? Object.entries(loaded.detail.metadata).sort(([a], [b]) => a.localeCompare(b)) : [],
+    [loaded]
+  );
+
+  if (!item) return null;
+
+  return (
+    <Box
+      w={320}
+      h="100%"
+      style={{
+        flexShrink: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        borderLeft: '1px solid var(--mantine-color-default-border)',
+      }}
+    >
+      <Group justify="space-between" p="8px" wrap="nowrap" style={{ flexShrink: 0 }}>
+        <Text fw={600}>{t('title')}</Text>
+        <Tooltip label={t('tooltip.close')}>
+          <ActionIcon onClick={onClickClose} aria-label={t('tooltip.close')}>
+            <X />
+          </ActionIcon>
+        </Tooltip>
+      </Group>
+
+      <ScrollArea style={{ flex: 1, minHeight: 0 }}>
+        <Stack gap="sm" p="8px">
+          <DetailRow label={t('label.name')} value={item.name} />
+          <DetailRow label={t('label.key')} value={item.key} copyable />
+          <DetailRow
+            label={t('label.size')}
+            value={`${formatFileSize(item.size)} (${t('unit.bytes', { size: item.size })})`}
+          />
+          <DetailRow label={t('label.lastModified')} value={formatDate(item.lastModified)} />
+          <DetailRow label={t('label.etag')} value={item.etag} copyable />
+
+          {state.status === 'loading' ? (
+            <Group justify="center" py="md">
+              <Loader size="sm" />
+            </Group>
+          ) : null}
+
+          {state.status === 'error' ? (
+            <Stack gap="xs" align="flex-start">
+              <Text c="red">{t('status.loadError')}</Text>
+              <Button onClick={onClickRetry}>{t('status.retry')}</Button>
+            </Stack>
+          ) : null}
+
+          {state.status === 'done' ? (
+            <>
+              <DetailRow label={t('label.contentType')} value={state.detail.contentType} />
+              {state.detail.storageClass ? (
+                <DetailRow label={t('label.storageClass')} value={state.detail.storageClass} />
+              ) : null}
+              <Box>
+                <Text size="sm" c="dimmed">
+                  {t('label.metadata')}
+                </Text>
+                {metadata.length === 0 ? (
+                  <Text>{EMPTY_VALUE}</Text>
+                ) : (
+                  <Table withTableBorder withColumnBorders style={{ tableLayout: 'fixed' }}>
+                    <Table.Tbody>
+                      {metadata.map(([key, value]) => (
+                        <Table.Tr key={key}>
+                          <Table.Td style={{ overflowWrap: 'anywhere' }}>{key}</Table.Td>
+                          <Table.Td style={{ overflowWrap: 'anywhere' }}>{value || EMPTY_VALUE}</Table.Td>
+                        </Table.Tr>
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                )}
+              </Box>
+            </>
+          ) : null}
+        </Stack>
+      </ScrollArea>
+    </Box>
+  );
+}
+export default memo(ObjectDetailDrawer);

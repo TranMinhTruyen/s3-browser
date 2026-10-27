@@ -33,6 +33,8 @@
     "S3E021": "Xóa thư mục {prefix} thất bại: {failed} object lỗi, {deleted} đã xóa.",
     "S3E022": "Thư mục {folder} có hơn {max} file lớn hơn {size} GiB cần tải lên.",
     "S3E023": "Chỉ được tải lên tối đa {max} file mỗi lần.",
+    "S3E024": "Lấy chi tiết object {key} thất bại, profile: {name}, bucket: {bucket}.",
+    "S3E025": "Key object {key} không hợp lệ.",
     "S3W001": "Quyền truy cập bucket bị giới hạn",
     "S3W002": "Đã hủy tải xuống object: {object}",
     "S3W003": "Cập nhật lịch sử tải xuống của {object} thất bại, vui lòng tải lại!",

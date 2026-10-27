@@ -220,7 +220,7 @@ export default createMantineModal<ConnectModalProps, false>(
               >
                 {t('title')}
               </Title>
-              <Modal.CloseButton size="md" />
+              <Modal.CloseButton size="md" aria-label={t('common:button.close')} />
             </Modal.Header>
 
             <Divider />

@@ -6,6 +6,8 @@
     "remainingLbl": "残り"
   },
   "action": {
-    "cancelAll": "すべてキャンセル"
+    "cancelAll": "すべてキャンセル",
+    "cancel": "キャンセル",
+    "close": "閉じる"
   }
 }

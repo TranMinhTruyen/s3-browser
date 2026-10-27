@@ -1,7 +1,9 @@
 {
   "title": "Đang tải xuống",
   "action": {
-    "cancelAll": "Huỷ tất cả"
+    "cancelAll": "Huỷ tất cả",
+    "cancel": "Hủy",
+    "close": "Đóng"
   },
   "label": {
     "objectLbl": "Đối tượng",

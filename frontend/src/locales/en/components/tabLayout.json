@@ -5,6 +5,7 @@
   "tooltip": {
     "closeTab": "Close tab",
     "connect": "Connect",
-    "refresh": "Refresh {target}"
+    "refresh": "Refresh {target}",
+    "addTab": "Add tab"
   }
 }

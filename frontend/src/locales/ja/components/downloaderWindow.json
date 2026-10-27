@@ -1,7 +1,9 @@
 {
   "title": "ダウンロード中",
   "action": {
-    "cancelAll": "すべてキャンセル"
+    "cancelAll": "すべてキャンセル",
+    "cancel": "キャンセル",
+    "close": "閉じる"
   },
   "label": {
     "objectLbl": "オブジェクト",

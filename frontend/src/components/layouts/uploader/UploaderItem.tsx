@@ -86,7 +86,7 @@ function UploaderItem(props: UploaderItemProps) {
         }}
       >
         <Center w="48px" h="100%">
-          <ActionIcon color="red" onClick={onClickCancelUpload}>
+          <ActionIcon color="red" onClick={onClickCancelUpload} aria-label={t('action.cancel')}>
             <X />
           </ActionIcon>
         </Center>

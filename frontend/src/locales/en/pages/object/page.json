@@ -5,11 +5,8 @@
     "backToBucket": "Back to bucket",
     "clearSelected": "Clear selected",
     "downloadSelected": "Download selected",
-    "deleteSelected": "Delete selected"
-  },
-  "label": {
-    "size": "Size",
-    "lastModified": "Last Modified"
+    "deleteSelected": "Delete selected",
+    "moreActions": "More actions"
   },
   "action": {
     "download": "Download",

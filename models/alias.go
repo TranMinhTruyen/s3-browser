@@ -25,6 +25,8 @@ type (
 	ListBucketOutput       = bucket.ListBucketOutput
 	ListObjectInput        = bucket.ListObjectInput
 	ListObjectOutput       = bucket.ListObjectOutput
+	ObjectDetailInput      = bucket.ObjectDetailInput
+	ObjectDetailOutput     = bucket.ObjectDetailOutput
 	DownloadProgressOutput = bucket.DownloadProgressOutput
 	DownloadObjInput       = bucket.DownloadObjInput
 	UploadObjInput         = bucket.UploadObjInput

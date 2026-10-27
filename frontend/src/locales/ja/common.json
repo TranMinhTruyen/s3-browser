@@ -6,6 +6,7 @@
     "connect": "接続",
     "cancel": "キャンセル",
     "OK": "OK",
-    "clear": "クリア"
+    "clear": "クリア",
+    "close": "閉じる"
   }
 }

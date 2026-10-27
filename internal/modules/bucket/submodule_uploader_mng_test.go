@@ -712,3 +712,12 @@ func TestCancelUploads(t *testing.T) {
 		t.Fatalf("canceled=%d", canceled.Load())
 	}
 }
+
+func TestAppHost(t *testing.T) {
+	app := newTestApp(t)
+	h := appHost{app: app}
+	if h.Context() == nil {
+		t.Fatal("Context is nil")
+	}
+	h.Emit("test:app-host", "payload") // must not panic
+}

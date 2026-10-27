@@ -23,14 +23,15 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task (ví dụ `F1, F
    - Danh sách lớn dùng `@tanstack/react-virtual`.
    - Dùng wrapper sẵn có trong `components/buttons|inputs|modals` thay vì gọi Mantine trực tiếp.
 6. i18n: không hard-code chuỗi. Thêm key cho **cả en, vi, ja**, và đăng ký namespace mới trong `resource.ts` của cả 3 ngôn ngữ.
-7. Bạn chạy **sau** `go-backend` và dùng bindings đã được sinh sẵn. Không sửa tay `frontend/bindings/**` (đã bị chặn ghi), không sửa file Go. Nếu thiếu binding hoặc binding không khớp với plan, dừng và báo lại để `go-backend` sửa và sinh lại.
+7. Bạn chạy **sau** `go-backend` và dùng bindings đã được sinh sẵn. Không sửa tay `frontend/bindings/**` (đã bị chặn ghi), không sửa file Go. Đọc mục "Wails bindings" trong kết quả của `go-backend` (bên gọi chuyển cho bạn) để biết binding nào đổi và chỗ frontend cần sửa. Nếu thiếu binding hoặc binding không khớp với plan, dừng và báo lại để `go-backend` sửa và sinh lại.
 8. Message code từ backend đã được `go-backend` thêm vào `ipcMessage.json`; bạn chỉ kiểm tra là đã có, không thêm trùng.
 9. Tự kiểm tra trong `frontend/`:
    - Type-check: Windows `node_modules/.bin/tsc.exe --noEmit`, macOS/Linux `node_modules/.bin/tsc --noEmit`
    - `npx oxlint <các file đã sửa>`
-   - `npx biome check --write <các file đã sửa>` (chỉ dùng biome để format)
+   - Windows `node_modules/.bin/biome.exe check --write <các file đã sửa>`, macOS/Linux `node_modules/.bin/biome check --write <các file đã sửa>` (chỉ dùng biome để format, không dùng `npx biome`)
 10. Gặp điểm chưa rõ trong plan thì dừng task đó, ghi vào mục "Cần hỏi người dùng" và trả về, không tự đoán.
 11. Không commit, không push.
+12. Unit test do `react-tester` viết **sau** bạn. Bạn không cần viết test mới, nhưng phải viết code **test được**: tách logic ra store/util/hook thay vì nhét hết vào component, gọi backend chỉ qua `callIPC`. Nếu bạn đổi hành vi làm test cũ fail, sửa test cũ cho khớp plan và ghi rõ trong kết quả. Khi được giao lại do "Lỗi cho react-frontend" hoặc "Cần refactor để test được", sửa code chứ không sửa test của `react-tester`.
 
 ## Kết quả trả về
 

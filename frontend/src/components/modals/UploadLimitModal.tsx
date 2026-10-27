@@ -286,7 +286,7 @@ export default createMantineModal<UploadLimitModalProps, DroppedFile[]>(props =>
               {t('title')}
             </Title>
           </Group>
-          <Modal.CloseButton size="md" />
+          <Modal.CloseButton size="md" aria-label={t('common:button.close')} />
         </Modal.Header>
 
         <Divider />

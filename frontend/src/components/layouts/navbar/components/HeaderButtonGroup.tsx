@@ -26,19 +26,19 @@ function HeaderButtonGroup() {
     <Stack p="8px">
       <Group gap="xs">
         <Tooltip label={t('tooltip.connect')}>
-          <ActionIcon onClick={onClickConnect}>
+          <ActionIcon onClick={onClickConnect} aria-label={t('tooltip.connect')}>
             <PlugZap />
           </ActionIcon>
         </Tooltip>
 
         <Tooltip label={t('tooltip.createProfile')}>
-          <ActionIcon onClick={onClickCreateProfile}>
+          <ActionIcon onClick={onClickCreateProfile} aria-label={t('tooltip.createProfile')}>
             <ListPlus />
           </ActionIcon>
         </Tooltip>
 
         <Tooltip label={t('tooltip.refresh')}>
-          <ActionIcon onClick={onClickRefresh} ml="auto">
+          <ActionIcon onClick={onClickRefresh} aria-label={t('tooltip.refresh')} ml="auto">
             <RefreshCw />
           </ActionIcon>
         </Tooltip>

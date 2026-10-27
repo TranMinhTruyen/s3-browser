@@ -6,6 +6,8 @@
     "remainingLbl": "Remaining"
   },
   "action": {
-    "cancelAll": "Cancel all"
+    "cancelAll": "Cancel all",
+    "cancel": "Cancel",
+    "close": "Close"
   }
 }

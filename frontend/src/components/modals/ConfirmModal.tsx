@@ -39,7 +39,7 @@ export default createMantineModal<ConfirmModalProps, boolean>(props => {
               {title}
             </Title>
           </Group>
-          <Modal.CloseButton size="md" />
+          <Modal.CloseButton size="md" aria-label={t('common:button.close')} />
         </Modal.Header>
 
         <Divider />

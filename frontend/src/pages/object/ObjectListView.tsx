@@ -9,6 +9,7 @@ import {
 } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { FilesDroppedOutput, ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
+import { Output } from '@wails/S3Browser/models/common';
 import { Events } from '@wailsio/runtime';
 import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -18,10 +19,12 @@ import { formatStringJson } from '@/common/utils/stringUtils';
 import ConfirmModal from '@/components/modals/ConfirmModal';
 import UploadLimitModal from '@/components/modals/UploadLimitModal';
 import i18n from '@/locales/i18n';
-import ObjectItem from '@/pages/object/components/ObjectItem';
+import ObjectItem from '@/pages/object/ObjectItem';
 
 // Download or delete is refused above this many objects at once.
 const MAX_OBJECTS_PER_ACTION = 5;
+// Backend message code of a key deleted successfully (its `params.object` is the key).
+const DELETE_OBJECT_SUCCESS_CODE = 'S3S005';
 // Objects fetched per page.
 const OBJECT_PAGE_SIZE = 10;
 // Row height before measuring, and the gap between rows.
@@ -60,6 +63,8 @@ function ObjectListView(props: ObjectListViewProps) {
   const addSelectItem = useTabListStore(s => s.addSelectItem);
   const removeSelectItem = useTabListStore(s => s.removeSelectItem);
   const clearSelectItem = useTabListStore(s => s.clearSelectItem);
+  const openDetail = useTabListStore(s => s.openDetail);
+  const closeDetail = useTabListStore(s => s.closeDetail);
   const setDeleting = useTabListStore(s => s.setDeleting);
   const setUploadingTab = useTabListStore(s => s.setUploadingTab);
 
@@ -105,6 +110,30 @@ function ObjectListView(props: ObjectListViewProps) {
       setNextCursor(output.nextCursor ?? '');
     }
   }, [handleGetListObject, startRequest]);
+
+  // Closes the drawer when the object it shows is one of the deleted keys or inside a deleted folder.
+  const closeDetailIfDeleted = useCallback(
+    (deletedKeys: string[]) => {
+      const detailKey = useTabListStore.getState().tabList[tabId]?.detailItem?.key;
+      if (detailKey && deletedKeys.some(key => (key.endsWith('/') ? detailKey.startsWith(key) : detailKey === key))) {
+        closeDetail(tabId);
+      }
+    },
+    [closeDetail, tabId]
+  );
+
+  // Runs on success and on partial failure: only keys reported as S3S005 are actually deleted. Output may be undefined.
+  const closeDetailIfDeletedByOutput = useCallback(
+    (output?: Output<unknown>) =>
+      closeDetailIfDeleted(
+        (output?.messageList ?? [])
+          .filter(message => message.messageCode === DELETE_OBJECT_SUCCESS_CODE)
+          .map(message => message.params?.object)
+          .filter(object => object !== undefined && object !== null && object !== '')
+          .map(String)
+      ),
+    [closeDetailIfDeleted]
+  );
 
   const loadNextPage = useCallback(async () => {
     if (!nextCursor) return;
@@ -174,7 +203,11 @@ function ObjectListView(props: ObjectListViewProps) {
           if (confirmModal) {
             setDeleting(tabId, objects, true);
             try {
-              await callIPC(DeleteObject, [{ connectionId, profileName, bucket, objects }]);
+              // Result is false if any key failed; each key reports its own result: S3S005 deleted, S3E013 failed.
+              await callIPC(DeleteObject, [{ connectionId, profileName, bucket, objects }], {
+                resolveAction: closeDetailIfDeletedByOutput,
+                rejectAction: closeDetailIfDeletedByOutput,
+              });
               await onRefresh();
             } finally {
               setDeleting(tabId, objects, false);
@@ -185,7 +218,7 @@ function ObjectListView(props: ObjectListViewProps) {
       }
       clearSelectItem(tabId);
     },
-    [bucket, profileName, connectionId, onRefresh, setDeleting, tabId, clearSelectItem]
+    [bucket, profileName, connectionId, onRefresh, setDeleting, tabId, clearSelectItem, closeDetailIfDeletedByOutput]
   );
 
   const onClickDeleteFolder = useCallback(
@@ -204,14 +237,16 @@ function ObjectListView(props: ObjectListViewProps) {
       if (!confirmed) return;
       setDeleting(tabId, [folderKey], true);
       try {
-        await callIPC(DeletePrefix, [{ connectionId, profileName, bucket, prefix: folderKey }]);
+        const body = await callIPC(DeletePrefix, [{ connectionId, profileName, bucket, prefix: folderKey }]);
+        // Keep the drawer on failure (even a partial one); the object it shows may still exist.
+        if (body) closeDetailIfDeleted([folderKey]);
         // Refresh even on failure or cancel: part of the folder may already be deleted.
         await onRefresh();
       } finally {
         setDeleting(tabId, [folderKey], false);
       }
     },
-    [bucket, profileName, connectionId, onRefresh, setDeleting, tabId]
+    [bucket, profileName, connectionId, onRefresh, setDeleting, tabId, closeDetailIfDeleted]
   );
 
   const onToggleSelect = useCallback(
@@ -222,6 +257,8 @@ function ObjectListView(props: ObjectListViewProps) {
     },
     [tabId, addSelectItem, removeSelectItem]
   );
+
+  const onOpenDetail = useCallback((item: ObjectItemData) => openDetail(tabId, item), [openDetail, tabId]);
 
   const onOpenFolder = useCallback((folder: string) => changePrefix(tabId, folder), [changePrefix, tabId]);
 
@@ -369,6 +406,7 @@ function ObjectListView(props: ObjectListViewProps) {
           <ObjectItem
             tabId={tabId}
             item={objectList[row.index]}
+            onOpenDetail={onOpenDetail}
             onToggleSelect={onToggleSelect}
             onClickMenuButton={onClickMenuButton}
             onClickDeleteFolder={onClickDeleteFolder}

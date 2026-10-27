@@ -64,7 +64,7 @@ function DownloaderWindow() {
     <>
       {!visible ? (
         <Affix ref={sizeRef} style={{ bottom: '16px', right: '16px' }}>
-          <ActionIcon onClick={openWindow} size="xl">
+          <ActionIcon onClick={openWindow} size="xl" aria-label={t('title')}>
             <Download />
           </ActionIcon>
         </Affix>
@@ -75,10 +75,16 @@ function DownloaderWindow() {
             <Group p="xs" justify="space-between">
               <Text>{t('title')}</Text>
               <Group gap="xs">
-                <ActionIcon color="red" size="md" onClick={onClickCancelAll} title={t('action.cancelAll')}>
+                <ActionIcon
+                  color="red"
+                  size="md"
+                  onClick={onClickCancelAll}
+                  title={t('action.cancelAll')}
+                  aria-label={t('action.cancelAll')}
+                >
                   <X />
                 </ActionIcon>
-                <CloseButton onClick={closeWindow} />
+                <CloseButton onClick={closeWindow} aria-label={t('action.close')} />
               </Group>
             </Group>
 

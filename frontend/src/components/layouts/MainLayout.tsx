@@ -20,6 +20,7 @@ function MainLayout() {
           <Group ml="auto">
             <Tooltip label={t('title')}>
               <ActionIcon
+                aria-label={t('title')}
                 color="gray"
                 onClick={() => {
                   HistoryModal.show();

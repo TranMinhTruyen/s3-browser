@@ -6,6 +6,8 @@
     "remainingLbl": "Còn lại"
   },
   "action": {
-    "cancelAll": "Huỷ tất cả"
+    "cancelAll": "Huỷ tất cả",
+    "cancel": "Hủy",
+    "close": "Đóng"
   }
 }

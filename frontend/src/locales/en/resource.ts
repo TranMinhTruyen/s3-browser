@@ -7,6 +7,7 @@ import connectModal from '@/locales/en/components/modals/connectModal.json';
 import historyModal from '@/locales/en/components/modals/historyModal.json';
 import uploadLimitModal from '@/locales/en/components/modals/uploadLimitModal.json';
 import connectionProfiles from '@/locales/en/components/navbar/connectionProfiles.json';
+import objectDetailDrawer from '@/locales/en/components/objectDetailDrawer.json';
 import tabLayout from '@/locales/en/components/tabLayout.json';
 import uploaderWindow from '@/locales/en/components/uploaderWindow.json';
 import ipcMessage from '@/locales/en/messages/ipcMessage.json';
@@ -31,6 +32,7 @@ const englishResource: ResourceLanguage = {
   },
   inputs: inputs,
   downloaderWindow: downloaderWindow,
+  objectDetailDrawer: objectDetailDrawer,
   tabLayout: tabLayout,
   uploaderWindow: uploaderWindow,
 };

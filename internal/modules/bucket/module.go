@@ -104,6 +104,12 @@ var (
 	// Upload at most {max} files at a time.
 	S3E023 = "S3E023"
 
+	// Get object {key} detail error, profile: {name}, bucket: {bucket}.
+	S3E024 = "S3E024"
+
+	// Invalid object key {key}.
+	S3E025 = "S3E025"
+
 	// Access bucket is limited.
 	S3W001 = "S3W001"
 
@@ -226,6 +232,15 @@ func (m *Module) GetListObject(
 	input models.ListObjectInput,
 ) models.Output[models.ListObjectOutput] {
 	return m.submoduleObjMng.listObject(ctx, input)
+}
+
+// GetObjectDetail returns the content type, storage class and user metadata of the object
+// input.Key (HeadObject). A folder key or an empty key is rejected. ctx is the call context.
+func (m *Module) GetObjectDetail(
+	ctx context.Context,
+	input models.ObjectDetailInput,
+) models.Output[models.ObjectDetailOutput] {
+	return m.submoduleObjMng.getObjectDetail(ctx, input)
 }
 
 func (m *Module) DownloadObject(input models.DownloadObjInput) models.Output[any] {
