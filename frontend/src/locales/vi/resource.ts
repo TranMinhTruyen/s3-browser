@@ -1,11 +1,13 @@
 import { ResourceLanguage } from 'i18next';
 import common from '@/locales/vi/common.json';
+import bucketPicker from '@/locales/vi/components/bucketPicker.json';
 import downloaderWindow from '@/locales/vi/components/downloaderWindow.json';
 import inputs from '@/locales/vi/components/inputs.json';
 import confirmModal from '@/locales/vi/components/modals/confirmModal.json';
 import connectModal from '@/locales/vi/components/modals/connectModal.json';
 import historyModal from '@/locales/vi/components/modals/historyModal.json';
 import uploadLimitModal from '@/locales/vi/components/modals/uploadLimitModal.json';
+import uploadPickerModal from '@/locales/vi/components/modals/uploadPickerModal.json';
 import connectionProfiles from '@/locales/vi/components/navbar/connectionProfiles.json';
 import objectDetailDrawer from '@/locales/vi/components/objectDetailDrawer.json';
 import tabLayout from '@/locales/vi/components/tabLayout.json';
@@ -23,6 +25,8 @@ const vietnameseResource: ResourceLanguage = {
   confirmModal: confirmModal,
   historyModal: historyModal,
   uploadLimitModal: uploadLimitModal,
+  uploadPickerModal: uploadPickerModal,
+  bucketPicker: bucketPicker,
   connectionProfiles: connectionProfiles,
   bucket: {
     page: bucketPage,

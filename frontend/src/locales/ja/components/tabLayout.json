@@ -8,7 +8,8 @@
     "refresh": "{target}を再読み込み",
     "addTab": "タブを追加",
     "search": "検索",
-    "clearSearch": "検索をクリア"
+    "clearSearch": "検索をクリア",
+    "upload": "ファイルをアップロード"
   },
   "search": {
     "placeholderObject": "キーで検索",

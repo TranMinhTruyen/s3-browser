@@ -1,0 +1,18 @@
+{
+  "title": "ファイルをアップロード",
+  "target": "アップロード先: {target}",
+  "selectFiles": "ファイルを選択",
+  "dropHint": "またはファイルやフォルダーをここにドラッグ＆ドロップ",
+  "dropHere": "ここにファイルをドロップ",
+  "bucketLabel": "アップロード先バケット",
+  "bucketRequired": "アップロード先バケットを選択してください",
+  "emptyList": "ファイルが追加されていません",
+  "selectedCount": "{selected}/{max} ファイル",
+  "selectedLarge": "{selected}/{max} 大きなファイル",
+  "autoUnselected": "一部のファイルがアップロード上限を超えているため、選択されていません",
+  "upload": "アップロード",
+  "large": "大",
+  "rootFolder": "(選択したファイル)",
+  "remove": "ファイルを削除",
+  "removeSelected": "選択したファイルを削除"
+}

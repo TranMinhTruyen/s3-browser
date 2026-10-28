@@ -119,6 +119,9 @@ var (
 	// Search keyword must not be empty.
 	S3E028 = "S3E028"
 
+	// Choose files error.
+	S3E029 = "S3E029"
+
 	// Access bucket is limited.
 	S3W001 = "S3W001"
 
@@ -324,6 +327,12 @@ func (m *Module) OpenDownloadDest(fileName, path string) models.Output[any] {
 
 func (m *Module) UploadObject(input models.UploadObjInput) models.Output[any] {
 	return m.submoduleUploaderMng.uploadObject(input)
+}
+
+// PickFiles opens the native dialog to choose files to upload and returns them as groups
+// with the upload limits. If the user cancels, the body has no groups.
+func (m *Module) PickFiles(ctx context.Context) models.Output[models.FilesDroppedOutput] {
+	return m.submoduleUploaderMng.pickFiles(ctx)
 }
 
 // HandleFilesDropped is the window's WindowFilesDropped listener. It forwards the

@@ -14,6 +14,8 @@ const (
 	EventUploadObjectProgress   = "uploader:upload-progress"
 	// Emitted when files are dropped on a tab's object list; payload is FilesDroppedOutput
 	EventFilesDropped = "uploader:files-dropped"
+	// Emitted when files are dropped on the upload picker modal; payload is FilesDroppedOutput
+	EventPickerFilesDropped = "uploader:picker-files-dropped"
 	// Emitted before a file starts uploading; payload is UploadStartedOutput
 	EventUploadObjectStarted = "uploader:upload-started"
 	// Emitted when a file's upload ends; payload is UploadFinishedOutput
@@ -28,6 +30,7 @@ func init() {
 	application.RegisterEvent[models.DownloadHistoryItem](EventLoadDownloadHistory)
 	application.RegisterEvent[models.UploadProgressOutput](EventUploadObjectProgress)
 	application.RegisterEvent[models.FilesDroppedOutput](EventFilesDropped)
+	application.RegisterEvent[models.FilesDroppedOutput](EventPickerFilesDropped)
 	application.RegisterEvent[models.UploadStartedOutput](EventUploadObjectStarted)
 	application.RegisterEvent[models.UploadFinishedOutput](EventUploadObjectFinished)
 }

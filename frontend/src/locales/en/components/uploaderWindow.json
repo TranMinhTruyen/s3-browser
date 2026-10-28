@@ -3,7 +3,8 @@
   "label": {
     "objectLbl": "Object",
     "uploadedLbl": "Uploaded",
-    "remainingLbl": "Remaining"
+    "remainingLbl": "Remaining",
+    "finalizingLbl": "Finalizing…"
   },
   "action": {
     "cancelAll": "Cancel all",

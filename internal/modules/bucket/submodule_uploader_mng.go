@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -47,6 +48,9 @@ type submoduleUploaderMng struct {
 	// nil when no call runs.
 	batchMu     sync.Mutex
 	batchCancel context.CancelFunc
+	// pickPaths opens the native dialog to choose files; empty paths means the user
+	// canceled. A field (not a uploadHost method) so tests can replace it.
+	pickPaths func() ([]string, error)
 }
 
 func newSubmoduleUploaderMng(
@@ -63,6 +67,14 @@ func newSubmoduleUploaderMng(
 				return nil, nil, false
 			}
 			return conn.Client, release, true
+		},
+		pickPaths: func() ([]string, error) {
+			dialog := app.Dialog.OpenFile().CanChooseFiles(true).CanChooseDirectories(false)
+			// The app has one window; attach to it so the dialog is modal (Current may be nil).
+			if window := app.Window.Current(); window != nil {
+				dialog.AttachToWindow(window)
+			}
+			return dialog.PromptForMultipleSelection()
 		},
 	}
 }
@@ -309,6 +321,9 @@ func renameKey(relKey, id string) string {
 	return dir + id + "_" + name
 }
 
+// dropKindPicker is the data-drop-kind of the drop zone inside the upload picker modal.
+const dropKindPicker = "picker"
+
 // dropContext is the part of the Wails window event context used for a drop.
 type dropContext interface {
 	DropTargetDetails() *application.DropTargetDetails
@@ -330,18 +345,28 @@ func (m *submoduleUploaderMng) handleDrop(ctx dropContext) {
 	if target == nil {
 		return
 	}
-	m.dropFiles(target.Attributes["data-tab-id"], ctx.DroppedFiles())
+	attrs := target.Attributes
+	event := EventFilesDropped
+	if attrs["data-drop-kind"] == dropKindPicker {
+		event = EventPickerFilesDropped
+	}
+	m.dropFiles(event, attrs["data-tab-id"], ctx.DroppedFiles())
 }
 
-// dropFiles expands the dropped paths (folders included) into groups of files and sends
-// them to the frontend, with the limits it must apply. An empty tabID (a drop outside a
-// tab) is ignored.
-func (m *submoduleUploaderMng) dropFiles(tabID string, dropped []string) {
+// dropFiles expands the dropped paths and emits the result as event. An empty tabID
+// (a drop outside a tab) is ignored.
+func (m *submoduleUploaderMng) dropFiles(event, tabID string, dropped []string) {
 	if tabID == "" {
 		return
 	}
-	res := expandDropped(dropped)
-	m.host.Emit(EventFilesDropped, models.FilesDroppedOutput{
+	m.host.Emit(event, buildFilesDropped(tabID, dropped))
+}
+
+// buildFilesDropped expands paths (folders included) into groups of files, with the
+// limits the frontend must apply.
+func buildFilesDropped(tabID string, paths []string) models.FilesDroppedOutput {
+	res := expandDropped(paths)
+	return models.FilesDroppedOutput{
 		TabId:             tabID,
 		Groups:            res.groups,
 		Skipped:           res.skipped,
@@ -352,7 +377,36 @@ func (m *submoduleUploaderMng) dropFiles(tabID string, dropped []string) {
 		LargeFileSize:     largeFileSize,
 		LargeFileMaxCount: largeFileMaxCount,
 		MaxTotalFiles:     maxTotalFiles,
+	}
+}
+
+// pickFiles opens the native file dialog (multiple files) and returns the chosen files
+// as groups with their limits, sorted by file name. If the user cancels, Body is empty
+// (no groups) and Result stays true. The dialog blocks until closed, so it has no timeout.
+func (m *submoduleUploaderMng) pickFiles(ctx context.Context) models.Output[models.FilesDroppedOutput] {
+	output := models.NewOutput[models.FilesDroppedOutput]()
+	if ctx.Err() != nil {
+		output.Result = false
+		return output
+	}
+	paths, err := m.pickPaths()
+	if err != nil {
+		m.logger.Error("pick files error", slog.Any("detail", err.Error()))
+		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E029, err.Error()))
+	}
+	if len(paths) == 0 {
+		return output
+	}
+	// The dialog doesn't guarantee an order, so sort for a stable list.
+	slices.SortFunc(paths, func(a, b string) int {
+		byName := strings.Compare(strings.ToLower(filepath.Base(a)), strings.ToLower(filepath.Base(b)))
+		if byName != 0 {
+			return byName
+		}
+		return strings.Compare(a, b)
 	})
+	output.Body = buildFilesDropped("", paths)
+	return output
 }
 
 // uploadOne uploads a single file. It registers a cancelable job and emits progress

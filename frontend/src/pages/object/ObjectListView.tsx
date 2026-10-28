@@ -6,7 +6,6 @@ import {
   DownloadObject,
   GetListObject,
   SearchObject,
-  UploadObject,
 } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { FilesDroppedOutput, ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
@@ -18,6 +17,7 @@ import { toast } from 'sonner';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { formatStringJson } from '@/common/utils/stringUtils';
+import { ensureUploadIdle, runUpload } from '@/common/utils/uploadUtils';
 import Button from '@/components/buttons/Button';
 import ConfirmModal from '@/components/modals/ConfirmModal';
 import UploadLimitModal from '@/components/modals/UploadLimitModal';
@@ -80,7 +80,6 @@ function ObjectListView(props: ObjectListViewProps) {
   const openDetail = useTabListStore(s => s.openDetail);
   const closeDetail = useTabListStore(s => s.closeDetail);
   const setDeleting = useTabListStore(s => s.setDeleting);
-  const setUploadingTab = useTabListStore(s => s.setUploadingTab);
 
   const startRequest = useCallback(() => {
     requestCtrl.current?.abort();
@@ -333,12 +332,7 @@ function ObjectListView(props: ObjectListViewProps) {
       let files = groups.flatMap(group => group.files);
       if (files.length === 0) return;
 
-      const isBusy = () => useTabListStore.getState().uploadingTabId !== null;
-      const warnBusy = () => toast.warning(i18n.t('ipcMessage:bucket.S3W005'));
-      if (isBusy()) {
-        warnBusy();
-        return;
-      }
+      if (!ensureUploadIdle()) return;
 
       // A group over a limit needs the user to choose which files to upload.
       if (groups.some(group => group.overMaxFiles || group.overLargeCount)) {
@@ -351,29 +345,16 @@ function ObjectListView(props: ObjectListViewProps) {
         });
         if (!chosen || chosen.length === 0) return;
         files = chosen;
-        // Another tab may have started an upload while the modal was open.
-        if (isBusy()) {
-          warnBusy();
-          return;
-        }
       } else if (capped) {
         toast.warning(i18n.t('uploadLimitModal:cappedWarning'));
       }
 
-      setUploadingTab(tabId);
-      try {
-        // The backend sends one success / canceled / error message per file, shown by callIPC.
-        await callIPC(UploadObject, [
-          { connectionId, profileName, bucket, prefix, objList: files.map(({ path, relKey }) => ({ path, relKey })) },
-        ]);
-        if (isMountedRef.current) {
-          await onRefreshRef.current();
-        }
-      } finally {
-        setUploadingTab(null);
-      }
+      // runUpload checks again: another tab may have started an upload while the modal was open.
+      await runUpload({ tabId, connectionId, profileName, bucket, prefix, files }, async () => {
+        if (isMountedRef.current) await onRefreshRef.current();
+      });
     },
-    [bucket, connectionId, prefix, profileName, setUploadingTab, tabId]
+    [bucket, connectionId, prefix, profileName, tabId]
   );
 
   useEffect(() => {

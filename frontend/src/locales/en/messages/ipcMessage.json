@@ -38,6 +38,7 @@
     "S3E026": "Search object error, profile: {name}, bucket: {bucket}.",
     "S3E027": "Search bucket error, profile: {name}.",
     "S3E028": "Search keyword must not be empty.",
+    "S3E029": "Choose files error.",
     "S3W001": "Access bucket is limited.",
     "S3W002": "Download object: {object} is canceled.",
     "S3W003": "Update download history failed: {object} please reload!",

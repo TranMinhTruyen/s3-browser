@@ -21,6 +21,8 @@ File này được Claude Code tự động load cho session chính và mọi su
 6. Gặp điểm chưa rõ giữa chừng thì **dừng task đó** và báo về, không tự đoán.
 7. Nếu thay đổi làm lệch quy ước trong file này, báo cho người dùng để cập nhật `CLAUDE.md` (agent không tự sửa file này).
 8. Luôn viết unit test cho frontend, yêu cầu coverage C1 ≥ 95% cho mỗi file đã đổi (xem mục **Testing**). Test do `react-tester` viết. Backend Go hiện **không** viết unit test.
+9. Luôn cố gắng tối ưu hiệu năng để tăng trải nghiệm người dùng.
+10. Code đơn giản, súc tích, dễ hiểu đừng quá dài dòng có comment cho code rõ ràng để dễ maintain sau này.
 
 ## 3. Quy trình xử lý một task (B1–B5)
 

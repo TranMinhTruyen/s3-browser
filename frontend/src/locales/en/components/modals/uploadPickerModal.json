@@ -1,0 +1,18 @@
+{
+  "title": "Upload files",
+  "target": "Upload to: {target}",
+  "selectFiles": "Select files",
+  "dropHint": "or drag and drop files and folders here",
+  "dropHere": "Drop files here",
+  "bucketLabel": "Target bucket",
+  "bucketRequired": "Choose a target bucket",
+  "emptyList": "No files added yet",
+  "selectedCount": "{selected}/{max} files",
+  "selectedLarge": "{selected}/{max} large files",
+  "autoUnselected": "Some files exceed the upload limits and were left unticked",
+  "upload": "Upload",
+  "large": "Large",
+  "rootFolder": "(selected files)",
+  "remove": "Remove file",
+  "removeSelected": "Remove selected"
+}
