@@ -8,6 +8,8 @@ import (
 	"github.com/minio/madmin-go/v4"
 )
 
+// S3Conn bundles the clients of one connected profile. Transport is kept so the idle
+// HTTP connections can be closed when the connection is dropped.
 type S3Conn struct {
 	ProfileName string
 	Provider    string
@@ -18,13 +20,6 @@ type S3Conn struct {
 	MinioAdmin *madmin.AdminClient
 
 	Transport *http.Transport
-}
-
-// PutConnContainer registers a connection under the given id, replacing any previous one.
-func (m *Module) PutConnContainer(id string, conn *S3Conn) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	m.connContainer[id] = conn
 }
 
 // GetConnContainer returns the connection registered under the given id.
@@ -43,8 +38,9 @@ func (m *Module) HasConn(id string) bool {
 	return ok
 }
 
-// RemoveConn unregisters the connection under the given id and returns it so the
-// caller can close it outside of the lock.
+// RemoveConn unregisters the connection under the given id and returns it. Remove* functions
+// never close it themselves: closing does network I/O, so the caller does it after the
+// lock is released.
 func (m *Module) RemoveConn(id string) (*S3Conn, bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -81,6 +77,7 @@ func (m *Module) AcquireConn(id string) (conn *S3Conn, release func(), ok bool) 
 	return conn, func() { once.Do(func() { m.releaseTransfer(id) }) }, true
 }
 
+// releaseTransfer drops one running transfer from the counter of the given connection id.
 func (m *Module) releaseTransfer(id string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

@@ -1,25 +1,24 @@
 import { TFunction } from 'i18next';
-import { isEmpty, isNil } from 'lodash';
 import { v7 } from 'uuid';
 import i18n from '@/locales/i18n';
 
 /**
- * Check string is null or empty.
- * If string is null or empty return true.
+ * Checks whether a string is null, undefined or empty (whitespace is not empty).
  *
- * @param value
- * @returns
+ * @param value - string to check.
+ * @returns true when there is no text.
  */
-export function isNullOrEmpty(value?: string | null) {
-  return isNil(value) || isEmpty(value);
+export function isNullOrEmpty(value?: string | null): value is null | undefined | '' {
+  return value == null || value === '';
 }
 
 /**
- * Format string with params.
+ * Replaces positional placeholders `{0}`, `{1}`, ... with the arguments.
+ * A placeholder without a matching (non-null) argument is left as is.
  *
- * @param template
- * @param params
- * @returns
+ * @param template - text containing `{n}` placeholders.
+ * @param args - values for `{0}`, `{1}`, ...
+ * @returns the formatted text.
  */
 export function formatString(template: string, ...args: (string | number | bigint | null | undefined)[]): string {
   return template.replace(/{(\d+)}/g, (match, index) => {
@@ -29,11 +28,12 @@ export function formatString(template: string, ...args: (string | number | bigin
 }
 
 /**
- * Format string with Json data.
+ * Replaces named placeholders `{key}` / `{a.b}` with values from `params`.
+ * A placeholder whose value is missing is left as is.
  *
- * @param template
- * @param params
- * @returns
+ * @param template - text containing `{key}` placeholders.
+ * @param params - values by key; nested values are read with dot paths.
+ * @returns the formatted text, or '' when the template is empty.
  */
 export function formatStringJson(
   template?: string,
@@ -56,6 +56,15 @@ export function formatStringJson(
   });
 }
 
+/**
+ * Turns a validation code (`V000002:255`) into a translated message.
+ * The label is `{0}`; the comma separated values after `:` are `{1}`, `{2}`, ...
+ *
+ * @param rawError - validation code with optional params.
+ * @param label - field label used as `{0}`.
+ * @param t - translate function (defaults to the global i18n).
+ * @returns the translated message, or the raw error when the translation is not a string.
+ */
 export function formatFieldError(rawError: string, label: React.ReactNode, t: TFunction = i18n.t): string {
   const [code, paramsStr] = rawError.split(':');
   const template = t(`${code}`, { defaultValue: code });
@@ -66,20 +75,18 @@ export function formatFieldError(rawError: string, label: React.ReactNode, t: TF
 }
 
 /**
- * Generates a UUID string (version 7), optionally prefixed.
- * Uses array filtering to cleanly handle the optional prefix.
+ * Generates a time-ordered UUID (v7), optionally prefixed.
  *
- * @param prefix - Optional string to prepend to the UUID.
- * @returns A string in the format "prefix-UUID" or just "UUID".
+ * @param prefix - optional text put before the UUID.
+ * @returns "prefix-UUID" or just "UUID".
  */
-export const createUUID = (prefix?: string) => {
-  return [prefix, v7()].filter(Boolean).join('-');
-};
+export const createUUID = (prefix?: string) => [prefix, v7()].filter(Boolean).join('-');
 
 /**
+ * Formats a byte count as bytes / KB / MB / GB (2 decimals above bytes).
  *
- * @param sizeInBytes
- * @returns
+ * @param sizeInBytes - size in bytes.
+ * @returns the readable size.
  */
 export const formatFileSize = (sizeInBytes: number): string => {
   if (sizeInBytes < 1024) return `${sizeInBytes} bytes`;

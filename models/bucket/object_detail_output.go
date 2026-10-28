@@ -1,5 +1,6 @@
 package bucket
 
+// ObjectDetailOutput is the head information of one object.
 type ObjectDetailOutput struct {
 	Key         string `json:"key"`
 	ContentType string `json:"contentType"`

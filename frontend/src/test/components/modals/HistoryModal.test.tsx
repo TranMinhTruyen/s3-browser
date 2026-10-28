@@ -12,10 +12,28 @@ import { renderWithProviders } from '@/test/renderWithProviders';
 
 // jsdom has no layout, so the real virtualizer would render no row: render every row instead.
 // `endIndex` is the last row the user "sees"; null means the end of the list.
-const virtual = vi.hoisted(() => ({ endIndex: null as number | null }));
+const virtual = vi.hoisted(() => ({
+  endIndex: null as number | null,
+  estimates: [] as number[],
+  scrollEls: [] as unknown[],
+}));
 vi.mock('@tanstack/react-virtual', () => ({
-  useVirtualizer: ({ count, getItemKey }: { count: number; getItemKey: (i: number) => string }) => ({
-    getVirtualItems: () => Array.from({ length: count }, (_, index) => ({ key: getItemKey(index), index, start: 0 })),
+  useVirtualizer: ({
+    count,
+    getItemKey,
+    estimateSize,
+    getScrollElement,
+  }: {
+    count: number;
+    getItemKey: (i: number) => string;
+    estimateSize: () => number;
+    getScrollElement: () => unknown;
+  }) => ({
+    getVirtualItems: () => {
+      virtual.estimates.push(estimateSize());
+      virtual.scrollEls.push(getScrollElement());
+      return Array.from({ length: count }, (_, index) => ({ key: getItemKey(index), index, start: 0 }));
+    },
     getTotalSize: () => count * 100,
     measureElement: () => {},
     range: count === 0 ? null : { startIndex: 0, endIndex: virtual.endIndex ?? count - 1 },
@@ -56,6 +74,8 @@ describe('HistoryModal', () => {
   beforeEach(() => {
     useModalStackStore.getState().reset();
     virtual.endIndex = null;
+    virtual.estimates = [];
+    virtual.scrollEls = [];
   });
 
   it('requests the first page and renders every column of the items', async () => {
@@ -227,5 +247,14 @@ describe('HistoryModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     await expect(result).resolves.toBe(false);
+  });
+
+  it('gives the virtualizer the row estimate and the modal scroll container', async () => {
+    callIPCMock.mockResolvedValueOnce(pageOf([item('a')]));
+    open();
+    await flush();
+
+    expect(virtual.estimates).toContain(100);
+    expect(virtual.scrollEls.at(-1)).toBeInstanceOf(HTMLElement);
   });
 });

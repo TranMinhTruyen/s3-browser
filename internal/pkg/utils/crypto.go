@@ -21,8 +21,11 @@ const (
 	keyringUser    = "db-encryption-key"
 )
 
+// ErrInvalidCiphertext is returned by Decrypt for any malformed or tampered input.
 var ErrInvalidCiphertext = errors.New("ciphertext invalid")
 
+// KeyManager encrypts and decrypts secrets with AES-256-GCM.
+// The key lives in the OS keyring, or in <data dir>/key in portable mode where there is no keyring on the host.
 type KeyManager struct {
 	key []byte
 }
@@ -70,6 +73,7 @@ func readKey(appName string) (string, error) {
 	return strings.TrimSpace(string(data)), err
 }
 
+// writeKey stores the base64 key in the keyring, or in the key file (mode 0600) in portable mode.
 func writeKey(appName, keyB64 string) error {
 	if !portable.Enabled {
 		return keyring.Set(keyringService, keyringUser, keyB64)
@@ -82,6 +86,7 @@ func writeKey(appName, keyB64 string) error {
 	return os.WriteFile(path, []byte(keyB64), 0o600)
 }
 
+// keyFilePath is only used in portable mode.
 func keyFilePath(appName string) (string, error) {
 	dir, err := portable.DataDir(appName)
 	if err != nil {
@@ -90,6 +95,7 @@ func keyFilePath(appName string) (string, error) {
 	return filepath.Join(dir, "key"), nil
 }
 
+// Encrypt returns base64(nonce || ciphertext) with a fresh random nonce, so equal inputs give different outputs.
 func (km *KeyManager) Encrypt(plaintext string) (string, error) {
 	block, err := aes.NewCipher(km.key)
 	if err != nil {
@@ -109,6 +115,8 @@ func (km *KeyManager) Encrypt(plaintext string) (string, error) {
 	return base64.StdEncoding.EncodeToString(sealed), nil
 }
 
+// Decrypt reverses Encrypt. Every failure maps to ErrInvalidCiphertext so callers cannot tell apart bad base64,
+// short input and failed authentication.
 func (km *KeyManager) Decrypt(encoded string) (string, error) {
 	data, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {

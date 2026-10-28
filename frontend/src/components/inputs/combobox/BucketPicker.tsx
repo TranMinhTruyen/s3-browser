@@ -24,6 +24,10 @@ type BucketPickerProps = {
   onChange: (bucketName: string | null) => void;
 };
 
+/**
+ * Dropdown that lists the buckets of a connection with server-side search (debounced) and "load more" paging.
+ * Data is fetched when the dropdown opens and in-flight requests are aborted on close or keyword change.
+ */
 function BucketPicker(props: BucketPickerProps) {
   const { connectionId, profileName, value, label, disabled, error, onChange } = props;
 

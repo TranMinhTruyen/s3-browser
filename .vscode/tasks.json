@@ -23,6 +23,9 @@
       "options": {
         "cwd": "${workspaceFolder}/frontend"
       },
+      "dependsOn": [
+        "vite: clear cache"
+      ],
       "isBackground": true,
       "presentation": {
         "reveal": "always",
@@ -102,6 +105,33 @@
           ]
         }
       },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "group": "wails-dev",
+        "close": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "vite: clear cache",
+      "detail": "Deletes the Vite dep cache (node_modules/.vite) before every debug start, so a stale pre-bundle or HMR module never survives a dependency change. Stops the old dev server first because it keeps using the cache.",
+      "type": "shell",
+      "command": "Remove-Item 'frontend/node_modules/.vite' -Recurse -Force -ErrorAction SilentlyContinue; if (Test-Path 'frontend/node_modules/.vite') { Write-Host 'vite cache still locked' } else { Write-Host 'vite cache cleared' }; exit 0",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "shell": {
+          "executable": "powershell.exe",
+          "args": [
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command"
+          ]
+        }
+      },
+      "dependsOn": [
+        "vite: stop dev server"
+      ],
       "presentation": {
         "reveal": "silent",
         "panel": "dedicated",

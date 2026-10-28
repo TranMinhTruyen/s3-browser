@@ -1,6 +1,8 @@
 //go:build portable
 
-// Package portable decides where the app keeps its data: next to the exe (portable build) or in the user config dir.
+// Package portable decides where the app keeps its data: next to the exe (portable build, tag "portable") or in
+// the user config dir. Two files with opposite build tags provide the same API, so callers never branch on the tag
+// except through Enabled.
 package portable
 
 import (

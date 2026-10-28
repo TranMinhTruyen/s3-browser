@@ -1,8 +1,5 @@
 {
   "title": "Hồ sơ kết nối",
-  "label": {
-    "saveProfileLabel": "Lưu hồ sơ"
-  },
   "form": {
     "label": {
       "name": "Tên hồ sơ",

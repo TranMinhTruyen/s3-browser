@@ -1,6 +1,7 @@
+// Package cnst holds the constants shared across the backend.
 package cnst
 
-// Module name.
+// Module names, used as Message.ModuleName.
 var (
 	Master  = "master"
 	Profile = "profile"
@@ -8,14 +9,16 @@ var (
 )
 
 var (
-	DateTimeFormatPattern     = "2006-01-02 15:04:05"
+	// FullDateTimeFormatPattern is the layout of Message.Order.
 	FullDateTimeFormatPattern = "2006-01-02T15:04:05.000"
-	DateFormatPattern         = "2006-01-02"
 
-	// Message type codes. These must match the names of Java's MessageTypeEnum
-	// (S/E/W/I) - the RPC caller deserializes messageType into that enum.
+	// MessageTypeSuccess is the success type code. Message type codes must match the names of
+	// Java's MessageTypeEnum (S/E/W/I) - the RPC caller deserializes messageType into that enum.
 	MessageTypeSuccess = "S"
-	MessageTypeError   = "E"
-	MessageTypeWarn    = "W"
-	MessageTypeInfo    = "I"
+	// MessageTypeError is the error type code.
+	MessageTypeError = "E"
+	// MessageTypeWarn is the warning type code.
+	MessageTypeWarn = "W"
+	// MessageTypeInfo is the info type code.
+	MessageTypeInfo = "I"
 )

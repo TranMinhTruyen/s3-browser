@@ -1,5 +1,6 @@
 package bucket
 
+// UploadObj is one local file to upload.
 type UploadObj struct {
 	// Path is the local file to upload.
 	Path string `json:"path"`
@@ -10,6 +11,7 @@ type UploadObj struct {
 	Key string `json:"key,omitempty"`
 }
 
+// UploadObjInput asks to upload local files into a bucket.
 type UploadObjInput struct {
 	ConnectionId string `json:"connectionId"`
 	ProfileName  string `json:"profileName,omitempty"`

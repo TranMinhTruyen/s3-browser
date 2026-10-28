@@ -1,3 +1,4 @@
+// Package logger sets up the JSON slog logger that writes to a rotating file and stdout.
 package logger
 
 import (
@@ -11,7 +12,8 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-func LogDir(appName string) (string, error) {
+// logDir returns <base>/logs and creates it when missing.
+func logDir(appName string) (string, error) {
 	base, err := logBase(appName)
 	if err != nil {
 		return "", err
@@ -39,16 +41,20 @@ func logBase(appName string) (string, error) {
 	return filepath.Join(home, "Library", "Logs", appName), nil
 }
 
+// Config is the input of Setup.
 type Config struct {
 	AppName string
 }
 
+// Setup builds the default slog logger (debug level, with source) and installs it with slog.SetDefault.
+// The returned Closer flushes and closes the log file; call it on exit.
 func Setup(cfg Config) (*slog.Logger, io.Closer, error) {
-	dir, err := LogDir(cfg.AppName)
+	dir, err := logDir(cfg.AppName)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	// Rotate at 5 MB, keep 3 compressed backups for 14 days.
 	rotator := &lumberjack.Logger{
 		Filename:   filepath.Join(dir, "app.log"),
 		MaxSize:    5,
@@ -57,30 +63,12 @@ func Setup(cfg Config) (*slog.Logger, io.Closer, error) {
 		Compress:   true,
 	}
 
-	level := slog.LevelDebug
 	handler := slog.NewJSONHandler(io.MultiWriter(rotator, os.Stdout), &slog.HandlerOptions{
-		Level:     level,
+		Level:     slog.LevelDebug,
 		AddSource: true,
 	})
 
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
 	return logger, rotator, nil
-}
-
-type WailsAdapter struct{ l *slog.Logger }
-
-func NewWailsAdapter(l *slog.Logger) *WailsAdapter {
-	return &WailsAdapter{l: l.With("source", "wails")}
-}
-
-func (a *WailsAdapter) Print(message string)   { a.l.Info(message) }
-func (a *WailsAdapter) Trace(message string)   { a.l.Debug(message) }
-func (a *WailsAdapter) Debug(message string)   { a.l.Debug(message) }
-func (a *WailsAdapter) Info(message string)    { a.l.Info(message) }
-func (a *WailsAdapter) Warning(message string) { a.l.Warn(message) }
-func (a *WailsAdapter) Error(message string)   { a.l.Error(message) }
-func (a *WailsAdapter) Fatal(message string) {
-	a.l.Error(message)
-	os.Exit(1)
 }

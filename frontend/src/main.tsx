@@ -6,6 +6,9 @@ import App from './App';
 import './style.css';
 import '@mantine/core/styles.css';
 import NiceModal from '@ebay/nice-modal-react';
+import { installDropTargetCleanup } from '@/common/utils/dropTargetUtils';
+
+installDropTargetCleanup();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

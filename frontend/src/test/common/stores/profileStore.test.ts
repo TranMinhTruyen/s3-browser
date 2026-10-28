@@ -18,25 +18,25 @@ describe('profileStore', () => {
   it('loadConnectionProfiles stores the output', async () => {
     callIPCMock.mockResolvedValueOnce({ connectionProfiles: { p1: profile } });
     await state().loadConnectionProfiles();
-    expect(state().getAllConnectionProfiles()).toEqual({ p1: profile });
+    expect(state().connectionProfiles).toEqual({ p1: profile });
   });
 
   it('loadConnectionProfiles falls back to an empty map', async () => {
-    state().setConnectionProfiles({ p1: profile });
+    useProfileStore.setState({ connectionProfiles: { p1: profile } });
     callIPCMock.mockResolvedValueOnce({});
     await state().loadConnectionProfiles();
     expect(state().connectionProfiles).toEqual({});
   });
 
   it('loadConnectionProfiles keeps the state when the call fails', async () => {
-    state().setConnectionProfiles({ p1: profile });
+    useProfileStore.setState({ connectionProfiles: { p1: profile } });
     callIPCMock.mockResolvedValueOnce(null);
     await state().loadConnectionProfiles();
     expect(state().connectionProfiles).toEqual({ p1: profile });
   });
 
   it('getConnectionProfileById', () => {
-    state().setConnectionProfiles({ p1: profile });
+    useProfileStore.setState({ connectionProfiles: { p1: profile } });
     expect(state().getConnectionProfileById('p1')).toEqual(profile);
     expect(state().getConnectionProfileById('nope')).toBeUndefined();
     expect(state().getConnectionProfileById(null)).toBeNull();

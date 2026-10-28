@@ -9,7 +9,7 @@ import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import TabDetail from '@/components/layouts/tab/components/TabDetail';
-import ConnectModal from '@/components/modals/ConnectModal';
+import { showConnectModal } from '@/components/modals/lazyModals';
 import UploadPickerModal from '@/components/modals/UploadPickerModal';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
@@ -58,7 +58,7 @@ vi.mock('@/components/layouts/tab/components/ObjectDetailDrawer', () => ({
     <div>{`drawer ${connectionId} ${bucket}`}</div>
   ),
 }));
-vi.mock('@/components/modals/ConnectModal', () => ({ default: { show: vi.fn() } }));
+vi.mock('@/components/modals/lazyModals', () => ({ showConnectModal: vi.fn() }));
 vi.mock('@/components/modals/UploadPickerModal', () => ({ default: { show: vi.fn() } }));
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn() }));
@@ -147,7 +147,7 @@ describe('TabDetail', () => {
       setProfile({ accessKey: '' });
       const user = setup();
       await user.click(btn('Connect'));
-      expect(ConnectModal.show).toHaveBeenCalledExactlyOnceWith({
+      expect(showConnectModal).toHaveBeenCalledExactlyOnceWith({
         mode: 'manualconnect',
         connectionProfile: profile({ accessKey: '' }),
       });
@@ -176,7 +176,7 @@ describe('TabDetail', () => {
       const user = setup();
       await user.click(btn('Connect'));
       expect(callIPC).not.toHaveBeenCalled();
-      expect(ConnectModal.show).not.toHaveBeenCalled();
+      expect(showConnectModal).not.toHaveBeenCalled();
     });
   });
 

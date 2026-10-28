@@ -1,3 +1,4 @@
+// Package common holds the models shared by every module: the Output envelope and Message.
 package common
 
 import (
@@ -5,6 +6,7 @@ import (
 	"time"
 )
 
+// Message is one user-facing message; the frontend resolves MessageCode to a localized text.
 type Message struct {
 	Order       string         `json:"order,omitempty"`
 	ModuleName  string         `json:"moduleName,omitempty"`
@@ -14,6 +16,7 @@ type Message struct {
 	ErrorDetail string         `json:"errorDetail,omitempty"`
 }
 
+// NewMessage builds a message stamped with the current time (Order).
 func NewMessage(messageType string, moduleName string, code string, errorDetail string) Message {
 	return Message{
 		Order:       time.Now().Format(cnst.FullDateTimeFormatPattern),
@@ -24,6 +27,7 @@ func NewMessage(messageType string, moduleName string, code string, errorDetail 
 	}
 }
 
+// NewParamsMessage is NewMessage with params for the localized text.
 func NewParamsMessage(
 	messageType string,
 	moduleName string,

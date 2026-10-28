@@ -1,0 +1,147 @@
+import { GetListObject, SearchObject } from '@wails/S3Browser/internal/handlers/buckethandler';
+import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
+import { RefObject, useCallback, useEffect, useRef, useState } from 'react';
+import { callIPC } from '@/common/utils/ipcUtils';
+
+// Objects fetched per page.
+export const OBJECT_PAGE_SIZE = 20;
+
+type UseObjectPagingParams = {
+  connectionId?: string;
+  profileName?: string;
+  bucket?: string;
+  prefix: string;
+  // Applied search keyword; empty means the normal folder listing.
+  keyword: string;
+  // Identifies the list (connection, bucket, prefix, keyword) the cursor belongs to.
+  listKey: string;
+  scrollRef: RefObject<HTMLElement | null>;
+};
+
+/**
+ * Cursor-based paging of an object list (folder listing or search) with request cancellation.
+ * Loads the first page whenever the list source changes and aborts the running request on unmount.
+ */
+export function useObjectPaging(params: UseObjectPagingParams) {
+  const { connectionId, profileName, bucket, prefix, keyword, listKey, scrollRef } = params;
+
+  const [objectDatas, setObjectDatas] = useState<ObjectItemData[]>([]);
+  const [nextCursor, setNextCursor] = useState('');
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadMoreError, setLoadMoreError] = useState(false);
+  // The list the cursor belongs to. Right after the source changes, nextCursor still holds the old list's
+  // cursor until the new first page lands, and sending it to the new source would break the request.
+  const [cursorKey, setCursorKey] = useState('');
+  const [isLoadingFirst, setIsLoadingFirst] = useState(false);
+  // True once the first page of the current list has loaded, so an empty search result can be told from loading.
+  const [isLoaded, setIsLoaded] = useState(false);
+  const requestCtrl = useRef<AbortController>(null);
+
+  const startRequest = useCallback(() => {
+    requestCtrl.current?.abort();
+    const ctrl = new AbortController();
+    requestCtrl.current = ctrl;
+    return ctrl;
+  }, []);
+
+  // Lists the folder, or searches it when a keyword is applied. Both return the same shape.
+  const handleGetListObject = useCallback(
+    (cursor: string, signal?: AbortSignal) => {
+      if (!connectionId || !bucket) return Promise.resolve(undefined);
+      if (keyword) {
+        return callIPC(SearchObject, [{ connectionId, profileName, bucket, prefix, keyword, nextCursor: cursor }], {
+          signal,
+        });
+      }
+      return callIPC(
+        GetListObject,
+        [{ connectionId, profileName, bucket, prefix, nextCursor: cursor, limit: OBJECT_PAGE_SIZE }],
+        { signal }
+      );
+    },
+    [bucket, prefix, profileName, connectionId, keyword]
+  );
+
+  const loadFirstPage = useCallback(async () => {
+    const ctrl = startRequest();
+    setNextCursor('');
+    setIsLoadingMore(false);
+    setLoadMoreError(false);
+    setIsLoaded(false);
+    setIsLoadingFirst(true);
+    // Aborting cancels the request on the Go side too, not only the state update.
+    const output = await handleGetListObject('', ctrl.signal);
+    if (ctrl.signal.aborted) return;
+    if (output) {
+      setObjectDatas(output.objectList);
+      setNextCursor(output.nextCursor ?? '');
+      setCursorKey(listKey);
+      setIsLoaded(true);
+    }
+    setIsLoadingFirst(false);
+  }, [handleGetListObject, startRequest, listKey]);
+
+  const loadNextPage = useCallback(async () => {
+    if (!nextCursor) return;
+    const ctrl = startRequest();
+    setIsLoadingMore(true);
+    const output = await handleGetListObject(nextCursor, ctrl.signal);
+    if (ctrl.signal.aborted) return;
+    if (output) {
+      // A search cursor can overlap the previous page, so drop keys already shown.
+      setObjectDatas(prev => {
+        const seen = new Set(prev.map(item => item.key));
+        const added = output.objectList.filter(item => !seen.has(item.key));
+        // Nothing new: keep the same array so the list does not re-render.
+        return added.length > 0 ? [...prev, ...added] : prev;
+      });
+      // A cursor equal to the one just sent would make auto-load repeat forever: treat it as the end.
+      setNextCursor(output.nextCursor === nextCursor ? '' : (output.nextCursor ?? ''));
+    } else {
+      setLoadMoreError(true);
+    }
+    setIsLoadingMore(false);
+  }, [nextCursor, handleGetListObject, startRequest]);
+
+  // Also runs when the prefix or keyword changes, because loadFirstPage depends on them.
+  useEffect(() => {
+    if (!connectionId || !bucket) return;
+    // oxlint-disable-next-line react/set-state-in-effect -- reset the list before the new source loads
+    setObjectDatas([]);
+    scrollRef.current?.scrollTo({ top: 0 });
+    loadFirstPage();
+  }, [connectionId, bucket, loadFirstPage, scrollRef]);
+
+  // Cancel any running request when the view unmounts.
+  useEffect(
+    () => () => {
+      requestCtrl.current?.abort();
+    },
+    []
+  );
+
+  const onRefresh = useCallback(async () => {
+    setObjectDatas([]);
+    await loadFirstPage();
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [scrollRef, loadFirstPage]);
+
+  // Retry after a failed page, or continue a search that found nothing yet.
+  const onClickLoadMore = useCallback(() => {
+    setLoadMoreError(false);
+    return loadNextPage();
+  }, [loadNextPage]);
+
+  return {
+    objectDatas,
+    nextCursor,
+    cursorKey,
+    isLoadingFirst,
+    isLoadingMore,
+    isLoaded,
+    loadMoreError,
+    loadNextPage,
+    onRefresh,
+    onClickLoadMore,
+  };
+}

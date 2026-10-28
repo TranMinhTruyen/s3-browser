@@ -4,7 +4,6 @@
   "selectFiles": "Select files",
   "dropHint": "or drag and drop files and folders here",
   "dropHere": "Drop files here",
-  "bucketLabel": "Target bucket",
   "bucketRequired": "Choose a target bucket",
   "emptyList": "No files added yet",
   "selectedCount": "{selected}/{max} files",

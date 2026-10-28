@@ -3,6 +3,7 @@ import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { createAppStore } from '@/common/stores/createStore';
 import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
 
+/** Saved connection profile, as returned by the backend. */
 export type ConnectionProfile = ConnectionProfileOutput & {};
 
 interface ProfileState {
@@ -10,9 +11,7 @@ interface ProfileState {
 }
 
 interface ProfileAction {
-  setConnectionProfiles: (datas: Partial<Record<string, ConnectionProfile>>) => void;
   loadConnectionProfiles: () => Promise<void>;
-  getAllConnectionProfiles: () => Partial<Record<string, ConnectionProfile>>;
   getConnectionProfileById: (key?: string | null) => ConnectionProfile | null | undefined;
   updateConnectionProfiles: (key: string, data: ConnectionProfile) => void;
   deleteConnectionProfiles: (key: string) => void;
@@ -21,13 +20,10 @@ interface ProfileAction {
 
 const SCOPE = 'profile';
 
+/** Saved connection profiles by id. */
 export const useProfileStore = createAppStore<ProfileState & ProfileAction>(
   (set, get) => ({
     connectionProfiles: {},
-
-    setConnectionProfiles: datas => {
-      set({ connectionProfiles: datas }, undefined, `${SCOPE}/setConnectionProfiles`);
-    },
 
     loadConnectionProfiles: async () => {
       const output = await callIPC(GetAllConnectionProfile, [], { scope: `${SCOPE}/loadConnectionProfiles` });
@@ -35,11 +31,7 @@ export const useProfileStore = createAppStore<ProfileState & ProfileAction>(
         return;
       }
 
-      get().setConnectionProfiles(output.connectionProfiles ?? {});
-    },
-
-    getAllConnectionProfiles: () => {
-      return get().connectionProfiles;
+      set({ connectionProfiles: output.connectionProfiles ?? {} }, undefined, `${SCOPE}/setConnectionProfiles`);
     },
 
     getConnectionProfileById: (key?: string | null) => {

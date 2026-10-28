@@ -14,6 +14,14 @@ declare global {
   }
 }
 
+/**
+ * Creates a zustand store with devtools (dev only) and immer.
+ * In dev the store is also exposed on `window.__stores[name]`.
+ *
+ * @param storeCreator - state and actions; actions call `set(update, undefined, 'scope/action')`.
+ * @param name - unique store name used by devtools and `window.__stores`.
+ * @returns the bound store hook.
+ */
 export function createAppStore<T>(
   storeCreator: StateCreator<T, [['zustand/devtools', never], ['zustand/immer', never]], [], T>,
   name: string

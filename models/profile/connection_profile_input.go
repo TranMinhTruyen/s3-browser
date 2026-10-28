@@ -1,5 +1,8 @@
+// Package profile holds the input/output models of the connection profile module.
 package profile
 
+// ConnectionProfileInput is the form data to create or update a connection profile.
+// Version is used for optimistic locking on update.
 type ConnectionProfileInput struct {
 	Id           string `json:"id,omitempty"`
 	Name         string `json:"name,omitempty"`

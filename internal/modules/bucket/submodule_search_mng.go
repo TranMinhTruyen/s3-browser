@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -30,6 +29,7 @@ const (
 	searchBucketCallTimeout = 10 * time.Second
 )
 
+// submoduleSearchMng searches objects and buckets by keyword, page by page.
 type submoduleSearchMng struct {
 	logger *slog.Logger
 	global *global.Module
@@ -58,11 +58,8 @@ func (m *submoduleSearchMng) searchObject(
 	ctx context.Context,
 	input models.SearchObjectInput,
 ) models.Output[models.SearchObjectOutput] {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	ctx, cancel := withCallContext(ctx, m.appContext(), 5*time.Minute)
 	defer cancel()
-	// Wails detaches the call context from the app lifetime, so also stop on app shutdown.
-	stop := context.AfterFunc(m.appContext(), cancel)
-	defer stop()
 
 	output := models.NewOutput[models.SearchObjectOutput]()
 
@@ -73,11 +70,7 @@ func (m *submoduleSearchMng) searchObject(
 
 	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
 	if !ok {
-		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
-				"name": input.ProfileName,
-			}),
-		)
+		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 
 	body := models.SearchObjectOutput{ObjectList: make([]models.ObjectItem, 0, searchMaxResults)}
@@ -97,8 +90,7 @@ func (m *submoduleSearchMng) searchObject(
 
 		page, err := s3Conn.Client.ListObjectsV2(ctx, listInput)
 		if err != nil {
-			// The frontend canceled the call; nobody is waiting for the result.
-			if errors.Is(ctx.Err(), context.Canceled) {
+			if isCallCanceled(ctx) {
 				output.Result = false
 				return output
 			}
@@ -243,11 +235,13 @@ type bucketCursor struct {
 	Skip  int    `json:"skip"`
 }
 
+// encodeBucketCursor turns c into the opaque string the frontend passes back as NextCursor.
 func encodeBucketCursor(c bucketCursor) string {
 	data, _ := json.Marshal(c)
 	return base64.RawURLEncoding.EncodeToString(data)
 }
 
+// decodeBucketCursor parses a cursor made by encodeBucketCursor; an empty string means the first page.
 func decodeBucketCursor(s string) (bucketCursor, error) {
 	var c bucketCursor
 	if s == "" {
@@ -272,11 +266,9 @@ func (m *submoduleSearchMng) searchBucket(
 	ctx context.Context,
 	input models.SearchBucketInput,
 ) models.Output[models.SearchBucketOutput] {
-	ctx, cancel := context.WithCancel(ctx)
+	// No overall timeout: each ListBuckets call has its own (searchBucketCallTimeout).
+	ctx, cancel := withCallContext(ctx, m.appContext(), 0)
 	defer cancel()
-	// Wails detaches the call context from the app lifetime, so also stop on app shutdown.
-	stop := context.AfterFunc(m.appContext(), cancel)
-	defer stop()
 
 	output := models.NewOutput[models.SearchBucketOutput]()
 	failure := func(detail string) models.Output[models.SearchBucketOutput] {
@@ -299,11 +291,7 @@ func (m *submoduleSearchMng) searchBucket(
 
 	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
 	if !ok {
-		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
-				"name": input.ProfileName,
-			}),
-		)
+		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 
 	body := models.SearchBucketOutput{BucketList: make([]models.Bucket, 0, searchMaxResults)}
@@ -318,8 +306,7 @@ func (m *submoduleSearchMng) searchBucket(
 		page, err := s3Conn.Client.ListBuckets(callCtx, listInput)
 		cancelCall()
 		if err != nil {
-			// The frontend canceled the call; nobody is waiting for the result.
-			if errors.Is(ctx.Err(), context.Canceled) {
+			if isCallCanceled(ctx) {
 				output.Result = false
 				return output
 			}

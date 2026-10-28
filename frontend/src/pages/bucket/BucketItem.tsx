@@ -12,6 +12,7 @@ type BucketItemProps = {
   onSelectBucket?: (bucketName: string | undefined) => void;
 };
 
+/** One row of the bucket list: name, creation date and actions. */
 function BucketItem(props: BucketItemProps) {
   const { item, onSelectBucket } = props;
   const { t } = useTranslation('bucket', { keyPrefix: 'page' });

@@ -9,10 +9,9 @@ type Config struct {
 }
 
 // ParseConfig decodes the embedded wails.json payload handed in by main.
+// A malformed payload yields a zero Config instead of an error.
 func ParseConfig(raw []byte) Config {
 	var cfg Config
-	if err := json.Unmarshal(raw, &cfg); err != nil {
-		return cfg
-	}
+	_ = json.Unmarshal(raw, &cfg) // on error keep whatever was decoded, see doc
 	return cfg
 }

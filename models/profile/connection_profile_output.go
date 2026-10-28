@@ -2,6 +2,7 @@ package profile
 
 import "time"
 
+// ConnectionProfileOutput is a saved connection profile with its live connection state.
 type ConnectionProfileOutput struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name,omitempty"`

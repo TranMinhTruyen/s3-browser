@@ -1,12 +1,13 @@
-import { CheckIcon, CloseButton, Combobox, ComboboxProps, Group, Input, InputBase, useCombobox } from '@mantine/core';
+import { CheckIcon, Combobox, ComboboxProps, Group, Input, InputBase } from '@mantine/core';
 import { GetInputPropsReturnType } from '@mantine/form';
-import { useUncontrolled } from '@mantine/hooks';
 import { MasterOutput } from '@wails/S3Browser/models/master';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFieldError } from '@/common/hooks/useFieldError';
 import { useMasterDataStore } from '@/common/stores/masterDataStore';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
+import ComboboxClearButton from '@/components/inputs/combobox/ComboboxClearButton';
+import { useSelectCombobox } from '@/components/inputs/combobox/useSelectCombobox';
 
 type RegionOptionProps = {
   item: MasterOutput;
@@ -34,13 +35,13 @@ type RegionComboboxProps = Omit<ComboboxProps, 'store' | 'onOptionSubmit' | 'chi
     onChange?: (value: string | null) => void;
   };
 
+/** Single-select dropdown of cloud regions from the master data, grouped by availability zone. */
 function RegionCombobox(props: RegionComboboxProps) {
   const { value, defaultValue, withAsterisk, disabled, error, onChange, onFocus, onBlur, ...rest } = props;
 
-  const [_value, handleChange] = useUncontrolled<string | null>({
+  const { combobox, current, onSubmitOption, onClear, onClickToggle } = useSelectCombobox({
     value,
     defaultValue,
-    finalValue: null,
     onChange,
   });
 
@@ -62,19 +63,8 @@ function RegionCombobox(props: RegionComboboxProps) {
     return map;
   }, [regionData]);
 
-  const selected = !isNullOrEmpty(_value) ? itemsByValue.get(_value) : undefined;
-  const showClear = !isNullOrEmpty(_value) && !disabled;
-
-  const combobox = useCombobox({
-    onDropdownClose: () => combobox.resetSelectedOption(),
-    onDropdownOpen: eventSource => {
-      if (eventSource === 'keyboard') {
-        combobox.selectActiveOption();
-      } else {
-        combobox.updateSelectedOptionIndex('active');
-      }
-    },
-  });
+  const selected = !isNullOrEmpty(current) ? itemsByValue.get(current) : undefined;
+  const showClear = !isNullOrEmpty(current) && !disabled;
 
   const sortedGroups = useMemo(
     () =>
@@ -88,22 +78,13 @@ function RegionCombobox(props: RegionComboboxProps) {
   const options = sortedGroups.map(([region, items]) => (
     <Combobox.Group key={region} label={t(`regionCombobox.availabilityZones.${region}`)}>
       {items.map(item => (
-        <RegionOption key={item.value1} item={item} active={item.value1 === _value} />
+        <RegionOption key={item.value1} item={item} active={item.value1 === current} />
       ))}
     </Combobox.Group>
   ));
 
   return (
-    <Combobox
-      store={combobox}
-      resetSelectionOnOptionHover
-      onOptionSubmit={val => {
-        handleChange(val);
-        combobox.updateSelectedOptionIndex('active');
-        combobox.closeDropdown();
-      }}
-      {...rest}
-    >
+    <Combobox store={combobox} resetSelectionOnOptionHover onOptionSubmit={onSubmitOption} {...rest}>
       <Combobox.Target targetType="button">
         <InputBase
           component="button"
@@ -115,33 +96,15 @@ function RegionCombobox(props: RegionComboboxProps) {
           disabled={disabled}
           onFocus={onFocus}
           onBlur={onBlur}
-          rightSection={
-            showClear ? (
-              <CloseButton
-                size="sm"
-                variant="transparent"
-                aria-label={t('common:button.clear')}
-                onMouseDown={event => event.preventDefault()}
-                onClick={event => {
-                  event.stopPropagation();
-                  handleChange(null);
-                  combobox.resetSelectedOption();
-                }}
-              />
-            ) : (
-              <Combobox.Chevron />
-            )
-          }
+          rightSection={showClear ? <ComboboxClearButton onClear={onClear} /> : <Combobox.Chevron />}
           rightSectionPointerEvents={showClear ? 'all' : 'none'}
-          onClick={() => combobox.toggleDropdown()}
+          onClick={onClickToggle}
         >
           {selected ? (
-            <>
-              <Group gap="xs">
-                <span>{selected.name}</span>
-                <span>[{selected.value1}]</span>
-              </Group>
-            </>
+            <Group gap="xs">
+              <span>{selected.name}</span>
+              <span>[{selected.value1}]</span>
+            </Group>
           ) : (
             <Input.Placeholder>{t('regionCombobox.placeholder')}</Input.Placeholder>
           )}

@@ -1,3 +1,4 @@
+// Package internal wires the modules and handlers of the app together.
 package internal
 
 import (
@@ -14,7 +15,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// App struct
+// App owns the handlers registered as Wails services and the resources released on shutdown.
 type App struct {
 	logger *slog.Logger
 	sqlDb  *sql.DB
@@ -25,7 +26,8 @@ type App struct {
 	ProfileHandler *handlers.ProfileHandler
 }
 
-// NewApp creates a new App application struct
+// NewApp opens and migrates the database, builds the modules, then the handlers on top of them.
+// It panics when the database or the encryption key is unusable, because the app cannot run without them.
 func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 	log := logger.With("component", "app")
 
@@ -48,7 +50,7 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 
 	profileModule := profile.NewModule(app, logger, globalModule, sqlDb, km)
 	bucketModule := bucket.NewModule(app, logger, globalModule, sqlDb, profileModule)
-	masterModule := master.NewModule(app, logger, globalModule, sqlDb)
+	masterModule := master.NewModule(app, logger, sqlDb)
 
 	profileHandler := handlers.NewProfileHandler(app, logger, profileModule)
 	bucketHandler := handlers.NewBucketHandler(app, logger, bucketModule)
@@ -64,7 +66,7 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 	}
 }
 
-// Clean up when shutting down the app
+// Shutdown cancels running transfers, closes every connection and the database.
 func (a *App) Shutdown() {
 	a.BucketHandler.CancelAllDownloads()
 	a.BucketHandler.CancelAllUploads()

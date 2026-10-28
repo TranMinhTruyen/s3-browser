@@ -17,9 +17,11 @@ import (
 )
 
 const (
-	// deletePrefixTimeout bounds one deletePrefix call; a prefix can hold a lot of objects.
+	// deletePrefixTimeout bounds one deletePrefix call. A prefix can hold millions of keys and is
+	// deleted page by page, so it gets far more time than a single request (5 minutes).
 	deletePrefixTimeout = 30 * time.Minute
-	// deleteBatchSize is the S3 limit of keys in one DeleteObjects request.
+	// deleteBatchSize is the S3 limit of keys in one DeleteObjects request. It is also the
+	// ListObjectsV2 page size, so memory stays bounded and one page maps to one delete request.
 	deleteBatchSize = 1000
 )
 
@@ -69,6 +71,7 @@ type prefixDeleter struct {
 	single bool
 }
 
+// fail counts one failed key and keeps the detail of the first one.
 func (d *prefixDeleter) fail(detail string) {
 	d.failed++
 	if d.firstErr == "" {
@@ -119,6 +122,8 @@ func (d *prefixDeleter) deleteBatch(ctx context.Context, keys []string) error {
 func (d *prefixDeleter) deleteEach(ctx context.Context, keys []string) error {
 	errs := make([]error, len(keys))
 	var g errgroup.Group
+	// Not errgroup.WithContext: every failure is recorded per key in errs and g.Go returns nil,
+	// so one failed key must not cancel the other deletes in the batch.
 	g.SetLimit(deleteConcurrency)
 	for i, k := range keys {
 		g.Go(func() error {
@@ -151,11 +156,8 @@ func (m *submoduleObjMng) deletePrefix(
 	ctx context.Context,
 	input models.DeletePrefixInput,
 ) models.Output[models.DeletePrefixOutput] {
-	ctx, cancel := context.WithTimeout(ctx, deletePrefixTimeout)
+	ctx, cancel := withCallContext(ctx, m.appContext(), deletePrefixTimeout)
 	defer cancel()
-	// Wails detaches the call context from the app lifetime, so also stop on app shutdown.
-	stop := context.AfterFunc(m.appContext(), cancel)
-	defer stop()
 
 	output := models.NewOutput[models.DeletePrefixOutput]()
 
@@ -169,11 +171,7 @@ func (m *submoduleObjMng) deletePrefix(
 
 	client, ok := m.getDeleter(input.ConnectionId)
 	if !ok {
-		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
-				"name": input.ProfileName,
-			}),
-		)
+		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 
 	d := &prefixDeleter{client: client, bucket: input.Bucket}
@@ -213,7 +211,7 @@ func (m *submoduleObjMng) deletePrefix(
 
 	if callErr != nil {
 		// The frontend canceled the call; nobody is waiting for the result.
-		if errors.Is(ctx.Err(), context.Canceled) {
+		if isCallCanceled(ctx) {
 			m.logger.Info("delete prefix canceled",
 				"bucket", input.Bucket, "prefix", input.Prefix, "deleted", d.deleted)
 			output.Result = false

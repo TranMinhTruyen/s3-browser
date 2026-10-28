@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { selectActiveTab, useTabListStore } from '@/common/stores/tabListStore';
+import { useTabListStore } from '@/common/stores/tabListStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
 
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
@@ -21,7 +21,7 @@ describe('tabListStore', () => {
 
   it('starts with one empty tab', () => {
     expect(Object.keys(state().tabList)).toHaveLength(1);
-    expect(selectActiveTab(state())).toMatchObject({ currentView: 'bucketList', prefix: '' });
+    expect(state().tabList[activeId()]).toMatchObject({ currentView: 'bucketList', prefix: '' });
   });
 
   it('setActiveTab ignores an empty id', () => {

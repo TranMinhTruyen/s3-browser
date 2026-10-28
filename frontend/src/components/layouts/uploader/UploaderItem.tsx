@@ -13,6 +13,7 @@ type UploaderItemProps = {
   id: string;
 };
 
+/** One upload row: progress ring, sizes and a cancel button shown on hover. */
 function UploaderItem(props: UploaderItemProps) {
   const { id } = props;
 

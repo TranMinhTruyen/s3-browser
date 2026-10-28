@@ -4,18 +4,18 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProfileStore } from '@/common/stores/profileStore';
 import ActionIcon from '@/components/buttons/ActionIcon';
-import ConnectModal from '@/components/modals/ConnectModal';
+import { showConnectModal } from '@/components/modals/lazyModals';
 
 function HeaderButtonGroup() {
   const { t } = useTranslation('connectionProfiles');
   const loadConnectionProfiles = useProfileStore(s => s.loadConnectionProfiles);
 
   const onClickConnect = useCallback(() => {
-    ConnectModal.show({ mode: 'connect' });
+    showConnectModal({ mode: 'connect' });
   }, []);
 
   const onClickCreateProfile = useCallback(() => {
-    ConnectModal.show({ mode: 'createProfile' });
+    showConnectModal({ mode: 'createProfile' });
   }, []);
 
   const onClickRefresh = useCallback(async () => {

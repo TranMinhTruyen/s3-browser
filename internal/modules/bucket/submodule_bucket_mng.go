@@ -5,7 +5,6 @@ import (
 	"S3Browser/internal/pkg/cnst"
 	"S3Browser/models"
 	"context"
-	"errors"
 	"log/slog"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+// submoduleBucketMng lists the buckets of a connection.
 type submoduleBucketMng struct {
 	logger *slog.Logger
 	app    *application.App
@@ -32,26 +32,20 @@ func newSubmoduleBucketMng(
 	}
 }
 
+// listBucket returns one page of the buckets of a connection (ListBuckets, 10s timeout).
+// input.NextCursor is the continuation token of the previous page.
 func (m *submoduleBucketMng) listBucket(
 	ctx context.Context,
 	input models.ListBucketInput,
 ) models.Output[models.ListBucketOutput] {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	ctx, cancel := withCallContext(ctx, m.app.Context(), 10*time.Second)
 	defer cancel()
-	// Wails detaches the call context from the app lifetime, so also stop on app shutdown.
-	stop := context.AfterFunc(m.app.Context(), cancel)
-	defer stop()
 
 	output := models.NewOutput[models.ListBucketOutput]()
 
 	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
-
 	if !ok {
-		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
-				"name": input.ProfileName,
-			}),
-		)
+		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 
 	listBucketInput := &s3.ListBucketsInput{
@@ -64,8 +58,7 @@ func (m *submoduleBucketMng) listBucket(
 	result, err := s3Conn.Client.ListBuckets(ctx, listBucketInput)
 
 	if err != nil {
-		// The frontend canceled the call; nobody is waiting for the result.
-		if errors.Is(ctx.Err(), context.Canceled) {
+		if isCallCanceled(ctx) {
 			output.Result = false
 			return output
 		}

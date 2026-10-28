@@ -6,12 +6,16 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+// Event names emitted to the frontend, in the form domain:kebab-name.
 const (
 	// Emitted after a new connection profile is saved; payload is the created profile
-	EventConnectSaveProfile     = "bucket:connect-save-profile"
+	EventConnectSaveProfile = "bucket:connect-save-profile"
+	// Emitted while a file downloads (throttled); payload is DownloadProgressOutput
 	EventDownloadObjectProgress = "downloader:download-progress"
-	EventLoadDownloadHistory    = "downloader:load-download-history"
-	EventUploadObjectProgress   = "uploader:upload-progress"
+	// Emitted when a history record is created or updated; payload is DownloadHistoryItem
+	EventLoadDownloadHistory = "downloader:load-download-history"
+	// Emitted while a file uploads (throttled); payload is UploadProgressOutput
+	EventUploadObjectProgress = "uploader:upload-progress"
 	// Emitted when files are dropped on a tab's object list; payload is FilesDroppedOutput
 	EventFilesDropped = "uploader:files-dropped"
 	// Emitted when files are dropped on the upload picker modal; payload is FilesDroppedOutput

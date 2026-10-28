@@ -1,3 +1,4 @@
+// Package db opens the SQLite database and runs the goose migrations.
 package db
 
 import (
@@ -11,9 +12,12 @@ import (
 	"os"
 	"path/filepath"
 
+	// Registers the pure-Go "sqlite" database/sql driver (modernc).
 	_ "modernc.org/sqlite"
 )
 
+// InitDB backs up then opens <data dir>/data.db (WAL, foreign keys on) and pings it.
+// It exits the process on failure: nothing in the app works without the database.
 func InitDB(ctx context.Context, appName string) *sql.DB {
 	appDir, err := portable.DataDir(appName)
 	if err != nil {
@@ -36,6 +40,7 @@ func InitDB(ctx context.Context, appName string) *sql.DB {
 		log.Fatalf("failed to open db at %s: %v", dbPath, err)
 	}
 
+	// One connection avoids SQLITE_BUSY between concurrent writers.
 	db.SetMaxOpenConns(1)
 
 	if err := db.PingContext(ctx); err != nil {
@@ -46,6 +51,8 @@ func InitDB(ctx context.Context, appName string) *sql.DB {
 	return db
 }
 
+// backupIfExists copies the database to <path>.bak before migrations run, so a bad migration can be undone by hand.
+// A missing database is not an error (first run).
 func backupIfExists(path string) (err error) {
 	src, err := os.Open(path)
 	if os.IsNotExist(err) {

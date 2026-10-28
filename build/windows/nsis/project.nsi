@@ -34,9 +34,10 @@ Unicode true
 ####
 !include "wails_tools.nsh"
 
-# The version information for this two must consist of 4 parts
-VIProductVersion "${INFO_PRODUCTVERSION}.0"
-VIFileVersion    "${INFO_PRODUCTVERSION}.0"
+# Numeric 4-part version for VIProductVersion/VIFileVersion (INFO_PRODUCTVERSION may hold a prerelease suffix)
+!define INFO_NUMERIC_VERSION "0.0.1.1"
+VIProductVersion "${INFO_NUMERIC_VERSION}"
+VIFileVersion    "${INFO_NUMERIC_VERSION}"
 
 VIAddVersionKey "CompanyName"     "${INFO_COMPANYNAME}"
 VIAddVersionKey "FileDescription" "${INFO_PRODUCTNAME} Installer"

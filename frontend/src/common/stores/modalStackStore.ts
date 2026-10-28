@@ -20,6 +20,7 @@ interface ModalStackAction {
  */
 const refCounts = new Map<string, number>();
 
+/** Stack of visible modals (bottom to top); drives z-index and which modal Escape / click-outside can close. */
 export const useModalStackStore = createAppStore<ModalStackState & ModalStackAction>(
   set => ({
     stack: [],

@@ -17,41 +17,25 @@ interface MasterDataState {
 }
 
 interface MasterDataAction {
-  /** Replaces the rows held for one master code. */
-  set: (key: MasterCode, datas: MasterOutput[]) => void;
   /** Merges a whole `{ code: rows }` payload, keeping codes it does not carry. */
   setAll: (datas: MasterData) => void;
-  /** Rows of one master code, empty when it has not been loaded yet. */
-  get: (key: MasterCode) => MasterOutput[];
   /** Fetches the given master codes from the backend and stores them. */
   load: (keys: MasterCode[]) => Promise<void>;
   /** Fetches every known master code. */
   loadAll: () => Promise<void>;
-  /** Same as `load`, but skips the codes already in the store. */
-  loadMissing: (keys: MasterCode[]) => Promise<void>;
   reset: () => boolean;
 
   /** Region master data */
   loadRegion: () => Promise<void>;
-  getRegion: () => Partial<Record<string, MasterOutput[]>>;
 }
 
 const SCOPE = 'MasterData';
 
+/** Master data (region lists, ...) loaded from the backend. */
 export const useMasterDataStore = createAppStore<MasterDataState & MasterDataAction>(
   (set, get) => ({
     masterData: {},
     regionData: {},
-
-    set: (key, datas) => {
-      set(
-        state => {
-          state.masterData[key] = datas;
-        },
-        undefined,
-        `${SCOPE}/set`
-      );
-    },
 
     setAll: datas => {
       set(
@@ -63,17 +47,8 @@ export const useMasterDataStore = createAppStore<MasterDataState & MasterDataAct
       );
     },
 
-    get: key => {
-      return get().masterData[key] ?? [];
-    },
-
     loadAll: async () => {
       await get().loadRegion();
-    },
-
-    loadMissing: async keys => {
-      const { masterData, load } = get();
-      await load(keys.filter(key => masterData[key] === undefined));
     },
 
     load: async keys => {
@@ -115,10 +90,6 @@ export const useMasterDataStore = createAppStore<MasterDataState & MasterDataAct
         undefined,
         `${SCOPE}/loadRegion`
       );
-    },
-
-    getRegion: () => {
-      return get().regionData;
     },
   }),
   SCOPE

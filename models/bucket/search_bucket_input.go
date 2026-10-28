@@ -1,5 +1,6 @@
 package bucket
 
+// SearchBucketInput searches bucket names by Keyword, continuing from NextCursor.
 type SearchBucketInput struct {
 	ConnectionId string `json:"connectionId"`
 	ProfileName  string `json:"profileName,omitempty"`

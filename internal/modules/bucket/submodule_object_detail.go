@@ -4,7 +4,6 @@ import (
 	"S3Browser/internal/pkg/cnst"
 	"S3Browser/models"
 	"context"
-	"errors"
 	"maps"
 	"strings"
 	"time"
@@ -28,11 +27,8 @@ func (m *submoduleObjMng) getObjectDetail(
 	ctx context.Context,
 	input models.ObjectDetailInput,
 ) models.Output[models.ObjectDetailOutput] {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	ctx, cancel := withCallContext(ctx, m.appContext(), 5*time.Minute)
 	defer cancel()
-	// Wails detaches the call context from the app lifetime, so also stop on app shutdown.
-	stop := context.AfterFunc(m.appContext(), cancel)
-	defer stop()
 
 	output := models.NewOutput[models.ObjectDetailOutput]()
 
@@ -47,11 +43,7 @@ func (m *submoduleObjMng) getObjectDetail(
 
 	client, ok := m.getHeader(input.ConnectionId)
 	if !ok {
-		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
-				"name": input.ProfileName,
-			}),
-		)
+		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 
 	head, err := client.HeadObject(ctx, &s3.HeadObjectInput{
@@ -60,7 +52,7 @@ func (m *submoduleObjMng) getObjectDetail(
 	})
 	if err != nil {
 		// The frontend canceled the call; nobody is waiting for the result.
-		if errors.Is(ctx.Err(), context.Canceled) {
+		if isCallCanceled(ctx) {
 			output.Result = false
 			return output
 		}

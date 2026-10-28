@@ -5,7 +5,6 @@ import (
 	"S3Browser/internal/pkg/cnst"
 	"S3Browser/models"
 	"context"
-	"errors"
 	"log/slog"
 	"strings"
 	"time"
@@ -31,6 +30,7 @@ type submoduleObjMng struct {
 // deleteConcurrency limits the objects deleted (or head-checked) at once.
 const deleteConcurrency = 6
 
+// newSubmoduleObjMng builds the object submodule on the shared connection store.
 func newSubmoduleObjMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -57,6 +57,7 @@ func newSubmoduleObjMng(
 	}
 }
 
+// deleteResult is the outcome of deleting one key.
 type deleteResult struct {
 	key string
 	err error
@@ -68,29 +69,22 @@ func (m *submoduleObjMng) listObject(
 	ctx context.Context,
 	input models.ListObjectInput,
 ) models.Output[models.ListObjectOutput] {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	ctx, cancel := withCallContext(ctx, m.appContext(), 5*time.Minute)
 	defer cancel()
-	// Wails detaches the call context from the app lifetime, so also stop on app shutdown.
-	stop := context.AfterFunc(m.appContext(), cancel)
-	defer stop()
 
 	output := models.NewOutput[models.ListObjectOutput]()
 
 	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
 
 	if !ok {
-		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
-				"name": input.ProfileName,
-			}),
-		)
+		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 
 	listObjectInput := &s3.ListObjectsV2Input{
 		Bucket:    &input.Bucket,
 		Prefix:    &input.Prefix,
 		Delimiter: aws.String("/"),
-		MaxKeys:   &input.Limit,
+		MaxKeys:   &input.Limit, // passed as is, no local bounds check (AWS S3 caps MaxKeys at 1000)
 	}
 
 	if input.NextCursor != "" {
@@ -101,7 +95,7 @@ func (m *submoduleObjMng) listObject(
 
 	if err != nil {
 		// The frontend canceled the call; nobody is waiting for the result.
-		if errors.Is(ctx.Err(), context.Canceled) {
+		if isCallCanceled(ctx) {
 			output.Result = false
 			return output
 		}
@@ -160,25 +154,22 @@ func (m *submoduleObjMng) listObject(
 	return output
 }
 
+// deleteObject deletes input.Objects one by one (up to deleteConcurrency at once) and
+// adds one message per key. Result is false if any key failed.
 func (m *submoduleObjMng) deleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	ctx, cancel := withCallContext(ctx, m.appContext(), 5*time.Minute)
 	defer cancel()
-	// Wails detaches the call context from the app lifetime, so also stop on app shutdown.
-	stop := context.AfterFunc(m.appContext(), cancel)
-	defer stop()
 
 	output := models.NewOutput[any]()
 
 	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
 
 	if !ok {
-		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
-				"name": input.ProfileName,
-			}),
-		)
+		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 
+	// Not errgroup.WithContext: failures go to the result channel and g.Go returns nil,
+	// so one failed key must not cancel the other deletes.
 	var g errgroup.Group
 	g.SetLimit(deleteConcurrency)
 	result := make(chan deleteResult, len(input.Objects))

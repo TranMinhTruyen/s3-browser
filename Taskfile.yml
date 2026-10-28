@@ -47,3 +47,9 @@ tasks:
     summary: Runs only the frontend dev server
     cmds:
       - task: common:dev:frontend
+
+  docs:pdf:
+    summary: Builds the user guide PDFs (en/vi/ja) from docs/user-guide/<lang>/user-guide.md
+    dir: docs
+    cmds:
+      - bun run build:pdf

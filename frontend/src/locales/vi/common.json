@@ -8,5 +8,6 @@
     "OK": "OK",
     "clear": "Xoá",
     "close": "Đóng"
-  }
+  },
+  "modalLoadError": "Không mở được hộp thoại. Vui lòng thử lại."
 }

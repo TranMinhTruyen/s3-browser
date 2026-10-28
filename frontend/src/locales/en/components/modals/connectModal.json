@@ -1,8 +1,5 @@
 {
   "title": "Connection Profile",
-  "label": {
-    "saveProfileLabel": "Save profile"
-  },
   "form": {
     "label": {
       "name": "Profile name",

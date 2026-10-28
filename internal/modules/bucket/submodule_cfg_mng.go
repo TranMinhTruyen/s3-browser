@@ -21,6 +21,7 @@ import (
 	miniocredentials "github.com/minio/minio-go/v7/pkg/credentials"
 )
 
+// submoduleCfgMng builds S3 clients from a profile and probes them. It has no state besides the logger.
 type submoduleCfgMng struct {
 	logger *slog.Logger
 }
@@ -33,6 +34,8 @@ func newSubmoduleCfgMng(
 	}
 }
 
+// buildClient creates the S3 client, presigner and (for MinIO) admin client of input. Each connection
+// gets its own http.Transport so Disconnect can close its idle connections without touching others.
 func (m *submoduleCfgMng) buildClient(input models.ConnectionProfileInput) *global.S3Conn {
 	client, transport := newHTTPClient()
 
@@ -89,6 +92,9 @@ func (m *submoduleCfgMng) buildClient(input models.ConnectionProfileInput) *glob
 	return conn
 }
 
+// probe checks the connection with ListBuckets and maps the error to a connect message.
+// AccessDenied is not an error: the connection works but is limited (S3W001, Body.Limited).
+// On error it closes the idle connections of c.
 func (m *submoduleCfgMng) probe(ctx context.Context, c *global.S3Conn) (models.Output[models.ConnectOutput], error) {
 	output := models.NewOutput[models.ConnectOutput]()
 
@@ -104,6 +110,8 @@ func (m *submoduleCfgMng) probe(ctx context.Context, c *global.S3Conn) (models.O
 	return output, nil
 }
 
+// describeConnectStatus fills output with the message for err and returns the error that makes the
+// connect fail, or nil when the connection is usable (limited access).
 func describeConnectStatus(err error, output *models.Output[models.ConnectOutput]) error {
 	if errors.Is(err, context.DeadlineExceeded) {
 		output.MessageList = []models.Message{
@@ -144,6 +152,8 @@ func describeConnectStatus(err error, output *models.Output[models.ConnectOutput
 	}
 }
 
+// UnwrapAwsError returns the error code of an AWS API error, or the text of a smithy
+// canceled/serialization/deserialization/operation error. It returns "" for any other error.
 func UnwrapAwsError(err error) string {
 	if err == nil {
 		return ""
@@ -177,6 +187,9 @@ func UnwrapAwsError(err error) string {
 	return ""
 }
 
+// newHTTPClient returns an HTTP client with a dedicated transport tuned for many parallel
+// transfers: large idle pool, 64 KiB buffers, no HTTP/2 (S3-compatible servers often lack it).
+// The transport is returned too so the caller can close its idle connections.
 func newHTTPClient() (*http.Client, *http.Transport) {
 	dialer := &net.Dialer{
 		Timeout:   5 * time.Second,

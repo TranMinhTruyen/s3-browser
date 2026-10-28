@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import TabLabel from '@/components/layouts/tab/components/TabLabel';
@@ -51,5 +51,16 @@ describe('TabLabel', () => {
   it('falls back to the default name when the tab is unknown', () => {
     renderWithProviders(<TabLabel tabId="missing" />);
     expect(screen.getByText('New profile')).toBeInTheDocument();
+  });
+
+  it('updates when its profile connects', () => {
+    renderWithProviders(<TabLabel tabId="t2" />);
+    expect(screen.getByText('New profile')).toBeInTheDocument();
+
+    act(() => {
+      useProfileStore.setState({ connectionProfiles: { off: { name: 'Staging', isConnected: true } as never } });
+    });
+
+    expect(screen.getByText('Staging')).toBeInTheDocument();
   });
 });

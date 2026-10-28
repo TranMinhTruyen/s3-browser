@@ -1,9 +1,6 @@
 import { Checkbox, CheckboxProps } from '@mantine/core';
 
-type CheckBoxInputProps = Omit<CheckboxProps, ''> & {};
-
-function CheckBoxInput(props: CheckBoxInputProps) {
-  const { ...rest } = props;
-  return <Checkbox {...rest} />;
+function CheckBoxInput(props: CheckboxProps) {
+  return <Checkbox {...props} />;
 }
 export default CheckBoxInput;

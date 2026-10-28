@@ -1,10 +1,11 @@
 import { Divider, Group, Modal, Text, Title } from '@mantine/core';
 import { Info, TriangleAlert } from 'lucide-react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import { formatStringJson } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
-import { WARNING_BG_COLOR, WARNING_COLOR } from '@/components/modals/modalColors';
+import { INFO_BG_COLOR, INFO_COLOR, WARNING_BG_COLOR, WARNING_COLOR } from '@/components/modals/modalColors';
 
 type ConfirmModalProps = ModalProps & {
   type: 'info' | 'warning';
@@ -17,11 +18,24 @@ export default createMantineModal<ConfirmModalProps, boolean>(props => {
 
   const { t } = useTranslation('confirmModal');
 
-  const icon = type === 'info' ? <Info color="#2600fdbe" /> : <TriangleAlert color={WARNING_COLOR} />;
-
-  const title = type === 'info' ? t('title.info') : t('title.warning');
+  const isInfo = type === 'info';
+  const color = isInfo ? INFO_COLOR : WARNING_COLOR;
+  const icon = isInfo ? <Info color={color} /> : <TriangleAlert color={color} />;
+  const title = isInfo ? t('title.info') : t('title.warning');
 
   const text = formatStringJson(t(`confirmCode.${confirmCode}`), params);
+
+  const { resolve, hide } = mantine.handler;
+
+  const onClickOk = useCallback(() => {
+    resolve(true);
+    hide();
+  }, [resolve, hide]);
+
+  const onClickCancel = useCallback(() => {
+    resolve(false);
+    hide();
+  }, [resolve, hide]);
 
   return (
     <Modal.Root {...mantine.props} size={size} centered={centered} {...restProps}>
@@ -31,11 +45,11 @@ export default createMantineModal<ConfirmModalProps, boolean>(props => {
           pos="relative"
           p="8px"
           mih="0px"
-          style={{ justifyContent: 'flex-end', backgroundColor: type === 'info' ? '#d0ebff' : WARNING_BG_COLOR }}
+          style={{ justifyContent: 'flex-end', backgroundColor: isInfo ? INFO_BG_COLOR : WARNING_BG_COLOR }}
         >
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
             {icon}
-            <Title order={4} style={{ color: type === 'info' ? '#2600fdbe' : WARNING_COLOR }}>
+            <Title order={4} style={{ color }}>
               {title}
             </Title>
           </Group>
@@ -53,21 +67,8 @@ export default createMantineModal<ConfirmModalProps, boolean>(props => {
         <Divider />
 
         <Group p="8px" justify="space-between">
-          <Button
-            onClick={() => {
-              mantine.handler.resolve(true);
-              mantine.handler.hide();
-            }}
-          >
-            {t('common:button.OK')}
-          </Button>
-          <Button
-            onClick={() => {
-              mantine.handler.resolve(false);
-              mantine.handler.hide();
-            }}
-            color="red"
-          >
+          <Button onClick={onClickOk}>{t('common:button.OK')}</Button>
+          <Button onClick={onClickCancel} color="red">
             {t('common:button.cancel')}
           </Button>
         </Group>

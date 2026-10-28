@@ -1,5 +1,6 @@
 package bucket
 
+// ListObjectInput is a page request for the objects and folders under Prefix.
 type ListObjectInput struct {
 	ConnectionId string `json:"connectionId"`
 	ProfileName  string `json:"profileName,omitempty"`

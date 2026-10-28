@@ -18,12 +18,20 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+// submoduleDownloadHistoryMng stores and lists download history in SQLite and opens a
+// downloaded file in the file manager.
+//
+// Its queries use context.WithTimeout(m.app.Context(), ...) and not withCallContext: create
+// and update run from the downloader's own goroutines, which have no Wails call context, and
+// the history must still be written when the user cancels a download. The app context is the
+// only parent, so there is no second context to watch with AfterFunc.
 type submoduleDownloadHistoryMng struct {
 	logger *slog.Logger
 	app    *application.App
 	q      *sqlc.Queries
 }
 
+// newSubmoduleDownloadHistoryMng creates the history manager on top of db.
 func newSubmoduleDownloadHistoryMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -36,6 +44,7 @@ func newSubmoduleDownloadHistoryMng(
 	}
 }
 
+// Download history statuses stored in the database and sent to the frontend.
 const (
 	DOWNLOADING    = "DOWNLOADING"
 	DOWNLOADED     = "DOWNLOADED"
@@ -43,6 +52,7 @@ const (
 	DOWNLOAD_ERROR = "DOWNLOAD_ERROR"
 )
 
+// createDownloadHistory inserts a DOWNLOADING record for a download that is starting.
 func (m *submoduleDownloadHistoryMng) createDownloadHistory(
 	input models.DownloadHistoryItem,
 ) (models.DownloadHistoryItem, error) {
@@ -70,6 +80,8 @@ func (m *submoduleDownloadHistoryMng) createDownloadHistory(
 	}, nil
 }
 
+// updateDownloadHistory writes the final status, path and size; input.Version is the
+// version returned by the previous create or update.
 func (m *submoduleDownloadHistoryMng) updateDownloadHistory(
 	input models.DownloadHistoryItem,
 ) (models.DownloadHistoryItem, error) {
@@ -99,6 +111,7 @@ func (m *submoduleDownloadHistoryMng) updateDownloadHistory(
 	}, nil
 }
 
+// getDownloadHistory returns one page of history after input.AfterID.
 func (m *submoduleDownloadHistoryMng) getDownloadHistory(
 	input models.DownloadHistoryInput,
 ) models.Output[models.DownloadHistoryOutput] {
@@ -140,6 +153,7 @@ func (m *submoduleDownloadHistoryMng) getDownloadHistory(
 	return output
 }
 
+// openDownloadDest shows path in the OS file manager. Errors name fileName for the user.
 func (m *submoduleDownloadHistoryMng) openDownloadDest(fileName, path string) models.Output[any] {
 	output := models.NewOutput[any]()
 

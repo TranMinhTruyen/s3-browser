@@ -13,6 +13,7 @@ type DownloaderItemProps = {
   id: string;
 };
 
+/** One download row: progress ring, sizes and a cancel button shown on hover. */
 function DownloaderItem(props: DownloaderItemProps) {
   const { id } = props;
   const { t } = useTranslation('downloaderWindow');
@@ -54,7 +55,7 @@ function DownloaderItem(props: DownloaderItemProps) {
 
       <Card.Section inheritPadding px="xs" style={{ flex: 1, minWidth: 0, padding: '8px' }}>
         <Text truncate="end">
-          {t('label.objectLbl')}: {item?.fileName}
+          {t('label.objectLbl')}: {item.fileName}
         </Text>
         <Group>
           <Box>

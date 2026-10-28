@@ -2,6 +2,7 @@ import { UploadFinishedOutput, UploadProgressOutput, UploadStartedOutput } from 
 import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
 
+/** Running upload and the bytes sent so far. */
 export type UploadItem = UploadStartedOutput & {
   uploaded: number;
 };
@@ -22,6 +23,7 @@ interface UploaderAction {
 const SCOPE = 'uploader';
 const MAX_FINISHED_IDS = 200;
 
+/** Running uploads and the ids already finished. */
 export const useUploaderStore = createAppStore<UploaderState & UploaderAction>(
   set => ({
     uploadItems: {},
@@ -75,4 +77,5 @@ export const useUploaderStore = createAppStore<UploaderState & UploaderAction>(
   SCOPE
 );
 
+/** Ids of running uploads. Returns a new array: use with `useShallow`. */
 export const selectUploadingIds = (s: UploaderState) => Object.keys(s.uploadItems);

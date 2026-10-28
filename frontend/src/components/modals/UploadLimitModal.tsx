@@ -1,14 +1,13 @@
-import { Accordion, Badge, Box, Divider, Group, Modal, Stack, Text, Title } from '@mantine/core';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { Accordion, Box, Divider, Group, Modal, Stack, Text, Title } from '@mantine/core';
 import { DroppedFile, DroppedGroup } from '@wails/S3Browser/models/bucket';
 import { Folder, TriangleAlert } from 'lucide-react';
-import { ChangeEvent, CSSProperties, memo, useCallback, useMemo, useRef, useState } from 'react';
+import { CSSProperties, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import { formatFileSize, formatStringJson } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
-import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import { WARNING_BG_COLOR, WARNING_COLOR } from '@/components/modals/modalColors';
+import { FileRow, GroupStat, rowsHeight, UploadRow, VirtualRowList } from '@/components/modals/UploadFileList';
 
 type UploadLimitModalProps = ModalProps & {
   groups: DroppedGroup[];
@@ -22,12 +21,8 @@ type UploadLimitModalProps = ModalProps & {
   capped?: boolean;
 };
 
-type Row = { kind: 'group'; index: number; group: DroppedGroup } | { kind: 'file'; file: DroppedFile };
-
-type GroupStat = { selected: number; selectedLarge: number };
-
 type FileListProps = {
-  rows: Row[];
+  rows: UploadRow[];
   selected: ReadonlySet<string>;
   stats: GroupStat[];
   maxFilesPerFolder: number;
@@ -37,125 +32,49 @@ type FileListProps = {
   onToggleFile: (path: string, checked: boolean) => void;
 };
 
-const ROW_HEIGHT = 36;
 const LIST_MAX_HEIGHT = 320;
-
-// Last path segment; dropped paths use "\" on Windows and "/" elsewhere.
-const baseName = (path: string) => path.split(/[\\/]/).pop() || path;
-
-type FileRowProps = {
-  file: DroppedFile;
-  checked: boolean;
-  style: CSSProperties;
-  onToggleFile: (path: string, checked: boolean) => void;
-};
-
-const FileRow = memo(function FileRow(props: FileRowProps) {
-  const { file, checked, style, onToggleFile } = props;
-  const { t } = useTranslation('uploadLimitModal');
-
-  const onChangeFile = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => onToggleFile(file.path, e.currentTarget.checked),
-    [onToggleFile, file.path]
-  );
-
-  return (
-    <Group style={style} gap="xs" wrap="nowrap" px="xs">
-      <CheckBoxInput
-        checked={checked}
-        onChange={onChangeFile}
-        label={
-          <Text span truncate="end" title={file.relKey} style={{ display: 'block' }}>
-            {baseName(file.relKey)}
-          </Text>
-        }
-        styles={{ root: { flex: 1, minWidth: 0 }, body: { minWidth: 0 }, labelWrapper: { minWidth: 0 } }}
-      />
-      {file.isLarge && (
-        <Badge color="orange" variant="light" style={{ flexShrink: 0 }}>
-          {t('large')}
-        </Badge>
-      )}
-      <Text size="sm" c="dimmed" style={{ flexShrink: 0 }}>
-        {formatFileSize(file.size)}
-      </Text>
-    </Group>
-  );
-});
 
 const FileList = memo(function FileList(props: FileListProps) {
   const { rows, selected, stats, maxFilesPerFolder, largeFileMaxCount, largeOnly, onToggleFile } = props;
   const { t } = useTranslation('uploadLimitModal');
 
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const renderRow = useCallback(
+    (row: UploadRow, key: string | number | bigint, style: CSSProperties) => {
+      if (row.kind === 'file') {
+        return (
+          <FileRow
+            key={key}
+            file={row.file}
+            checked={selected.has(row.file.path)}
+            style={style}
+            largeLabel={t('large')}
+            titleBy="relKey"
+            onToggleFile={onToggleFile}
+          />
+        );
+      }
 
-  // React Compiler is disabled, so this compiler-only lint does not apply.
-  // oxlint-disable-next-line react/incompatible-library
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
-    getItemKey: idx => {
-      const row = rows[idx];
-      return row.kind === 'group' ? `g:${row.index}` : `f:${row.file.path}`;
+      const stat = stats[row.index];
+      const over = largeOnly ? stat.selectedLarge > largeFileMaxCount : stat.selected > maxFilesPerFolder;
+      return (
+        <Group key={key} style={style} gap="xs" wrap="nowrap" px="xs" bg="var(--mantine-color-default-hover)">
+          <Folder size="16px" style={{ flexShrink: 0 }} />
+          <Text fw={600} truncate="end" style={{ flex: 1, minWidth: 0 }} title={row.group.name}>
+            {row.group.name || t('rootFolder')}
+          </Text>
+          <Text size="sm" c={over ? 'red' : 'dimmed'} fw={over ? 600 : undefined} style={{ flexShrink: 0 }}>
+            {largeOnly
+              ? formatStringJson(t('selectedLarge'), { selected: stat.selectedLarge, max: largeFileMaxCount })
+              : formatStringJson(t('selectedCount'), { selected: stat.selected, max: maxFilesPerFolder })}
+          </Text>
+        </Group>
+      );
     },
-    overscan: 8,
-  });
+    [selected, stats, maxFilesPerFolder, largeFileMaxCount, largeOnly, onToggleFile, t]
+  );
 
   return (
-    <div
-      ref={scrollRef}
-      style={{ height: Math.min(rows.length * ROW_HEIGHT, LIST_MAX_HEIGHT), overflow: 'auto', position: 'relative' }}
-    >
-      <div style={{ position: 'relative', height: virtualizer.getTotalSize(), width: '100%' }}>
-        {virtualizer.getVirtualItems().map(item => {
-          const row = rows[item.index];
-          const style = {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: ROW_HEIGHT,
-            transform: `translateY(${item.start}px)`,
-          } as const;
-
-          if (row.kind === 'group') {
-            const stat = stats[row.index];
-            const over = largeOnly ? stat.selectedLarge > largeFileMaxCount : stat.selected > maxFilesPerFolder;
-            return (
-              <Group
-                key={item.key}
-                style={style}
-                gap="xs"
-                wrap="nowrap"
-                px="xs"
-                bg="var(--mantine-color-default-hover)"
-              >
-                <Folder size="16px" style={{ flexShrink: 0 }} />
-                <Text fw={600} truncate="end" style={{ flex: 1, minWidth: 0 }} title={row.group.name}>
-                  {row.group.name || t('rootFolder')}
-                </Text>
-                <Text size="sm" c={over ? 'red' : 'dimmed'} fw={over ? 600 : undefined} style={{ flexShrink: 0 }}>
-                  {largeOnly
-                    ? formatStringJson(t('selectedLarge'), { selected: stat.selectedLarge, max: largeFileMaxCount })
-                    : formatStringJson(t('selectedCount'), { selected: stat.selected, max: maxFilesPerFolder })}
-                </Text>
-              </Group>
-            );
-          }
-
-          return (
-            <FileRow
-              key={item.key}
-              file={row.file}
-              checked={selected.has(row.file.path)}
-              style={style}
-              onToggleFile={onToggleFile}
-            />
-          );
-        })}
-      </div>
-    </div>
+    <VirtualRowList rows={rows} height={Math.min(rowsHeight(rows.length), LIST_MAX_HEIGHT)} renderRow={renderRow} />
   );
 });
 
@@ -214,7 +133,7 @@ export default createMantineModal<UploadLimitModalProps, DroppedFile[]>(props =>
   );
 
   const overMaxRows = useMemo(() => {
-    const rows: Row[] = [];
+    const rows: UploadRow[] = [];
     groups.forEach((group, index) => {
       if (!group.overMaxFiles) return;
       rows.push({ kind: 'group', index, group });
@@ -224,7 +143,7 @@ export default createMantineModal<UploadLimitModalProps, DroppedFile[]>(props =>
   }, [groups]);
 
   const overLargeRows = useMemo(() => {
-    const rows: Row[] = [];
+    const rows: UploadRow[] = [];
     groups.forEach((group, index) => {
       if (!group.overLargeCount) return;
       rows.push({ kind: 'group', index, group });

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createUUID,
   formatFieldError,
@@ -68,10 +68,40 @@ describe('formatFieldError', () => {
 });
 
 describe('createUUID', () => {
-  it('creates unique ids with an optional prefix', () => {
+  const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('creates a v7 uuid without prefix', () => {
+    expect(createUUID()).toMatch(new RegExp(`^${UUID}$`));
+  });
+
+  it('puts the prefix before the uuid', () => {
+    expect(createUUID('tab')).toMatch(new RegExp(`^tab-${UUID}$`));
+  });
+
+  it('creates a different id each call', () => {
     expect(createUUID()).not.toBe(createUUID());
-    expect(createUUID('tab')).toMatch(/^tab-/);
-    expect(createUUID().startsWith('-')).toBe(false);
+  });
+
+  it('generates monotonically increasing ids', () => {
+    const ids = Array.from({ length: 50 }, () => createUUID());
+    expect([...ids].sort()).toEqual(ids);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('encodes a timestamp not earlier than the time before the call', () => {
+    const before = Date.now();
+    const hex = createUUID().replace(/-/g, '');
+    expect(Number.parseInt(hex.slice(0, 12), 16)).toBeGreaterThanOrEqual(before);
+  });
+
+  it('keeps the timestamp bits after the prefix', () => {
+    const before = Date.now();
+    const hex = createUUID('tab').slice('tab-'.length).replace(/-/g, '');
+    expect(Number.parseInt(hex.slice(0, 12), 16)).toBeGreaterThanOrEqual(before);
   });
 });
 
