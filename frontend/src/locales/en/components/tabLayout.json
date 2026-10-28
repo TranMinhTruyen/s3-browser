@@ -8,7 +8,8 @@
     "refresh": "Refresh {target}",
     "addTab": "Add tab",
     "search": "Search",
-    "clearSearch": "Clear search"
+    "clearSearch": "Clear search",
+    "upload": "Upload files"
   },
   "search": {
     "placeholderObject": "Search by key",

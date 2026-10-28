@@ -3,7 +3,8 @@
   "label": {
     "objectLbl": "Đối tượng",
     "uploadedLbl": "Đã tải lên",
-    "remainingLbl": "Còn lại"
+    "remainingLbl": "Còn lại",
+    "finalizingLbl": "Đang hoàn tất…"
   },
   "action": {
     "cancelAll": "Huỷ tất cả",

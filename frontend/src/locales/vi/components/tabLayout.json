@@ -8,7 +8,8 @@
     "refresh": "Làm mới {target}",
     "addTab": "Thêm tab",
     "search": "Tìm kiếm",
-    "clearSearch": "Xoá tìm kiếm"
+    "clearSearch": "Xoá tìm kiếm",
+    "upload": "Tải file lên"
   },
   "search": {
     "placeholderObject": "Tìm theo key",

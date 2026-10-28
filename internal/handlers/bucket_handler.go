@@ -126,6 +126,11 @@ func (h *BucketHandler) UploadObject(input models.UploadObjInput) models.Output[
 	return h.bucket.UploadObject(input)
 }
 
+// PickFiles opens the native dialog to choose files to upload and returns them as groups.
+func (h *BucketHandler) PickFiles(ctx context.Context) models.Output[models.FilesDroppedOutput] {
+	return h.bucket.PickFiles(ctx)
+}
+
 // FilesDropped is the main window's WindowFilesDropped listener, not a frontend API:
 // wails:ignore keeps it out of the generated bindings.
 //

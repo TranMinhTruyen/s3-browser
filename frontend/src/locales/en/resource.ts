@@ -1,11 +1,13 @@
 import { ResourceLanguage } from 'i18next';
 import common from '@/locales/en/common.json';
+import bucketPicker from '@/locales/en/components/bucketPicker.json';
 import downloaderWindow from '@/locales/en/components/downloaderWindow.json';
 import inputs from '@/locales/en/components/inputs.json';
 import confirmModal from '@/locales/en/components/modals/confirmModal.json';
 import connectModal from '@/locales/en/components/modals/connectModal.json';
 import historyModal from '@/locales/en/components/modals/historyModal.json';
 import uploadLimitModal from '@/locales/en/components/modals/uploadLimitModal.json';
+import uploadPickerModal from '@/locales/en/components/modals/uploadPickerModal.json';
 import connectionProfiles from '@/locales/en/components/navbar/connectionProfiles.json';
 import objectDetailDrawer from '@/locales/en/components/objectDetailDrawer.json';
 import tabLayout from '@/locales/en/components/tabLayout.json';
@@ -23,6 +25,8 @@ const englishResource: ResourceLanguage = {
   confirmModal: confirmModal,
   historyModal: historyModal,
   uploadLimitModal: uploadLimitModal,
+  uploadPickerModal: uploadPickerModal,
+  bucketPicker: bucketPicker,
   connectionProfiles: connectionProfiles,
   bucket: {
     page: bucketPage,

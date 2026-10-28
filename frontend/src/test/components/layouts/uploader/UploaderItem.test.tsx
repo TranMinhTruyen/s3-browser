@@ -37,18 +37,51 @@ describe('UploaderItem', () => {
     expect(screen.getByText('1.50 KB')).toBeInTheDocument();
   });
 
-  it('caps the percentage at 99 and never shows a negative remainder', () => {
-    setItem(3000, 2000);
-    renderWithProviders(<UploaderItem id="u1" />);
+  it('caps the percentage at 99 while nearly complete and not yet finalizing', () => {
+    setItem(1999, 2000);
+    const { container } = renderWithProviders(<UploaderItem id="u1" />);
 
     expect(screen.getByText('99%')).toBeInTheDocument();
-    expect(screen.getByText('0 bytes')).toBeInTheDocument();
+    expect(screen.getByText('Uploaded')).toBeInTheDocument();
+    expect(screen.getByText('Remaining')).toBeInTheDocument();
+    expect(screen.getByText('1 bytes')).toBeInTheDocument();
+    expect(screen.queryByText('Finalizing…')).not.toBeInTheDocument();
+    expect(container.querySelector('.mantine-Loader-root')).toBeNull();
   });
 
-  it('shows 0% while the total is unknown', () => {
+  it('shows 0% and the normal layout while the total is unknown', () => {
     setItem(0, 0);
-    renderWithProviders(<UploaderItem id="u1" />);
+    const { container } = renderWithProviders(<UploaderItem id="u1" />);
+
     expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.getByText('Uploaded')).toBeInTheDocument();
+    expect(screen.queryByText('Finalizing…')).not.toBeInTheDocument();
+    expect(container.querySelector('.mantine-Loader-root')).toBeNull();
+  });
+
+  it.each([
+    ['uploaded equals total', 2048, 2048],
+    ['uploaded exceeds total', 3000, 2048],
+  ])('shows the finalizing state when %s', (_name, uploaded, total) => {
+    setItem(uploaded, total);
+    const { container } = renderWithProviders(<UploaderItem id="u1" />);
+
+    expect(container.querySelector('.mantine-Loader-root')).not.toBeNull();
+    expect(screen.queryByText(/%/)).not.toBeInTheDocument();
+    expect(screen.getByText('Finalizing…')).toBeInTheDocument();
+    expect(screen.getByText('2.00 KB')).toBeInTheDocument();
+    expect(screen.queryByText('Uploaded')).not.toBeInTheDocument();
+    expect(screen.queryByText('Remaining')).not.toBeInTheDocument();
+  });
+
+  it('cancels the upload through IPC while finalizing', async () => {
+    setItem(2048, 2048);
+    renderWithProviders(<UploaderItem id="u1" />);
+
+    await userEvent.hover(screen.getByText('Object: a.bin'));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel', hidden: true }));
+
+    expect(callIPC).toHaveBeenCalledWith(CancelUploadOne, ['u1']);
   });
 
   it('cancels the upload through IPC after hovering the card', async () => {

@@ -1,14 +1,16 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ConnectS3ByProfile } from '@wails/S3Browser/internal/handlers/buckethandler';
+import { ConnectS3ByProfile, UploadObject } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { ObjectItem } from '@wails/S3Browser/models/bucket';
 import { type Ref, useImperativeHandle } from 'react';
+import { toast } from 'sonner';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import TabDetail from '@/components/layouts/tab/components/TabDetail';
 import ConnectModal from '@/components/modals/ConnectModal';
+import UploadPickerModal from '@/components/modals/UploadPickerModal';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
 type BucketStubProps = {
@@ -57,8 +59,13 @@ vi.mock('@/components/layouts/tab/components/ObjectDetailDrawer', () => ({
   ),
 }));
 vi.mock('@/components/modals/ConnectModal', () => ({ default: { show: vi.fn() } }));
+vi.mock('@/components/modals/UploadPickerModal', () => ({ default: { show: vi.fn() } }));
+vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn() }));
-vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({ ConnectS3ByProfile: vi.fn() }));
+vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
+  ConnectS3ByProfile: vi.fn(),
+  UploadObject: vi.fn(),
+}));
 
 const TAB = 't1';
 const profile = (patch: Partial<ConnectionProfileOutput> = {}) =>
@@ -88,6 +95,7 @@ function setup() {
 
 describe('TabDetail', () => {
   beforeEach(() => {
+    useTabListStore.setState({ uploadingTabId: null });
     h.objectRefresh.mockResolvedValue(undefined);
     h.menu.mockResolvedValue(undefined);
     setTab();
@@ -530,6 +538,210 @@ describe('TabDetail', () => {
       setup();
       expect(screen.queryByText(/^drawer/)).not.toBeInTheDocument();
       expect(document.querySelector(`[data-tab-id="${TAB}"]`)).not.toHaveAttribute('data-file-drop-target');
+    });
+  });
+
+  describe('upload', () => {
+    const pickerMock = vi.mocked(UploadPickerModal.show);
+    const file = (name: string) => ({ path: `/local/${name}`, relKey: name, size: 1, isLarge: false });
+    const picked = (bucket: string, names: string[] = ['a.txt']) => ({ bucket, files: names.map(file) });
+    const uploadBtn = () => btn('Upload files');
+    const objectTab = (patch: Record<string, unknown> = {}) =>
+      setTab({ currentView: 'objectList', bucket: 'b', prefix: 'a/', ...patch });
+
+    beforeEach(() => {
+      setProfile({ isConnected: true });
+      h.objectRefresh.mockResolvedValue(undefined);
+      vi.mocked(callIPC).mockResolvedValue({} as never);
+      pickerMock.mockResolvedValue(null as never);
+    });
+
+    it('shows the upload button in the bucket list and in the object list', () => {
+      setup();
+      expect(uploadBtn()).toBeEnabled();
+      cleanup();
+      objectTab();
+      setup();
+      expect(uploadBtn()).toBeEnabled();
+    });
+
+    it('disables the upload button until the profile is connected', () => {
+      setProfile({ isConnected: false });
+      setup();
+      expect(uploadBtn()).toBeDisabled();
+    });
+
+    it('opens the picker for the current bucket and folder in the object list', async () => {
+      objectTab();
+      const user = setup();
+      await user.click(uploadBtn());
+      expect(pickerMock).toHaveBeenCalledExactlyOnceWith({
+        tabId: TAB,
+        connectionId: 'p1',
+        profileName: 'Prof',
+        bucket: 'b',
+        prefix: 'a/',
+      });
+    });
+
+    it('opens the picker without a fixed bucket and an empty prefix in the bucket list', async () => {
+      setTab({ prefix: 'stale/' });
+      const user = setup();
+      await user.click(uploadBtn());
+      expect(pickerMock).toHaveBeenCalledExactlyOnceWith({
+        tabId: TAB,
+        connectionId: 'p1',
+        profileName: 'Prof',
+        bucket: undefined,
+        prefix: '',
+      });
+    });
+
+    it('opens the picker without a fixed bucket when the object view has no bucket', async () => {
+      setTab({ currentView: 'objectList', bucket: undefined, prefix: 'a/' });
+      const user = setup();
+      await user.click(uploadBtn());
+      expect(pickerMock).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ bucket: undefined, prefix: '' }));
+    });
+
+    it('does nothing when the profile has no id', async () => {
+      setProfile({ isConnected: true, id: '' });
+      const user = setup();
+      await user.click(uploadBtn());
+      expect(pickerMock).not.toHaveBeenCalled();
+    });
+
+    it('warns and does not open the picker while another upload is running', async () => {
+      useTabListStore.setState({ uploadingTabId: 'other' });
+      const user = setup();
+      await user.click(uploadBtn());
+      expect(toast.warning).toHaveBeenCalledWith('Another upload is running, please wait until it finishes.');
+      expect(pickerMock).not.toHaveBeenCalled();
+    });
+
+    it('does not upload when the picker is canceled', async () => {
+      pickerMock.mockResolvedValue(null as never);
+      const user = setup();
+      await user.click(uploadBtn());
+      expect(callIPC).not.toHaveBeenCalled();
+      expect(useTabListStore.getState().uploadingTabId).toBeNull();
+    });
+
+    it('does not upload when no file was ticked', async () => {
+      pickerMock.mockResolvedValue({ bucket: 'b', files: [] } as never);
+      const user = setup();
+      await user.click(uploadBtn());
+      expect(callIPC).not.toHaveBeenCalled();
+    });
+
+    it('uploads the files into the current folder, then refreshes the same list', async () => {
+      objectTab();
+      pickerMock.mockResolvedValue(picked('b', ['a.txt', 'b.txt']) as never);
+      const user = setup();
+      await user.click(uploadBtn());
+      await waitFor(() => expect(h.objectRefresh).toHaveBeenCalledTimes(1));
+      expect(callIPC).toHaveBeenCalledExactlyOnceWith(UploadObject, [
+        {
+          connectionId: 'p1',
+          profileName: 'Prof',
+          bucket: 'b',
+          prefix: 'a/',
+          objList: [
+            { path: '/local/a.txt', relKey: 'a.txt' },
+            { path: '/local/b.txt', relKey: 'b.txt' },
+          ],
+        },
+      ]);
+      expect(useTabListStore.getState().uploadingTabId).toBeNull();
+    });
+
+    it('marks the tab as uploading while the upload runs', async () => {
+      objectTab();
+      pickerMock.mockResolvedValue(picked('b') as never);
+      let seen: string | null = null;
+      vi.mocked(callIPC).mockImplementation((async () => {
+        seen = useTabListStore.getState().uploadingTabId;
+        return {};
+      }) as never);
+      const user = setup();
+      await user.click(uploadBtn());
+      await waitFor(() => expect(h.objectRefresh).toHaveBeenCalled());
+      expect(seen).toBe(TAB);
+    });
+
+    it('uploads to the root of the bucket chosen in the picker from the bucket list and does not refresh', async () => {
+      pickerMock.mockResolvedValue(picked('chosen') as never);
+      const user = setup();
+      await user.click(uploadBtn());
+      await waitFor(() => expect(callIPC).toHaveBeenCalledTimes(1));
+      expect(vi.mocked(callIPC).mock.calls[0][1]).toEqual([expect.objectContaining({ bucket: 'chosen', prefix: '' })]);
+      await waitFor(() => expect(useTabListStore.getState().uploadingTabId).toBeNull());
+      expect(h.objectRefresh).not.toHaveBeenCalled();
+      expect(h.bucketRefresh).not.toHaveBeenCalled();
+    });
+
+    it('refreshes when the user opened the target bucket root during the upload', async () => {
+      pickerMock.mockResolvedValue(picked('chosen') as never);
+      vi.mocked(callIPC).mockImplementation((async () => {
+        useTabListStore.getState().changeCurrentView(TAB, 'objectList', 'chosen');
+        return {};
+      }) as never);
+      const user = setup();
+      await user.click(uploadBtn());
+      await waitFor(() => expect(h.objectRefresh).toHaveBeenCalledTimes(1));
+    });
+
+    it.each([
+      ['another folder', { prefix: 'other/' }],
+      ['another bucket', { bucket: 'else' }],
+      ['the bucket list', { currentView: 'bucketList' }],
+    ])('does not refresh when the user moved to %s during the upload', async (_name, patch) => {
+      objectTab();
+      pickerMock.mockResolvedValue(picked('b') as never);
+      vi.mocked(callIPC).mockImplementation((async () => {
+        useTabListStore.getState().updateTab(TAB, patch as never);
+        return {};
+      }) as never);
+      const user = setup();
+      await user.click(uploadBtn());
+      await waitFor(() => expect(useTabListStore.getState().uploadingTabId).toBeNull());
+      expect(h.objectRefresh).not.toHaveBeenCalled();
+    });
+
+    it('does not refresh when the tab was closed during the upload', async () => {
+      objectTab();
+      pickerMock.mockResolvedValue(picked('b') as never);
+      vi.mocked(callIPC).mockImplementation((async () => {
+        useTabListStore.setState({ tabList: {} });
+        return {};
+      }) as never);
+      const user = setup();
+      await user.click(uploadBtn());
+      await waitFor(() => expect(useTabListStore.getState().uploadingTabId).toBeNull());
+      expect(h.objectRefresh).not.toHaveBeenCalled();
+    });
+
+    it('still refreshes and releases the tab when the upload fails (callIPC returns null)', async () => {
+      objectTab();
+      pickerMock.mockResolvedValue(picked('b') as never);
+      vi.mocked(callIPC).mockResolvedValue(null as never);
+      const user = setup();
+      await user.click(uploadBtn());
+      await waitFor(() => expect(h.objectRefresh).toHaveBeenCalledTimes(1));
+      expect(useTabListStore.getState().uploadingTabId).toBeNull();
+    });
+
+    it('does not upload when another upload started while the picker was open', async () => {
+      objectTab();
+      pickerMock.mockImplementation((async () => {
+        useTabListStore.setState({ uploadingTabId: 'other' });
+        return picked('b');
+      }) as never);
+      const user = setup();
+      await user.click(uploadBtn());
+      await waitFor(() => expect(toast.warning).toHaveBeenCalled());
+      expect(callIPC).not.toHaveBeenCalled();
+      expect(useTabListStore.getState().uploadingTabId).toBe('other');
     });
   });
 });

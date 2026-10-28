@@ -1,6 +1,6 @@
 import { Anchor, Breadcrumbs, Divider, Group, Paper, Stack, Text, Tooltip } from '@mantine/core';
 import { ConnectS3ByProfile } from '@wails/S3Browser/internal/handlers/buckethandler';
-import { ArrowLeft, BroomSparkles, Download, PlugZap, RefreshCw, Trash } from 'lucide-react';
+import { ArrowLeft, BroomSparkles, Download, PlugZap, RefreshCw, Trash, Upload } from 'lucide-react';
 import { MouseEvent, memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
@@ -8,11 +8,13 @@ import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { formatStringJson, isNullOrEmpty } from '@/common/utils/stringUtils';
+import { ensureUploadIdle, runUpload } from '@/common/utils/uploadUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import Combobox from '@/components/inputs/combobox/Combobox';
 import SearchInput from '@/components/inputs/SearchInput';
 import ObjectDetailDrawer from '@/components/layouts/tab/components/ObjectDetailDrawer';
 import ConnectModal from '@/components/modals/ConnectModal';
+import UploadPickerModal from '@/components/modals/UploadPickerModal';
 import BucketListView, { BucketListViewRef } from '@/pages/bucket/BucketListView';
 import ObjectListView, { ObjectListViewRef } from '@/pages/object/ObjectListView';
 import classes from '@/pages/object/page.module.css';
@@ -190,6 +192,35 @@ function TabDetail(props: TabDetailProps) {
     return objectListRef.current?.onClickMenuButton?.(selectedItems, 'delete');
   }, [selectedItems]);
 
+  // Opens the file picker, then uploads the ticked files: into the current folder in the object list, or into the
+  // bucket chosen in the picker (at its root) in the bucket list.
+  const onClickUpload = useCallback(async () => {
+    if (!selectedProfile?.id || !ensureUploadIdle()) return;
+    const connectionId = selectedProfile.id;
+    const profileName = selectedProfile.name;
+    const inBucket = currentView === 'objectList' && !!selectedBucket;
+    const uploadPrefix = inBucket ? prefix : '';
+    const picked = await UploadPickerModal.show({
+      tabId,
+      connectionId,
+      profileName,
+      bucket: inBucket ? selectedBucket : undefined,
+      prefix: uploadPrefix,
+    });
+    if (!picked || picked.files.length === 0) return;
+
+    await runUpload(
+      { tabId, connectionId, profileName, bucket: picked.bucket, prefix: uploadPrefix, files: picked.files },
+      async () => {
+        // The user may have moved on while uploading: refresh only the list the files went to.
+        const tab = useTabListStore.getState().tabList[tabId];
+        if (tab?.currentView === 'objectList' && tab.bucket === picked.bucket && tab.prefix === uploadPrefix) {
+          await objectListRef.current?.onRefresh?.();
+        }
+      }
+    );
+  }, [selectedProfile, currentView, selectedBucket, prefix, tabId]);
+
   const viewContent = (
     <>
       <Stack gap="8px" display={currentView === 'bucketList' ? undefined : 'none'}>
@@ -255,6 +286,12 @@ function TabDetail(props: TabDetailProps) {
             onSearch={onSearch}
             onClear={onClearSearch}
           />
+
+          <Tooltip label={t('tooltip.upload')}>
+            <ActionIcon onClick={onClickUpload} aria-label={t('tooltip.upload')} disabled={!isConnected}>
+              <Upload />
+            </ActionIcon>
+          </Tooltip>
 
           {currentView === 'objectList' ? (
             <>

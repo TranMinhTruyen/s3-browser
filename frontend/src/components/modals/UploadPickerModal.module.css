@@ -1,0 +1,29 @@
+/* The Wails runtime adds file-drop-target-active on the modal content while files are dragged over it.
+   The whole modal accepts the drop, but only the list area is highlighted. */
+.dropArea {
+  position: relative;
+}
+
+.dropOverlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #3b48ff;
+  background-color: color-mix(in srgb, var(--mantine-color-body) 85%, transparent);
+  pointer-events: none;
+}
+
+.dropZone:global(.file-drop-target-active) .dropArea {
+  outline: 2px dashed #3b48ff;
+  outline-offset: -2px;
+  background-image: linear-gradient(rgba(59, 72, 255, 0.05), rgba(59, 72, 255, 0.05));
+}
+
+.dropZone:global(.file-drop-target-active) .dropOverlay {
+  display: flex;
+}

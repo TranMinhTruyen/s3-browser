@@ -1,4 +1,4 @@
-import { Box, Card, Center, Collapse, Group, RingProgress, Text } from '@mantine/core';
+import { Box, Card, Center, Collapse, Group, Loader, RingProgress, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { CancelUploadOne } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { X } from 'lucide-react';
@@ -27,7 +27,8 @@ function UploaderItem(props: UploaderItemProps) {
 
   if (!item) return null;
 
-  const percent = item.total > 0 ? Math.min(99, Math.round((item.uploaded / item.total) * 100)) : 0;
+  const finalizing = item.total > 0 && item.uploaded >= item.total;
+  const percent = finalizing ? 100 : item.total > 0 ? Math.min(99, Math.round((item.uploaded / item.total) * 100)) : 0;
 
   return (
     <Card
@@ -43,9 +44,15 @@ function UploaderItem(props: UploaderItemProps) {
           <RingProgress
             size={60}
             label={
-              <Text size="xs" ta="center">
-                {percent}%
-              </Text>
+              finalizing ? (
+                <Center>
+                  <Loader size="xs" />
+                </Center>
+              ) : (
+                <Text size="xs" ta="center">
+                  {percent}%
+                </Text>
+              )
             }
             thickness={6}
             roundCaps
@@ -58,21 +65,30 @@ function UploaderItem(props: UploaderItemProps) {
         <Text truncate="end">
           {t('label.objectLbl')}: {item.fileName}
         </Text>
-        <Group>
-          <Box>
+        {finalizing ? (
+          <Group gap="xs">
+            <Text c="blue">{t('label.finalizingLbl')}</Text>
             <Text size="xs" c="dimmed">
-              {t('label.uploadedLbl')}
+              {formatFileSize(item.total)}
             </Text>
-            <Text>{formatFileSize(item.uploaded)}</Text>
-          </Box>
+          </Group>
+        ) : (
+          <Group>
+            <Box>
+              <Text size="xs" c="dimmed">
+                {t('label.uploadedLbl')}
+              </Text>
+              <Text>{formatFileSize(item.uploaded)}</Text>
+            </Box>
 
-          <Box>
-            <Text size="xs" c="dimmed">
-              {t('label.remainingLbl')}
-            </Text>
-            <Text>{formatFileSize(Math.max(0, item.total - item.uploaded))}</Text>
-          </Box>
-        </Group>
+            <Box>
+              <Text size="xs" c="dimmed">
+                {t('label.remainingLbl')}
+              </Text>
+              <Text>{formatFileSize(Math.max(0, item.total - item.uploaded))}</Text>
+            </Box>
+          </Group>
+        )}
       </Card.Section>
 
       <Collapse

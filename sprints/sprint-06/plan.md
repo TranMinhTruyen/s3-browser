@@ -1,0 +1,87 @@
+# Plan sprint-06
+
+## 1. Tóm tắt yêu cầu
+- R1: Button upload cạnh button search (ObjectListView và BucketListView) mở modal chọn file. Modal có button mở hộp thoại chọn file của OS và vùng kéo thả; file thêm vào danh sách xem trước (virtualize), mỗi file có checkbox. Upload các file đã tick, áp dụng cùng giới hạn như thả file (số file mỗi folder, file lớn, tổng số file). ObjectListView upload vào bucket + prefix hiện tại; BucketListView có thêm ô chọn bucket đích (bắt buộc chọn). Nền tảng: AWS S3 + MinIO (người dùng đã chọn "Cả hai").
+- Ngoài phạm vi: unit test Go.
+
+Kết quả khảo sát code (đã kiểm chứng):
+- `UploadObject` (`internal/modules/bucket/submodule_uploader_mng.go`) cần `path` tuyệt đối trên máy; backend tự kiểm tra lại giới hạn (`maxTotalFiles=1000`, `maxFilesPerFolder=50`, `largeFileMaxCount=4`, `largeFileSize=10GiB`) và chỉ cho một lần upload chạy cùng lúc (`busy`, trả `S3W005`). Key trùng được tự đổi tên.
+- Giới hạn được gửi cho frontend trong `models/bucket/files_dropped_output.go` (`FilesDroppedOutput`: `groups[]` với `files[]{path, relKey, size, isLarge}`, `maxFilesPerFolder`, `largeFileSize`, `largeFileMaxCount`, `maxTotalFiles`, `skipped`, `overMaxTotal`, `capped`). `expandDropped` (`uploader_expand.go`) đã xử lý cả file lẫn folder, nên có thể dùng lại cho đường dẫn lấy từ dialog.
+- Luồng thả hiện có: `main.go:78` `EnableFileDrop: true`, `main.go:81` `OnWindowEvent(WindowFilesDropped, BucketHandler.FilesDropped)` -> `handleDrop` đọc `DropTargetDetails().Attributes["data-tab-id"]` -> emit `uploader:files-dropped`. Vùng thả là `Paper` trong `TabDetail.tsx:336-345` (`data-file-drop-target` chỉ khi `currentView === 'objectList'`, kèm `data-tab-id`). `ObjectListView.onFilesDropped` (dòng 315-377) lọc theo `tabId`, báo `skipped`/`overMaxTotal`, chặn khi `uploadingTabId !== null`, mở `UploadLimitModal` khi nhóm vượt giới hạn, rồi `setUploadingTab` -> `callIPC(UploadObject)` -> refresh.
+- Dialog native đã được dùng ở `submodule_downloader_mng.go:95` (`m.app.Dialog.OpenFile()...PromptForSingleSelection()`), và Wails v3.0.0 (go.mod) có `OpenFileDialogStruct.PromptForMultipleSelection()`, `CanChooseFiles`, `CanChooseDirectories`, `AddFilter`, `SetTitle`, `AttachToWindow` (kiểm trong module cache `wails/v3@v3.0.0/pkg/application/dialogs.go`). Không truy cập được https://v3.wails.io (HTTP 403 với WebFetch), nên API trên xác minh bằng source module, không bằng trang tài liệu.
+- Cơ chế drop của runtime Wails (`window.ts` trong `@wailsio/runtime` v3.0.0): dùng `document.elementFromPoint(x, y)` rồi `closest('[data-file-drop-target]')`; trả `id`, `classList`, và toàn bộ `attributes` của phần tử đó trong `DropTargetDetails`. Thả ngoài mọi drop target thì bị bỏ qua. Modal Mantine render qua portal ra ngoài `Paper` vùng thả, nên hiện tại thả lên modal bị bỏ qua và lớp phủ che luôn vùng list phía sau.
+
+## 2. Câu hỏi chưa rõ
+Cần người dùng xác nhận Q1 và Q2 trước B3. Q3-Q5 là đề xuất mặc định, planner sẽ làm theo nếu không có phản hồi khác.
+
+| # | Câu hỏi | Đề xuất | Trả lời |
+|---|---|---|---|
+| Q1 | Hộp thoại chọn file có cho chọn cả folder không? | Chỉ chọn file (`CanChooseFiles(true)`, `PromptForMultipleSelection`). Lý do: dialog chọn nhiều file và dialog chọn folder là hai chế độ khác nhau trên Windows; việc kết hợp trong một dialog của Wails v3.0.0 chưa xác minh (chưa tìm thấy xử lý rõ ràng trong source). Folder vẫn nhận được qua kéo thả vào modal (đã có `expandDropped`). Nếu cần chọn folder bằng dialog thì thêm button thứ hai "Thêm folder" (`CanChooseDirectories(true)`, `PromptForSingleSelection`), tốn thêm 1 handler nhỏ. | (chờ người dùng) |
+| Q2 | Khi vượt giới hạn: tự bỏ file vượt và cảnh báo, hay khoá button upload đến khi bỏ tick bớt? | Kết hợp, nhất quán với `UploadLimitModal` hiện có: khi thêm file, tự tick theo thứ tự đến khi chạm giới hạn của nhóm (tối đa `maxFilesPerFolder` file, tối đa `largeFileMaxCount` file lớn) và để file vượt không tick, kèm toast cảnh báo; người dùng vẫn tick tay được, nhưng nếu tick vượt giới hạn thì khoá button upload và hiển thị bộ đếm đỏ `x/max` ở header nhóm (giống `UploadLimitModal`). Lý do: không mất file ngầm, không cần luật mới, và backend vẫn từ chối nếu vượt. | (chờ người dùng) |
+| Q3 | Phân biệt thả vào modal và thả vào list? | Đặt `data-file-drop-target` + `data-drop-kind="picker"` + `data-tab-id` lên vùng drop trong modal. Backend `handleDrop` đọc `data-drop-kind`: `picker` thì emit event mới `uploader:picker-files-dropped` (payload `FilesDroppedOutput`), còn lại giữ nguyên `uploader:files-dropped`. Lý do: runtime chọn drop target bằng `elementFromPoint` + `closest`, nên modal (portal) và list không bao giờ lẫn nhau, không cần cờ trạng thái. Thả lên phần modal ngoài vùng drop sẽ bị bỏ qua (có thể đặt attribute lên toàn bộ `Modal.Content` để cả modal là vùng thả; đề xuất làm vậy). | Đề xuất |
+| Q4 | Chọn bucket đích ở BucketListView dùng control nào? `Combobox` hiện có chỉ nhận mảng `data` tĩnh, không có tìm kiếm hay phân trang, mà danh sách bucket phân trang (limit 10) và có `SearchBucket`. | Tạo component mới `BucketPicker` (Mantine Combobox có ô tìm kiếm) lấy 20 bucket đầu bằng `GetListBucket`, gõ từ khoá thì gọi `SearchBucket` (debounce), có nút "tải thêm" theo `nextCursor`. Giá trị chọn là tên bucket. | Đề xuất |
+| Q5 | Tính giới hạn khi người dùng thêm file nhiều lần vào modal? | Chọn trùng đường dẫn thì bỏ qua (dedupe theo `path`). Danh sách trong modal gộp theo `group.name` và cap tổng ở `maxTotalFiles` (vượt thì bỏ file thừa và toast `S3W007`, tái sử dụng message có sẵn). Lưu ý: tất cả file chọn từ dialog có `relKey` = tên file nên đều rơi vào nhóm gốc (`""`), do đó mỗi lần upload từ dialog tối đa 50 file (giống hành vi thả file lẻ hiện nay), muốn nhiều hơn phải thả folder. Chấp nhận. | Đề xuất |
+| Q6 | Vị trí button upload và icon? | Đặt ngay sau `SearchInput` trong `TabDetail.tsx` (dùng chung cho cả 2 view), icon `Upload` của lucide-react, disabled khi chưa kết nối (giống search). | Đề xuất |
+
+## 3. Task backend (go-backend)
+| # | Task | Yêu cầu | File sửa / tạo | Phụ thuộc |
+|---|---|---|---|---|
+| B1 | Message code mới `S3E029` (chọn file thất bại) khai báo ở đầu `module.go`; thêm key `S3E029` vào `ipcMessage.json` en/vi/ja | R1 | `internal/modules/bucket/module.go` (sửa), `frontend/src/locales/en/messages/ipcMessage.json`, `.../vi/...`, `.../ja/...` (sửa) | - |
+| B2 | Tách phần dựng `FilesDroppedOutput` khỏi `dropFiles` thành hàm dùng chung (nhận `tabID`, danh sách path), để cả drop và dialog dùng chung `expandDropped` + các hằng giới hạn | R1 | `internal/modules/bucket/submodule_uploader_mng.go` (sửa) | B1 |
+| B3 | Thêm `pickFiles()` trong uploader: mở `Dialog.OpenFile()` chọn nhiều file (theo Q1), user huỷ thì trả `Result=true` với `Body` rỗng; lỗi dialog thì `output.ThrowError(S3E029)`; kết quả đi qua hàm ở B2 (`TabId` rỗng). Dialog gọi qua một field hàm `pickPaths func() ([]string, error)` gán trong `newSubmoduleUploaderMng`, không thêm method vào interface `uploadHost` để không làm vỡ fake host của test Go hiện có. Có timeout/ctx theo quy ước (dialog chặn tới khi người dùng đóng nên không bọc timeout, chỉ kiểm tra ctx huỷ trước khi mở) | R1 | `internal/modules/bucket/submodule_uploader_mng.go` (sửa) | B2 |
+| B4 | `handleDrop` đọc `data-drop-kind`: `picker` thì emit event mới `uploader:picker-files-dropped`; còn lại như cũ. Khai báo hằng `EventPickerFilesDropped` và `application.RegisterEvent[models.FilesDroppedOutput]` trong `init()` | R1 | `internal/modules/bucket/events.go`, `internal/modules/bucket/submodule_uploader_mng.go` (sửa) | B2 |
+| B5 | API public `Module.PickFiles()` (doc comment) và handler `BucketHandler.PickFiles()` trả `models.Output[models.FilesDroppedOutput]` (mỏng, chỉ gọi xuống module) | R1 | `internal/modules/bucket/module.go`, `internal/handlers/bucket_handler.go` (sửa) | B3 |
+
+Message code mới: `S3E029` (kiểm tra số kế tiếp là 029, hiện cao nhất là `S3E028`)  |  Migration / sqlc: không  |  Cần sinh lại bindings: có (handler `PickFiles`; model và event dùng lại `FilesDroppedOutput`, không đổi `models/alias.go`)
+
+## 4. Task frontend (react-frontend)
+| # | Task | Yêu cầu | File sửa / tạo | Phụ thuộc |
+|---|---|---|---|---|
+| F1 | Tách phần chạy upload ra util dùng chung: kiểm tra `uploadingTabId` (toast `S3W005`), `setUploadingTab(tabId)`, `callIPC(UploadObject, ...)`, `finally setUploadingTab(null)`; trả cho bên gọi để refresh. `ObjectListView.onFilesDropped` gọi lại util này, hành vi giữ nguyên | R1 | `frontend/src/common/utils/uploadUtils.ts` (tạo), `frontend/src/pages/object/ObjectListView.tsx` (sửa) | B5 + bindings |
+| F2 | `BucketPicker`: chọn bucket đích có tìm kiếm + phân trang (Q4), xuất `onChange(bucketName)` | R1 | `frontend/src/components/inputs/combobox/BucketPicker.tsx` (tạo) | B5 + bindings |
+| F3 | `UploadPickerModal` (`createMantineModal`): header tiêu đề, (BucketListView) `BucketPicker` bắt buộc chọn, button "Chọn file" gọi `callIPC(PickFiles)`, vùng thả (`data-file-drop-target`, `data-drop-kind="picker"`, `data-tab-id`), lắng nghe `Events.On('uploader:picker-files-dropped')` lọc theo `tabId` khi modal đang mở, danh sách virtualize bằng `@tanstack/react-virtual` (header nhóm + hàng file có checkbox, tham khảo `FileList` trong `UploadLimitModal.tsx`), dedupe theo `path` (Q5), tự tick theo giới hạn (Q2), bộ đếm `x/max` mỗi nhóm, nút Upload bị khoá khi vượt giới hạn / chưa chọn bucket / không có file tick; Cancel đóng modal. Resolve `{ bucket, files }` hoặc `null`. Dùng `React.memo` cho hàng, `useCallback` cho mọi hàm, dùng `Set` cho tick, không select nguyên object store | R1 | `frontend/src/components/modals/UploadPickerModal.tsx` (tạo), `frontend/src/pages/object/page.module.css` (sửa, style vùng thả trong modal nếu cần) | F1, F2 |
+| F4 | `TabDetail`: thêm `ActionIcon` upload (icon `Upload`) ngay sau `SearchInput`, `disabled={!isConnected}`. Handler `onClickUpload`: mở `UploadPickerModal.show({ tabId, connectionId, profileName, bucket: selectedBucket, prefix, ... })`, nhận kết quả rồi gọi util F1 với bucket đích (ObjectListView: bucket + prefix hiện tại; BucketListView: bucket đã chọn, prefix rỗng). Sau khi upload xong, chỉ refresh object list nếu vẫn ở cùng bucket + prefix + view `objectList` | R1 | `frontend/src/components/layouts/tab/components/TabDetail.tsx` (sửa) | F3 |
+| F5 | Locale + đăng ký resource cả 3 ngôn ngữ | R1 | `frontend/src/locales/{en,vi,ja}/components/modals/uploadPickerModal.json` (tạo), `frontend/src/locales/{en,vi,ja}/components/tabLayout.json` (thêm `tooltip.upload`), `frontend/src/locales/{en,vi,ja}/resource.ts` (sửa) | F3, F4 |
+
+i18n key mới (en/vi/ja): namespace `uploadPickerModal` (`title`, `selectFiles`, `dropHint`, `bucketLabel`, `bucketPlaceholder`, `bucketRequired`, `emptyList`, `selectedCount`, `selectedLarge`, `limitExceeded`, `autoUnselected`, `upload`, `large`, `rootFolder`, `selectAll`), `tabLayout:tooltip.upload`, `bucketPicker` (placeholder tìm kiếm, tải thêm, rỗng), `ipcMessage:bucket.S3E029`.
+
+Test frontend (react-tester):
+| Task | File cần test | Case cần phủ |
+|---|---|---|
+| F1 | `frontend/src/test/common/utils/uploadUtils.test.ts` | đang bận (`uploadingTabId` khác null) -> toast `S3W005`, không gọi `UploadObject`; thành công -> `setUploadingTab(tabId)` rồi reset `null`; `callIPC` trả `null` (lỗi) vẫn reset `uploadingTabId`; `callIPC` ném lỗi vẫn reset (finally); map `files` chỉ gồm `path`/`relKey`; `prefix` rỗng và có giá trị |
+| F1 | `frontend/src/test/pages/object/ObjectListView.test.tsx` (cập nhật) | các case thả file hiện có vẫn pass sau refactor; nhánh refresh khi view còn mounted / đã unmount |
+| F2 | `frontend/src/test/components/inputs/combobox/BucketPicker.test.tsx` | tải trang đầu; danh sách rỗng; gõ từ khoá -> `SearchBucket` (dùng fake timer của vitest cho debounce nếu có, hoặc mock hook debounce); `nextCursor` có/không -> hiện/ẩn "tải thêm"; tải thêm lỗi (`callIPC` trả null); chọn bucket -> `onChange`; xoá lựa chọn; bỏ qua kết quả cũ khi signal bị abort; unmount huỷ request |
+| F3 | `frontend/src/test/components/modals/UploadPickerModal.test.tsx` | mở modal ở chế độ bucket cố định / chế độ chọn bucket; click "Chọn file": `PickFiles` trả body có file / body rỗng (người dùng huỷ) / `null` (lỗi); event `uploader:picker-files-dropped` đúng `tabId` / sai `tabId` bị bỏ qua; dedupe path trùng; gộp nhóm cùng `name`; tự tick đến giới hạn `maxFilesPerFolder`; giới hạn file lớn `largeFileMaxCount`; cap `maxTotalFiles` + toast `S3W007`; `skipped > 0` + `capped` + `overMaxTotal` hiện cảnh báo; tick/bỏ tick; tick tay vượt giới hạn -> nút Upload bị khoá + bộ đếm đỏ; chưa chọn bucket (chế độ chọn bucket) -> khoá; không có file tick -> khoá; Upload resolve đúng `{ bucket, files }`; Cancel / đóng bằng nút X resolve `null`; virtualize với danh sách lớn (mock kích thước phần tử cho virtualizer); gỡ listener khi unmount |
+| F4 | `frontend/src/test/components/layouts/tab/components/TabDetail.test.tsx` (cập nhật) | nút upload hiện ở cả `bucketList` và `objectList`; disabled khi chưa kết nối; click mở modal với đúng props (bucket, prefix, connectionId); modal trả `null` -> không upload; trả files -> gọi util upload với bucket đích; ObjectListView: refresh khi còn cùng bucket/prefix, không refresh khi đã đổi folder; BucketListView: không refresh; upload thất bại |
+
+## 5. Thứ tự thực hiện (luôn tuần tự)
+1. Backend: B1 -> B2 -> B3 -> B4 -> B5. Kiểm tra bằng `go vet ./...`, `go build ./...`, `go tool golangci-lint run ./...`.
+2. `go tool wails3 generate bindings -clean=true -ts` (qua skill `wails3-bindings`). Không có sqlc.
+3. Frontend: F1 -> F2 -> F3 -> F4 -> F5.
+4. FE test (react-tester), coverage C1 >= 95% cho từng file đã đổi: `uploadUtils.ts`, `ObjectListView.tsx`, `BucketPicker.tsx`, `UploadPickerModal.tsx`, `TabDetail.tsx`.
+5. verifier, code-reviewer (tối đa 3 vòng).
+
+## 6. Rủi ro
+| # | Rủi ro | Mức độ | Cách giảm thiểu |
+|---|---|---|---|
+| 1 | Không truy cập được https://v3.wails.io (403), API dialog/drop xác minh qua source module `wails/v3@v3.0.0` và `window.ts`, chưa đối chiếu với trang tài liệu | medium | go-backend đối chiếu lại khi triển khai; chạy thử thủ công trên Windows |
+| 2 | `PromptForMultipleSelection` và dialog trộn file + folder trên Windows chưa xác minh bằng chạy thật; thứ tự file trả về không đảm bảo (source lặp trên kết quả không phải slice) | medium | Q1 đề xuất chỉ chọn file; sắp xếp kết quả theo tên phía backend để thứ tự ổn định |
+| 3 | Dialog native chặn tới khi người dùng đóng; nếu gọi từ goroutine không phù hợp có thể treo hoặc dialog không gắn vào cửa sổ chính | medium | Làm theo cách `downloader` đang dùng (đã chạy được); thử `AttachToWindow` (chưa xác minh cách lấy cửa sổ chính trong handler) nếu dialog bị chìm sau modal |
+| 4 | Thả vào modal bị nhận nhầm là thả vào list (hoặc ngược lại) vì Wails chỉ nhận drop theo `closest('[data-file-drop-target]')` | medium | Q3: attribute riêng và event riêng; verifier kiểm thủ công 3 trường hợp (thả vào modal, vào list khi modal đóng, vào vùng ngoài); nên có thêm test Go ở lần sau |
+| 5 | Refactor `onFilesDropped` của ObjectListView sang util dùng chung có thể làm lệch hành vi đang được test (UploadLimitModal, toast, refresh khi unmount) | medium | F1 giữ nguyên thứ tự gọi; chạy lại bộ test hiện có của `ObjectListView` trước khi sửa tiếp |
+| 6 | Hiệu năng danh sách lớn (tới 1000 file, mỗi lần thêm gộp nhóm + dedupe + đếm giới hạn) | medium | Dùng `Set`/`Map` theo `path`, tính thống kê bằng `useMemo`, hàng `memo`, virtualize; tránh tạo lại mảng khi tick |
+| 7 | Cùng tên file ở hai thư mục khác nhau khi chọn qua dialog đều có `relKey` = tên file; backend tự đổi tên key trùng bằng `renameKey` | low | Chấp nhận (đã có xử lý ở backend); ghi chú trong modal nếu cần |
+| 8 | `BucketPicker` là control mới có phân trang + tìm kiếm + debounce, tốn công test (C1 >= 95%) | medium | Tách logic tải thành hook nhỏ dễ mock; có thể thu hẹp xuống 1 trang `GetListBucket` + `SearchBucket` nếu người dùng chấp nhận |
+| 9 | Chỉ một upload chạy tại một thời điểm (backend `busy` và `uploadingTabId`); người dùng có thể chọn file xong mới biết đang bận | low | Kiểm tra `uploadingTabId` khi mở modal và báo `S3W005` sớm; backend vẫn là chốt chặn cuối |
+| 10 | Sprint gồm 5 task backend + 5 task frontend (khoảng 10), ở ngưỡng cảnh báo | low | Nếu muốn giảm chi phí vòng review, có thể tách F2 (`BucketPicker`) sang sprint riêng, sprint này tạm dùng `Combobox` hiện có với 1 trang bucket |
+
+## 7. Tiêu chí hoàn thành
+- [ ] Unit test frontend đạt coverage C1 >= 95% và Lines >= 95% cho từng file đã đổi (`uploadUtils.ts`, `ObjectListView.tsx`, `BucketPicker.tsx`, `UploadPickerModal.tsx`, `TabDetail.tsx`)
+- [ ] `go build ./...`, `go vet ./...`, `go tool golangci-lint run ./...` sạch; `tsc --noEmit`, biome, oxlint sạch; bindings đã sinh lại
+- [ ] Có button upload cạnh button search ở ObjectListView và BucketListView; click mở được modal
+- [ ] Modal mở được hộp thoại chọn file hoặc nhận kéo thả; thả vào modal không kích hoạt upload của danh sách object phía sau
+- [ ] Mỗi file có checkbox chọn/bỏ chọn; danh sách virtualize, cuộn mượt với 1000 file
+- [ ] BucketListView: bắt buộc chọn bucket đích mới upload được; ObjectListView: upload vào bucket + prefix hiện tại
+- [ ] Giới hạn giống chức năng thả file (theo Q2); backend vẫn chặn khi vượt
+- [ ] Click Upload upload các file đã tick qua `UploadObject` (tái sử dụng `uploadingTabId` và cảnh báo đang bận); Cancel đóng modal không upload
+- [ ] Key `S3E029` và các key i18n mới có đủ en/vi/ja và đã đăng ký trong `resource.ts` của cả 3 ngôn ngữ
