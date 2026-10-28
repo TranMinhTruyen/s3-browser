@@ -1,5 +1,5 @@
-import { AppShell, Group, SegmentedControl, Splitter, Tooltip } from '@mantine/core';
-import { RotateCcwClock } from 'lucide-react';
+import { AppShell, Group, Splitter, Tooltip } from '@mantine/core';
+import { RotateCcwClock, Settings } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet } from 'react-router-dom';
@@ -7,28 +7,20 @@ import ActionIcon from '@/components/buttons/ActionIcon';
 import DownloaderWindow from '@/components/layouts/downloader/DownloaderWindow';
 import LeftNavbar from '@/components/layouts/navbar/LeftNavbar';
 import UploaderWindow from '@/components/layouts/uploader/UploaderWindow';
-import { showHistoryModal } from '@/components/modals/lazyModals';
+import { showHistoryModal, showSettingModal } from '@/components/modals/lazyModals';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
-import i18n from '@/locales/i18n';
 
-type Language = 'en' | 'ja' | 'vi';
-
-const LANGUAGE_OPTIONS: { label: string; value: Language }[] = [
-  { label: 'EN', value: 'en' },
-  { label: 'VI', value: 'vi' },
-  { label: 'JA', value: 'ja' },
-];
-
-/** App shell: header (history, language), navbar + routed page splitter, and transfer windows. */
+/** App shell: header (settings, history), navbar + routed page splitter, and transfer windows. */
 function MainLayout() {
   const { t } = useTranslation('historyModal');
+  const { t: tSetting } = useTranslation('settingModal');
 
   const onClickHistory = useCallback(() => {
     showHistoryModal();
   }, []);
 
-  const onChangeLanguage = useCallback((value: Language) => {
-    i18n.changeLanguage(value);
+  const onClickSetting = useCallback(() => {
+    showSettingModal();
   }, []);
 
   return (
@@ -37,18 +29,17 @@ function MainLayout() {
         <Group h="100%" px="sm" style={{ backgroundColor: INFO_BG_COLOR }}>
           <Group gap="xs"></Group>
           <Group ml="auto">
+            <Tooltip label={tSetting('title')}>
+              <ActionIcon aria-label={tSetting('title')} color="gray" onClick={onClickSetting}>
+                <Settings />
+              </ActionIcon>
+            </Tooltip>
+
             <Tooltip label={t('title')}>
               <ActionIcon aria-label={t('title')} color="gray" onClick={onClickHistory}>
                 <RotateCcwClock />
               </ActionIcon>
             </Tooltip>
-
-            <SegmentedControl<Language>
-              defaultValue="en"
-              onChange={onChangeLanguage}
-              style={{ height: '35px' }}
-              data={LANGUAGE_OPTIONS}
-            />
           </Group>
         </Group>
       </AppShell.Header>

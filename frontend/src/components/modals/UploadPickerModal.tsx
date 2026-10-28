@@ -350,11 +350,11 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
         <Divider />
 
         <Group p="8px" justify="space-between">
-          <Button onClick={onClickUpload} disabled={!targetBucket || hasViolation || result.length === 0}>
-            {t('upload')} ({result.length})
-          </Button>
           <Button onClick={onClickCancel} color="red">
             {t('common:button.cancel')}
+          </Button>
+          <Button onClick={onClickUpload} disabled={!targetBucket || hasViolation || result.length === 0}>
+            {t('upload')} ({result.length})
           </Button>
         </Group>
       </Modal.Content>

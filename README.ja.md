@@ -21,6 +21,7 @@ S3Browser は **Wails v3**（Go バックエンド、React + TypeScript フロ�
 - 1 件または複数のオブジェクトのダウンロード（分割並列取得）、進捗ウィンドウ、キャンセル、保存されるダウンロード履歴。
 - オブジェクトとフォルダの削除（確認付き）。
 - 英語、ベトナム語、日本語の UI。
+- 設定ダイアログ: テーマ（ライト / ダーク / システムに合わせる）、フォント、言語、Windows 起動時の自動起動。`settings.json` に保存され、UI 表示前に読み込まれます。
 - インストール不要のポータブル版。
 
 | オブジェクト | アップロード |
@@ -97,7 +98,7 @@ bun run --cwd docs build:pdf
 
 ```
 main.go            Wails アプリのエントリーポイント、サービス登録
-internal/          Go バックエンド: handlers、modules (bucket, profile, master, global)、pkg (db, logger, portable など)
+internal/          Go バックエンド: handlers、modules (bucket, profile, master, global, setting)、pkg (db, logger, portable など)
 models/            フロントエンドと共有する入出力モデル
 frontend/          React 19 + TypeScript の UI (src、bindings は Wails が生成)
 build/             Wails のビルド資産とプラットフォーム別 Taskfile (windows, darwin)

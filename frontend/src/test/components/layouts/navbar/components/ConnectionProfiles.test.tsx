@@ -98,17 +98,31 @@ describe('ConnectionProfiles', () => {
       expect(unsubscribe).toHaveBeenCalled();
     });
 
-    it('shows a connected profile with a green status and a disconnected one with a white status', () => {
+    it('shows a connected profile with a green status and a disconnected one with a red status', () => {
       renderProfiles({
         on: profile('on', { isConnected: true, color: undefined }),
         off: profile('off', { color: '#000000' }),
       });
 
       const status = (name: string) => card(name).querySelector<HTMLElement>('.mantine-Card-section')!;
-      expect(status('on-name').style.backgroundColor).toBe('rgb(131, 241, 117)');
-      expect(status('off-name').style.backgroundColor).toBe('rgb(255, 255, 255)');
+      expect(status('on-name').style.backgroundColor).toBe('var(--mantine-color-green-light)');
+      expect(status('on-name').style.color).toBe('var(--mantine-color-green-light-color)');
+      expect(status('off-name').style.backgroundColor).toBe('var(--mantine-color-red-light)');
+      expect(status('off-name').style.color).toBe('var(--mantine-color-red-light-color)');
       expect(card('on-name').querySelector('.lucide-cable')).toBeInTheDocument();
       expect(card('off-name').querySelector('.lucide-unplug')).toBeInTheDocument();
+    });
+  });
+
+  describe('text color', () => {
+    it.each([
+      ['light', '#ffffff', 'var(--mantine-color-black)'],
+      ['dark', '#000000', 'var(--mantine-color-white)'],
+      ['unset', undefined, 'var(--mantine-color-text)'],
+    ])('uses a contrasting text color for a %s profile color', (_name, color, expected) => {
+      renderProfiles({ p: profile('p', { color }) });
+
+      expect(card('p-name')).toHaveStyle({ color: expected });
     });
   });
 

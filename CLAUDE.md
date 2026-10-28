@@ -121,6 +121,8 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 - **Mọi hàm** khai báo trong component phải bọc `useCallback`.
 - Danh sách lớn phải virtualize.
 - Component Mantine được bọc lại trong `components/buttons|inputs|modals`.
+- Màu: dùng biến theme `var(--mantine-color-*)` và `light-dark(<light>, <dark>)` để hỗ trợ cả light/dark theme; không hard-code hex/rgb/tên màu (ngoại lệ: màu lưu như dữ liệu, ví dụ màu profile do user chọn).
+- Modal: footer đặt nút Huỷ (`color="red"`) bên **trái**, các nút hành động (Reset, Apply, Save, OK, Upload, ...) bên **phải**, dùng `<Group p="8px" justify="space-between" wrap="nowrap">` để không nhảy layout khi đổi ngôn ngữ/font. Phần thân modal có form/nội dung chính thì bọc trong `<Paper withBorder>` giống `UploadPickerModal`.
 
 ### i18n
 

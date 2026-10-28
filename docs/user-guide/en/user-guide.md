@@ -17,7 +17,7 @@ The interface is available in English, Vietnamese and Japanese.
 
 ![Main window](images/01-main-window.png)
 
-The window has three areas: the **profile list** on the left, the **tabs** on the right (each tab shows the buckets and objects of one connection) and the **header** at the top with the download history button and the language switch.
+The window has three areas: the **profile list** on the left, the **tabs** on the right (each tab shows the buckets and objects of one connection) and the **header** at the top with the **Settings** button and the download history button.
 
 > This is a beta version (0.0.1-beta.1). Please keep a copy of important data before deleting objects: a deletion cannot be undone.
 
@@ -175,11 +175,23 @@ Open the **More actions** menu of the object and choose **Delete**, or select ob
 
 Deleting a **folder** removes the folder **and everything inside it**. The confirmation says so, and the action cannot be undone. If some objects cannot be deleted, the message tells you how many failed and how many were deleted.
 
-## 9. Change the language
+## 9. Settings (theme, font, language)
 
-Use the **EN / VI / JA** switch at the top right. The whole interface changes immediately, including messages. The application starts in English every time; switch again if you prefer another language.
+Click the **Settings** button (gear icon) at the top right, left of the download history button.
 
-![Language switch](images/02-language-switch.png)
+- **Theme**: Light, Dark or Follow system.
+- **Font**: Nunito, System UI, Segoe UI, Arial, Monospace or JetBrains Mono.
+- **Language**: English, Tiếng Việt or 日本語. The whole interface changes, including messages.
+- **Launch on Windows startup**: start S3Browser when you sign in to Windows. Only shown in the installed Windows version (not the portable one).
+
+Every change is previewed immediately. Then choose:
+
+- **Save**: keep the settings, also after restarting the app.
+- **Apply**: keep the settings until you close the app; the dialog stays open. Launch on Windows startup is not changed by Apply.
+- **Cancel** or **X**: undo the changes made since the last Apply or Save.
+- **Reset to default**: put the form back to the defaults (Light, Nunito, English, off). Click **Save** to keep them.
+
+Settings are loaded when the app starts, before the window content appears.
 
 ## 10. Troubleshooting
 

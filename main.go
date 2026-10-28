@@ -40,6 +40,15 @@ func portableWindowsOptions(appName string) (application.WindowsOptions, error) 
 	}, nil
 }
 
+// backgroundColour is the native window background for the saved theme, so the window does not flash the wrong
+// colour before the page renders. "auto" uses the light colour because only the page knows the OS scheme.
+func backgroundColour(theme string) application.RGBA {
+	if theme == "dark" {
+		return application.NewRGBA(36, 36, 36, 255)
+	}
+	return application.NewRGBA(255, 255, 255, 255)
+}
+
 // main wires logger, app, handlers and the main window, then runs the Wails event loop.
 func main() {
 	cfg := internal.ParseConfig(wailsConfigJSON)
@@ -72,13 +81,14 @@ func main() {
 	mainApp.RegisterService(application.NewService(app.BucketHandler))
 	mainApp.RegisterService(application.NewService(app.MasterHandler))
 	mainApp.RegisterService(application.NewService(app.ProfileHandler))
+	mainApp.RegisterService(application.NewService(app.SettingHandler))
 
 	mainWindow := mainApp.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:                  cfg.Name,
 		MinWidth:               1024,
 		MinHeight:              768,
 		StartState:             application.WindowStateMaximised,
-		BackgroundColour:       application.NewRGBA(27, 38, 54, 1),
+		BackgroundColour:       backgroundColour(app.SettingHandler.GetSettings().Body.Settings.Theme),
 		OpenInspectorOnStartup: DevMode,
 		EnableFileDrop:         true,
 	})

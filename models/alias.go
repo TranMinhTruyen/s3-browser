@@ -7,6 +7,7 @@ import (
 	"S3Browser/models/common"
 	"S3Browser/models/master"
 	"S3Browser/models/profile"
+	"S3Browser/models/setting"
 )
 
 type (
@@ -121,3 +122,12 @@ var (
 func NewOutput[T any]() Output[T] {
 	return common.NewOutput[T]()
 }
+
+type (
+	// AppSettings re-exports setting.AppSettings.
+	AppSettings = setting.AppSettings
+	// SaveSettingInput re-exports setting.SaveSettingInput.
+	SaveSettingInput = setting.SaveSettingInput
+	// SettingsOutput re-exports setting.SettingsOutput.
+	SettingsOutput = setting.SettingsOutput
+)

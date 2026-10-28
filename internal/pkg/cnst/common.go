@@ -6,6 +6,7 @@ var (
 	Master  = "master"
 	Profile = "profile"
 	Bucket  = "bucket"
+	Setting = "setting"
 )
 
 var (

@@ -11,7 +11,14 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import classes from '@/components/layouts/layout.module.css';
 import ConfirmModal from '@/components/modals/ConfirmModal';
 import { showConnectModal } from '@/components/modals/lazyModals';
-import { INFO_BG_COLOR } from '@/components/modals/modalColors';
+
+/** Black/white text that contrasts with the user-chosen profile color; theme text when no color is set. */
+const getProfileTextColor = (color?: string) =>
+  color
+    ? isLightColor(color)
+      ? 'var(--mantine-color-black)'
+      : 'var(--mantine-color-white)'
+    : 'var(--mantine-color-text)';
 
 function ConnectionProfiles() {
   const { t } = useTranslation('connectionProfiles');
@@ -178,7 +185,7 @@ function ConnectionProfiles() {
               withBorder
               orientation="horizontal"
               onDoubleClick={onClickConnect(key, value)}
-              c={isLightColor(value.color ?? INFO_BG_COLOR) ? '#000000' : '#FFFFFF'}
+              c={getProfileTextColor(value.color)}
               className={classes.card}
             >
               <Card.Section
@@ -189,7 +196,13 @@ function ConnectionProfiles() {
                   alignItems: 'center',
                   minWidth: '40px',
                   justifyContent: 'center',
-                  backgroundColor: value.isConnected ? '#83f175' : '#FFFFFF',
+                  // Status uses Mantine "light" variant colors: connected = green, disconnected = red
+                  color: value.isConnected
+                    ? 'var(--mantine-color-green-light-color)'
+                    : 'var(--mantine-color-red-light-color)',
+                  backgroundColor: value.isConnected
+                    ? 'var(--mantine-color-green-light)'
+                    : 'var(--mantine-color-red-light)',
                 }}
               >
                 {connectingKeys.has(key) ? (
@@ -208,7 +221,7 @@ function ConnectionProfiles() {
                   minWidth: 0,
                   display: 'flex',
                   alignItems: 'center',
-                  backgroundColor: value.color ?? '#FFFFFF',
+                  backgroundColor: value.color ?? 'var(--mantine-color-body)',
                 }}
               >
                 <Box>

@@ -21,6 +21,7 @@ S3Browser là ứng dụng desktop viết bằng **Wails v3** (backend Go, front
 - Tải xuống một hoặc nhiều object (tải song song theo từng đoạn), có cửa sổ tiến độ, huỷ và lịch sử tải xuống được lưu lại.
 - Xoá object và thư mục (có xác nhận).
 - Giao diện tiếng Anh, tiếng Việt và tiếng Nhật.
+- Hộp thoại Cài đặt: giao diện (sáng / tối / theo hệ thống), phông chữ, ngôn ngữ và khởi động cùng Windows; lưu trong `settings.json` và được nạp trước khi hiện giao diện.
 - Bản portable chạy không cần cài đặt.
 
 | Object | Tải lên |
@@ -97,7 +98,7 @@ bun run --cwd docs build:pdf
 
 ```
 main.go            Điểm vào của app Wails, đăng ký service
-internal/          Backend Go: handlers, modules (bucket, profile, master, global), pkg (db, logger, portable...)
+internal/          Backend Go: handlers, modules (bucket, profile, master, global, setting), pkg (db, logger, portable...)
 models/            Model input/output dùng chung với frontend
 frontend/          Giao diện React 19 + TypeScript (src, bindings do Wails sinh)
 build/             Tài nguyên build Wails và Taskfile theo nền tảng (windows, darwin)

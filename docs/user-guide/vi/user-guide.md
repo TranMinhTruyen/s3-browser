@@ -17,7 +17,7 @@ Giao diện có tiếng Anh, tiếng Việt và tiếng Nhật.
 
 ![Cửa sổ chính](images/01-main-window.png)
 
-Cửa sổ gồm ba khu vực: **danh sách hồ sơ** bên trái, **các tab** bên phải (mỗi tab hiển thị bucket và object của một kết nối) và **thanh trên cùng** có nút lịch sử tải xuống và nút đổi ngôn ngữ.
+Cửa sổ gồm ba khu vực: **danh sách hồ sơ** bên trái, **các tab** bên phải (mỗi tab hiển thị bucket và object của một kết nối) và **thanh trên cùng** có nút **Cài đặt** và nút lịch sử tải xuống.
 
 > Đây là bản beta (0.0.1-beta.1). Hãy sao lưu dữ liệu quan trọng trước khi xóa object: thao tác xóa không thể hoàn tác.
 
@@ -175,11 +175,23 @@ Mở menu **Thao tác khác** của object và chọn **Xoá**, hoặc chọn c�
 
 Xóa một **thư mục** sẽ xóa thư mục **và toàn bộ nội dung bên trong**. Cửa sổ xác nhận có nói rõ điều này và thao tác không thể hoàn tác. Nếu có object không xóa được, thông báo cho biết bao nhiêu object lỗi và bao nhiêu đã xóa.
 
-## 9. Đổi ngôn ngữ
+## 9. Cài đặt (giao diện, phông chữ, ngôn ngữ)
 
-Dùng nút chuyển **EN / VI / JA** ở góc trên bên phải. Toàn bộ giao diện, kể cả thông báo, đổi ngay lập tức. Ứng dụng luôn khởi động bằng tiếng Anh; hãy chuyển lại nếu bạn muốn ngôn ngữ khác.
+Bấm nút **Cài đặt** (biểu tượng bánh răng) ở góc trên bên phải, bên trái nút lịch sử tải xuống.
 
-![Chuyển ngôn ngữ](images/02-language-switch.png)
+- **Giao diện**: Sáng, Tối hoặc Theo hệ thống.
+- **Phông chữ**: Nunito, System UI, Segoe UI, Arial, Monospace hoặc JetBrains Mono.
+- **Ngôn ngữ**: English, Tiếng Việt hoặc 日本語. Toàn bộ giao diện, kể cả thông báo, đổi theo.
+- **Khởi động cùng Windows**: mở S3Browser khi đăng nhập Windows. Chỉ hiện ở bản cài đặt trên Windows (không có ở bản portable).
+
+Mọi thay đổi được xem trước ngay. Sau đó chọn:
+
+- **Lưu**: giữ cài đặt, kể cả sau khi mở lại app.
+- **Áp dụng**: giữ cài đặt đến khi đóng app; hộp thoại vẫn mở. Áp dụng không thay đổi tùy chọn Khởi động cùng Windows.
+- **Hủy** hoặc **X**: bỏ các thay đổi kể từ lần Áp dụng hoặc Lưu gần nhất.
+- **Đặt lại mặc định**: đưa form về mặc định (Sáng, Nunito, English, tắt). Bấm **Lưu** để giữ.
+
+Cài đặt được nạp khi app khởi động, trước khi nội dung cửa sổ hiện ra.
 
 ## 10. Xử lý sự cố
 

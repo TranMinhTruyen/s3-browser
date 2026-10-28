@@ -6,6 +6,7 @@ import inputs from '@/locales/vi/components/inputs.json';
 import confirmModal from '@/locales/vi/components/modals/confirmModal.json';
 import connectModal from '@/locales/vi/components/modals/connectModal.json';
 import historyModal from '@/locales/vi/components/modals/historyModal.json';
+import settingModal from '@/locales/vi/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/vi/components/modals/uploadLimitModal.json';
 import uploadPickerModal from '@/locales/vi/components/modals/uploadPickerModal.json';
 import connectionProfiles from '@/locales/vi/components/navbar/connectionProfiles.json';
@@ -24,6 +25,7 @@ const vietnameseResource: ResourceLanguage = {
   connectModal: connectModal,
   confirmModal: confirmModal,
   historyModal: historyModal,
+  settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,
   uploadPickerModal: uploadPickerModal,
   bucketPicker: bucketPicker,

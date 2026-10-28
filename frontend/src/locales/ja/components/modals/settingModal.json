@@ -1,0 +1,22 @@
+{
+  "title": "設定",
+  "label": {
+    "theme": "テーマ",
+    "font": "フォント",
+    "language": "言語",
+    "launchOnStartup": "Windows 起動時に自動起動"
+  },
+  "option": {
+    "theme": { "light": "ライト", "dark": "ダーク", "auto": "システムに合わせる" },
+    "font": {
+      "nunito": "Nunito",
+      "system-ui": "System UI",
+      "segoe-ui": "Segoe UI",
+      "arial": "Arial",
+      "monospace": "Monospace",
+      "jetbrains-mono": "JetBrains Mono"
+    }
+  },
+  "button": { "save": "保存", "cancel": "キャンセル", "apply": "適用", "reset": "デフォルトに戻す" },
+  "message": { "saved": "設定を保存しました。", "applied": "アプリを閉じるまで設定を適用しました。" }
+}

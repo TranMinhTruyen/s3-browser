@@ -58,5 +58,11 @@
     "PFS001": "Thêm hồ sơ [{name}] thành công",
     "PFS002": "Cập nhật hồ sơ [{name}] thành công",
     "PFS003": "Xóa hồ sơ [{name}] thành công"
+  },
+  "setting": {
+    "STE001": "Lỗi khi tải cài đặt",
+    "STE002": "Lỗi khi lưu cài đặt",
+    "STE003": "Không thể thay đổi khởi động cùng Windows, các cài đặt khác đã được lưu",
+    "STE004": "Giá trị cài đặt không hợp lệ"
   }
 }

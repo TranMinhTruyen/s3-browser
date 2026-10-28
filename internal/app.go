@@ -7,6 +7,7 @@ import (
 	"S3Browser/internal/modules/global"
 	"S3Browser/internal/modules/master"
 	"S3Browser/internal/modules/profile"
+	"S3Browser/internal/modules/setting"
 	"S3Browser/internal/pkg/db"
 	"S3Browser/internal/pkg/utils"
 	"database/sql"
@@ -24,6 +25,7 @@ type App struct {
 	BucketHandler  *handlers.BucketHandler
 	MasterHandler  *handlers.MasterHandler
 	ProfileHandler *handlers.ProfileHandler
+	SettingHandler *handlers.SettingHandler
 }
 
 // NewApp opens and migrates the database, builds the modules, then the handlers on top of them.
@@ -51,10 +53,12 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 	profileModule := profile.NewModule(app, logger, globalModule, sqlDb, km)
 	bucketModule := bucket.NewModule(app, logger, globalModule, sqlDb, profileModule)
 	masterModule := master.NewModule(app, logger, sqlDb)
+	settingModule := setting.NewModule(app, logger, cfg.Name)
 
 	profileHandler := handlers.NewProfileHandler(app, logger, profileModule)
 	bucketHandler := handlers.NewBucketHandler(app, logger, bucketModule)
 	masterHandler := handlers.NewMasterHandler(app, logger, masterModule)
+	settingHandler := handlers.NewSettingHandler(app, logger, settingModule)
 
 	return &App{
 		logger:         log,
@@ -63,6 +67,7 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 		BucketHandler:  bucketHandler,
 		MasterHandler:  masterHandler,
 		ProfileHandler: profileHandler,
+		SettingHandler: settingHandler,
 	}
 }
 

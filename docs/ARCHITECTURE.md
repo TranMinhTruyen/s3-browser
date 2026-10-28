@@ -20,7 +20,8 @@ App/S3Browser
 │   │   ├── global/         shared connection container
 │   │   ├── profile/        connection profiles (encrypted secrets)
 │   │   ├── master/         master data (regions...)
-│   │   └── bucket/         buckets, objects, upload, download, search
+│   │   ├── bucket/         buckets, objects, upload, download, search
+│   │   └── setting/        app settings (settings.json, autostart)
 │   └── pkg/                cnst, db (schemas, queries, sqlc), logger, portable, utils
 ├── models/                 input/output models + alias.go
 ├── frontend/
@@ -88,6 +89,15 @@ SQLite file `data.db` in the app data dir (see `internal/pkg/portable`; WAL, for
 - Queries: `internal/pkg/db/queries/<domain>/<snake_name>.sql` with `-- name: PascalName :one|many|exec`; SQL uses leading commas.
 - Code: `go tool sqlc generate` writes `internal/pkg/db/sqlc` (generated, never edit).
 
+### 2.7 App settings (`modules/setting`)
+
+Theme, font, language and launch-on-startup live in `settings.json` in the same data dir as `data.db` (not in SQLite).
+
+- `GetSettings`, `SaveSettings`, `ResetSettings` (`SettingHandler`). Values are validated against fixed lists; a missing or corrupt file falls back to the defaults (`light`, `nunito`, `en`, off), an unknown value resets only that field.
+- Writes are atomic (temp file + rename) under a mutex. `ResetSettings` only returns the defaults; nothing is written until Save.
+- Launch on startup writes `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (`autostart_windows.go`). It is not supported on the portable build or other OSes (`autostartSupported=false`). Save writes the file first, then the registry; if the registry fails the file keeps the old value and warning `STE003` is returned.
+- `main.go` reads the theme once to set the window background colour before the page loads.
+
 ## 3. Frontend
 
 ### 3.1 Calling the backend: `callIPC`
@@ -113,7 +123,7 @@ Stores are created with `createAppStore(creator, name)` (zustand + immer + devto
 
 ### 3.3 Modals
 
-Modals are NiceModal components wrapped by `createMantineModal` (`common/utils/modalUtils.ts`), with z-index managed by `modalStackStore`. Heavy modals are loaded on demand in `components/modals/lazyModals.ts` (`showConnectModal`, `showHistoryModal`), so they stay out of the main bundle. Use the wrappers in `components/buttons|inputs|modals` instead of raw Mantine components.
+Modals are NiceModal components wrapped by `createMantineModal` (`common/utils/modalUtils.ts`), with z-index managed by `modalStackStore`. Heavy modals are loaded on demand in `components/modals/lazyModals.ts` (`showConnectModal`, `showHistoryModal`, `showSettingModal`), so they stay out of the main bundle. Use the wrappers in `components/buttons|inputs|modals` instead of raw Mantine components. Modal footer: Cancel on the left, actions on the right (`<Group justify="space-between" wrap="nowrap">`); a main content area goes in `<Paper withBorder>`.
 
 ### 3.4 i18n
 
@@ -129,7 +139,13 @@ Large lists (objects, buckets, uploader, history, file lists) are virtualized wi
 
 ### 3.7 Layout
 
-`App.tsx` -> `MainLayout` (navbar, tab layout, uploader/downloader windows) -> `TabLayout` (lazy) -> `TabDetail` -> `pages/bucket` and `pages/object`. State lives in `common/stores` (`profileStore`, `tabListStore`, `uploaderStore`, `downloaderStore`, `masterDataStore`).
+`App.tsx` -> `MainLayout` (navbar, tab layout, uploader/downloader windows) -> `TabLayout` (lazy) -> `TabDetail` -> `pages/bucket` and `pages/object`. State lives in `common/stores` (`profileStore`, `tabListStore`, `uploaderStore`, `downloaderStore`, `masterDataStore`, `settingStore`).
+
+### 3.8 Settings and theme
+
+`main.tsx` awaits `useSettingStore.getState().load()` before rendering, so theme, font and language are applied first (defaults on failure). `settingStore` keeps `saved` (file), `applied` (current session, changed by Apply) and `draft` (form, previewed live); closing the modal reverts to `applied`. `applySettings` sets the Mantine color scheme (in-memory `settingColorSchemeManager`, no localStorage), the `--mantine-font-family` variable and the i18n language.
+
+Colors: use `var(--mantine-color-*)` and `light-dark(<light>, <dark>)`, never hard-coded hex/rgb (except colors stored as data, such as the profile color).
 
 ## 4. Bindings and commands
 
