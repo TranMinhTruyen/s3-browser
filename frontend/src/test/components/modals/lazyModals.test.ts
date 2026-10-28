@@ -2,11 +2,13 @@ import { toast } from 'sonner';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import ConnectModal from '@/components/modals/ConnectModal';
 import HistoryModal from '@/components/modals/HistoryModal';
-import { showConnectModal, showHistoryModal } from '@/components/modals/lazyModals';
+import { showConnectModal, showHistoryModal, showSettingModal } from '@/components/modals/lazyModals';
+import SettingModal from '@/components/modals/SettingModal';
 import i18n from '@/locales/i18n';
 
 vi.mock('@/components/modals/ConnectModal', () => ({ default: { show: vi.fn() } }));
 vi.mock('@/components/modals/HistoryModal', () => ({ default: { show: vi.fn() } }));
+vi.mock('@/components/modals/SettingModal', () => ({ default: { show: vi.fn() } }));
 vi.mock('sonner', () => ({ toast: { error: vi.fn() } }));
 
 describe('lazyModals', () => {
@@ -30,9 +32,17 @@ describe('lazyModals', () => {
     expect(toast.error).not.toHaveBeenCalled();
   });
 
+  it('shows the setting modal once the chunk is loaded', async () => {
+    await showSettingModal();
+
+    expect(SettingModal.show).toHaveBeenCalledTimes(1);
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['connect', () => showConnectModal({ mode: 'editProfile' as const }), ConnectModal],
     ['history', () => showHistoryModal(), HistoryModal],
+    ['setting', () => showSettingModal(), SettingModal],
   ])('reports a failed %s modal load without rejecting', async (_name, open, modal) => {
     const error = new Error('chunk failed');
     vi.mocked(modal.show).mockImplementationOnce(() => {

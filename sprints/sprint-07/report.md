@@ -1,6 +1,6 @@
 # Báo cáo Sprint 07a: Rà soát, refactor và tối ưu hiệu năng (R1–R3)
 
-**Trạng thái: chờ người dùng smoke test thủ công (S3 + MinIO).** Phần 07b (R4–R5: tài liệu, version) làm ở lượt sau.
+**Trạng thái: DONE (2026-10-28).** Người dùng đã xác nhận hoàn tất cả 07a (R1–R3) và 07b (R4–R5, xem phần cuối file). Các mục "Chưa làm / cần người dùng" còn lại chuyển sang sprint sau.
 
 ## Kết quả
 

@@ -1,6 +1,6 @@
 import type { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import z from 'zod';
-import { INFO_BG_COLOR } from '@/components/modals/modalColors';
+import { DEFAULT_PROFILE_COLOR } from '@/components/modals/modalColors';
 
 /** Schema used when only saving a profile (the secret key is optional). */
 export const profileSchema = z.object({
@@ -33,7 +33,7 @@ export const getDefaultConnectionInfo = (name: string): ConnectionInfo =>
   connectSchema
     .default({
       name,
-      color: INFO_BG_COLOR,
+      color: DEFAULT_PROFILE_COLOR,
       provider: 'aws',
       endpoint: '',
       region: '',

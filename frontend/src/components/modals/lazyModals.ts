@@ -18,3 +18,6 @@ export const showConnectModal = (props: ConnectModalProps) =>
 
 export const showHistoryModal = () =>
   import('@/components/modals/HistoryModal').then(m => m.default.show()).catch(onLoadModalFailed);
+
+export const showSettingModal = () =>
+  import('@/components/modals/SettingModal').then(m => m.default.show()).catch(onLoadModalFailed);

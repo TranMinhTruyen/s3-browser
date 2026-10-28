@@ -5,6 +5,23 @@
 Mọi thay đổi đáng chú ý của dự án được ghi trong file này.
 Định dạng dựa theo [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Chưa phát hành]
+
+### Thêm mới
+
+- Hộp thoại Cài đặt (nút bên trái nút Lịch sử tải xuống): giao diện (sáng / tối / theo hệ thống), phông chữ (Nunito, System UI, Segoe UI, Arial, Monospace, JetBrains Mono), ngôn ngữ và khởi động cùng Windows (chỉ bản cài đặt trên Windows).
+- Cài đặt được lưu trong `settings.json` cạnh `data.db` và nạp trước khi hiện giao diện, nên ngôn ngữ giờ đã được ghi nhớ.
+- Thay đổi được xem trước ngay. **Áp dụng** giữ thay đổi đến khi đóng app, **Lưu** ghi vào file, **Đặt lại mặc định** đưa form về mặc định.
+- Giao diện tối.
+- Đóng gói sẵn phông JetBrains Mono.
+
+### Thay đổi
+
+- Nút chuyển EN / VI / JA trên thanh trên cùng được chuyển vào hộp thoại Cài đặt.
+- Màu dùng biến theme nên mọi màn hình hiển thị đúng ở cả giao diện sáng và tối. Trạng thái kết nối của hồ sơ dùng xanh nhạt / đỏ nhạt.
+- Nút trong hộp thoại: Hủy nằm bên trái, các nút thao tác bên phải (xác nhận, tải lên, lịch sử, cài đặt).
+- Màu nền cửa sổ khi khởi động theo giao diện đã lưu.
+
 ## [0.0.1-beta.1] - 2026-10-28
 
 Bản beta đầu tiên.

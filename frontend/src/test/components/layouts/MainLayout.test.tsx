@@ -1,16 +1,19 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import MainLayout from '@/components/layouts/MainLayout';
-import { showHistoryModal } from '@/components/modals/lazyModals';
-import i18n from '@/locales/i18n';
+import { showHistoryModal, showSettingModal } from '@/components/modals/lazyModals';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
 vi.mock('@/components/layouts/downloader/DownloaderWindow', () => ({ default: () => <div>downloader window</div> }));
 vi.mock('@/components/layouts/uploader/UploaderWindow', () => ({ default: () => <div>uploader window</div> }));
 vi.mock('@/components/layouts/navbar/LeftNavbar', () => ({ default: () => <div>left navbar</div> }));
-vi.mock('@/components/modals/lazyModals', () => ({ showConnectModal: vi.fn(), showHistoryModal: vi.fn() }));
+vi.mock('@/components/modals/lazyModals', () => ({
+  showConnectModal: vi.fn(),
+  showHistoryModal: vi.fn(),
+  showSettingModal: vi.fn(),
+}));
 
 const renderLayout = () =>
   renderWithProviders(
@@ -24,10 +27,6 @@ const renderLayout = () =>
   );
 
 describe('MainLayout', () => {
-  beforeEach(() => {
-    vi.spyOn(i18n, 'changeLanguage').mockResolvedValue(i18n.t);
-  });
-
   it('renders the navbar, the routed page and the transfer windows', () => {
     renderLayout();
 
@@ -45,13 +44,21 @@ describe('MainLayout', () => {
     expect(showHistoryModal).toHaveBeenCalledTimes(1);
   });
 
-  it('changes the language from the segmented control', async () => {
+  it('opens the setting modal from the header button and no longer shows the language switch', async () => {
     renderLayout();
 
-    await userEvent.click(screen.getByLabelText('VI'));
-    expect(i18n.changeLanguage).toHaveBeenLastCalledWith('vi');
+    await userEvent.click(screen.getByRole('button', { name: 'Settings' }));
 
-    await userEvent.click(screen.getByLabelText('JA'));
-    expect(i18n.changeLanguage).toHaveBeenLastCalledWith('ja');
+    expect(showSettingModal).toHaveBeenCalledTimes(1);
+    expect(screen.queryByLabelText('VI')).not.toBeInTheDocument();
+  });
+
+  it('places the setting button before the history button', () => {
+    renderLayout();
+
+    const buttons = screen.getAllByRole('button');
+    const setting = buttons.indexOf(screen.getByRole('button', { name: 'Settings' }));
+    const history = buttons.indexOf(screen.getByRole('button', { name: 'Download history' }));
+    expect(setting).toBeLessThan(history);
   });
 });

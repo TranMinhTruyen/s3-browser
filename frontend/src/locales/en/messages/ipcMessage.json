@@ -58,5 +58,11 @@
     "PFS001": "Add new profile [{name}] success.",
     "PFS002": "Update profile [{name}] success.",
     "PFS003": "Delete profile [{name}] success."
+  },
+  "setting": {
+    "STE001": "Error while loading settings.",
+    "STE002": "Error while saving settings.",
+    "STE003": "Cannot change launch on Windows startup, other settings were saved.",
+    "STE004": "Invalid setting value."
   }
 }

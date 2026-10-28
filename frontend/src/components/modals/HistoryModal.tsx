@@ -199,7 +199,7 @@ export default createMantineModal<{}, false>(props => {
 
         <Divider />
 
-        <Group p="8px" justify="flex-end">
+        <Group p="8px" justify="flex-start">
           <Button
             onClick={() => {
               mantine.handler.resolve(false);

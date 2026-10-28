@@ -20,7 +20,8 @@ App/S3Browser
 │   │   ├── global/         共有の接続コンテナ
 │   │   ├── profile/        接続プロファイル (シークレットは暗号化)
 │   │   ├── master/         マスターデータ (リージョンなど)
-│   │   └── bucket/         バケット、オブジェクト、アップロード、ダウンロード、検索
+│   │   ├── bucket/         バケット、オブジェクト、アップロード、ダウンロード、検索
+│   │   └── setting/        アプリ設定 (settings.json、自動起動)
 │   └── pkg/                cnst、db (schemas, queries, sqlc)、logger、portable、utils
 ├── models/                 入出力モデル + alias.go
 ├── frontend/
@@ -88,6 +89,15 @@ return output.ThrowError(msg)      // Result = false + メッセージ
 - クエリ: `internal/pkg/db/queries/<domain>/<snake_name>.sql` に `-- name: PascalName :one|many|exec` を付けて記述します。SQL はカンマを行頭に置くスタイルです。
 - コード: `go tool sqlc generate` が `internal/pkg/db/sqlc` を生成します (自動生成のため編集禁止)。
 
+### 2.7 アプリ設定 (`modules/setting`)
+
+テーマ、フォント、言語、Windows 起動時の自動起動は、`data.db` と同じデータフォルダの `settings.json` に保存します (SQLite ではありません)。
+
+- `GetSettings`、`SaveSettings`、`ResetSettings` (`SettingHandler`)。値は固定リストで検証し、ファイルがない・壊れている場合はデフォルト (`light`、`nunito`、`en`、オフ) を使い、不明な値はその項目だけをデフォルトに戻します。
+- 書き込みはミューテックス内でアトミック (一時ファイル + rename)。`ResetSettings` はデフォルトを返すだけで、保存するまで書き込みません。
+- 自動起動は `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` に書き込みます (`autostart_windows.go`)。ポータブル版と他の OS では非対応 (`autostartSupported=false`)。保存時はファイルを先に書き、その後レジストリを変更します。レジストリが失敗した場合はファイルを元の値に戻し、警告 `STE003` を返します。
+- `main.go` はページ読み込み前にテーマを 1 回読み、ウィンドウの背景色を設定します。
+
 ## 3. フロントエンド
 
 ### 3.1 バックエンド呼び出し: `callIPC`
@@ -113,7 +123,7 @@ const body = await callIPC(GetListObject, [input], { scope: `${SCOPE}/load`, sig
 
 ### 3.3 モーダル
 
-モーダルは `createMantineModal` (`common/utils/modalUtils.ts`) でラップした NiceModal コンポーネントで、z-index は `modalStackStore` が管理します。重いモーダルは `components/modals/lazyModals.ts` (`showConnectModal`、`showHistoryModal`) で必要になったときに読み込むため、メインバンドルには含まれません。Mantine を直接使わず、`components/buttons|inputs|modals` のラッパーを使います。
+モーダルは `createMantineModal` (`common/utils/modalUtils.ts`) でラップした NiceModal コンポーネントで、z-index は `modalStackStore` が管理します。重いモーダルは `components/modals/lazyModals.ts` (`showConnectModal`、`showHistoryModal`、`showSettingModal`) で必要になったときに読み込むため、メインバンドルには含まれません。Mantine を直接使わず、`components/buttons|inputs|modals` のラッパーを使います。 モーダルのフッター: キャンセルは左、操作ボタンは右 (`<Group justify="space-between" wrap="nowrap">`)。メインの内容は `<Paper withBorder>` で囲みます。
 
 ### 3.4 i18n
 
@@ -129,7 +139,13 @@ const body = await callIPC(GetListObject, [input], { scope: `${SCOPE}/load`, sig
 
 ### 3.7 レイアウト
 
-`App.tsx` -> `MainLayout` (ナビバー、タブレイアウト、アップローダー/ダウンローダーウィンドウ) -> `TabLayout` (lazy) -> `TabDetail` -> `pages/bucket` と `pages/object`。状態は `common/stores` (`profileStore`、`tabListStore`、`uploaderStore`、`downloaderStore`、`masterDataStore`) にあります。
+`App.tsx` -> `MainLayout` (ナビバー、タブレイアウト、アップローダー/ダウンローダーウィンドウ) -> `TabLayout` (lazy) -> `TabDetail` -> `pages/bucket` と `pages/object`。状態は `common/stores` (`profileStore`、`tabListStore`、`uploaderStore`、`downloaderStore`、`masterDataStore`、`settingStore`) にあります。
+
+### 3.8 設定とテーマ
+
+`main.tsx` は描画前に `useSettingStore.getState().load()` を待つため、テーマ、フォント、言語が先に適用されます (失敗時はデフォルト)。`settingStore` は `saved` (ファイル)、`applied` (現在のセッション、適用で変更)、`draft` (フォーム、即時プレビュー) を持ち、モーダルを閉じると `applied` に戻ります。`applySettings` は Mantine のカラースキーム (メモリ上の `settingColorSchemeManager`、localStorage は不使用)、`--mantine-font-family` 変数、i18n の言語を設定します。
+
+色: `var(--mantine-color-*)` と `light-dark(<light>, <dark>)` を使い、hex/rgb を直書きしません (プロファイルの色など、データとして保存する色は除く)。
 
 ## 4. バインディングとコマンド
 

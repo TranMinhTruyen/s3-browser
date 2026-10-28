@@ -5,6 +5,23 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- Settings dialog (button left of Download history): theme (light / dark / follow system), font (Nunito, System UI, Segoe UI, Arial, Monospace, JetBrains Mono), language and launch on Windows startup (installed Windows build only).
+- Settings are saved in `settings.json` next to `data.db` and loaded before the UI appears, so the language is now remembered.
+- Changes are previewed immediately. **Apply** keeps them until the app closes, **Save** writes them to the file, **Reset to default** restores the defaults in the form.
+- Dark theme.
+- Bundled JetBrains Mono font.
+
+### Changed
+
+- The EN / VI / JA switch in the header moved into the Settings dialog.
+- Colors use theme variables so every screen works in light and dark theme. The connection status of a profile uses light green / light red.
+- Dialog buttons: Cancel is on the left, actions on the right (confirm, upload, history, settings).
+- The window background follows the saved theme at start-up.
+
 ## [0.0.1-beta.1] - 2026-10-28
 
 First beta release.

@@ -1,0 +1,22 @@
+{
+  "title": "Settings",
+  "label": {
+    "theme": "Theme",
+    "font": "Font",
+    "language": "Language",
+    "launchOnStartup": "Launch on Windows startup"
+  },
+  "option": {
+    "theme": { "light": "Light", "dark": "Dark", "auto": "Follow system" },
+    "font": {
+      "nunito": "Nunito",
+      "system-ui": "System UI",
+      "segoe-ui": "Segoe UI",
+      "arial": "Arial",
+      "monospace": "Monospace",
+      "jetbrains-mono": "JetBrains Mono"
+    }
+  },
+  "button": { "save": "Save", "cancel": "Cancel", "apply": "Apply", "reset": "Reset to default" },
+  "message": { "saved": "Settings saved.", "applied": "Settings applied until the app is closed." }
+}

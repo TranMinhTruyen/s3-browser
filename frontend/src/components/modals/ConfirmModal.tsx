@@ -67,10 +67,10 @@ export default createMantineModal<ConfirmModalProps, boolean>(props => {
         <Divider />
 
         <Group p="8px" justify="space-between">
-          <Button onClick={onClickOk}>{t('common:button.OK')}</Button>
           <Button onClick={onClickCancel} color="red">
             {t('common:button.cancel')}
           </Button>
+          <Button onClick={onClickOk}>{t('common:button.OK')}</Button>
         </Group>
       </Modal.Content>
     </Modal.Root>

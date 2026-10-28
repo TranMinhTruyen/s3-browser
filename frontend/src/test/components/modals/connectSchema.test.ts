@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { connectSchema, getDefaultConnectionInfo, profileSchema } from '@/components/modals/connectSchema';
-import { INFO_BG_COLOR } from '@/components/modals/modalColors';
+import { DEFAULT_PROFILE_COLOR } from '@/components/modals/modalColors';
 
 const valid = {
   name: 'p',
@@ -19,7 +19,7 @@ describe('getDefaultConnectionInfo', () => {
   it('builds empty values with the given name', () => {
     expect(getDefaultConnectionInfo('My profile')).toEqual({
       name: 'My profile',
-      color: INFO_BG_COLOR,
+      color: DEFAULT_PROFILE_COLOR,
       provider: 'aws',
       endpoint: '',
       region: '',

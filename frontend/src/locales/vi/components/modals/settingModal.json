@@ -1,0 +1,22 @@
+{
+  "title": "Cài đặt",
+  "label": {
+    "theme": "Giao diện",
+    "font": "Phông chữ",
+    "language": "Ngôn ngữ",
+    "launchOnStartup": "Khởi động cùng Windows"
+  },
+  "option": {
+    "theme": { "light": "Sáng", "dark": "Tối", "auto": "Theo hệ thống" },
+    "font": {
+      "nunito": "Nunito",
+      "system-ui": "System UI",
+      "segoe-ui": "Segoe UI",
+      "arial": "Arial",
+      "monospace": "Monospace",
+      "jetbrains-mono": "JetBrains Mono"
+    }
+  },
+  "button": { "save": "Lưu", "cancel": "Hủy", "apply": "Áp dụng", "reset": "Đặt lại mặc định" },
+  "message": { "saved": "Đã lưu cài đặt.", "applied": "Đã áp dụng cài đặt đến khi đóng app." }
+}

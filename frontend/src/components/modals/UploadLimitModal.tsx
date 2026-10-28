@@ -269,11 +269,11 @@ export default createMantineModal<UploadLimitModalProps, DroppedFile[]>(props =>
         <Divider />
 
         <Group p="8px" justify="space-between">
-          <Button onClick={onClickUpload} disabled={hasViolation || result.length === 0}>
-            {t('upload')} ({result.length})
-          </Button>
           <Button onClick={onClickCancel} color="red">
             {t('common:button.cancel')}
+          </Button>
+          <Button onClick={onClickUpload} disabled={hasViolation || result.length === 0}>
+            {t('upload')} ({result.length})
           </Button>
         </Group>
       </Modal.Content>

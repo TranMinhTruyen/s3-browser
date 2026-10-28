@@ -1,21 +1,21 @@
 .card {
   cursor: pointer;
-  border: 1px solid #000000;
+  border: 1px solid light-dark(var(--mantine-color-black), var(--mantine-color-dark-2));
   transition:
     border-color 150ms ease,
     color 150ms ease;
 }
 
 .iconSection {
-  border-color: #000000;
+  border-color: light-dark(var(--mantine-color-black), var(--mantine-color-dark-2));
   transition: border-color 150ms ease;
 }
 
 .card:hover {
-  border-color: #3b48ff;
-  color: #3b48ff;
+  border-color: var(--mantine-color-indigo-light-color);
+  color: var(--mantine-color-indigo-light-color);
 }
 
 .card:hover .iconSection {
-  border-color: #3b48ff;
+  border-color: var(--mantine-color-indigo-light-color);
 }

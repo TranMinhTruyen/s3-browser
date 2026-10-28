@@ -20,7 +20,8 @@ App/S3Browser
 │   │   ├── global/         container kết nối dùng chung
 │   │   ├── profile/        profile kết nối (secret được mã hoá)
 │   │   ├── master/         master data (region...)
-│   │   └── bucket/         bucket, object, upload, download, tìm kiếm
+│   │   ├── bucket/         bucket, object, upload, download, tìm kiếm
+│   │   └── setting/        cài đặt app (settings.json, autostart)
 │   └── pkg/                cnst, db (schemas, queries, sqlc), logger, portable, utils
 ├── models/                 model input/output + alias.go
 ├── frontend/
@@ -88,6 +89,15 @@ File SQLite `data.db` nằm trong thư mục dữ liệu của app (xem `interna
 - Query: `internal/pkg/db/queries/<domain>/<snake_name>.sql` với chú thích `-- name: PascalName :one|many|exec`; SQL viết kiểu dấu phẩy đứng đầu dòng.
 - Code: `go tool sqlc generate` sinh vào `internal/pkg/db/sqlc` (code sinh tự động, không sửa tay).
 
+### 2.7 Cài đặt app (`modules/setting`)
+
+Giao diện, phông chữ, ngôn ngữ và khởi động cùng Windows nằm trong `settings.json`, cùng thư mục data với `data.db` (không lưu trong SQLite).
+
+- `GetSettings`, `SaveSettings`, `ResetSettings` (`SettingHandler`). Giá trị được kiểm tra theo danh sách cố định; file thiếu hoặc hỏng thì dùng mặc định (`light`, `nunito`, `en`, tắt), giá trị lạ chỉ đưa field đó về mặc định.
+- Ghi atomic (file tạm + rename) trong mutex. `ResetSettings` chỉ trả về mặc định; chưa ghi gì cho đến khi Lưu.
+- Khởi động cùng Windows ghi vào `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` (`autostart_windows.go`). Không hỗ trợ ở bản portable và hệ điều hành khác (`autostartSupported=false`). Lưu sẽ ghi file trước rồi mới ghi registry; nếu registry lỗi thì file giữ giá trị cũ và trả cảnh báo `STE003`.
+- `main.go` đọc theme một lần để đặt màu nền cửa sổ trước khi trang được tải.
+
 ## 3. Frontend
 
 ### 3.1 Gọi backend: `callIPC`
@@ -113,7 +123,7 @@ Store được tạo bằng `createAppStore(creator, name)` (zustand + immer + d
 
 ### 3.3 Modal
 
-Modal là component NiceModal được bọc bởi `createMantineModal` (`common/utils/modalUtils.ts`), z-index do `modalStackStore` quản lý. Các modal nặng được tải khi cần trong `components/modals/lazyModals.ts` (`showConnectModal`, `showHistoryModal`) nên không nằm trong bundle chính. Dùng các wrapper trong `components/buttons|inputs|modals` thay vì component Mantine gốc.
+Modal là component NiceModal được bọc bởi `createMantineModal` (`common/utils/modalUtils.ts`), z-index do `modalStackStore` quản lý. Các modal nặng được tải khi cần trong `components/modals/lazyModals.ts` (`showConnectModal`, `showHistoryModal`, `showSettingModal`) nên không nằm trong bundle chính. Dùng các wrapper trong `components/buttons|inputs|modals` thay vì component Mantine gốc. Footer modal: nút Hủy bên trái, các nút thao tác bên phải (`<Group justify="space-between" wrap="nowrap">`); vùng nội dung chính bọc trong `<Paper withBorder>`.
 
 ### 3.4 i18n
 
@@ -129,7 +139,13 @@ Các danh sách lớn (object, bucket, uploader, lịch sử, danh sách file) �
 
 ### 3.7 Bố cục
 
-`App.tsx` -> `MainLayout` (navbar, tab layout, cửa sổ uploader/downloader) -> `TabLayout` (lazy) -> `TabDetail` -> `pages/bucket` và `pages/object`. State nằm trong `common/stores` (`profileStore`, `tabListStore`, `uploaderStore`, `downloaderStore`, `masterDataStore`).
+`App.tsx` -> `MainLayout` (navbar, tab layout, cửa sổ uploader/downloader) -> `TabLayout` (lazy) -> `TabDetail` -> `pages/bucket` và `pages/object`. State nằm trong `common/stores` (`profileStore`, `tabListStore`, `uploaderStore`, `downloaderStore`, `masterDataStore`, `settingStore`).
+
+### 3.8 Cài đặt và theme
+
+`main.tsx` chờ `useSettingStore.getState().load()` trước khi render, nên theme, phông chữ và ngôn ngữ được áp dụng trước (lỗi thì dùng mặc định). `settingStore` giữ `saved` (trong file), `applied` (phiên hiện tại, đổi bằng Áp dụng) và `draft` (form, xem trước ngay); đóng modal thì quay về `applied`. `applySettings` đặt color scheme của Mantine (`settingColorSchemeManager` trong bộ nhớ, không dùng localStorage), biến `--mantine-font-family` và ngôn ngữ i18n.
+
+Màu: dùng `var(--mantine-color-*)` và `light-dark(<light>, <dark>)`, không hard-code hex/rgb (trừ màu lưu như dữ liệu, ví dụ màu hồ sơ).
 
 ## 4. Binding và lệnh
 
