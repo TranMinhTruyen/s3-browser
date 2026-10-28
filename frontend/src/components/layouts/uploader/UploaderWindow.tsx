@@ -4,7 +4,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { CancelAllUploads } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Events } from '@wailsio/runtime';
 import { Upload, X } from 'lucide-react';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/shallow';
 import { useDownloaderStore } from '@/common/stores/downloaderStore';
@@ -20,6 +20,7 @@ const LIST_MAX_HEIGHT = 260;
 const ITEM_HEIGHT = 80;
 const ITEM_GAP = 8;
 
+/** Floating upload progress window (or a button when closed), placed next to the downloader. */
 function UploaderWindow() {
   const { t } = useTranslation('uploaderWindow');
 
@@ -68,13 +69,15 @@ function UploaderWindow() {
     };
   }, [finishUpload]);
 
-  const listRef = useRef<HTMLDivElement>(null);
+  // State, not a ref: Affix renders through a Portal that mounts one render late, so a ref would still be null
+  // when the virtualizer reads it and nothing would re-render it, leaving the list empty.
+  const [listElement, setListElement] = useState<HTMLDivElement | null>(null);
 
   // React Compiler is disabled, so this compiler-only lint does not apply.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
     count: uploadItemIds.length,
-    getScrollElement: () => listRef.current,
+    getScrollElement: () => listElement,
     estimateSize: () => ITEM_HEIGHT,
     getItemKey: idx => uploadItemIds[idx],
     gap: ITEM_GAP,
@@ -125,7 +128,7 @@ function UploaderWindow() {
 
         <Divider />
 
-        <Box ref={listRef} p="8px" style={{ maxHeight: `${LIST_MAX_HEIGHT}px`, overflow: 'auto' }}>
+        <Box ref={setListElement} p="8px" style={{ maxHeight: `${LIST_MAX_HEIGHT}px`, overflow: 'auto' }}>
           <div style={{ position: 'relative', height: virtualizer.getTotalSize(), width: '100%' }}>
             {virtualizer.getVirtualItems().map(row => (
               <div

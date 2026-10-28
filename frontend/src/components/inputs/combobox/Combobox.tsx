@@ -1,5 +1,4 @@
 import {
-  CloseButton,
   CSSProperties,
   Group,
   Input,
@@ -8,20 +7,22 @@ import {
   Combobox as MCombobox,
   ComboboxProps as MComboboxProps,
   Text,
-  useCombobox,
 } from '@mantine/core';
 import { GetInputPropsReturnType } from '@mantine/form';
-import { useElementSize, useUncontrolled } from '@mantine/hooks';
+import { useElementSize } from '@mantine/hooks';
 import { CheckIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useFieldError } from '@/common/hooks/useFieldError';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
+import ComboboxClearButton from '@/components/inputs/combobox/ComboboxClearButton';
+import { useSelectCombobox } from '@/components/inputs/combobox/useSelectCombobox';
+
+type ComboboxItem = { name: string; value: string };
 
 type ComboboxProps = Omit<MComboboxProps, 'store' | 'onOptionSubmit' | 'children'> &
   Omit<Partial<GetInputPropsReturnType>, 'onChange' | 'value'> & {
     label?: string;
-    data: { name: string; value: string }[];
+    data: ComboboxItem[];
     value?: string | null;
     defaultValue?: string | null;
     withAsterisk?: boolean;
@@ -33,13 +34,7 @@ type ComboboxProps = Omit<MComboboxProps, 'store' | 'onOptionSubmit' | 'children
     inputStyles?: InputBaseProps['styles'];
   };
 
-const ComboboxOption = memo(function ComboboxOption({
-  item,
-  active,
-}: {
-  item: { name: string; value: string };
-  active: boolean;
-}) {
+const ComboboxOption = memo(function ComboboxOption({ item, active }: { item: ComboboxItem; active: boolean }) {
   return (
     <MCombobox.Option value={item.value} active={active}>
       <Group gap="xs" wrap="nowrap">
@@ -50,8 +45,11 @@ const ComboboxOption = memo(function ComboboxOption({
   );
 });
 
+/**
+ * Single-select dropdown over `data` (`name` is shown, `value` is stored). Works controlled (`value`)
+ * or uncontrolled (`defaultValue`), and can be spread with Mantine form `getInputProps`.
+ */
 function Combobox(props: ComboboxProps) {
-  const { t } = useTranslation();
   const {
     label,
     data,
@@ -70,46 +68,26 @@ function Combobox(props: ComboboxProps) {
     ...rest
   } = props;
 
-  const [_value, handleChange] = useUncontrolled<string | null>({
+  const { combobox, current, onSubmitOption, onClear, onClickToggle } = useSelectCombobox({
     value,
     defaultValue,
-    finalValue: null,
     onChange,
   });
 
   const { ref: targetRef, width: targetWidth } = useElementSize<HTMLButtonElement>();
 
   const formatError = useFieldError();
-  const translatedError = formatError(error, 'label' in props ? props.label : undefined);
-  const itemsByValue = useMemo(() => {
-    const set = new Map<string, { name: string; value: string }>();
-    data.forEach(item => set.set(item.value, item));
-    return set;
-  }, [data]);
+  const translatedError = formatError(error, label);
+  const itemsByValue = useMemo(() => new Map(data.map(item => [item.value, item])), [data]);
 
-  const selected = !isNullOrEmpty(_value) ? itemsByValue.get(_value) : undefined;
-  const showClear = !isNullOrEmpty(_value) && !disabled;
-
-  const combobox = useCombobox({
-    onDropdownClose: () => combobox.resetSelectedOption(),
-    onDropdownOpen: eventSource => {
-      if (eventSource === 'keyboard') {
-        combobox.selectActiveOption();
-      } else {
-        combobox.updateSelectedOptionIndex('active');
-      }
-    },
-  });
+  const selected = !isNullOrEmpty(current) ? itemsByValue.get(current) : undefined;
+  const showClear = !isNullOrEmpty(current) && !disabled;
 
   return (
     <MCombobox
       store={combobox}
       resetSelectionOnOptionHover
-      onOptionSubmit={val => {
-        handleChange(val);
-        combobox.updateSelectedOptionIndex('active');
-        combobox.closeDropdown();
-      }}
+      onOptionSubmit={onSubmitOption}
       width="max-content"
       position="bottom-start"
       {...rest}
@@ -130,25 +108,9 @@ function Combobox(props: ComboboxProps) {
           disabled={disabled}
           onFocus={onFocus}
           onBlur={onBlur}
-          rightSection={
-            showClear ? (
-              <CloseButton
-                size="sm"
-                variant="transparent"
-                aria-label={t('common:button.clear')}
-                onMouseDown={event => event.preventDefault()}
-                onClick={event => {
-                  event.stopPropagation();
-                  handleChange(null);
-                  combobox.resetSelectedOption();
-                }}
-              />
-            ) : (
-              <MCombobox.Chevron />
-            )
-          }
+          rightSection={showClear ? <ComboboxClearButton onClear={onClear} /> : <MCombobox.Chevron />}
           rightSectionPointerEvents={showClear ? 'all' : 'none'}
-          onClick={() => combobox.toggleDropdown()}
+          onClick={onClickToggle}
         >
           {selected ? <Text truncate="end">{selected.name}</Text> : <Input.Placeholder>{label}</Input.Placeholder>}
         </InputBase>
@@ -157,7 +119,7 @@ function Combobox(props: ComboboxProps) {
       <MCombobox.Dropdown miw={targetWidth}>
         <MCombobox.Options mah={250} style={{ overflowY: 'auto' }}>
           {data.map(item => (
-            <ComboboxOption key={item.value} item={item} active={item.value === _value} />
+            <ComboboxOption key={item.value} item={item} active={item.value === current} />
           ))}
         </MCombobox.Options>
       </MCombobox.Dropdown>

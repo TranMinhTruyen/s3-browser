@@ -8,6 +8,7 @@ import ActionIcon from '@/components/buttons/ActionIcon';
 import TabDetail from '@/components/layouts/tab/components/TabDetail';
 import TabLabel from '@/components/layouts/tab/components/TabLabel';
 
+/** Tab strip with closable, scrollable tabs; panels stay mounted (display none) to keep each tab's state. */
 function TabLayout() {
   const { t } = useTranslation('tabLayout');
 

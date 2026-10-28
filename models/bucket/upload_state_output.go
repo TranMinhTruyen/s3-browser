@@ -3,6 +3,7 @@ package bucket
 // UploadStatus is how an upload ended.
 type UploadStatus string
 
+// Possible UploadStatus values.
 const (
 	UploadStatusSuccess  UploadStatus = "success"
 	UploadStatusError    UploadStatus = "error"

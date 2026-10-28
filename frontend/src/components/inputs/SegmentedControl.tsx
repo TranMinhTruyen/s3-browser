@@ -1,10 +1,7 @@
-import { SegmentedControl as MSegmentedControl, SegmentedControlProps as MSegmentedControlProps } from '@mantine/core';
-
-type SegmentedControlProps = MSegmentedControlProps & {};
+import { SegmentedControl as MSegmentedControl, SegmentedControlProps } from '@mantine/core';
 
 function SegmentedControl(props: SegmentedControlProps) {
-  const { ...rest } = props;
-  return <MSegmentedControl {...rest} />;
+  return <MSegmentedControl {...props} />;
 }
 
 export default SegmentedControl;

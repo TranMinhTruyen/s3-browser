@@ -13,6 +13,7 @@ import (
 //go:embed all:schemas/*.sql
 var schemasFS embed.FS
 
+// gooseSlogLogger routes goose output to slog.
 type gooseSlogLogger struct{}
 
 func (gooseSlogLogger) Printf(format string, v ...interface{}) {
@@ -23,6 +24,7 @@ func (gooseSlogLogger) Fatalf(format string, v ...interface{}) {
 	slog.Error("goose: " + fmt.Sprintf(format, v...))
 }
 
+// RunMigrations applies the embedded schemas/*.sql migrations and logs when the version changes.
 func RunMigrations(ctx context.Context, sqlDB *sql.DB) error {
 	goose.SetBaseFS(schemasFS)
 	goose.SetLogger(gooseSlogLogger{})

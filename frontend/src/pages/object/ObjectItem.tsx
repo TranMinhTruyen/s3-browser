@@ -18,6 +18,7 @@ type ObjectItemProps = {
   onOpenFolder: (prefix: string) => void;
 };
 
+/** One row of the object list: folder or file with selection and context actions. */
 function ObjectItem(props: ObjectItemProps) {
   const { tabId, item, onOpenDetail, onToggleSelect, onClickMenuButton, onClickDeleteFolder, onOpenFolder } = props;
 

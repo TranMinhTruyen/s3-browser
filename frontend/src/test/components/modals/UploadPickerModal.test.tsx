@@ -671,7 +671,7 @@ describe('UploadPickerModal', () => {
     it('shows the bucket picker with the connection and no target text', async () => {
       open({ bucket: undefined });
       await flush();
-      expect(screen.getByText('picker label=Target bucket value=null conn=c1 profile=Prof')).toBeInTheDocument();
+      expect(screen.getByText('picker label=undefined value=null conn=c1 profile=Prof')).toBeInTheDocument();
       expect(screen.queryByText(/Upload to:/)).not.toBeInTheDocument();
     });
 

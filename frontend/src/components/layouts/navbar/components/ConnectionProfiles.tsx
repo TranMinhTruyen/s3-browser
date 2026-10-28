@@ -10,7 +10,8 @@ import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import classes from '@/components/layouts/layout.module.css';
 import ConfirmModal from '@/components/modals/ConfirmModal';
-import ConnectModal from '@/components/modals/ConnectModal';
+import { showConnectModal } from '@/components/modals/lazyModals';
+import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 
 function ConnectionProfiles() {
   const { t } = useTranslation('connectionProfiles');
@@ -39,19 +40,23 @@ function ConnectionProfiles() {
   }, [loadConnectionProfiles, reset]);
 
   useEffect(() => {
-    const unsubscribe = Events.On('bucket:connect-save-profile', e => {
+    // Events.On returns the unsubscribe function.
+    return Events.On('bucket:connect-save-profile', e => {
       if (!e.data.id) return;
       autoConnectDoneRef.current = false;
       updateConnectionProfiles(e.data.id, { ...e.data });
     });
-
-    return () => {
-      unsubscribe();
-    };
   }, [updateConnectionProfiles]);
 
+  // Marks a profile as (not) connecting; the ref guards re-entry, the state drives the spinner.
+  const setConnecting = useCallback((key: string, connecting: boolean) => {
+    if (connecting) connectingRef.current.add(key);
+    else connectingRef.current.delete(key);
+    setConnectingKeys(new Set(connectingRef.current));
+  }, []);
+
   const onClickOpenConnectModal = useCallback((value: ConnectionProfile, mode: 'manualconnect' | 'editProfile') => {
-    ConnectModal.show({
+    showConnectModal({
       mode: mode,
       connectionProfile: { ...value },
     });
@@ -64,26 +69,23 @@ function ConnectionProfiles() {
         onClickOpenConnectModal(value, 'manualconnect');
         return;
       }
-      connectingRef.current.add(key);
-      setConnectingKeys(new Set(connectingRef.current));
+      setConnecting(key, true);
       try {
         const output = await callIPC(ConnectS3ByProfile, [key]);
         if (output?.isConnected) {
           updateConnectionProfiles(key, { ...value, isConnected: true });
         }
       } finally {
-        connectingRef.current.delete(key);
-        setConnectingKeys(new Set(connectingRef.current));
+        setConnecting(key, false);
       }
     },
-    [onClickOpenConnectModal, updateConnectionProfiles]
+    [onClickOpenConnectModal, updateConnectionProfiles, setConnecting]
   );
 
   const onClickDisconnect = useCallback(
     (key: string, value: ConnectionProfile) => async () => {
       if (!value || !value.isConnected || connectingRef.current.has(key)) return;
-      connectingRef.current.add(key);
-      setConnectingKeys(new Set(connectingRef.current));
+      setConnecting(key, true);
       try {
         const output = await callIPC(Disconnect, [key]);
         if (output) {
@@ -91,11 +93,10 @@ function ConnectionProfiles() {
           resetViewByProfile(key);
         }
       } finally {
-        connectingRef.current.delete(key);
-        setConnectingKeys(new Set(connectingRef.current));
+        setConnecting(key, false);
       }
     },
-    [updateConnectionProfiles, resetViewByProfile]
+    [updateConnectionProfiles, resetViewByProfile, setConnecting]
   );
 
   const onClickEditProfile = useCallback(
@@ -177,7 +178,7 @@ function ConnectionProfiles() {
               withBorder
               orientation="horizontal"
               onDoubleClick={onClickConnect(key, value)}
-              c={isLightColor(value.color ?? '#d0ebff') ? '#000000' : '#FFFFFF'}
+              c={isLightColor(value.color ?? INFO_BG_COLOR) ? '#000000' : '#FFFFFF'}
               className={classes.card}
             >
               <Card.Section

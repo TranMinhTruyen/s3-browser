@@ -1,20 +1,19 @@
-import { Badge, Center, Divider, Group, Modal, Stack, Text, Title } from '@mantine/core';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { Box, Center, Divider, Group, Modal, Paper, Stack, Text, Title } from '@mantine/core';
 import { PickFiles } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { DroppedFile, DroppedGroup, FilesDroppedOutput } from '@wails/S3Browser/models/bucket';
 import { Events } from '@wailsio/runtime';
 import { FileDown, Folder, Trash2, Upload } from 'lucide-react';
-import { ChangeEvent, CSSProperties, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CSSProperties, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
-import { formatFileSize, formatStringJson } from '@/common/utils/stringUtils';
+import { formatStringJson } from '@/common/utils/stringUtils';
 import { mergePickedFiles, PickerLimits, PickerList, removePickedFiles } from '@/common/utils/uploadUtils';
-import ActionIcon from '@/components/buttons/ActionIcon';
 import Button from '@/components/buttons/Button';
-import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import BucketPicker from '@/components/inputs/combobox/BucketPicker';
+import { INFO_BG_COLOR } from '@/components/modals/modalColors';
+import { FileRow, GroupStat, UploadRow, VirtualRowList } from '@/components/modals/UploadFileList';
 import i18n from '@/locales/i18n';
 import classes from './UploadPickerModal.module.css';
 
@@ -30,62 +29,8 @@ type UploadPickerModalProps = ModalProps & {
 
 export type UploadPickerResult = { bucket: string; files: DroppedFile[] };
 
-type Row = { kind: 'group'; index: number; group: DroppedGroup } | { kind: 'file'; file: DroppedFile };
-
-type GroupStat = { selected: number; selectedLarge: number };
-
-const ROW_HEIGHT = 36;
 // The list follows the window height but never gets smaller than the minimum.
 const LIST_HEIGHT = 'max(280px, 40vh)';
-
-// Last path segment; picked paths use "\" on Windows and "/" elsewhere.
-const baseName = (path: string) => path.split(/[\\/]/).pop() || path;
-
-type FileRowProps = {
-  file: DroppedFile;
-  checked: boolean;
-  style: CSSProperties;
-  onToggleFile: (path: string, checked: boolean) => void;
-  onRemoveFile: (path: string) => void;
-};
-
-const FileRow = memo(function FileRow(props: FileRowProps) {
-  const { file, checked, style, onToggleFile, onRemoveFile } = props;
-  const { t } = useTranslation('uploadPickerModal');
-
-  const onChangeFile = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => onToggleFile(file.path, e.currentTarget.checked),
-    [onToggleFile, file.path]
-  );
-
-  const onClickRemove = useCallback(() => onRemoveFile(file.path), [onRemoveFile, file.path]);
-
-  return (
-    <Group style={style} gap="xs" wrap="nowrap" px="xs">
-      <CheckBoxInput
-        checked={checked}
-        onChange={onChangeFile}
-        label={
-          <Text span truncate="end" title={file.path} style={{ display: 'block' }}>
-            {baseName(file.relKey)}
-          </Text>
-        }
-        styles={{ root: { flex: 1, minWidth: 0 }, body: { minWidth: 0 }, labelWrapper: { minWidth: 0 } }}
-      />
-      {file.isLarge && (
-        <Badge color="orange" variant="light" style={{ flexShrink: 0 }}>
-          {t('large')}
-        </Badge>
-      )}
-      <Text size="sm" c="dimmed" style={{ flexShrink: 0 }}>
-        {formatFileSize(file.size)}
-      </Text>
-      <ActionIcon size="sm" color="red" onClick={onClickRemove} aria-label={t('remove')} title={t('remove')}>
-        <Trash2 size="14px" />
-      </ActionIcon>
-    </Group>
-  );
-});
 
 type GroupRowProps = {
   group: DroppedGroup;
@@ -122,7 +67,7 @@ const GroupRow = memo(function GroupRow(props: GroupRowProps) {
 });
 
 type FileListProps = {
-  rows: Row[];
+  rows: UploadRow[];
   selected: ReadonlySet<string>;
   stats: GroupStat[];
   limits: PickerLimits;
@@ -132,60 +77,37 @@ type FileListProps = {
 
 const FileList = memo(function FileList(props: FileListProps) {
   const { rows, selected, stats, limits, onToggleFile, onRemoveFile } = props;
+  const { t } = useTranslation('uploadPickerModal');
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  // React Compiler is disabled, so this compiler-only lint does not apply.
-  // oxlint-disable-next-line react/incompatible-library
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
-    getItemKey: idx => {
-      const row = rows[idx];
-      return row.kind === 'group' ? `g:${row.index}` : `f:${row.file.path}`;
-    },
-    overscan: 8,
-  });
-
-  return (
-    <div ref={scrollRef} style={{ height: LIST_HEIGHT, overflow: 'auto', position: 'relative' }}>
-      <div style={{ position: 'relative', height: virtualizer.getTotalSize(), width: '100%' }}>
-        {virtualizer.getVirtualItems().map(item => {
-          const row = rows[item.index];
-          const style = {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: ROW_HEIGHT,
-            transform: `translateY(${item.start}px)`,
-          } as const;
-
-          return row.kind === 'group' ? (
-            <GroupRow
-              key={item.key}
-              group={row.group}
-              selected={stats[row.index].selected}
-              selectedLarge={stats[row.index].selectedLarge}
-              maxFilesPerFolder={limits.maxFilesPerFolder}
-              largeFileMaxCount={limits.largeFileMaxCount}
-              style={style}
-            />
-          ) : (
-            <FileRow
-              key={item.key}
-              file={row.file}
-              checked={selected.has(row.file.path)}
-              style={style}
-              onToggleFile={onToggleFile}
-              onRemoveFile={onRemoveFile}
-            />
-          );
-        })}
-      </div>
-    </div>
+  const renderRow = useCallback(
+    (row: UploadRow, key: string | number | bigint, style: CSSProperties) =>
+      row.kind === 'group' ? (
+        <GroupRow
+          key={key}
+          group={row.group}
+          selected={stats[row.index].selected}
+          selectedLarge={stats[row.index].selectedLarge}
+          maxFilesPerFolder={limits.maxFilesPerFolder}
+          largeFileMaxCount={limits.largeFileMaxCount}
+          style={style}
+        />
+      ) : (
+        <FileRow
+          key={key}
+          file={row.file}
+          checked={selected.has(row.file.path)}
+          style={style}
+          largeLabel={t('large')}
+          titleBy="path"
+          removeLabel={t('remove')}
+          onToggleFile={onToggleFile}
+          onRemoveFile={onRemoveFile}
+        />
+      ),
+    [selected, stats, limits, onToggleFile, onRemoveFile, t]
   );
+
+  return <VirtualRowList rows={rows} height={LIST_HEIGHT} renderRow={renderRow} />;
 });
 
 /**
@@ -271,7 +193,7 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
     [groups, selected]
   );
 
-  const rows = useMemo<Row[]>(
+  const rows = useMemo<UploadRow[]>(
     () =>
       groups.flatMap((group, index) => [
         { kind: 'group' as const, index, group },
@@ -342,7 +264,7 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
           pos="relative"
           p="8px"
           mih="0px"
-          style={{ justifyContent: 'flex-end', backgroundColor: '#d0ebff' }}
+          style={{ justifyContent: 'flex-end', backgroundColor: INFO_BG_COLOR }}
         >
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
             <Upload />
@@ -354,22 +276,27 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
         <Divider />
 
         <Modal.Body p="8px">
-          <Stack gap="8px">
-            {bucket ? (
-              <Text size="sm" c="dimmed" truncate="end">
-                {formatStringJson(t('target'), { target })}
-              </Text>
-            ) : (
-              <BucketPicker
-                connectionId={connectionId}
-                profileName={profileName}
-                value={pickedBucket}
-                label={t('bucketLabel')}
-                error={!pickedBucket && result.length > 0 ? t('bucketRequired') : undefined}
-                onChange={setPickedBucket}
-              />
-            )}
-            <Group justify="space-between">
+          {/* Bordered sections like the object view: target, actions and list, each split by a divider */}
+          <Paper withBorder style={{ overflow: 'hidden' }}>
+            <Box p="8px">
+              {bucket ? (
+                <Text size="sm" c="dimmed" truncate="end">
+                  {formatStringJson(t('target'), { target })}
+                </Text>
+              ) : (
+                <BucketPicker
+                  connectionId={connectionId}
+                  profileName={profileName}
+                  value={pickedBucket}
+                  error={!pickedBucket && result.length > 0 ? t('bucketRequired') : undefined}
+                  onChange={setPickedBucket}
+                />
+              )}
+            </Box>
+
+            <Divider />
+
+            <Stack gap="4px" p="8px">
               <Group gap="xs">
                 <Button
                   leftSection={<Upload size="16px" />}
@@ -391,7 +318,10 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
               <Text size="sm" c="dimmed">
                 {t('dropHint')}
               </Text>
-            </Group>
+            </Stack>
+
+            <Divider />
+
             <div className={classes.dropArea}>
               {rows.length === 0 ? (
                 <Center h={LIST_HEIGHT}>
@@ -414,7 +344,7 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
                 <Text fw={600}>{t('dropHere')}</Text>
               </div>
             </div>
-          </Stack>
+          </Paper>
         </Modal.Body>
 
         <Divider />

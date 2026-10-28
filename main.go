@@ -1,3 +1,4 @@
+// Command S3Browser is a desktop S3/MinIO browser built on Wails v3.
 package main
 
 import (
@@ -12,9 +13,13 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
+// assets is the built frontend served to the webview.
+//
 //go:embed all:frontend/dist
 var assets embed.FS
 
+// wailsConfigJSON is read back at runtime so wails.json stays the single source of the app name.
+//
 //go:embed all:wails.json
 var wailsConfigJSON []byte
 
@@ -35,8 +40,8 @@ func portableWindowsOptions(appName string) (application.WindowsOptions, error) 
 	}, nil
 }
 
+// main wires logger, app, handlers and the main window, then runs the Wails event loop.
 func main() {
-	// Create an instance of the app structure
 	cfg := internal.ParseConfig(wailsConfigJSON)
 
 	appLogger, closer, err := logger.Setup(logger.Config{

@@ -8,5 +8,6 @@
     "OK": "OK",
     "clear": "Clear",
     "close": "Close"
-  }
+  },
+  "modalLoadError": "Could not open the dialog. Please try again."
 }

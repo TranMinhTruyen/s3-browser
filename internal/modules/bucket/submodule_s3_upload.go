@@ -19,6 +19,8 @@ import (
 )
 
 const (
+	// uploadPartConcurrency is the parts of one file sent at once. With uploadFileConcurrency
+	// files in flight this bounds open requests to files x parts.
 	uploadPartConcurrency = 4
 	// minUploadPartSize is the smallest part size. Files smaller than this are sent in
 	// a single PutObject. S3 requires every part except the last to be at least 5 MiB.
@@ -88,6 +90,8 @@ func uploadFile(
 	size := info.Size()
 
 	var sent atomic.Int64
+	// One goroutine samples the counter every 200ms instead of emitting an event per read,
+	// which would flood the frontend; stop() ends it when the upload returns.
 	stop := utils.ReportEvery(200*time.Millisecond, func() {
 		progress(min(sent.Load(), size), size)
 	})
@@ -244,6 +248,7 @@ type progressReader struct {
 	pos  int64
 }
 
+// Read implements io.Reader and counts the bytes read.
 func (p *progressReader) Read(b []byte) (int, error) {
 	n, err := p.r.Read(b)
 	p.pos += int64(n)
@@ -251,6 +256,7 @@ func (p *progressReader) Read(b []byte) (int, error) {
 	return n, err
 }
 
+// Seek implements io.Seeker and corrects the count for bytes that will be read again.
 func (p *progressReader) Seek(offset int64, whence int) (int64, error) {
 	pos, err := p.r.Seek(offset, whence)
 	if err != nil {

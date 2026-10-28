@@ -12,6 +12,10 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+// connectTimeout bounds the probe of a connect or test call.
+const connectTimeout = 30 * time.Second
+
+// submoduleConnMng connects, tests and disconnects S3 connections and keeps them in the global store.
 type submoduleConnMng struct {
 	logger  *slog.Logger
 	app     *application.App
@@ -38,13 +42,23 @@ func newSubmoduleConnMng(
 	}
 }
 
-func (m *submoduleConnMng) testAction(input models.ConnectionProfileInput) models.Output[models.ConnectOutput] {
+// probe builds a client for input and checks it with ListBuckets. The caller owns c: on success
+// it must keep it (replaceConn) or close its idle connections; on failure probe already closed them.
+func (m *submoduleConnMng) probe(
+	input models.ConnectionProfileInput,
+) (*global.S3Conn, models.Output[models.ConnectOutput], error) {
 	// The app context is canceled only when the app shuts down, so always bound the I/O with a timeout.
-	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(m.app.Context(), connectTimeout)
 	defer cancel()
 
 	c := m.submoduleCfgMng.buildClient(input)
 	status, err := m.submoduleCfgMng.probe(ctx, c)
+	return c, status, err
+}
+
+// testAction checks the credentials and endpoint of input (S3S001) without keeping the connection.
+func (m *submoduleConnMng) testAction(input models.ConnectionProfileInput) models.Output[models.ConnectOutput] {
+	c, status, err := m.probe(input)
 
 	if err != nil {
 		status.Body.IsConnected = false
@@ -62,16 +76,12 @@ func (m *submoduleConnMng) testAction(input models.ConnectionProfileInput) model
 	return status
 }
 
+// connectAction connects with input and keeps the connection; see Module.Connect.
 func (m *submoduleConnMng) connectAction(
 	input models.ConnectionProfileInput,
 	isExistingProfile bool,
 ) models.Output[models.ConnectOutput] {
-	// The app context is canceled only when the app shuts down, so always bound the I/O with a timeout.
-	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
-	defer cancel()
-
-	c := m.submoduleCfgMng.buildClient(input)
-	status, err := m.submoduleCfgMng.probe(ctx, c)
+	c, status, err := m.probe(input)
 
 	if err != nil {
 		status.Body.IsConnected = false
@@ -111,6 +121,7 @@ func (m *submoduleConnMng) replaceConn(id string, c *global.S3Conn) {
 	}
 }
 
+// profileConnectAction connects with a saved profile and keeps the connection (S3S002).
 func (m *submoduleConnMng) profileConnectAction(connectionId string) models.Output[models.ConnectOutput] {
 	output := models.NewOutput[models.ConnectOutput]()
 	profile := m.profile.GetConnectionProfileById(connectionId)
@@ -129,12 +140,7 @@ func (m *submoduleConnMng) profileConnectAction(connectionId string) models.Outp
 		Provider:  profile.Body.Provider,
 	}
 
-	// The app context is canceled only when the app shuts down, so always bound the I/O with a timeout.
-	ctx, cancel := context.WithTimeout(m.app.Context(), 30*time.Second)
-	defer cancel()
-
-	c := m.submoduleCfgMng.buildClient(connectInput)
-	status, err := m.submoduleCfgMng.probe(ctx, c)
+	c, status, err := m.probe(connectInput)
 
 	if err != nil {
 		output.Body.IsConnected = false
@@ -155,6 +161,7 @@ func (m *submoduleConnMng) profileConnectAction(connectionId string) models.Outp
 	return output
 }
 
+// disconnectAction removes a connection from the store and closes its idle HTTP connections.
 func (m *submoduleConnMng) disconnectAction(connectionId string) models.Output[bool] {
 	output := models.NewOutput[bool]()
 
@@ -167,11 +174,10 @@ func (m *submoduleConnMng) disconnectAction(connectionId string) models.Output[b
 			}),
 		)
 		return output
-	} else {
-		output.AddMessage(
-			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E005, "Connection not found"),
-		)
 	}
 
+	output.AddMessage(
+		models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E005, "Connection not found"),
+	)
 	return output
 }

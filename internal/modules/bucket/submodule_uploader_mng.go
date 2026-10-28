@@ -11,12 +11,9 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"slices"
-	"strings"
 	"sync"
 	"sync/atomic"
 
-	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"golang.org/x/sync/errgroup"
 )
@@ -31,17 +28,24 @@ type uploadHost interface {
 // appHost is the uploadHost backed by the Wails application.
 type appHost struct{ app *application.App }
 
+// Context returns the app context, which ends on shutdown.
 func (h appHost) Context() context.Context { return h.app.Context() }
 
+// Emit sends an event to the frontend.
 func (h appHost) Emit(name string, data ...any) { h.app.Event.Emit(name, data...) }
 
+// submoduleUploaderMng uploads files. State is shared by all tabs: one uploadObject call at
+// a time (busy), and every file in flight is a cancelable job (jobs) so the user can stop
+// one file or the whole batch.
 type submoduleUploaderMng struct {
 	logger *slog.Logger
 	host   uploadHost
 	// getClient returns the S3 client of a connection and marks a transfer running on it
 	// until release is called; ok is false if it isn't connected.
 	getClient func(connID string) (client s3Uploader, release func(), ok bool)
-	jobs      sync.Map
+	// jobs maps upload ID -> uploaderJob for the files in flight; a sync.Map because the
+	// cancel handlers read it while uploadOne goroutines add and remove entries.
+	jobs sync.Map
 	// busy is set while an uploadObject call runs; only one runs at a time, across all tabs.
 	busy atomic.Bool
 	// batchCancel cancels the running uploadObject call, including its key check;
@@ -53,6 +57,7 @@ type submoduleUploaderMng struct {
 	pickPaths func() ([]string, error)
 }
 
+// newSubmoduleUploaderMng wires the uploader to the Wails app and the shared connections.
 func newSubmoduleUploaderMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -79,6 +84,7 @@ func newSubmoduleUploaderMng(
 	}
 }
 
+// uploaderJob is a running single-file upload that can be canceled.
 type uploaderJob struct {
 	cancel context.CancelFunc
 }
@@ -98,6 +104,7 @@ const (
 // tests can lower it instead of creating 10 GiB files.
 var largeFileSize int64 = 10 << 30
 
+// uploadResult is the outcome of one file, turned into a message after all files finish.
 type uploadResult struct {
 	path string
 	key  string
@@ -156,16 +163,13 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 	client, releaseConn, ok := m.getClient(input.ConnectionId)
 	if !ok {
 		m.logger.Error("get connection profile failed")
-		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
-				"name": input.ProfileName,
-			}),
-		)
+		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 	defer releaseConn()
 
 	// One context for the whole call, so cancelAllUploads also stops the key check
-	// below and the files that haven't started yet.
+	// below and the files that haven't started yet. It is not a Wails call context: this
+	// call blocks while the user works, so it only ends on cancelAllUploads or app shutdown.
 	ctx, cancel := context.WithCancel(m.host.Context())
 	m.setBatchCancel(cancel)
 	defer func() { m.setBatchCancel(nil); cancel() }()
@@ -187,7 +191,8 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 		used[items[i].RelKey] = struct{}{}
 	}
 
-	// Each goroutine writes only its own index, so no lock is needed.
+	// Each goroutine writes only its own index, so no lock is needed. Results are read
+	// after g.Wait(), which waits for every group (and each group waits for its files).
 	results := make([]uploadResult, len(items))
 	// One goroutine per group hands its files out, but all groups share one semaphore, so at
 	// most uploadFileConcurrency files upload at a time. A plain errgroup.Group (no shared
@@ -249,168 +254,10 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 	return output
 }
 
-// cleanUploadItems returns a copy of items with a safe RelKey set on each. If a RelKey
-// is not safe it returns the path of that item as badPath.
-func cleanUploadItems(items []models.UploadObj) (clean []models.UploadObj, badPath string) {
-	clean = make([]models.UploadObj, len(items))
-	for i, item := range items {
-		rel, ok := cleanRelKey(item.RelKey, item.Path)
-		if !ok {
-			return nil, item.Path
-		}
-		item.RelKey = rel
-		clean[i] = item
-	}
-	return clean, ""
-}
-
-// groupUploadItems groups the indexes of items by the folder of their RelKey, in order of
-// first appearance, and checks the per group limits. Sizes are read from disk; a file that
-// can't be read counts as small (the upload reports it). If a limit is broken it returns
-// the error message for it.
-func groupUploadItems(items []models.UploadObj) (groups [][]int, violation []models.Message) {
-	pos := map[string]int{}
-	names := []string{}
-	for i, item := range items {
-		dir := relKeyDir(item.RelKey)
-		p, ok := pos[dir]
-		if !ok {
-			p = len(groups)
-			pos[dir] = p
-			names = append(names, dir)
-			groups = append(groups, nil)
-		}
-		groups[p] = append(groups[p], i)
-	}
-
-	for p, indexes := range groups {
-		if len(indexes) > maxFilesPerFolder {
-			return nil, []models.Message{
-				models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E018, "", map[string]any{
-					"folder": names[p],
-					"max":    maxFilesPerFolder,
-				}),
-			}
-		}
-		large := 0
-		for _, i := range indexes {
-			if info, err := os.Stat(items[i].Path); err == nil && info.Size() > largeFileSize {
-				large++
-			}
-		}
-		if large > largeFileMaxCount {
-			return nil, []models.Message{
-				models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E022, "", map[string]any{
-					"folder": names[p],
-					"max":    largeFileMaxCount,
-					"size":   largeFileSize >> 30,
-				}),
-			}
-		}
-	}
-	return groups, nil
-}
-
-// renameKey puts id in front of the file name of relKey, keeping its folders:
-// "a/b/c.txt" -> "a/b/<id>_c.txt".
-func renameKey(relKey, id string) string {
-	dir, name := "", relKey
-	if i := strings.LastIndex(relKey, "/"); i >= 0 {
-		dir, name = relKey[:i+1], relKey[i+1:]
-	}
-	return dir + id + "_" + name
-}
-
-// dropKindPicker is the data-drop-kind of the drop zone inside the upload picker modal.
-const dropKindPicker = "picker"
-
-// dropContext is the part of the Wails window event context used for a drop.
-type dropContext interface {
-	DropTargetDetails() *application.DropTargetDetails
-	DroppedFiles() []string
-}
-
-// handleFilesDropped forwards files dropped on an object list to the frontend.
-// The drop target carries the tab ID in data-tab-id; drops elsewhere are ignored.
-func (m *submoduleUploaderMng) handleFilesDropped(event *application.WindowEvent) {
-	// The context is nil for an event that didn't come from a real drop.
-	if ctx := event.Context(); ctx != nil {
-		m.handleDrop(ctx)
-	}
-}
-
-// handleDrop reads the drop target and the dropped paths from ctx and forwards them.
-func (m *submoduleUploaderMng) handleDrop(ctx dropContext) {
-	target := ctx.DropTargetDetails()
-	if target == nil {
-		return
-	}
-	attrs := target.Attributes
-	event := EventFilesDropped
-	if attrs["data-drop-kind"] == dropKindPicker {
-		event = EventPickerFilesDropped
-	}
-	m.dropFiles(event, attrs["data-tab-id"], ctx.DroppedFiles())
-}
-
-// dropFiles expands the dropped paths and emits the result as event. An empty tabID
-// (a drop outside a tab) is ignored.
-func (m *submoduleUploaderMng) dropFiles(event, tabID string, dropped []string) {
-	if tabID == "" {
-		return
-	}
-	m.host.Emit(event, buildFilesDropped(tabID, dropped))
-}
-
-// buildFilesDropped expands paths (folders included) into groups of files, with the
-// limits the frontend must apply.
-func buildFilesDropped(tabID string, paths []string) models.FilesDroppedOutput {
-	res := expandDropped(paths)
-	return models.FilesDroppedOutput{
-		TabId:             tabID,
-		Groups:            res.groups,
-		Skipped:           res.skipped,
-		TotalFiles:        res.total,
-		OverMaxTotal:      res.overTotal,
-		Capped:            res.capped,
-		MaxFilesPerFolder: maxFilesPerFolder,
-		LargeFileSize:     largeFileSize,
-		LargeFileMaxCount: largeFileMaxCount,
-		MaxTotalFiles:     maxTotalFiles,
-	}
-}
-
-// pickFiles opens the native file dialog (multiple files) and returns the chosen files
-// as groups with their limits, sorted by file name. If the user cancels, Body is empty
-// (no groups) and Result stays true. The dialog blocks until closed, so it has no timeout.
-func (m *submoduleUploaderMng) pickFiles(ctx context.Context) models.Output[models.FilesDroppedOutput] {
-	output := models.NewOutput[models.FilesDroppedOutput]()
-	if ctx.Err() != nil {
-		output.Result = false
-		return output
-	}
-	paths, err := m.pickPaths()
-	if err != nil {
-		m.logger.Error("pick files error", slog.Any("detail", err.Error()))
-		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E029, err.Error()))
-	}
-	if len(paths) == 0 {
-		return output
-	}
-	// The dialog doesn't guarantee an order, so sort for a stable list.
-	slices.SortFunc(paths, func(a, b string) int {
-		byName := strings.Compare(strings.ToLower(filepath.Base(a)), strings.ToLower(filepath.Base(b)))
-		if byName != 0 {
-			return byName
-		}
-		return strings.Compare(a, b)
-	})
-	output.Body = buildFilesDropped("", paths)
-	return output
-}
-
-// uploadOne uploads a single file. It registers a cancelable job and emits progress
-// events while uploading. If the job was canceled, the result's error is context.Canceled.
+// uploadOne uploads a single file. It registers a cancelable job (so cancelUploadOne can
+// stop just this file) and emits progress events while uploading. The job is removed and
+// its context released on return, so nothing leaks. If the job was canceled, the result's error
+// is context.Canceled.
 func (m *submoduleUploaderMng) uploadOne(
 	parent context.Context,
 	id string,
@@ -499,57 +346,4 @@ func (m *submoduleUploaderMng) cancelAllUploads() models.Output[any] {
 	})
 	m.logger.Info("all uploads is canceled")
 	return models.NewOutput[any]()
-}
-
-// normalizePrefix turns p into the form used for keys: no leading "/", and a trailing
-// "/" unless it is empty (the bucket root). Windows separators are converted to "/".
-func normalizePrefix(p string) string {
-	p = strings.TrimLeft(strings.ReplaceAll(p, `\`, "/"), "/")
-	if p != "" && !strings.HasSuffix(p, "/") {
-		p += "/"
-	}
-	return p
-}
-
-// existingKeys checks, uploadFileConcurrency at a time, whether an object with key
-// prefix + RelKey already exists in bucket, for each item. Each distinct RelKey is
-// checked once. It returns the RelKeys (without prefix) except those the bucket
-// answered 404 for: a key that couldn't be checked is treated as existing, so its file
-// gets a renamed key and nothing is overwritten.
-func existingKeys(
-	ctx context.Context,
-	client s3Uploader,
-	bucket, prefix string,
-	items []models.UploadObj,
-) map[string]struct{} {
-	var names []string
-	seen := make(map[string]struct{}, len(items))
-	for _, item := range items {
-		if _, ok := seen[item.RelKey]; !ok {
-			seen[item.RelKey] = struct{}{}
-			names = append(names, item.RelKey)
-		}
-	}
-
-	// Each goroutine writes only its own index, so no lock is needed.
-	errs := make([]error, len(names))
-	var g errgroup.Group
-	g.SetLimit(uploadFileConcurrency)
-	for i, name := range names {
-		g.Go(func() error {
-			key := prefix + name
-			_, errs[i] = client.HeadObject(ctx, &s3.HeadObjectInput{Bucket: &bucket, Key: &key})
-			return nil
-		})
-	}
-	_ = g.Wait()
-
-	existing := make(map[string]struct{}, len(items))
-	for i, name := range names {
-		if errs[i] != nil && UnwrapAwsError(errs[i]) == "NotFound" {
-			continue
-		}
-		existing[name] = struct{}{}
-	}
-	return existing
 }

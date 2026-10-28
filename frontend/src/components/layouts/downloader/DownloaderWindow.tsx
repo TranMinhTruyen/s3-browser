@@ -11,6 +11,7 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import DownloaderItem from '@/components/layouts/downloader/DownloaderItem';
 
+/** Floating download progress window (or a button when closed); publishes its size for the uploader. */
 function DownloaderWindow() {
   const { t } = useTranslation('downloaderWindow');
 

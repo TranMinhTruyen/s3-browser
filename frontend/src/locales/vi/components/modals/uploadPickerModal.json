@@ -4,7 +4,6 @@
   "selectFiles": "Chọn file",
   "dropHint": "hoặc kéo thả file và thư mục vào đây",
   "dropHere": "Thả file vào đây",
-  "bucketLabel": "Bucket đích",
   "bucketRequired": "Hãy chọn bucket đích",
   "emptyList": "Chưa thêm file nào",
   "selectedCount": "{selected}/{max} file",

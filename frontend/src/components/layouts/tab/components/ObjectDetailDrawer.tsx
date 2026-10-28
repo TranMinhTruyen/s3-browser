@@ -69,6 +69,7 @@ function DetailRow(props: DetailRowProps) {
   );
 }
 
+/** Right-side drawer showing metadata of the selected object (loaded lazily, cancelable). */
 function ObjectDetailDrawer(props: ObjectDetailDrawerProps) {
   const { tabId, connectionId, profileName, bucket } = props;
 

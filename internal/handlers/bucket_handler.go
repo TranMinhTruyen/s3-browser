@@ -9,12 +9,14 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+// BucketHandler is the Wails service for connections, buckets, objects, uploads and downloads.
 type BucketHandler struct {
 	logger *slog.Logger
 	app    *application.App
 	bucket *bucket.Module
 }
 
+// NewBucketHandler creates the bucket handler.
 func NewBucketHandler(app *application.App, logger *slog.Logger, bucket *bucket.Module) *BucketHandler {
 	return &BucketHandler{
 		logger: logger.With("component", "bucket_handler"),
@@ -23,6 +25,7 @@ func NewBucketHandler(app *application.App, logger *slog.Logger, bucket *bucket.
 	}
 }
 
+// ConnectS3 tests the connection when isTestConn is set, otherwise connects and keeps it open.
 func (h *BucketHandler) ConnectS3(
 	input models.ConnectionProfileInput,
 	isTestConn bool,
@@ -34,18 +37,22 @@ func (h *BucketHandler) ConnectS3(
 	return h.bucket.Connect(input, isExistingProfile)
 }
 
+// ConnectS3ByProfile connects using a saved profile.
 func (h *BucketHandler) ConnectS3ByProfile(connectionId string) models.Output[models.ConnectOutput] {
 	return h.bucket.ConnectByProfile(connectionId)
 }
 
+// DisconnectAll closes every connection.
 func (h *BucketHandler) DisconnectAll() {
 	h.bucket.DisconnectAll()
 }
 
+// Disconnect closes one connection.
 func (h *BucketHandler) Disconnect(connectionId string) models.Output[bool] {
 	return h.bucket.Disconnect(connectionId)
 }
 
+// GetListBucket lists the buckets of a connection.
 func (h *BucketHandler) GetListBucket(
 	ctx context.Context,
 	input models.ListBucketInput,
@@ -53,6 +60,7 @@ func (h *BucketHandler) GetListBucket(
 	return h.bucket.GetListBucket(ctx, input)
 }
 
+// GetListObject lists one page of objects under a prefix.
 func (h *BucketHandler) GetListObject(
 	ctx context.Context,
 	input models.ListObjectInput,
@@ -60,6 +68,7 @@ func (h *BucketHandler) GetListObject(
 	return h.bucket.GetListObject(ctx, input)
 }
 
+// SearchObject searches objects of a bucket by keyword.
 func (h *BucketHandler) SearchObject(
 	ctx context.Context,
 	input models.SearchObjectInput,
@@ -67,6 +76,7 @@ func (h *BucketHandler) SearchObject(
 	return h.bucket.SearchObject(ctx, input)
 }
 
+// SearchBucket searches buckets by keyword.
 func (h *BucketHandler) SearchBucket(
 	ctx context.Context,
 	input models.SearchBucketInput,
@@ -74,6 +84,7 @@ func (h *BucketHandler) SearchBucket(
 	return h.bucket.SearchBucket(ctx, input)
 }
 
+// GetObjectDetail returns the metadata of one object.
 func (h *BucketHandler) GetObjectDetail(
 	ctx context.Context,
 	input models.ObjectDetailInput,
@@ -81,30 +92,37 @@ func (h *BucketHandler) GetObjectDetail(
 	return h.bucket.GetObjectDetail(ctx, input)
 }
 
+// DownloadObject starts downloading objects.
 func (h *BucketHandler) DownloadObject(input models.DownloadObjInput) models.Output[any] {
 	return h.bucket.DownloadObject(input)
 }
 
+// CancelDownloadOne cancels one running download.
 func (h *BucketHandler) CancelDownloadOne(id string) models.Output[any] {
 	return h.bucket.CancelDownloadOne(id)
 }
 
+// CancelAllDownloads cancels every running download.
 func (h *BucketHandler) CancelAllDownloads() models.Output[any] {
 	return h.bucket.CancelAllDownloads()
 }
 
+// CancelUploadOne cancels one running upload.
 func (h *BucketHandler) CancelUploadOne(id string) models.Output[any] {
 	return h.bucket.CancelUploadOne(id)
 }
 
+// CancelAllUploads cancels every running upload.
 func (h *BucketHandler) CancelAllUploads() models.Output[any] {
 	return h.bucket.CancelAllUploads()
 }
 
+// DeleteObject deletes the given objects.
 func (h *BucketHandler) DeleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
 	return h.bucket.DeleteObject(ctx, input)
 }
 
+// DeletePrefix deletes every object under a prefix.
 func (h *BucketHandler) DeletePrefix(
 	ctx context.Context,
 	input models.DeletePrefixInput,
@@ -112,16 +130,19 @@ func (h *BucketHandler) DeletePrefix(
 	return h.bucket.DeletePrefix(ctx, input)
 }
 
+// GetDownloadHistory returns the download history.
 func (h *BucketHandler) GetDownloadHistory(
 	input models.DownloadHistoryInput,
 ) models.Output[models.DownloadHistoryOutput] {
 	return h.bucket.GetDownloadHistory(input)
 }
 
+// OpenDownloadDest opens a downloaded file in the file manager.
 func (h *BucketHandler) OpenDownloadDest(fileName, path string) models.Output[any] {
 	return h.bucket.OpenDownloadDest(fileName, path)
 }
 
+// UploadObject starts uploading files.
 func (h *BucketHandler) UploadObject(input models.UploadObjInput) models.Output[any] {
 	return h.bucket.UploadObject(input)
 }

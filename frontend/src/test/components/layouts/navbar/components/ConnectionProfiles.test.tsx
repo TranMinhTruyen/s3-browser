@@ -10,7 +10,7 @@ import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ConnectionProfiles from '@/components/layouts/navbar/components/ConnectionProfiles';
 import ConfirmModal from '@/components/modals/ConfirmModal';
-import ConnectModal from '@/components/modals/ConnectModal';
+import { showConnectModal } from '@/components/modals/lazyModals';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
 vi.mock('@wailsio/runtime', async importOriginal => {
@@ -27,11 +27,11 @@ vi.mock('@wails/S3Browser/internal/handlers/profilehandler', () => ({
 }));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
 vi.mock('@/components/modals/ConfirmModal', () => ({ default: { show: vi.fn() } }));
-vi.mock('@/components/modals/ConnectModal', () => ({ default: { show: vi.fn() } }));
+vi.mock('@/components/modals/lazyModals', () => ({ showConnectModal: vi.fn(), showHistoryModal: vi.fn() }));
 
 const callIPCMock = vi.mocked(callIPC);
 const confirmMock = vi.mocked(ConfirmModal.show);
-const connectModalMock = vi.mocked(ConnectModal.show);
+const connectModalMock = vi.mocked(showConnectModal);
 const flush = () => act(async () => {});
 
 const profile = (id: string, extra: Partial<ConnectionProfileOutput> = {}) =>
@@ -141,7 +141,7 @@ describe('ConnectionProfiles', () => {
       await flush();
       expect(callIPCMock).not.toHaveBeenCalled();
 
-      act(() => useProfileStore.getState().setConnectionProfiles({ late: profile('late', { autoConnect: true }) }));
+      act(() => useProfileStore.setState({ connectionProfiles: { late: profile('late', { autoConnect: true }) } }));
       await flush();
 
       expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['late']);

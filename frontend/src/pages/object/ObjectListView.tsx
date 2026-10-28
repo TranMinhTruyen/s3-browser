@@ -1,35 +1,23 @@
 import { Center, Loader, Text } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import {
-  DeleteObject,
-  DeletePrefix,
-  DownloadObject,
-  GetListObject,
-  SearchObject,
-} from '@wails/S3Browser/internal/handlers/buckethandler';
+import { DeleteObject, DeletePrefix, DownloadObject } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
-import { FilesDroppedOutput, ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
+import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
 import { Output } from '@wails/S3Browser/models/common';
-import { Events } from '@wailsio/runtime';
 import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
-import { formatStringJson } from '@/common/utils/stringUtils';
-import { ensureUploadIdle, runUpload } from '@/common/utils/uploadUtils';
 import Button from '@/components/buttons/Button';
 import ConfirmModal from '@/components/modals/ConfirmModal';
-import UploadLimitModal from '@/components/modals/UploadLimitModal';
-import i18n from '@/locales/i18n';
 import ObjectItem from '@/pages/object/ObjectItem';
+import { useFilesDroppedUpload } from '@/pages/object/useFilesDroppedUpload';
+import { useObjectPaging } from '@/pages/object/useObjectPaging';
 
 // Download or delete is refused above this many objects at once.
 const MAX_OBJECTS_PER_ACTION = 5;
 // Backend message code of a key deleted successfully (its `params.object` is the key).
 const DELETE_OBJECT_SUCCESS_CODE = 'S3S005';
-// Objects fetched per page.
-const OBJECT_PAGE_SIZE = 10;
 // Row height before measuring, and the gap between rows.
 const ROW_ESTIMATE_SIZE = 104;
 const ROW_GAP = 8;
@@ -49,30 +37,32 @@ type ObjectListViewProps = {
   ref?: Ref<ObjectListViewRef>;
 };
 
+/** Virtualized, lazily paged list of the objects (or search results) of the current folder. */
 function ObjectListView(props: ObjectListViewProps) {
   const { tabId, bucket, profile, scrollRef, keyword = '', ref } = props;
 
   const { t } = useTranslation('object', { keyPrefix: 'page' });
 
-  const [objectDatas, setObjectDatas] = useState<ObjectItemData[]>([]);
-  const [nextCursor, setNextCursor] = useState('');
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [loadMoreError, setLoadMoreError] = useState(false);
-  // The list the cursor belongs to. Right after the source changes, nextCursor still holds the old list's
-  // cursor until the new first page lands, and sending it to the new source would break the request.
-  const [cursorKey, setCursorKey] = useState('');
-  const [isLoadingFirst, setIsLoadingFirst] = useState(false);
-  // True once the first page of the current list has loaded, so an empty search result can be told from loading.
-  const [isLoaded, setIsLoaded] = useState(false);
   const [scrollMargin, setScrollMargin] = useState(0);
 
   const connectionId = profile?.id;
   const profileName = profile?.name;
-  const requestCtrl = useRef<AbortController>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   const prefix = useTabListStore(s => s.tabList[tabId]?.prefix ?? '');
   const listKey = `${connectionId}|${bucket}|${prefix}|${keyword}`;
+  const {
+    objectDatas,
+    nextCursor,
+    cursorKey,
+    isLoadingFirst,
+    isLoadingMore,
+    isLoaded,
+    loadMoreError,
+    loadNextPage,
+    onRefresh,
+    onClickLoadMore,
+  } = useObjectPaging({ connectionId, profileName, bucket, prefix, keyword, listKey, scrollRef });
   const changePrefix = useTabListStore(s => s.changePrefix);
   const addSelectItem = useTabListStore(s => s.addSelectItem);
   const removeSelectItem = useTabListStore(s => s.removeSelectItem);
@@ -80,61 +70,6 @@ function ObjectListView(props: ObjectListViewProps) {
   const openDetail = useTabListStore(s => s.openDetail);
   const closeDetail = useTabListStore(s => s.closeDetail);
   const setDeleting = useTabListStore(s => s.setDeleting);
-
-  const startRequest = useCallback(() => {
-    requestCtrl.current?.abort();
-    const ctrl = new AbortController();
-    requestCtrl.current = ctrl;
-    return ctrl;
-  }, []);
-
-  // Lists the folder, or searches it when a keyword is applied. Both return the same shape.
-  const handleGetListObject = useCallback(
-    (cursor: string, signal?: AbortSignal) => {
-      if (!connectionId || !bucket) return Promise.resolve(undefined);
-      if (keyword) {
-        return callIPC(SearchObject, [{ connectionId, profileName, bucket, prefix, keyword, nextCursor: cursor }], {
-          signal,
-        });
-      }
-      return callIPC(
-        GetListObject,
-        [
-          {
-            connectionId,
-            profileName,
-            bucket,
-            prefix,
-            nextCursor: cursor,
-            limit: OBJECT_PAGE_SIZE,
-          },
-        ],
-        {
-          signal,
-        }
-      );
-    },
-    [bucket, prefix, profileName, connectionId, keyword]
-  );
-
-  const loadFirstPage = useCallback(async () => {
-    const ctrl = startRequest();
-    setNextCursor('');
-    setIsLoadingMore(false);
-    setLoadMoreError(false);
-    setIsLoaded(false);
-    setIsLoadingFirst(true);
-    // Aborting cancels the request on the Go side too, not only the state update.
-    const output = await handleGetListObject('', ctrl.signal);
-    if (ctrl.signal.aborted) return;
-    if (output) {
-      setObjectDatas(output.objectList);
-      setNextCursor(output.nextCursor ?? '');
-      setCursorKey(listKey);
-      setIsLoaded(true);
-    }
-    setIsLoadingFirst(false);
-  }, [handleGetListObject, startRequest, listKey]);
 
   // Closes the drawer when the object it shows is one of the deleted keys or inside a deleted folder.
   const closeDetailIfDeleted = useCallback(
@@ -160,55 +95,8 @@ function ObjectListView(props: ObjectListViewProps) {
     [closeDetailIfDeleted]
   );
 
-  const loadNextPage = useCallback(async () => {
-    if (!nextCursor) return;
-    const ctrl = startRequest();
-    setIsLoadingMore(true);
-    const output = await handleGetListObject(nextCursor, ctrl.signal);
-    if (ctrl.signal.aborted) return;
-    if (output) {
-      // A search cursor can overlap the previous page, so drop keys already shown.
-      setObjectDatas(prev => {
-        const seen = new Set(prev.map(item => item.key));
-        const added = output.objectList.filter(item => !seen.has(item.key));
-        // Nothing new: keep the same array so the list does not re-render.
-        return added.length > 0 ? [...prev, ...added] : prev;
-      });
-      // A cursor equal to the one just sent would make auto-load repeat forever: treat it as the end.
-      setNextCursor(output.nextCursor === nextCursor ? '' : (output.nextCursor ?? ''));
-    } else {
-      setLoadMoreError(true);
-    }
-    setIsLoadingMore(false);
-  }, [nextCursor, handleGetListObject, startRequest]);
-
-  // Also runs when the prefix or keyword changes, because loadFirstPage depends on them.
-  useEffect(() => {
-    if (!connectionId || !bucket) return;
-    setObjectDatas([]);
-    scrollRef.current?.scrollTo({ top: 0 });
-    loadFirstPage();
-  }, [connectionId, bucket, loadFirstPage, scrollRef]);
-
-  // Cancel any running request when the view unmounts.
-  useEffect(
-    () => () => {
-      requestCtrl.current?.abort();
-      clearSelectItem(tabId);
-    },
-    [clearSelectItem, tabId]
-  );
-
-  const onRefresh = useCallback(async () => {
-    setObjectDatas([]);
-    await loadFirstPage();
-    scrollRef.current?.scrollTo({ top: 0 });
-  }, [scrollRef, loadFirstPage]);
-
-  const onClickLoadMore = useCallback(() => {
-    setLoadMoreError(false);
-    return loadNextPage();
-  }, [loadNextPage]);
+  // The selection does not outlive the view.
+  useEffect(() => () => clearSelectItem(tabId), [clearSelectItem, tabId]);
 
   const onClickMenuButton = useCallback(
     async (keys: string[], action: 'download' | 'delete') => {
@@ -299,75 +187,7 @@ function ObjectListView(props: ObjectListViewProps) {
 
   const onOpenFolder = useCallback((folder: string) => changePrefix(tabId, folder), [changePrefix, tabId]);
 
-  // An upload can outlive this render (the user may open another folder meanwhile) or the
-  // view itself, so it refreshes through these refs: the list currently shown, if still mounted.
-  const onRefreshRef = useRef(onRefresh);
-  onRefreshRef.current = onRefresh;
-  const isMountedRef = useRef(true);
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  const onFilesDropped = useCallback(
-    async ({
-      groups,
-      skipped,
-      overMaxTotal,
-      capped,
-      maxFilesPerFolder,
-      largeFileSize,
-      largeFileMaxCount,
-      maxTotalFiles,
-    }: FilesDroppedOutput) => {
-      if (!connectionId || !bucket) return;
-      if (skipped > 0) {
-        toast.warning(formatStringJson(i18n.t('ipcMessage:bucket.S3W006'), { count: skipped }));
-      }
-      if (overMaxTotal) {
-        toast.warning(formatStringJson(i18n.t('ipcMessage:bucket.S3W007'), { max: maxTotalFiles }));
-      }
-      let files = groups.flatMap(group => group.files);
-      if (files.length === 0) return;
-
-      if (!ensureUploadIdle()) return;
-
-      // A group over a limit needs the user to choose which files to upload.
-      if (groups.some(group => group.overMaxFiles || group.overLargeCount)) {
-        const chosen = await UploadLimitModal.show({
-          groups,
-          maxFilesPerFolder,
-          largeFileSize,
-          largeFileMaxCount,
-          capped,
-        });
-        if (!chosen || chosen.length === 0) return;
-        files = chosen;
-      } else if (capped) {
-        toast.warning(i18n.t('uploadLimitModal:cappedWarning'));
-      }
-
-      // runUpload checks again: another tab may have started an upload while the modal was open.
-      await runUpload({ tabId, connectionId, profileName, bucket, prefix, files }, async () => {
-        if (isMountedRef.current) await onRefreshRef.current();
-      });
-    },
-    [bucket, connectionId, prefix, profileName, tabId]
-  );
-
-  useEffect(() => {
-    const unsubscribe = Events.On('uploader:files-dropped', e => {
-      // Every open tab listens; only the tab the files were dropped on handles them.
-      if (e.data?.tabId === tabId) {
-        onFilesDropped(e.data);
-      }
-    });
-    return () => {
-      unsubscribe();
-    };
-  }, [onFilesDropped, tabId]);
+  useFilesDroppedUpload({ tabId, connectionId, profileName, bucket, prefix, onRefresh });
 
   useImperativeHandle(
     ref,

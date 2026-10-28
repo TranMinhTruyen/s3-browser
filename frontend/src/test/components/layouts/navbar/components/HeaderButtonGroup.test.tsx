@@ -3,10 +3,10 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useProfileStore } from '@/common/stores/profileStore';
 import HeaderButtonGroup from '@/components/layouts/navbar/components/HeaderButtonGroup';
-import ConnectModal from '@/components/modals/ConnectModal';
+import { showConnectModal } from '@/components/modals/lazyModals';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
-vi.mock('@/components/modals/ConnectModal', () => ({ default: { show: vi.fn() } }));
+vi.mock('@/components/modals/lazyModals', () => ({ showConnectModal: vi.fn(), showHistoryModal: vi.fn() }));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
 vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({}));
 vi.mock('@wails/S3Browser/internal/handlers/profilehandler', () => ({ GetAllConnectionProfile: vi.fn() }));
@@ -24,7 +24,7 @@ describe('HeaderButtonGroup', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Connect' }));
 
-    expect(ConnectModal.show).toHaveBeenCalledWith({ mode: 'connect' });
+    expect(showConnectModal).toHaveBeenCalledWith({ mode: 'connect' });
   });
 
   it('opens the connect modal in createProfile mode', async () => {
@@ -32,7 +32,7 @@ describe('HeaderButtonGroup', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Create connection profile' }));
 
-    expect(ConnectModal.show).toHaveBeenCalledWith({ mode: 'createProfile' });
+    expect(showConnectModal).toHaveBeenCalledWith({ mode: 'createProfile' });
   });
 
   it('reloads the connection profiles on refresh', async () => {

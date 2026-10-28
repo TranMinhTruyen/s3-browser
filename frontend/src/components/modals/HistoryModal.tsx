@@ -10,6 +10,7 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal } from '@/common/utils/modalUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
+import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 
 const PAGE_SIZE = 10;
 
@@ -111,7 +112,7 @@ export default createMantineModal<{}, false>(props => {
           pos="relative"
           p="8px"
           mih="0px"
-          style={{ justifyContent: 'flex-end', backgroundColor: '#d0ebff' }}
+          style={{ justifyContent: 'flex-end', backgroundColor: INFO_BG_COLOR }}
         >
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
             <Title order={4}>{t('title')}</Title>

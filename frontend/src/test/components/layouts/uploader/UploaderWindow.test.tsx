@@ -10,9 +10,24 @@ import UploaderWindow from '@/components/layouts/uploader/UploaderWindow';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
 // jsdom has no layout, so the real virtualizer would render no row: render every row instead.
+const virtual = vi.hoisted(() => ({ getScrollEl: null as null | (() => unknown), estimates: [] as number[] }));
 vi.mock('@tanstack/react-virtual', () => ({
-  useVirtualizer: ({ count, getItemKey }: { count: number; getItemKey: (i: number) => string }) => ({
-    getVirtualItems: () => Array.from({ length: count }, (_, index) => ({ key: getItemKey(index), index, start: 0 })),
+  useVirtualizer: ({
+    count,
+    getItemKey,
+    estimateSize,
+    getScrollElement,
+  }: {
+    count: number;
+    getItemKey: (i: number) => string;
+    estimateSize: () => number;
+    getScrollElement: () => unknown;
+  }) => ({
+    getVirtualItems: () => {
+      virtual.estimates.push(estimateSize());
+      virtual.getScrollEl = getScrollElement;
+      return Array.from({ length: count }, (_, index) => ({ key: getItemKey(index), index, start: 0 }));
+    },
     getTotalSize: () => count * 80,
   }),
 }));
@@ -83,6 +98,18 @@ describe('UploaderWindow', () => {
     expect(screen.getByText('Uploading')).toBeInTheDocument();
     expect(screen.getByText('Object: a.bin')).toBeInTheDocument();
     expect(useUploaderStore.getState().uploadItems.u1).toMatchObject({ fileName: 'a.bin', uploaded: 0 });
+  });
+
+  it('gives the virtualizer the scroll element, item keys and row size', () => {
+    virtual.getScrollEl = null;
+    virtual.estimates.length = 0;
+    renderWithProviders(<UploaderWindow />);
+
+    emit('uploader:upload-started', started('u1', 'a.bin'));
+
+    expect(virtual.estimates).toContain(80);
+    expect((virtual.getScrollEl as (() => unknown) | null)?.()).toBeInstanceOf(HTMLElement);
+    expect(Object.keys(useUploaderStore.getState().uploadItems)).toEqual(['u1']);
   });
 
   it('ignores events without data', () => {

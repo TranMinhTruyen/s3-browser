@@ -2,10 +2,9 @@ import { Center, Divider, Group, Modal, Stack, Title } from '@mantine/core';
 import { schemaResolver, useForm } from '@mantine/form';
 import { ConnectS3 } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { CreateProfile, UpdateProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
-import { ConnectionProfileInput, ConnectionProfileOutput } from '@wails/S3Browser/models';
+import { ConnectionProfileInput } from '@wails/S3Browser/models';
 import { SyntheticEvent, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import z from 'zod';
 import awsLogo from '@/assets/images/aws.svg';
 import minioLogo from '@/assets/images/minio.svg';
 import { useProfileStore } from '@/common/stores/profileStore';
@@ -18,31 +17,30 @@ import RegionCombobox from '@/components/inputs/combobox/RegionCombobox';
 import FieldInput from '@/components/inputs/FieldInput';
 import SegmentedControl from '@/components/inputs/SegmentedControl';
 import ConfirmModal from '@/components/modals/ConfirmModal';
+import {
+  type ConnectionInfo,
+  type ConnectModalProps,
+  connectSchema,
+  getDefaultConnectionInfo,
+  profileSchema,
+} from '@/components/modals/connectSchema';
+import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 
-const baseSchema = z.object({
-  name: z.string().trim(),
-  color: z.string().trim(),
-  provider: z.string().trim(),
-  endpoint: z.string().trim().nonempty('V000001'),
-  region: z.string().trim().nonempty('V000001'),
-  accessKey: z.string().trim().nonempty('V000001'),
-  secretKey: z.string().trim(),
-  pathStyle: z.boolean(),
-  savePassword: z.boolean(),
-  autoConnect: z.boolean(),
-});
+/** Provider options of the segmented control; static, so built once. */
+const PROVIDER_OPTIONS = [
+  { logo: awsLogo, label: 'AWS', value: 'aws' },
+  { logo: minioLogo, label: 'MinIO', value: 'minio' },
+].map(({ logo, label, value }) => ({
+  value,
+  label: (
+    <Center style={{ gap: '16px' }}>
+      <img src={logo} alt="" width={18} height={18} />
+      <span>{label}</span>
+    </Center>
+  ),
+}));
 
-const connectSchema = baseSchema.extend({
-  secretKey: z.string().trim().nonempty('V000001'),
-});
-
-export interface ConnectionInfo extends z.infer<typeof connectSchema> {}
-
-type ConnectModalProps = {
-  mode?: 'connect' | 'manualconnect' | 'createProfile' | 'editProfile';
-  connectionProfile?: ConnectionProfileOutput;
-};
-
+/** Modal to connect, test a connection, or create/edit a connection profile depending on `mode`. */
 export default createMantineModal<ConnectModalProps, false>(
   props => {
     const { mode = 'connect', connectionProfile, mantine } = props;
@@ -54,31 +52,18 @@ export default createMantineModal<ConnectModalProps, false>(
 
     // useForm only reads initialValues on mount; compute them once instead of on every keystroke.
     const [initialValues] = useState(() => {
-      const defaultValues = connectSchema
-        .default({
-          name: `Connection No.${createUUID()}`,
-          color: '#d0ebff',
-          provider: 'aws',
-          endpoint: '',
-          region: '',
-          accessKey: '',
-          secretKey: '',
-          pathStyle: false,
-          savePassword: false,
-          autoConnect: false,
-        })
-        .parse(undefined);
+      const defaultValues = getDefaultConnectionInfo(`Connection No.${createUUID()}`);
 
       return mode === 'connect' || mode === 'createProfile'
         ? defaultValues
-        : { ...defaultValues, ...connectionProfile, savePassword: connectionProfile?.secretKey ? true : false };
+        : { ...defaultValues, ...connectionProfile, savePassword: !!connectionProfile?.secretKey };
     });
 
     const form = useForm<ConnectionInfo>({
       mode: 'uncontrolled',
       initialValues: initialValues,
       validate: values => {
-        const resolver = schemaResolver(actionRef.current === 'profile' ? baseSchema : connectSchema, {
+        const resolver = schemaResolver(actionRef.current === 'profile' ? profileSchema : connectSchema, {
           sync: true,
         });
         return resolver(values);
@@ -207,7 +192,7 @@ export default createMantineModal<ConnectModalProps, false>(
               pos="relative"
               p="8px"
               mih="0px"
-              style={{ justifyContent: 'flex-end', backgroundColor: '#d0ebff' }}
+              style={{ justifyContent: 'flex-end', backgroundColor: INFO_BG_COLOR }}
             >
               <Title
                 order={4}
@@ -228,26 +213,7 @@ export default createMantineModal<ConnectModalProps, false>(
             <Modal.Body p="16px">
               <Stack gap="sm">
                 <SegmentedControl
-                  data={[
-                    {
-                      label: (
-                        <Center style={{ gap: '16px' }}>
-                          <img src={awsLogo} alt="" width={18} height={18} />
-                          <span>AWS</span>
-                        </Center>
-                      ),
-                      value: 'aws',
-                    },
-                    {
-                      label: (
-                        <Center style={{ gap: '16px' }}>
-                          <img src={minioLogo} alt="" width={18} height={18} />
-                          <span>MinIO</span>
-                        </Center>
-                      ),
-                      value: 'minio',
-                    },
-                  ]}
+                  data={PROVIDER_OPTIONS}
                   key={form.key('provider')}
                   {...form.getInputProps('provider')}
                 />

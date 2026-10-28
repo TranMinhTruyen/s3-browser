@@ -1,28 +1,13 @@
 import { type ElementProps, Button as MButton, type ButtonProps as MButtonProps } from '@mantine/core';
-import { useState } from 'react';
+import { useAutoLoading } from '@/components/buttons/useAutoLoading';
 
 interface ButtonProps extends MButtonProps, ElementProps<'button', keyof MButtonProps> {}
 
+/** Mantine button that shows a loader (and disables itself) while an async `onClick` is pending. */
 function Button(props: ButtonProps) {
   const { size = 'sm', loading, onClick, disabled, ...restProps } = props;
 
-  const [autoLoading, setAutoLoading] = useState(false);
-
-  /**
-   *  Auto-manages loading state when onClick returns a Promise (async handler)
-   */
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    const result = onClick?.(event) as unknown;
-
-    // Return early if onClick didn't return a Promise (i.e. it ran synchronously)
-    if (!result || typeof (result as Promise<unknown>).then !== 'function') return;
-
-    setAutoLoading(true);
-    void (result as Promise<unknown>).finally(() => setAutoLoading(false));
-  };
-
-  // Prefer explicit `loading` prop if provided; otherwise fall back to auto-tracked state
-  const isLoading = loading ?? autoLoading;
+  const { isLoading, onClickButton } = useAutoLoading(onClick, loading);
 
   return (
     <MButton
@@ -30,7 +15,7 @@ function Button(props: ButtonProps) {
       size={size}
       loading={isLoading}
       disabled={disabled || isLoading}
-      onClick={handleClick}
+      onClick={onClickButton}
       {...restProps}
     />
   );

@@ -21,6 +21,9 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// submoduleDownloaderMng downloads objects. Every object in flight is a cancelable job
+// (jobs); dests holds the paths running downloads write to, guarded by destsMu, so two
+// objects with the same base name never write to the same file.
 type submoduleDownloaderMng struct {
 	logger                      *slog.Logger
 	app                         *application.App
@@ -31,6 +34,7 @@ type submoduleDownloaderMng struct {
 	dests                       map[string]struct{}
 }
 
+// newSubmoduleDownloaderMng wires the downloader to the app, connections and history.
 func newSubmoduleDownloaderMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -46,10 +50,12 @@ func newSubmoduleDownloaderMng(
 	}
 }
 
+// downloaderJob is a running single-object download that can be canceled.
 type downloaderJob struct {
 	cancel context.CancelFunc
 }
 
+// downloadResult is the outcome of one object, turned into a message after all finish.
 type downloadResult struct {
 	key  string
 	dest string
@@ -77,11 +83,7 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 
 	if !ok {
 		m.logger.Error("get connection profile failed")
-		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
-				"name": input.ProfileName,
-			}),
-		)
+		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 	defer releaseConn()
 
@@ -118,6 +120,8 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 	})
 
 	// Buffered so goroutines never block on send; results are read only after g.Wait().
+	// Downloads use the app context, not a call context: the call blocks behind a native
+	// dialog, and each file is canceled through its own job or through cancelAllDownloads.
 	results := make(chan downloadResult, len(input.Objects))
 	// A plain errgroup.Group (no shared context): one failed object must not cancel the others.
 	var g errgroup.Group
@@ -244,6 +248,7 @@ func (m *submoduleDownloaderMng) destTaken(p string, checkDisk bool) bool {
 	return pathExists(p) || pathExists(p+".part")
 }
 
+// pathExists reports whether p exists, without following a symlink.
 func pathExists(p string) bool {
 	_, err := os.Lstat(p)
 	return err == nil

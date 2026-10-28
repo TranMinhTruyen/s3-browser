@@ -4,11 +4,17 @@ import { toast } from 'sonner';
 import { createUUID, formatStringJson, isNullOrEmpty } from '@/common/utils/stringUtils';
 import i18n from '@/locales/i18n';
 
+/** Options of {@link callIPC}. */
 interface Optionals<T> {
+  /** Stale-result guard key: a newer call with the same scope makes the older result be dropped (null). */
   scope?: string;
+  /** Show the backend messages as toasts. Default true. */
   showMessage?: boolean;
+  /** Cancels the call (and drops its result) when aborted. */
   signal?: AbortSignal;
+  /** Runs when the backend reports success. */
   resolveAction?: (output?: Output<T>) => void;
+  /** Runs when the backend reports failure or the call throws (then `output` is undefined). */
   rejectAction?: (output?: Output<T>) => void;
 }
 
@@ -28,6 +34,7 @@ function isStaleKey(key: string, sequence: string): boolean {
   return keys.get(key) !== sequence;
 }
 
+/** Drops the pending results of `scope` and its sub-scopes (`scope/...`), e.g. on store reset. */
 export function invalidateLoads(scope: string): void {
   for (const key of keys.keys()) {
     if (key === scope || key.startsWith(`${scope}/`)) {
@@ -39,6 +46,14 @@ export function invalidateLoads(scope: string): void {
 /* -------------------------------------------------------------------------- */
 /* Call                                                                       */
 /* -------------------------------------------------------------------------- */
+/**
+ * Calls a Wails binding: shows its messages, ignores canceled / stale results and turns thrown errors into a toast.
+ *
+ * @param binding - generated binding returning `Output<T>`.
+ * @param args - arguments of the binding.
+ * @param options - see {@link Optionals}.
+ * @returns the body on success; null on failure, cancel or stale result.
+ */
 export async function callIPC<A extends unknown[], T>(
   binding: (...args: A) => Promise<Output<T>>,
   args: A,

@@ -28,7 +28,8 @@ func download(
 		progress = func(int64, int64) {} // allow callers that don't track progress
 	}
 
-	// Step 1: write to a temporary file so dest never ends up incomplete.
+	// Step 1: write to a temporary ".part" file and rename it at the end, so dest never ends
+	// up incomplete. Any failure or cancel removes the .part file.
 	part := dest + ".part"
 	f, err := os.Create(part)
 	if err != nil {
@@ -46,6 +47,8 @@ func download(
 	w := &countingWriterAt{w: f}
 	var total atomic.Int64
 	total.Store(-1)
+	// One goroutine samples the counter every 200ms instead of emitting an event per write,
+	// which would flood the frontend; stop() ends it when the download returns.
 	stop := utils.ReportEvery(200*time.Millisecond, func() {
 		if t := total.Load(); t >= 0 {
 			progress(min(w.n.Load(), t), t)
@@ -86,6 +89,7 @@ type countingWriterAt struct {
 	n atomic.Int64
 }
 
+// WriteAt implements io.WriterAt and counts the bytes written.
 func (c *countingWriterAt) WriteAt(p []byte, off int64) (int, error) {
 	n, err := c.w.WriteAt(p, off)
 	c.n.Add(int64(n))
@@ -96,6 +100,7 @@ func (c *countingWriterAt) WriteAt(p []byte, off int64) (int, error) {
 // once the first response arrives.
 type onTransferStart func(size int64)
 
+// OnObjectTransferStart implements the transfer manager listener and passes on the size.
 func (f onTransferStart) OnObjectTransferStart(_ context.Context, e *transfermanager.ObjectTransferStartEvent) {
 	f(e.TotalBytes)
 }

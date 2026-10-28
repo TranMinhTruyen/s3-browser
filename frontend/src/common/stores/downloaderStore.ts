@@ -2,6 +2,7 @@ import { DownloadHistoryItem, DownloadProgressOutput } from '@wails/S3Browser/mo
 import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
 
+/** Download history row merged with its live progress. */
 export type DownloadItem = DownloadHistoryItem & DownloadProgressOutput;
 
 interface DownloaderState {
@@ -22,6 +23,7 @@ interface DownloaderAction {
 
 const SCOPE = 'downloader';
 
+/** Download progress items and the downloader window state. */
 export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAction>(
   (set, get) => ({
     downloadItems: {},
@@ -93,6 +95,7 @@ export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAct
   SCOPE
 );
 
+/** Ids of downloads in progress. Returns a new array: use with `useShallow`. */
 export const selectDownloadingIds = (s: DownloaderState) =>
   Object.values(s.downloadItems)
     .filter(item => item.status === 'DOWNLOADING')

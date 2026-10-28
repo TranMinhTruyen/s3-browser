@@ -1,3 +1,5 @@
+// Package models re-exports the input/output models of every domain under one import path,
+// so modules and handlers only import "S3Browser/models".
 package models
 
 import (
@@ -7,73 +9,115 @@ import (
 	"S3Browser/models/profile"
 )
 
-// common
 type (
-	Message       = common.Message
+	// Message re-exports common.Message.
+	Message = common.Message
+	// Output re-exports common.Output.
 	Output[T any] = common.Output[T]
 )
 
-// bucket
 type (
-	Bucket                 = bucket.Bucket
-	ObjectItem             = bucket.ObjectItem
-	UploadObj              = bucket.UploadObj
-	DroppedFile            = bucket.DroppedFile
-	DroppedGroup           = bucket.DroppedGroup
-	ConnectOutput          = bucket.ConnectOutput
-	ListBucketInput        = bucket.ListBucketInput
-	ListBucketOutput       = bucket.ListBucketOutput
-	ListObjectInput        = bucket.ListObjectInput
-	ListObjectOutput       = bucket.ListObjectOutput
-	SearchObjectInput      = bucket.SearchObjectInput
-	SearchObjectOutput     = bucket.SearchObjectOutput
-	SearchBucketInput      = bucket.SearchBucketInput
-	SearchBucketOutput     = bucket.SearchBucketOutput
-	ObjectDetailInput      = bucket.ObjectDetailInput
-	ObjectDetailOutput     = bucket.ObjectDetailOutput
+	// Bucket re-exports bucket.Bucket.
+	Bucket = bucket.Bucket
+	// ObjectItem re-exports bucket.ObjectItem.
+	ObjectItem = bucket.ObjectItem
+	// UploadObj re-exports bucket.UploadObj.
+	UploadObj = bucket.UploadObj
+	// DroppedFile re-exports bucket.DroppedFile.
+	DroppedFile = bucket.DroppedFile
+	// DroppedGroup re-exports bucket.DroppedGroup.
+	DroppedGroup = bucket.DroppedGroup
+	// ConnectOutput re-exports bucket.ConnectOutput.
+	ConnectOutput = bucket.ConnectOutput
+	// ListBucketInput re-exports bucket.ListBucketInput.
+	ListBucketInput = bucket.ListBucketInput
+	// ListBucketOutput re-exports bucket.ListBucketOutput.
+	ListBucketOutput = bucket.ListBucketOutput
+	// ListObjectInput re-exports bucket.ListObjectInput.
+	ListObjectInput = bucket.ListObjectInput
+	// ListObjectOutput re-exports bucket.ListObjectOutput.
+	ListObjectOutput = bucket.ListObjectOutput
+	// SearchObjectInput re-exports bucket.SearchObjectInput.
+	SearchObjectInput = bucket.SearchObjectInput
+	// SearchObjectOutput re-exports bucket.SearchObjectOutput.
+	SearchObjectOutput = bucket.SearchObjectOutput
+	// SearchBucketInput re-exports bucket.SearchBucketInput.
+	SearchBucketInput = bucket.SearchBucketInput
+	// SearchBucketOutput re-exports bucket.SearchBucketOutput.
+	SearchBucketOutput = bucket.SearchBucketOutput
+	// ObjectDetailInput re-exports bucket.ObjectDetailInput.
+	ObjectDetailInput = bucket.ObjectDetailInput
+	// ObjectDetailOutput re-exports bucket.ObjectDetailOutput.
+	ObjectDetailOutput = bucket.ObjectDetailOutput
+	// DownloadProgressOutput re-exports bucket.DownloadProgressOutput.
 	DownloadProgressOutput = bucket.DownloadProgressOutput
-	DownloadObjInput       = bucket.DownloadObjInput
-	UploadObjInput         = bucket.UploadObjInput
-	DownloadHistoryItem    = bucket.DownloadHistoryItem
-	DownloadHistoryInput   = bucket.DownloadHistoryInput
-	DownloadHistoryOutput  = bucket.DownloadHistoryOutput
-	DeleteObjInput         = bucket.DeleteObjInput
-	DeletePrefixInput      = bucket.DeletePrefixInput
-	DeletePrefixOutput     = bucket.DeletePrefixOutput
-	UploadProgressOutput   = bucket.UploadProgressOutput
-	FilesDroppedOutput     = bucket.FilesDroppedOutput
-	UploadStartedOutput    = bucket.UploadStartedOutput
-	UploadFinishedOutput   = bucket.UploadFinishedOutput
-	UploadStatus           = bucket.UploadStatus
+	// DownloadObjInput re-exports bucket.DownloadObjInput.
+	DownloadObjInput = bucket.DownloadObjInput
+	// UploadObjInput re-exports bucket.UploadObjInput.
+	UploadObjInput = bucket.UploadObjInput
+	// DownloadHistoryItem re-exports bucket.DownloadHistoryItem.
+	DownloadHistoryItem = bucket.DownloadHistoryItem
+	// DownloadHistoryInput re-exports bucket.DownloadHistoryInput.
+	DownloadHistoryInput = bucket.DownloadHistoryInput
+	// DownloadHistoryOutput re-exports bucket.DownloadHistoryOutput.
+	DownloadHistoryOutput = bucket.DownloadHistoryOutput
+	// DeleteObjInput re-exports bucket.DeleteObjInput.
+	DeleteObjInput = bucket.DeleteObjInput
+	// DeletePrefixInput re-exports bucket.DeletePrefixInput.
+	DeletePrefixInput = bucket.DeletePrefixInput
+	// DeletePrefixOutput re-exports bucket.DeletePrefixOutput.
+	DeletePrefixOutput = bucket.DeletePrefixOutput
+	// UploadProgressOutput re-exports bucket.UploadProgressOutput.
+	UploadProgressOutput = bucket.UploadProgressOutput
+	// FilesDroppedOutput re-exports bucket.FilesDroppedOutput.
+	FilesDroppedOutput = bucket.FilesDroppedOutput
+	// UploadStartedOutput re-exports bucket.UploadStartedOutput.
+	UploadStartedOutput = bucket.UploadStartedOutput
+	// UploadFinishedOutput re-exports bucket.UploadFinishedOutput.
+	UploadFinishedOutput = bucket.UploadFinishedOutput
+	// UploadStatus re-exports bucket.UploadStatus.
+	UploadStatus = bucket.UploadStatus
 )
 
 const (
-	UploadStatusSuccess  = bucket.UploadStatusSuccess
-	UploadStatusError    = bucket.UploadStatusError
+	// UploadStatusSuccess re-exports bucket.UploadStatusSuccess.
+	// UploadStatusSuccess re-exports bucket.UploadStatusSuccess.
+	UploadStatusSuccess = bucket.UploadStatusSuccess
+	// UploadStatusError re-exports bucket.UploadStatusError.
+	// UploadStatusError re-exports bucket.UploadStatusError.
+	UploadStatusError = bucket.UploadStatusError
+	// UploadStatusCanceled re-exports bucket.UploadStatusCanceled.
+	// UploadStatusCanceled re-exports bucket.UploadStatusCanceled.
 	UploadStatusCanceled = bucket.UploadStatusCanceled
 )
 
-// master
 type (
-	MasterOutput        = master.MasterOutput
+	// MasterOutput re-exports master.MasterOutput.
+	MasterOutput = master.MasterOutput
+	// GetMasterDataOutput re-exports master.GetMasterDataOutput.
 	GetMasterDataOutput = master.GetMasterDataOutput
-	RegionOutput        = master.RegionOutput
+	// RegionOutput re-exports master.RegionOutput.
+	RegionOutput = master.RegionOutput
 )
 
-// profile
 type (
-	ConnectionProfileInput        = profile.ConnectionProfileInput
-	ConnectionProfileOutput       = profile.ConnectionProfileOutput
+	// ConnectionProfileInput re-exports profile.ConnectionProfileInput.
+	ConnectionProfileInput = profile.ConnectionProfileInput
+	// ConnectionProfileOutput re-exports profile.ConnectionProfileOutput.
+	ConnectionProfileOutput = profile.ConnectionProfileOutput
+	// GetAllConnectionProfileOutput re-exports profile.GetAllConnectionProfileOutput.
 	GetAllConnectionProfileOutput = profile.GetAllConnectionProfileOutput
 )
 
 // common functions
 var (
-	NewMessage       = common.NewMessage
+	// NewMessage re-exports common.NewMessage.
+	NewMessage = common.NewMessage
+	// NewParamsMessage re-exports common.NewParamsMessage.
 	NewParamsMessage = common.NewParamsMessage
 )
 
-// wraper func
+// NewOutput wraps common.NewOutput because a generic function cannot be aliased with a var.
 func NewOutput[T any]() Output[T] {
 	return common.NewOutput[T]()
 }

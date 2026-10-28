@@ -23,6 +23,7 @@ type BucketListViewProps = {
   ref?: Ref<BucketListViewRef>;
 };
 
+/** Virtualized bucket list of the active connection; exposes imperative actions via `BucketListViewRef`. */
 function BucketListView(props: BucketListViewProps) {
   const { profile, active, scrollRef, keyword = '', onSelectBucket, ref } = props;
 

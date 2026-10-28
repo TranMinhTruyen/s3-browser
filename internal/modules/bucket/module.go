@@ -1,3 +1,5 @@
+// Package bucket is the S3 module: connections, buckets, objects, search, upload and download.
+// Module is the public API called by the handlers; the work is done by the submodule_*.go files.
 package bucket
 
 import (
@@ -14,6 +16,8 @@ import (
 // Message codes returned to the frontend by the bucket module.
 // Naming convention: S3S = success, S3E = error, S3W = warning.
 var (
+	// ---- Success ----
+
 	// Test connection profile {name} to S3 success.
 	S3S001 = "S3S001"
 
@@ -34,6 +38,8 @@ var (
 
 	// Deleted {count} object(s) under folder {prefix}.
 	S3S007 = "S3S007"
+
+	// ---- Error ----
 
 	// Access key or secret key is not valid for this endpoint.
 	S3E001 = "S3E001"
@@ -61,9 +67,6 @@ var (
 
 	// Destination {path} not exists.
 	S3E009 = "S3E009"
-
-	// Create download history of {object} error.
-	S3E010 = "S3E010"
 
 	// Get download history error.
 	S3E011 = "S3E011"
@@ -122,14 +125,13 @@ var (
 	// Choose files error.
 	S3E029 = "S3E029"
 
+	// ---- Warning ----
+
 	// Access bucket is limited.
 	S3W001 = "S3W001"
 
 	// Download object: {object} is canceled.
 	S3W002 = "S3W002"
-
-	// Update download history failed: {object} please reload!
-	S3W003 = "S3W003"
 
 	// Upload file {name} is canceled.
 	S3W004 = "S3W004"
@@ -137,13 +139,16 @@ var (
 	// Another upload is running, please wait until it finishes.
 	S3W005 = "S3W005"
 
+	// Used by the frontend only.
 	// Skipped {count} item(s) that can't be uploaded (unreadable, symbolic link or not a regular file).
 	S3W006 = "S3W006"
 
+	// Used by the frontend only.
 	// The drop holds more than {max} files, the files after the first {max} are ignored.
 	S3W007 = "S3W007"
 )
 
+// Module is the public API of the bucket module.
 type Module struct {
 	logger  *slog.Logger
 	app     *application.App
@@ -159,6 +164,7 @@ type Module struct {
 	submoduleUploaderMng        *submoduleUploaderMng
 }
 
+// NewModule creates the bucket module and its submodules.
 func NewModule(
 	app *application.App,
 	logger *slog.Logger,
@@ -280,14 +286,18 @@ func (m *Module) GetObjectDetail(
 	return m.submoduleObjMng.getObjectDetail(ctx, input)
 }
 
+// DownloadObject starts downloading input.Objects from input.Bucket; progress is reported
+// by EventDownloadObjectProgress and each file is saved to the download history.
 func (m *Module) DownloadObject(input models.DownloadObjInput) models.Output[any] {
 	return m.submoduleDownloaderMng.downloadObject(input)
 }
 
+// CancelDownloadOne cancels the running download with the given ID.
 func (m *Module) CancelDownloadOne(id string) models.Output[any] {
 	return m.submoduleDownloaderMng.cancelDownloadOne(id)
 }
 
+// CancelAllDownloads cancels every running download.
 func (m *Module) CancelAllDownloads() models.Output[any] {
 	return m.submoduleDownloaderMng.cancelAllDownloads()
 }
@@ -303,6 +313,7 @@ func (m *Module) CancelAllUploads() models.Output[any] {
 	return m.submoduleUploaderMng.cancelAllUploads()
 }
 
+// DeleteObject deletes the objects in input.Objects. ctx is the call context.
 func (m *Module) DeleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
 	return m.submoduleObjMng.deleteObject(ctx, input)
 }
@@ -317,14 +328,18 @@ func (m *Module) DeletePrefix(
 	return m.submoduleObjMng.deletePrefix(ctx, input)
 }
 
+// GetDownloadHistory returns the saved download history for input.
 func (m *Module) GetDownloadHistory(input models.DownloadHistoryInput) models.Output[models.DownloadHistoryOutput] {
 	return m.submoduleDownloadHistoryMng.getDownloadHistory(input)
 }
 
+// OpenDownloadDest reveals the downloaded file at path in the system file manager.
 func (m *Module) OpenDownloadDest(fileName, path string) models.Output[any] {
 	return m.submoduleDownloadHistoryMng.openDownloadDest(fileName, path)
 }
 
+// UploadObject starts uploading input.ObjList into input.Prefix; progress is reported by
+// EventUploadObjectProgress.
 func (m *Module) UploadObject(input models.UploadObjInput) models.Output[any] {
 	return m.submoduleUploaderMng.uploadObject(input)
 }

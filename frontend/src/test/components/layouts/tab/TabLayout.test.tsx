@@ -1,15 +1,27 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { memo } from 'react';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import TabLayout from '@/components/layouts/tab/TabLayout';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
-vi.mock('@/components/layouts/tab/components/TabDetail', () => ({ default: () => <div>tab detail</div> }));
+const detailRenders = vi.hoisted(() => {
+  const state = { count: 0, bump: () => void (state.count += 1) };
+  return state;
+});
+// Like the real TabDetail, the mock is memoized.
+vi.mock('@/components/layouts/tab/components/TabDetail', () => ({
+  default: memo(() => {
+    detailRenders.bump();
+    return <div>tab detail</div>;
+  }),
+}));
 vi.mock('@/components/layouts/tab/components/TabLabel', () => ({ default: () => <span>tab label</span> }));
 
 describe('TabLayout', () => {
   beforeEach(() => {
     useTabListStore.getState().reset();
+    detailRenders.count = 0;
   });
 
   it('adds a tab from the add button and closes it again', async () => {
@@ -45,5 +57,15 @@ describe('TabLayout', () => {
 
     expect(useTabListStore.getState().activeTab).toBe(first);
     expect(screen.getAllByText('tab detail')).toHaveLength(2);
+  });
+
+  it('does not re-render the tab details when only the active tab changes', async () => {
+    renderWithProviders(<TabLayout />);
+    await userEvent.click(screen.getByRole('button', { name: 'Add tab' }));
+    const rendersBefore = detailRenders.count;
+
+    await userEvent.click(screen.getAllByRole('tab')[0]);
+
+    expect(detailRenders.count).toBe(rendersBefore);
   });
 });

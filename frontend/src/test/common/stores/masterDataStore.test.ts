@@ -18,13 +18,10 @@ describe('masterDataStore', () => {
     vi.clearAllMocks();
   });
 
-  it('set, setAll and get', () => {
-    expect(state().get('REGION')).toEqual([]);
-    state().set('REGION', rows);
-    expect(state().get('REGION')).toEqual(rows);
+  it('setAll merges and keeps codes it does not carry', () => {
+    state().setAll({ REGION: rows });
     state().setAll({ OTHER: rows } as never);
-    expect(state().get('REGION')).toEqual(rows);
-    expect(state().get('OTHER' as never)).toEqual(rows);
+    expect(state().masterData).toEqual({ REGION: rows, OTHER: rows });
   });
 
   it('load does nothing without keys', async () => {
@@ -41,31 +38,21 @@ describe('masterDataStore', () => {
   it('load stores the returned master data', async () => {
     callIPCMock.mockResolvedValueOnce({ masterData: { REGION: rows } });
     await state().load(['REGION']);
-    expect(state().get('REGION')).toEqual(rows);
-  });
-
-  it('loadMissing only asks for codes not loaded yet', async () => {
-    state().set('REGION', rows);
-    await state().loadMissing(['REGION', 'OTHER'] as never);
-    expect(callIPCMock).toHaveBeenCalledExactlyOnceWith(expect.anything(), [['OTHER']], expect.anything());
-
-    callIPCMock.mockClear();
-    await state().loadMissing(['REGION']);
-    expect(callIPCMock).not.toHaveBeenCalled();
+    expect(state().masterData.REGION).toEqual(rows);
   });
 
   it('loadRegion stores region data, loadAll delegates to it', async () => {
     callIPCMock.mockResolvedValueOnce(null);
     await state().loadRegion();
-    expect(state().getRegion()).toEqual({});
+    expect(state().regionData).toEqual({});
 
     callIPCMock.mockResolvedValueOnce({ regionData: { aws: rows } });
     await state().loadAll();
-    expect(state().getRegion()).toEqual({ aws: rows });
+    expect(state().regionData).toEqual({ aws: rows });
   });
 
   it('reset clears the data and invalidates the scope', () => {
-    state().set('REGION', rows);
+    state().setAll({ REGION: rows });
     expect(state().reset()).toBe(true);
     expect(state().masterData).toEqual({});
     expect(invalidateLoads).toHaveBeenCalledWith('MasterData');

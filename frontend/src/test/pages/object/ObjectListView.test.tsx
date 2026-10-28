@@ -22,10 +22,29 @@ import { renderWithProviders } from '@/test/renderWithProviders';
 
 // jsdom has no layout, so the real virtualizer would render no row: render every row instead.
 // `endIndex` is the last row the user "sees"; null means the end of the list.
-const virtual = vi.hoisted(() => ({ endIndex: null as number | null }));
+const virtual = vi.hoisted(() => ({
+  endIndex: null as number | null,
+  scrollElement: null as unknown,
+  estimate: null as number | null,
+}));
 vi.mock('@tanstack/react-virtual', () => ({
-  useVirtualizer: ({ count, getItemKey }: { count: number; getItemKey: (i: number) => string }) => ({
-    getVirtualItems: () => Array.from({ length: count }, (_, index) => ({ key: getItemKey(index), index, start: 0 })),
+  useVirtualizer: ({
+    count,
+    getItemKey,
+    getScrollElement,
+    estimateSize,
+  }: {
+    count: number;
+    getItemKey: (i: number) => string;
+    getScrollElement: () => unknown;
+    estimateSize: () => number;
+  }) => ({
+    // The real virtualizer asks for these itself; record them so a test can check what it would get.
+    getVirtualItems: () => {
+      virtual.scrollElement = getScrollElement();
+      virtual.estimate = estimateSize();
+      return Array.from({ length: count }, (_, index) => ({ key: getItemKey(index), index, start: 0 }));
+    },
     getTotalSize: () => count * 100,
     measureElement: () => {},
     range: count === 0 ? null : { startIndex: 0, endIndex: virtual.endIndex ?? count - 1 },
@@ -130,8 +149,15 @@ describe('ObjectListView', () => {
       bucket: 'bkt',
       prefix: 'dir/',
       nextCursor: '',
-      limit: 10,
+      limit: 20,
     });
+  });
+
+  it('virtualizes the rows against the tab scroll container with the row size estimate', async () => {
+    const { scrollRef } = renderList();
+    await screen.findByText('a.txt');
+    expect(virtual.scrollElement).toBe(scrollRef.current);
+    expect(virtual.estimate).toBe(104);
   });
 
   it('loads the next page when the end of the list is reached', async () => {

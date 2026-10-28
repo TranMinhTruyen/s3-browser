@@ -3,7 +3,6 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import SegmentedControl from '@/components/inputs/SegmentedControl';
-import SwitchInput from '@/components/inputs/SwitchInput';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
 describe('CheckBoxInput', () => {
@@ -15,18 +14,6 @@ describe('CheckBoxInput', () => {
 
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText('Agree')).toBeChecked();
-  });
-});
-
-describe('SwitchInput', () => {
-  it('toggles and reports the change', async () => {
-    const onChange = vi.fn();
-    renderWithProviders(<SwitchInput label="Enable" onChange={onChange} />);
-
-    await userEvent.click(screen.getByLabelText('Enable'));
-
-    expect(onChange).toHaveBeenCalledTimes(1);
-    expect(screen.getByLabelText('Enable')).toBeChecked();
   });
 });
 

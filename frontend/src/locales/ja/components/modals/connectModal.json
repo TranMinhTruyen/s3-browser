@@ -1,8 +1,5 @@
 {
   "title": "接続プロファイル",
-  "label": {
-    "saveProfileLabel": "プロファイルを保存"
-  },
   "form": {
     "label": {
       "name": "プロファイル名",

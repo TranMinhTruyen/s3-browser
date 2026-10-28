@@ -3,6 +3,7 @@ import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
 import { createUUID } from '@/common/utils/stringUtils';
 
+/** State of one tab: profile, current view, folder, selection and detail drawer. */
 interface TabDetail {
   profileId?: string | null;
   currentView: 'bucketList' | 'objectList';
@@ -54,6 +55,7 @@ const initialId = createUUID();
 
 const newTab = (): TabDetail => ({ currentView: 'bucketList', prefix: '', selectionItem: [], deletingItems: [] });
 
+/** Open tabs, the active one and which tab is uploading. */
 export const useTabListStore = createAppStore<TabListState & TabListAction>(
   (set, get) => ({
     activeTab: initialId,
@@ -274,5 +276,3 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
   }),
   SCOPE
 );
-
-export const selectActiveTab = (s: TabListState) => s.tabList[s.activeTab];

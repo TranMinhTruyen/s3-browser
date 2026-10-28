@@ -4,7 +4,6 @@
   "selectFiles": "ファイルを選択",
   "dropHint": "またはファイルやフォルダーをここにドラッグ＆ドロップ",
   "dropHere": "ここにファイルをドロップ",
-  "bucketLabel": "アップロード先バケット",
   "bucketRequired": "アップロード先バケットを選択してください",
   "emptyList": "ファイルが追加されていません",
   "selectedCount": "{selected}/{max} ファイル",

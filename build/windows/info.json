@@ -1,10 +1,10 @@
 {
 	"fixed": {
-		"file_version": "0.0.1"
+		"file_version": "0.0.1.1"
 	},
 	"info": {
 		"0409": {
-			"ProductVersion": "0.0.1",
+			"ProductVersion": "0.0.1-beta.1",
 			"CompanyName": "minh-truyen",
 			"FileDescription": "A lightweight S3-compatible bucket browser",
 			"LegalCopyright": "(c) 2026, minh-truyen",

@@ -2,6 +2,7 @@ package bucket
 
 import "time"
 
+// ObjectItem is an object or a folder (common prefix) of a bucket.
 type ObjectItem struct {
 	Key          string    `json:"key"`
 	Name         string    `json:"name"`
@@ -13,6 +14,7 @@ type ObjectItem struct {
 	IsFolder bool `json:"isFolder"`
 }
 
+// ListObjectOutput is one page of objects; NextCursor is nil on the last page.
 type ListObjectOutput struct {
 	ObjectList []ObjectItem `json:"objectList"`
 	NextCursor *string      `json:"nextCursor,omitempty"`

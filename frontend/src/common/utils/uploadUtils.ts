@@ -5,6 +5,7 @@ import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import i18n from '@/locales/i18n';
 
+/** A local file to upload and its object key relative to the target prefix. */
 export type UploadFile = { path: string; relKey: string };
 
 export type RunUploadParams = {
@@ -44,6 +45,7 @@ export async function runUpload(params: RunUploadParams, onDone?: () => Promise<
   }
 }
 
+/** Limits applied while building the upload picker list. */
 export type PickerLimits = { maxFilesPerFolder: number; largeFileMaxCount: number; maxTotalFiles: number };
 
 export type PickerList = { groups: DroppedGroup[]; selected: ReadonlySet<string> };

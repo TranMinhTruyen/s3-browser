@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConnectS3 } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { CreateProfile, UpdateProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
@@ -82,11 +82,13 @@ describe('ConnectModal', () => {
       callIPCMock.mockResolvedValue({ isConnected: true } as never);
       const user = await open();
 
-      await user.type(field(/Endpoint/), 'https://play.min.io');
+      // One change event per field instead of one per keystroke: typing ~30 keys through the form was
+      // what made this test time out when the whole suite runs in parallel.
+      fireEvent.change(field(/Endpoint/), { target: { value: 'https://play.min.io' } });
       await user.click(screen.getByRole('button', { name: /Region/ }));
       await user.click(await screen.findByText('Tokyo'));
-      await user.type(field(/Access key/), 'AK');
-      await user.type(field(/Secret key/), 'SK');
+      fireEvent.change(field(/Access key/), { target: { value: 'AK' } });
+      fireEvent.change(field(/Secret key/), { target: { value: 'SK' } });
       await user.click(button('Connect'));
 
       await waitFor(() => expect(callIPCMock).toHaveBeenCalledTimes(1));
