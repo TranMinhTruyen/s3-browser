@@ -10,12 +10,17 @@ import { useSettingStore } from '@/common/stores/settingStore';
 import { appTheme } from '@/common/theme/appTheme';
 import { installDropTargetCleanup } from '@/common/utils/dropTargetUtils';
 import { settingColorSchemeManager } from '@/common/utils/settingUtils';
+import { normalizeTabProfilesFromDisk, restoreTabsFromDisk } from '@/common/utils/tabPersistence';
 import MotionProvider from '@/components/providers/MotionProvider';
 
 installDropTargetCleanup();
 
 // Settings must be applied before the first paint, so the UI never flashes the wrong theme, font or language.
 await useSettingStore.getState().load();
+
+// Tabs are restored before the first render; tabs of deleted profiles lose their profile once profiles are loaded.
+await restoreTabsFromDisk();
+await normalizeTabProfilesFromDisk();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

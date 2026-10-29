@@ -55,18 +55,24 @@ func (m *submoduleFileMng) read() (models.AppSettings, error) {
 	return sanitize(settings), nil
 }
 
-// write saves atomically: a temp file in the same dir is renamed over the target, so a crash never leaves half a file.
+// write saves the settings atomically.
 func (m *submoduleFileMng) write(settings models.AppSettings) error {
 	path, err := m.path()
 	if err != nil {
 		return err
 	}
-	data, err := json.MarshalIndent(settings, "", "  ")
+	return writeJSONAtomic(path, settings)
+}
+
+// writeJSONAtomic saves v as JSON: a temp file in the same dir is renamed over the target,
+// so a crash never leaves half a file.
+func writeJSONAtomic(path string, v any) error {
+	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	tmp, err := os.CreateTemp(filepath.Dir(path), settingsFileName+".*.tmp")
+	tmp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*.tmp")
 	if err != nil {
 		return err
 	}

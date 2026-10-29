@@ -21,6 +21,15 @@ var (
 
 	// STE004 - Invalid setting value
 	STE004 = "STE004"
+
+	// STE005 - Error while loading tab state
+	STE005 = "STE005"
+
+	// STE006 - Error while saving tab state
+	STE006 = "STE006"
+
+	// STE007 - Invalid tab data
+	STE007 = "STE007"
 )
 
 // Module reads and writes the app settings file.
@@ -28,6 +37,7 @@ type Module struct {
 	logger  *slog.Logger
 	app     *application.App
 	setting *submoduleSettingMng
+	tab     *submoduleTabMng
 }
 
 // NewModule creates the setting module; appName selects the data dir and names the autostart entry.
@@ -36,6 +46,7 @@ func NewModule(app *application.App, logger *slog.Logger, appName string) *Modul
 		logger:  logger.With("component", "setting_module"),
 		app:     app,
 		setting: newSubmoduleSettingMng(logger, appName),
+		tab:     newSubmoduleTabMng(logger, appName),
 	}
 }
 
@@ -81,5 +92,35 @@ func (m *Module) ResetSettings() models.Output[models.SettingsOutput] {
 	output := models.NewOutput[models.SettingsOutput]()
 	output.Body.AutostartSupported = autostartSupported()
 	output.Body.Settings = defaultSettings()
+	return output
+}
+
+// GetTabState returns the remembered tabs. A missing, malformed or invalid file yields an empty state.
+func (m *Module) GetTabState() models.Output[models.TabState] {
+	output := models.NewOutput[models.TabState]()
+
+	state, err := m.tab.get()
+	output.Body = state
+	if err != nil {
+		m.logger.Error("load tab state failed", "error", err)
+		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Setting, STE005, err.Error()))
+	}
+	return output
+}
+
+// SaveTabState validates and saves the tab order, active tab and profile of each tab.
+func (m *Module) SaveTabState(input models.SaveTabStateInput) models.Output[models.TabState] {
+	output := models.NewOutput[models.TabState]()
+
+	state := models.TabState(input)
+	invalid, err := m.tab.save(state)
+	if invalid != nil {
+		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Setting, STE007, invalid.Error()))
+	}
+	if err != nil {
+		m.logger.Error("save tab state failed", "error", err)
+		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Setting, STE006, err.Error()))
+	}
+	output.Body = state
 	return output
 }

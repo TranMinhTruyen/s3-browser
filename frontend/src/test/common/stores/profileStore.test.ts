@@ -17,7 +17,7 @@ describe('profileStore', () => {
 
   it('loadConnectionProfiles stores the output', async () => {
     callIPCMock.mockResolvedValueOnce({ connectionProfiles: { p1: profile } });
-    await state().loadConnectionProfiles();
+    await expect(state().loadConnectionProfiles()).resolves.toBe(true);
     expect(state().connectionProfiles).toEqual({ p1: profile });
   });
 
@@ -31,7 +31,7 @@ describe('profileStore', () => {
   it('loadConnectionProfiles keeps the state when the call fails', async () => {
     useProfileStore.setState({ connectionProfiles: { p1: profile } });
     callIPCMock.mockResolvedValueOnce(null);
-    await state().loadConnectionProfiles();
+    await expect(state().loadConnectionProfiles()).resolves.toBe(false);
     expect(state().connectionProfiles).toEqual({ p1: profile });
   });
 

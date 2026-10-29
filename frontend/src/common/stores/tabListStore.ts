@@ -1,4 +1,5 @@
 import type { ObjectItem } from '@wails/S3Browser/models/bucket';
+import type { TabState } from '@wails/S3Browser/models/setting';
 import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
 import { createUUID } from '@/common/utils/stringUtils';
@@ -48,6 +49,11 @@ interface TabListAction {
 
   setDeleting: (tabId: string, items: string[], deleting: boolean) => void;
   setUploadingTab: (tabId: string | null) => void;
+
+  // Tab order, active tab and profile of each tab, in the shape saved to disk.
+  serializeTabs: () => TabState;
+  // Rebuilds the tabs from the saved layout. Empty or invalid layout keeps the current tabs.
+  restoreTabs: (saved: TabState) => void;
 
   reset: () => void;
 }
@@ -279,6 +285,26 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
 
     setUploadingTab: (tabId: string | null) => {
       set({ uploadingTabId: tabId }, undefined, `${SCOPE}/setUploadingTab`);
+    },
+
+    serializeTabs: () => {
+      const { tabList, activeTab } = get();
+      return {
+        tabs: Object.entries(tabList).map(([id, tab]) => ({ id, profileId: tab.profileId ?? null })),
+        activeTab,
+      };
+    },
+
+    restoreTabs: saved => {
+      const tabs = (saved.tabs ?? []).filter(tab => tab.id);
+      if (tabs.length === 0 || new Set(tabs.map(tab => tab.id)).size !== tabs.length) return;
+
+      const tabList: Record<string, TabDetail> = {};
+      tabs.forEach(tab => {
+        tabList[tab.id] = { ...newTab(), profileId: tab.profileId };
+      });
+      const activeTab = saved.activeTab in tabList ? saved.activeTab : tabs[0].id;
+      set({ tabList, activeTab }, undefined, `${SCOPE}/restoreTabs`);
     },
 
     // uploadingTabId is kept: an upload already sent to the backend keeps running.
