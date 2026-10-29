@@ -27,6 +27,21 @@ Bạn là reviewer senior cho S3Browser. Toàn bộ quy ước code (backend, fr
 - `useMemo`/`useCallback` có deps thay đổi sau mỗi tương tác (ví dụ một `Set` selection), làm memo vô dụng; đề xuất tách row component dùng `memo` và tự subscribe vào slice của nó.
 - Deps của `useImperativeHandle` thay đổi mỗi lần render.
 - Danh sách lớn không virtualize.
+- Code gây warning/error trong console của React: thiếu hoặc trùng `key` (dùng index làm key cho list có thể sắp xếp/xoá), setState sau unmount hoặc sau khi request bị huỷ, chuyển input từ uncontrolled sang controlled, DOM lồng sai (`<button>` trong `<button>`, `<div>` trong `<p>`), prop lạ truyền xuống DOM, `t()` với key không tồn tại. Còn sót `console.log/warn/error` trong code production. Trong test: cảnh báo `act(...)`, hoặc `vi.spyOn(console, ...)` dùng để che warning thay vì assert.
+- Gọi `callIPC` trong render, trong vòng lặp từng item, hoặc trong effect thiếu điều kiện chặn gọi lặp; ô tìm kiếm/filter gọi backend theo từng phím mà không debounce.
+- Đăng ký `Events.On` mà không huỷ khi unmount, hoặc đăng ký lại mỗi lần render.
+- Sự kiện tần suất cao (tiến độ upload/download) ghi thẳng vào store ở mỗi lần nhận mà không gộp/throttle, làm re-render cả danh sách.
+- Tính toán nặng (sort/filter/group cả danh sách object) chạy lại mỗi render thay vì `useMemo` hoặc làm ở backend.
+
+**Hiệu năng (Go backend)**
+- Liệt kê object: luôn phân trang bằng `ListObjectsV2` với `MaxKeys` và continuation token; không gom toàn bộ bucket vào bộ nhớ rồi mới trả về.
+- File lớn: upload/download phải stream (`io.Reader`/`io.Copy`, multipart như `submodule_s3_upload.go`); không `io.ReadAll`/`os.ReadFile` cả file vào RAM.
+- Goroutine song song phải có giới hạn (semaphore dùng chung, `errgroup.SetLimit`); không mở một goroutine cho mỗi object/file không giới hạn.
+- Thao tác dài phải nhận context huỷ được và dừng ngay khi bị huỷ, kể cả trong vòng lặp phân trang.
+- Gọi S3 hoặc truy vấn DB lặp theo từng item (N+1) khi có thể gộp (ví dụ `DeleteObjects` theo lô thay vì `DeleteObject` từng key).
+- Giữ lock trong khi gọi mạng/IO, hoặc lock phạm vi quá rộng làm nghẽn các request khác.
+- Emit event Wails trong vòng lặp chặt (mỗi chunk/mỗi object) thay vì gộp hoặc giới hạn tần suất; payload event/IPC quá lớn (trả cả danh sách khi chỉ cần một trang).
+- Tạo lại S3 client/kết nối DB cho mỗi request thay vì dùng lại kết nối đã có.
 
 **Chất lượng unit test** (theo mục **Testing** của `CLAUDE.md`)
 - Test có assert thật về kết quả (`Result`, `MessageCode`, `Body`, state store, nội dung hiển thị), không chỉ gọi hàm cho chạy qua dòng.

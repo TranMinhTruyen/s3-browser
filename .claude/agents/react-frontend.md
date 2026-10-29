@@ -22,6 +22,7 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task (ví dụ `F1, F
    - Handler đặt tên `on` + sự kiện + đối tượng (ví dụ `onClickConnect`).
    - Danh sách lớn dùng `@tanstack/react-virtual`.
    - Dùng wrapper sẵn có trong `components/buttons|inputs|modals` thay vì gọi Mantine trực tiếp.
+   - Không để warning/error trong console của React (thiếu `key`, setState sau unmount, controlled/uncontrolled, DOM lồng sai, prop lạ truyền xuống DOM, thiếu key i18n). Không để `console.log/warn/error` trong code production (theo mục **Console sạch** của `CLAUDE.md`).
 6. i18n: không hard-code chuỗi. Thêm key cho **cả en, vi, ja**, và đăng ký namespace mới trong `resource.ts` của cả 3 ngôn ngữ.
 7. Bạn chạy **sau** `go-backend` và dùng bindings đã được sinh sẵn. Không sửa tay `frontend/bindings/**` (đã bị chặn ghi), không sửa file Go. Đọc mục "Wails bindings" trong kết quả của `go-backend` (bên gọi chuyển cho bạn) để biết binding nào đổi và chỗ frontend cần sửa. Nếu thiếu binding hoặc binding không khớp với plan, dừng và báo lại để `go-backend` sửa và sinh lại.
 8. Message code từ backend đã được `go-backend` thêm vào `ipcMessage.json`; bạn chỉ kiểm tra là đã có, không thêm trùng.

@@ -23,6 +23,7 @@ Bạn là **verifier** của S3Browser. Bạn chỉ chạy kiểm tra và báo c
    - `npx oxlint <các file đã đổi>`
    - Windows `node_modules/.bin/biome.exe check <các file đã đổi>`, macOS/Linux `node_modules/.bin/biome check <các file đã đổi>` (không dùng `npx biome`)
    - Unit test và coverage: chạy toàn bộ test bằng lệnh `vitest run` trong mục **Testing** của `CLAUDE.md`, với `--coverage.include` là các file `.ts`/`.tsx` production đã đổi (trừ phần loại trừ). Mỗi file phải đạt **Branches ≥ 95%** và **Lines ≥ 95%**
+   - **Console sạch**: đọc toàn bộ output của lần `vitest run` ở trên (cả stdout và stderr). Nếu có `Warning:`, cảnh báo `act(...)`, dòng `stderr |`, `console.error` hoặc `console.warn` thì ghi **FAIL**, kèm tên test và nguyên văn cảnh báo (agent nên sửa: `react-frontend` nếu do code production, `react-tester` nếu do cách viết test). Đồng thời grep `console\.(log|warn|error|debug)` trong các file production đã đổi; có thì FAIL
    - Mỗi file production đã đổi có file test tương ứng trong `frontend/src/test/` theo cùng cây thư mục (ví dụ `src/pages/bucket/BucketPage.tsx` → `src/test/pages/bucket/BucketPage.test.tsx`) (hoặc được ghi trong mục "Không test được" kèm lý do)
 4. Kiểm tra tính đầy đủ:
    - Message code mới trong `module.go` đều có key trong `ipcMessage.json` của en, vi, ja.
@@ -47,6 +48,7 @@ Bạn là **verifier** của S3Browser. Bạn chỉ chạy kiểm tra và báo c
 | bindings mới nhất | | |
 | sqlc diff | | |
 | vitest | | |
+| console sạch (không warning/error) | | |
 | FE coverage Branches/Lines ≥ 95% | | file dưới ngưỡng: ... |
 
 ### Lỗi
