@@ -15,6 +15,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// submoduleObjMng lists, deletes and reads the detail of objects.
 type submoduleObjMng struct {
 	logger *slog.Logger
 	global *global.Module

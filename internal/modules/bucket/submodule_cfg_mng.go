@@ -26,6 +26,7 @@ type submoduleCfgMng struct {
 	logger *slog.Logger
 }
 
+// newSubmoduleCfgMng builds the client builder; it only needs a logger.
 func newSubmoduleCfgMng(
 	logger *slog.Logger,
 ) *submoduleCfgMng {

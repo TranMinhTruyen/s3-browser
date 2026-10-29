@@ -56,6 +56,7 @@ func groupUploadItems(items []models.UploadObj) (groups [][]int, violation []mod
 		}
 		large := 0
 		for _, i := range indexes {
+			// Sequential on purpose: at most maxTotalFiles cheap stats; parallel stat is not worth the complexity.
 			if info, err := os.Stat(items[i].Path); err == nil && info.Size() > largeFileSize {
 				large++
 			}

@@ -223,7 +223,7 @@ func (m *Module) ConnectByProfile(connectionId string) models.Output[models.Conn
 
 // Disconnect closes the active connection identified by connectionId
 // and removes it from the shared connection store.
-// Returns true in if the disconnect succeeded.
+// Returns true if the disconnect succeeded.
 func (m *Module) Disconnect(connectionId string) models.Output[bool] {
 	return m.submoduleConnMng.disconnectAction(connectionId)
 }

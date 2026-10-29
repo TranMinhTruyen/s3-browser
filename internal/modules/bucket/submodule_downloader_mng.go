@@ -65,6 +65,8 @@ type downloadResult struct {
 }
 
 // downloadConcurrency limits both the objects downloaded at once and the parts fetched at once per object.
+// So up to downloadConcurrency^2 (36) connections can be open. Not lowered: no measurement shows a gain,
+// and fewer connections would slow a few large objects.
 const downloadConcurrency = 6
 
 // downloadObject asks the user where to save, then downloads every object in input.Objects.
@@ -86,6 +88,10 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 	defer releaseConn()
+
+	if len(input.Objects) == 0 {
+		return output
+	}
 
 	var (
 		destDir string
@@ -238,6 +244,8 @@ func destKey(p string) string {
 }
 
 // destTaken reports whether p cannot be used. The caller must hold destsMu.
+// The dests check and the reservation must be one step under the lock. The disk check (Lstat, cheap,
+// only for multi download) sits here too for simplicity; the lock only contends with release.
 func (m *submoduleDownloaderMng) destTaken(p string, checkDisk bool) bool {
 	if _, ok := m.dests[destKey(p)]; ok {
 		return true
