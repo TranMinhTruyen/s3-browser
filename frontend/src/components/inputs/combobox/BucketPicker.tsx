@@ -44,7 +44,10 @@ function BucketPicker(props: BucketPickerProps) {
   const { ref: targetRef, width: targetWidth } = useElementSize<HTMLButtonElement>();
 
   const combobox = useCombobox({
-    onDropdownOpen: () => setOpened(true),
+    onDropdownOpen: () => {
+      setOpened(true);
+      combobox.focusSearchInput();
+    },
     onDropdownClose: () => setOpened(false),
   });
 
