@@ -1,5 +1,7 @@
 # Sprint 09: Kéo thả tab và ghi nhớ tab
 
+> **Trạng thái: HOÀN TẤT (2026-10-29).** R1, R2, R3 đã merge vào `master` (PR #10, #9), xem `report.md` và `plan.md`.
+>
 > Chuyển từ sprint-08 (R2, R3 cũ). Phần phân tích, đề xuất và task đã soạn sẵn nằm ở `sprints/sprint-08/plan.md` mục 8.
 
 ## Mục tiêu
@@ -15,8 +17,8 @@ Cho phép kéo thả tab để thay đổi vị trí, và ghi nhớ các tab đa
 - **Nền tảng:** Cả hai
 - **Màn hình liên quan:** TabLayout
 - **Tiêu chí chấp nhận:**
-  - [ ] Có thể kéo thả tab thoải mái, không giới hạn
-  - [ ] Có animation để UI nhìn mượt hơn, chú ý vấn đề hiệu năng (có thể thêm lib animation bên ngoài)
+  - [x] Có thể kéo thả tab thoải mái, không giới hạn
+  - [x] Có animation để UI nhìn mượt hơn, chú ý vấn đề hiệu năng (có thể thêm lib animation bên ngoài)
 
 ### R2: Ghi nhớ số lượng, vị trí, profile của tab khi đóng app (R3 của sprint-08)
 
@@ -26,8 +28,8 @@ Cho phép kéo thả tab để thay đổi vị trí, và ghi nhớ các tab đa
 - **Nền tảng:** Cả hai
 - **Màn hình liên quan:** TabLayout
 - **Tiêu chí chấp nhận:**
-  - [ ] Mở app lại thì load lại hết các tab đã nhớ kèm profile của tab đó
-  - [ ] Không tự connect; user sẽ tự connect thủ công
+  - [x] Mở app lại thì load lại hết các tab đã nhớ kèm profile của tab đó
+  - [x] Không tự connect; user sẽ tự connect thủ công
 
 ### R3: Tối ưu danh sách profile và đồng bộ select (bổ sung trong sprint)
 
@@ -38,10 +40,10 @@ Cho phép kéo thả tab để thay đổi vị trí, và ghi nhớ các tab đa
 - **Nền tảng:** Cả hai
 - **Màn hình liên quan:** LeftNavbar (ConnectionProfiles), TabActionBar, mọi Select/Combobox
 - **Tiêu chí chấp nhận:**
-  - [ ] 200 profile cuộn mượt, chỉ render các dòng đang hiện; một profile đổi trạng thái thì chỉ dòng đó render lại
-  - [ ] Giữ nguyên double click connect, context menu, spinner, màu profile, auto-connect, xoá có xác nhận
-  - [ ] Select profile có ô search tự focus khi mở, lọc không phân biệt hoa thường, từ khoá reset khi đóng
-  - [ ] Dropdown của mọi combobox/select có cùng nền, viền, đổ bóng (đặt một lần trong theme Mantine)
+  - [x] 200 profile cuộn mượt, chỉ render các dòng đang hiện; một profile đổi trạng thái thì chỉ dòng đó render lại
+  - [x] Giữ nguyên double click connect, context menu, spinner, màu profile, auto-connect, xoá có xác nhận
+  - [x] Select profile có ô search tự focus khi mở, lọc không phân biệt hoa thường, từ khoá reset khi đóng
+  - [x] Dropdown của mọi combobox/select có cùng nền, viền, đổ bóng (đặt một lần trong theme Mantine)
 
 ## Ngoài phạm vi
 
