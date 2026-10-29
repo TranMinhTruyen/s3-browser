@@ -4,7 +4,7 @@
   },
   "tooltip": {
     "closeTab": "タブを閉じる",
-    "dragTab": "ドラッグして並べ替え",
+    "dragTab": "ドラッグして並べ替え (Ctrl+Shift+←/→)",
     "connect": "接続",
     "refresh": "{target}を再読み込み",
     "addTab": "タブを追加",

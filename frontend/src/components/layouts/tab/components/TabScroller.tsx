@@ -20,7 +20,10 @@ const TAU = 90;
 // Stop animating (and snap to target) when closer than this many px.
 const STOP_DISTANCE = 0.5;
 
-/** Horizontal scroller with arrow buttons outside the viewport; arrows page by aligning a tab to the left edge. */
+/**
+ * Horizontal scroller with arrow buttons outside the viewport; arrows page by aligning a tab to the left edge.
+ * Tracks overflow via scroll + ResizeObserver and removes every listener/observer/frame on unmount.
+ */
 function TabScroller({ ref, children }: TabScrollerProps) {
   const { t } = useTranslation('tabLayout');
   const viewportRef = useRef<HTMLDivElement>(null);
