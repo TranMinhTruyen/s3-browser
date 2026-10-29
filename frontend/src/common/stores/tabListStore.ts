@@ -61,6 +61,16 @@ interface TabListAction {
 const SCOPE = 'tabList';
 const initialId = createUUID();
 
+/** Back to the bucket list root: no bucket, folder, selection or detail. Call inside an immer `set`. */
+const resetTabView = (tab: TabDetail) => {
+  tab.currentView = 'bucketList';
+  tab.bucket = undefined;
+  tab.prefix = '';
+  tab.selectionItem = [];
+  tab.detailItem = undefined;
+};
+
+/** A tab with no profile, showing the bucket list. */
 const newTab = (): TabDetail => ({ currentView: 'bucketList', prefix: '', selectionItem: [], deletingItems: [] });
 
 /** Open tabs, the active one and which tab is uploading. */
@@ -107,7 +117,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       const { tabList, activeTab } = get();
 
       const keys = Object.keys(tabList);
-      if (keys.length <= 1 || !(tabId in tabList)) return;
+      if (keys.length <= 1 || !Object.hasOwn(tabList, tabId)) return;
 
       const index = keys.indexOf(tabId);
 
@@ -140,12 +150,10 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
         state => {
           const tab = state.tabList[tabId];
           if (tab) {
-            tab.currentView = currentView;
-            tab.bucket = currentView === 'objectList' ? bucket : undefined;
             // Opening or leaving a bucket always starts from its root.
-            tab.prefix = '';
-            tab.selectionItem = [];
-            tab.detailItem = undefined;
+            resetTabView(tab);
+            tab.currentView = currentView;
+            if (currentView === 'objectList') tab.bucket = bucket;
           }
         },
         undefined,
@@ -174,11 +182,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
         state => {
           Object.values(state.tabList).forEach(tab => {
             if (tab.profileId === profileId) {
-              tab.currentView = 'bucketList';
-              tab.bucket = undefined;
-              tab.prefix = '';
-              tab.selectionItem = [];
-              tab.detailItem = undefined;
+              resetTabView(tab);
             }
           });
         },
@@ -193,11 +197,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
           Object.values(state.tabList).forEach(tab => {
             if (tab.profileId === profileId) {
               tab.profileId = null;
-              tab.currentView = 'bucketList';
-              tab.bucket = undefined;
-              tab.prefix = '';
-              tab.selectionItem = [];
-              tab.detailItem = undefined;
+              resetTabView(tab);
             }
           });
         },
@@ -303,7 +303,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       tabs.forEach(tab => {
         tabList[tab.id] = { ...newTab(), profileId: tab.profileId };
       });
-      const activeTab = saved.activeTab in tabList ? saved.activeTab : tabs[0].id;
+      const activeTab = Object.hasOwn(tabList, saved.activeTab) ? saved.activeTab : tabs[0].id;
       set({ tabList, activeTab }, undefined, `${SCOPE}/restoreTabs`);
     },
 

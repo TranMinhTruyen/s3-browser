@@ -3,7 +3,10 @@ import { useAutoLoading } from '@/components/buttons/useAutoLoading';
 
 interface ActionIconProps extends MActionIconProps, ElementProps<'button', keyof MActionIconProps> {}
 
-/** Mantine action icon that shows a loader (and disables itself) while an async `onClick` is pending. */
+/**
+ * Mantine action icon that shows a loader and disables itself while an async `onClick` is pending.
+ * An explicit `loading` prop wins. Defaults: size `lg`, variant `light`; other props go to Mantine.
+ */
 function ActionIcon(props: ActionIconProps) {
   const { size = 'lg', loading, onClick, disabled, ...restProps } = props;
 

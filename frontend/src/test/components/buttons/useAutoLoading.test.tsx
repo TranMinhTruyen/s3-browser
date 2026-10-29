@@ -3,6 +3,14 @@ import type { MouseEvent } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { useAutoLoading } from '@/components/buttons/useAutoLoading';
 
+// The tsconfig has no Node types; unhandled rejections can only be observed through Node's process.
+const nodeGlobals = globalThis as unknown as {
+  process: {
+    on: (name: 'unhandledRejection', fn: (reason: unknown) => void) => void;
+    off: (name: 'unhandledRejection', fn: (reason: unknown) => void) => void;
+  };
+  setImmediate: (fn: (value?: unknown) => void) => void;
+};
 const event = {} as MouseEvent<HTMLButtonElement>;
 
 describe('useAutoLoading', () => {
@@ -20,25 +28,30 @@ describe('useAutoLoading', () => {
     expect(result.current.isLoading).toBe(false);
   });
 
-  it('turns loading off when the Promise rejects', async () => {
-    let reject!: (e: Error) => void;
-    const pending = new Promise<void>((_, r) => (reject = r));
-    // The hook does not handle rejections itself: catch the derived finally() promise so the run stays clean.
-    const originalFinally = pending.finally.bind(pending);
-    pending.finally = (cb?: (() => void) | null) => {
-      const derived = originalFinally(cb);
-      derived.catch(() => {});
-      return derived;
-    };
-    const onClick = vi.fn(() => pending);
-    const { result } = renderHook(() => useAutoLoading(onClick, undefined));
+  it('turns loading off when the Promise rejects without an unhandled rejection', async () => {
+    const unhandled = vi.fn();
+    nodeGlobals.process.on('unhandledRejection', unhandled);
+    try {
+      let reject!: (e: Error) => void;
+      const pending = new Promise<void>((_, r) => (reject = r));
+      // The caller owns the rejection of its own promise and still receives the original error.
+      const callerResult = expect(pending).rejects.toThrow('boom');
+      const onClick = vi.fn(() => pending);
+      const { result } = renderHook(() => useAutoLoading(onClick, undefined));
 
-    act(() => result.current.onClickButton(event));
-    expect(result.current.isLoading).toBe(true);
+      act(() => result.current.onClickButton(event));
+      expect(result.current.isLoading).toBe(true);
 
-    await act(async () => reject(new Error('boom')));
+      await act(async () => reject(new Error('boom')));
+      // Let Node run its unhandled-rejection check (it runs after the microtask queue drains).
+      await new Promise(r => nodeGlobals.setImmediate(r));
+      await callerResult;
 
-    expect(result.current.isLoading).toBe(false);
+      expect(result.current.isLoading).toBe(false);
+      expect(unhandled).not.toHaveBeenCalled();
+    } finally {
+      nodeGlobals.process.off('unhandledRejection', unhandled);
+    }
   });
 
   it('ignores synchronous handlers', () => {

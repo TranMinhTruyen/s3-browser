@@ -12,6 +12,8 @@ interface ModalStackAction {
   reset: () => boolean;
 }
 
+const SCOPE = 'modalStack';
+
 /**
  * Active acquisitions per modal id. Kept outside the state because it never drives rendering.
  *
@@ -34,7 +36,7 @@ export const useModalStackStore = createAppStore<ModalStackState & ModalStackAct
           }
         },
         undefined,
-        'modalStack/acquire'
+        `${SCOPE}/acquire`
       );
     },
 
@@ -43,13 +45,13 @@ export const useModalStackStore = createAppStore<ModalStackState & ModalStackAct
       queueMicrotask(() => {
         if ((refCounts.get(id) ?? 0) > 0) return;
         refCounts.delete(id);
-        set(state => ({ stack: state.stack.filter(x => x !== id) }), undefined, 'modalStack/release');
+        set(state => ({ stack: state.stack.filter(x => x !== id) }), undefined, `${SCOPE}/release`);
       });
     },
 
     reset: () => {
       refCounts.clear();
-      set({ stack: [] }, undefined, 'modalStack/reset');
+      set({ stack: [] }, undefined, `${SCOPE}/reset`);
       return true;
     },
   }),
