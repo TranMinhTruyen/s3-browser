@@ -27,6 +27,7 @@ interface SettingAction {
   resetDraft: () => void;
   /** Drops the draft and restores the applied values. */
   revert: () => void;
+  /** Clears the store back to the defaults and drops pending loads (used on app reset). */
   reset: () => boolean;
 }
 
