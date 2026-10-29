@@ -12,6 +12,7 @@ import {
 } from '@/common/cnst/settingConst';
 import i18n from '@/locales/i18n';
 
+/** Returns `value` when it is one of `list`, otherwise `fallback`. */
 const pick = <T extends string>(list: readonly T[], value: unknown, fallback: T): T =>
   list.includes(value as T) ? (value as T) : fallback;
 
@@ -45,9 +46,19 @@ export const settingColorSchemeManager: MantineColorSchemeManager = {
   },
 };
 
-/** Applies theme, font and language to the running app (used for load, preview and revert). */
+/** Resolves `auto` with the OS preference and writes the scheme on <html>, the same attribute Mantine uses. */
+function setSchemeAttribute(theme: ThemeKey): void {
+  const dark = theme === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : theme === 'dark';
+  document.documentElement.setAttribute('data-mantine-color-scheme', dark ? 'dark' : 'light');
+}
+
+/**
+ * Applies theme, font and language to the running app (used for load, preview and revert).
+ * The scheme attribute is also set directly, so it is right before React mounts (no light flash on a dark OS).
+ */
 export function applySettings(settings: AppSettingValues): void {
   currentScheme = settings.theme;
+  setSchemeAttribute(settings.theme);
   onSchemeChange?.(settings.theme);
 
   const family = FONT_FAMILIES[settings.font];
