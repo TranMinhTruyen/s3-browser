@@ -9,5 +9,6 @@
     "clear": "Clear",
     "close": "Close"
   },
-  "modalLoadError": "Could not open the dialog. Please try again."
+  "modalLoadError": "Could not open the dialog. Please try again.",
+  "modalLoading": "Loading dialog..."
 }

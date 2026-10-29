@@ -21,8 +21,10 @@ export const connectSchema = profileSchema.extend({
   secretKey: z.string().trim().nonempty('V000001'),
 });
 
+/** Form values of the connect modal. */
 export interface ConnectionInfo extends z.infer<typeof connectSchema> {}
 
+/** Props of `ConnectModal.show()`. `connectionProfile` is the profile to connect or edit; omit it for a new one. */
 export type ConnectModalProps = {
   mode?: 'connect' | 'manualconnect' | 'createProfile' | 'editProfile';
   connectionProfile?: ConnectionProfileOutput;

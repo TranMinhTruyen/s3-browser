@@ -2,22 +2,54 @@ import { toast } from 'sonner';
 import type { ConnectModalProps } from '@/components/modals/connectSchema';
 import i18n from '@/locales/i18n';
 
-/** Logs the failed chunk load and tells the user, so it never becomes an unhandled rejection. */
+/** A chunk that loads faster than this shows no feedback, so fast loads do not flash a toast. */
+const SLOW_LOAD_MS = 300;
+
+/** Tells the user a chunk failed to load, with the error as detail, so it never becomes an unhandled rejection. */
 const onLoadModalFailed = (error: unknown) => {
-  // oxlint-disable-next-line no-console -- kept on purpose for debugging failed chunk loads
-  console.error('Failed to load modal chunk', error);
-  toast.error(i18n.t('common:modalLoadError'));
+  toast.error(i18n.t('common:modalLoadError'), {
+    description: error instanceof Error ? error.message : String(error),
+  });
 };
+
+/**
+ * Loads a modal chunk. Shows a loading toast if it is slow and an error toast if it fails (then resolves undefined).
+ * Only the chunk load is guarded: an error thrown later by `show()` is not reported as a load error.
+ */
+async function loadModal<M>(load: () => Promise<M>): Promise<M | undefined> {
+  let loadingId: string | number | undefined;
+  const timer = setTimeout(() => {
+    loadingId = toast.loading(i18n.t('common:modalLoading'));
+  }, SLOW_LOAD_MS);
+  try {
+    return await load();
+  } catch (error) {
+    onLoadModalFailed(error);
+    return undefined;
+  } finally {
+    clearTimeout(timer);
+    if (loadingId !== undefined) toast.dismiss(loadingId);
+  }
+}
 
 /**
  * Heavy modals are loaded on first use so they stay out of the main bundle.
  * Callers keep the same `show` contract; only the first call waits for the chunk.
+ * When the chunk fails to load, `show` resolves undefined: callers that await a result must treat it as a cancel.
  */
-export const showConnectModal = (props: ConnectModalProps) =>
-  import('@/components/modals/ConnectModal').then(m => m.default.show(props)).catch(onLoadModalFailed);
+export const showConnectModal = async (props: ConnectModalProps) =>
+  (await loadModal(() => import('@/components/modals/ConnectModal')))?.default.show(props);
 
-export const showHistoryModal = () =>
-  import('@/components/modals/HistoryModal').then(m => m.default.show()).catch(onLoadModalFailed);
+export const showHistoryModal = async () =>
+  (await loadModal(() => import('@/components/modals/HistoryModal')))?.default.show();
 
-export const showSettingModal = () =>
-  import('@/components/modals/SettingModal').then(m => m.default.show()).catch(onLoadModalFailed);
+export const showSettingModal = async () =>
+  (await loadModal(() => import('@/components/modals/SettingModal')))?.default.show();
+
+export const showUploadPickerModal = async (
+  props: Parameters<typeof import('@/components/modals/UploadPickerModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/components/modals/UploadPickerModal')))?.default.show(props);
+
+export const showUploadLimitModal = async (
+  props: Parameters<typeof import('@/components/modals/UploadLimitModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/components/modals/UploadLimitModal')))?.default.show(props);

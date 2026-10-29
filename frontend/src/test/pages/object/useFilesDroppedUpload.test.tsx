@@ -3,14 +3,14 @@ import { Events } from '@wailsio/runtime';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ensureUploadIdle, runUpload } from '@/common/utils/uploadUtils';
-import UploadLimitModal from '@/components/modals/UploadLimitModal';
+import { showUploadLimitModal } from '@/components/modals/lazyModals';
 import i18n from '@/locales/i18n';
 import { useFilesDroppedUpload } from '@/pages/object/useFilesDroppedUpload';
 
 vi.mock('@wailsio/runtime', () => ({ Events: { On: vi.fn() } }));
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }));
 vi.mock('@/common/utils/uploadUtils', () => ({ ensureUploadIdle: vi.fn(), runUpload: vi.fn() }));
-vi.mock('@/components/modals/UploadLimitModal', () => ({ default: { show: vi.fn() } }));
+vi.mock('@/components/modals/lazyModals', () => ({ showUploadLimitModal: vi.fn() }));
 
 type Params = Parameters<typeof useFilesDroppedUpload>[0];
 type Handler = (e: { data?: unknown }) => void;
@@ -79,7 +79,7 @@ describe('useFilesDroppedUpload', () => {
     setup();
     await send(drop());
     expect(toast.warning).not.toHaveBeenCalled();
-    expect(UploadLimitModal.show).not.toHaveBeenCalled();
+    expect(showUploadLimitModal).not.toHaveBeenCalled();
     expect(runUpload).toHaveBeenCalledExactlyOnceWith(
       { tabId: 'tab-1', connectionId: 'conn', profileName: 'prof', bucket: 'bkt', prefix: 'dir/', files: [file] },
       expect.any(Function)
@@ -131,11 +131,11 @@ describe('useFilesDroppedUpload', () => {
       ['overLargeCount', { files: [file], overLargeCount: true }],
     ])('asks the user to choose files when a group has %s and uploads the chosen ones', async (_name, group) => {
       const chosen = [{ path: 'C:/z.txt', relKey: 'z.txt' }];
-      vi.mocked(UploadLimitModal.show).mockResolvedValue(chosen as never);
+      vi.mocked(showUploadLimitModal).mockResolvedValue(chosen as never);
       setup();
       await send(drop({ groups: [group], capped: true, ...limits }));
 
-      expect(UploadLimitModal.show).toHaveBeenCalledExactlyOnceWith({
+      expect(showUploadLimitModal).toHaveBeenCalledExactlyOnceWith({
         groups: [group],
         capped: true,
         ...limits,
@@ -146,10 +146,10 @@ describe('useFilesDroppedUpload', () => {
     });
 
     it.each([
-      ['cancelled', undefined],
+      ['cancelled or failed to load (undefined)', undefined],
       ['empty', []],
     ])('uploads nothing when the dialog is %s', async (_name, chosen) => {
-      vi.mocked(UploadLimitModal.show).mockResolvedValue(chosen as never);
+      vi.mocked(showUploadLimitModal).mockResolvedValue(chosen as never);
       setup();
       await send(drop({ groups: [{ files: [file], overMaxFiles: true }] }));
       expect(runUpload).not.toHaveBeenCalled();

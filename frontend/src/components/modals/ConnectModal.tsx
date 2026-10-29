@@ -40,7 +40,13 @@ const PROVIDER_OPTIONS = [
   ),
 }));
 
-/** Modal to connect, test a connection, or create/edit a connection profile depending on `mode`. */
+/**
+ * Modal to connect, test a connection, or create/edit a connection profile depending on `mode`:
+ * - `connect`: connect with typed credentials (nothing saved unless "save password" is ticked);
+ * - `manualconnect`: connect a saved profile whose secret key is not stored;
+ * - `createProfile` / `editProfile`: save a profile; the secret key is optional.
+ * Resolves `false` when dismissed. Load it through `showConnectModal` (lazy chunk).
+ */
 export default createMantineModal<ConnectModalProps, false>(
   props => {
     const { mode = 'connect', connectionProfile, mantine } = props;
@@ -294,7 +300,7 @@ export default createMantineModal<ConnectModalProps, false>(
 
             <Divider />
 
-            <Group p="8px" justify="space-between">
+            <Group p="8px" justify="space-between" wrap="nowrap">
               <Button type="button" loading={form.submitting} onClick={onClickTestConnection}>
                 {t('form.button.testConnection')}
               </Button>
