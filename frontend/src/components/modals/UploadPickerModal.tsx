@@ -1,9 +1,9 @@
 import { Box, Center, Divider, Group, Modal, Paper, Stack, Text, Title } from '@mantine/core';
 import { PickFiles } from '@wails/S3Browser/internal/handlers/buckethandler';
-import { DroppedFile, DroppedGroup, FilesDroppedOutput } from '@wails/S3Browser/models/bucket';
+import { DroppedFile, FilesDroppedOutput } from '@wails/S3Browser/models/bucket';
 import { Events } from '@wailsio/runtime';
-import { FileDown, Folder, Trash2, Upload } from 'lucide-react';
-import { CSSProperties, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FileDown, Trash2, Upload } from 'lucide-react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { callIPC } from '@/common/utils/ipcUtils';
@@ -13,7 +13,7 @@ import { mergePickedFiles, PickerLimits, PickerList, removePickedFiles } from '@
 import Button from '@/components/buttons/Button';
 import BucketPicker from '@/components/inputs/combobox/BucketPicker';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
-import { FileRow, GroupStat, UploadRow, VirtualRowList } from '@/components/modals/UploadFileList';
+import { FileRow, GroupRow, GroupStat, UploadRow, VirtualRowList } from '@/components/modals/UploadFileList';
 import i18n from '@/locales/i18n';
 import classes from './UploadPickerModal.module.css';
 
@@ -32,40 +32,6 @@ export type UploadPickerResult = { bucket: string; files: DroppedFile[] };
 // The list follows the window height but never gets smaller than the minimum.
 const LIST_HEIGHT = 'max(280px, 40vh)';
 
-type GroupRowProps = {
-  group: DroppedGroup;
-  selected: number;
-  selectedLarge: number;
-  maxFilesPerFolder: number;
-  largeFileMaxCount: number;
-  style: CSSProperties;
-};
-
-const GroupRow = memo(function GroupRow(props: GroupRowProps) {
-  const { group, selected, selectedLarge, maxFilesPerFolder, largeFileMaxCount, style } = props;
-  const { t } = useTranslation('uploadPickerModal');
-
-  const overCount = selected > maxFilesPerFolder;
-  const overLarge = selectedLarge > largeFileMaxCount;
-
-  return (
-    <Group style={style} gap="xs" wrap="nowrap" px="xs" bg="var(--mantine-color-default-hover)">
-      <Folder size="16px" style={{ flexShrink: 0 }} />
-      <Text fw={600} truncate="end" style={{ flex: 1, minWidth: 0 }} title={group.name}>
-        {group.name || t('rootFolder')}
-      </Text>
-      {group.largeCount > 0 && (
-        <Text size="sm" c={overLarge ? 'red' : 'dimmed'} fw={overLarge ? 600 : undefined} style={{ flexShrink: 0 }}>
-          {formatStringJson(t('selectedLarge'), { selected: selectedLarge, max: largeFileMaxCount })}
-        </Text>
-      )}
-      <Text size="sm" c={overCount ? 'red' : 'dimmed'} fw={overCount ? 600 : undefined} style={{ flexShrink: 0 }}>
-        {formatStringJson(t('selectedCount'), { selected, max: maxFilesPerFolder })}
-      </Text>
-    </Group>
-  );
-});
-
 type FileListProps = {
   rows: UploadRow[];
   selected: ReadonlySet<string>;
@@ -80,30 +46,42 @@ const FileList = memo(function FileList(props: FileListProps) {
   const { t } = useTranslation('uploadPickerModal');
 
   const renderRow = useCallback(
-    (row: UploadRow, key: string | number | bigint, style: CSSProperties) =>
-      row.kind === 'group' ? (
+    (row: UploadRow, key: string | number | bigint, top: number) => {
+      if (row.kind === 'file') {
+        return (
+          <FileRow
+            key={key}
+            file={row.file}
+            checked={selected.has(row.file.path)}
+            top={top}
+            largeLabel={t('large')}
+            titleBy="path"
+            removeLabel={t('remove')}
+            onToggleFile={onToggleFile}
+            onRemoveFile={onRemoveFile}
+          />
+        );
+      }
+
+      const stat = stats[row.index];
+      const { maxFilesPerFolder, largeFileMaxCount } = limits;
+      return (
         <GroupRow
           key={key}
           group={row.group}
-          selected={stats[row.index].selected}
-          selectedLarge={stats[row.index].selectedLarge}
-          maxFilesPerFolder={limits.maxFilesPerFolder}
-          largeFileMaxCount={limits.largeFileMaxCount}
-          style={style}
+          top={top}
+          rootLabel={t('rootFolder')}
+          largeText={
+            row.group.largeCount > 0
+              ? formatStringJson(t('selectedLarge'), { selected: stat.selectedLarge, max: largeFileMaxCount })
+              : undefined
+          }
+          largeOver={stat.selectedLarge > largeFileMaxCount}
+          countText={formatStringJson(t('selectedCount'), { selected: stat.selected, max: maxFilesPerFolder })}
+          countOver={stat.selected > maxFilesPerFolder}
         />
-      ) : (
-        <FileRow
-          key={key}
-          file={row.file}
-          checked={selected.has(row.file.path)}
-          style={style}
-          largeLabel={t('large')}
-          titleBy="path"
-          removeLabel={t('remove')}
-          onToggleFile={onToggleFile}
-          onRemoveFile={onRemoveFile}
-        />
-      ),
+      );
+    },
     [selected, stats, limits, onToggleFile, onRemoveFile, t]
   );
 
@@ -349,7 +327,7 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
 
         <Divider />
 
-        <Group p="8px" justify="space-between">
+        <Group p="8px" justify="space-between" wrap="nowrap">
           <Button onClick={onClickCancel} color="red">
             {t('common:button.cancel')}
           </Button>

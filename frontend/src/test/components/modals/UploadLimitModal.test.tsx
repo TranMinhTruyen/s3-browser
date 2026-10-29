@@ -142,6 +142,43 @@ describe('UploadLimitModal', () => {
     expect(screen.queryByText('Folders with more than 2 files')).not.toBeInTheDocument();
   });
 
+  it('shows only the file counter in the over-max section and only the large counter in the large section', async () => {
+    open([photos(), videos()]);
+    await flush();
+    // Both sections are open only when expanded; open the large one too.
+    const largeHeader = screen.getByRole('button', { name: /large files \(over/ });
+    if (largeHeader.getAttribute('aria-expanded') !== 'true') await userEvent.click(largeHeader);
+
+    expect(screen.getAllByText(/\d+\/\d+ files/)).toHaveLength(1);
+    expect(screen.getByText('2/2 files')).toBeInTheDocument();
+    expect(screen.getAllByText(/\d+\/\d+ large files/)).toHaveLength(1);
+    expect(screen.getByText('1/1 large files')).toBeInTheDocument();
+  });
+
+  it('turns a counter red and bold only once it is over the limit', async () => {
+    open([photos()]);
+    await flush();
+
+    const counter = () => screen.getByText(/\d+\/2 files/);
+    expect(counter().style.fontWeight).toBe('');
+    expect(counter().style.color).toContain('dimmed');
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'f3.jpg' }));
+
+    expect(counter().style.fontWeight).toBe('600');
+    expect(counter().style.color).toContain('red');
+  });
+
+  it('puts Cancel on the left and Upload on the right of a non-wrapping footer', async () => {
+    open([photos()]);
+    await flush();
+
+    const footer = screen.getByRole('button', { name: 'Cancel' }).parentElement as HTMLElement;
+    expect(footer.style.getPropertyValue('--group-wrap')).toBe('nowrap');
+    expect(footer.style.getPropertyValue('--group-justify')).toBe('space-between');
+    expect(Array.from(footer.querySelectorAll('button')).map(b => b.textContent)).toEqual(['Cancel', 'Upload (2)']);
+  });
+
   it('resolves an empty list on Cancel and null when the modal is closed', async () => {
     const result = open([photos()]);
     await flush();

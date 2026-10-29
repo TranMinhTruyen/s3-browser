@@ -2,7 +2,7 @@ import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DroppedFile, DroppedGroup } from '@wails/S3Browser/models/bucket';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { FileRow, rowsHeight, type UploadRow, VirtualRowList } from '@/components/modals/UploadFileList';
+import { FileRow, GroupRow, rowsHeight, type UploadRow, VirtualRowList } from '@/components/modals/UploadFileList';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
 const virtual = vi.hoisted(() => ({ estimates: [] as number[], getScrollEl: null as null | (() => unknown) }));
@@ -46,7 +46,7 @@ describe('FileRow', () => {
       <FileRow
         file={file()}
         checked={false}
-        style={{}}
+        top={0}
         largeLabel="Large"
         titleBy="path"
         onToggleFile={onToggleFile}
@@ -119,6 +119,106 @@ describe('FileRow', () => {
   });
 });
 
+describe('FileRow positioning', () => {
+  const props = {
+    file: file(),
+    checked: false,
+    largeLabel: 'Large',
+    titleBy: 'path' as const,
+    onToggleFile: vi.fn(),
+  };
+  const row = () => screen.getByRole('checkbox').closest('.mantine-Group-root') as HTMLElement;
+
+  it('places the row with translateY(top) and a fixed height', () => {
+    renderWithProviders(<FileRow {...props} top={72} />);
+
+    expect(row().style.transform).toBe('translateY(72px)');
+    expect(row().style.height).toBe('36px');
+    expect(row().style.position).toBe('absolute');
+  });
+
+  it('moves when top changes', () => {
+    const { rerender } = renderWithProviders(<FileRow {...props} top={0} />);
+    expect(row().style.transform).toBe('translateY(0px)');
+
+    rerender(<FileRow {...props} top={108} />);
+
+    expect(row().style.transform).toBe('translateY(108px)');
+  });
+
+  it('keeps the same style object while top and props stay equal (memo)', () => {
+    const { rerender } = renderWithProviders(<FileRow {...props} top={36} />);
+    const before = row();
+    const styleBefore = before.getAttribute('style');
+
+    rerender(<FileRow {...props} top={36} />);
+
+    expect(row()).toBe(before);
+    expect(row().getAttribute('style')).toBe(styleBefore);
+  });
+});
+
+describe('GroupRow', () => {
+  const grp = (name: string) => new DroppedGroup({ name } as Partial<DroppedGroup>);
+
+  it('shows the group name without any counter when no text is given', () => {
+    renderWithProviders(<GroupRow group={grp('photos')} top={36} rootLabel="Root" />);
+
+    expect(screen.getByText('photos')).toBeInTheDocument();
+    expect(screen.queryByText('Root')).not.toBeInTheDocument();
+    expect(screen.queryByText(/\//)).not.toBeInTheDocument();
+    expect(screen.getByText('photos').closest('.mantine-Group-root')).toHaveStyle({
+      transform: 'translateY(36px)',
+      height: '36px',
+    });
+  });
+
+  it('falls back to the root label for an empty name', () => {
+    renderWithProviders(<GroupRow group={grp('')} top={0} rootLabel="Root" />);
+
+    expect(screen.getByText('Root')).toBeInTheDocument();
+  });
+
+  it('shows both counters dimmed and normal weight within the limits', () => {
+    renderWithProviders(
+      <GroupRow group={grp('g')} top={0} rootLabel="Root" largeText="1/2 large" countText="3/5 files" />
+    );
+
+    for (const text of ['1/2 large', '3/5 files']) {
+      const el = screen.getByText(text);
+      expect(el.style.fontWeight).toBe('');
+      expect(el.style.color).toContain('dimmed');
+    }
+  });
+
+  it('highlights counters over the limit in red with weight 600', () => {
+    renderWithProviders(
+      <GroupRow
+        group={grp('g')}
+        top={0}
+        rootLabel="Root"
+        largeText="3/2 large"
+        countText="9/5 files"
+        largeOver
+        countOver
+      />
+    );
+
+    for (const text of ['3/2 large', '9/5 files']) {
+      const el = screen.getByText(text);
+      expect(el.style.fontWeight).toBe('600');
+      expect(el.style.color).toContain('red');
+    }
+  });
+
+  it('shows only the counter that has a text', () => {
+    renderWithProviders(<GroupRow group={grp('g')} top={0} rootLabel="Root" countText="3/5 files" />);
+
+    expect(screen.getByText('3/5 files')).toBeInTheDocument();
+    expect(screen.queryByText(/large/)).not.toBeInTheDocument();
+  });
+});
+
 describe('VirtualRowList', () => {
   const group = new DroppedGroup({ rootName: 'photos' } as Partial<DroppedGroup>);
   const rows: UploadRow[] = [
@@ -132,8 +232,8 @@ describe('VirtualRowList', () => {
   });
 
   it('renders every row through renderRow with its key and position', () => {
-    const renderRow = vi.fn((row: UploadRow, key: string | number | bigint, style: React.CSSProperties) => (
-      <div key={key} data-testid="row" style={style}>
+    const renderRow = vi.fn((row: UploadRow, key: string | number | bigint, top: number) => (
+      <div key={key} data-testid="row" data-top={top}>
         {row.kind}
       </div>
     ));
@@ -144,7 +244,8 @@ describe('VirtualRowList', () => {
     expect(renderRow.mock.calls[0][0]).toBe(rows[0]);
     expect(renderRow.mock.calls[0][1]).toBe('g:3');
     expect(renderRow.mock.calls[1][1]).toBe('f:/x/a.bin');
-    expect(renderRow.mock.calls[1][2]).toMatchObject({ height: 36, transform: 'translateY(36px)' });
+    expect(renderRow.mock.calls[0][2]).toBe(0);
+    expect(renderRow.mock.calls[1][2]).toBe(36);
     expect(screen.getAllByTestId('row').map(r => r.textContent)).toEqual(['group', 'file']);
   });
 

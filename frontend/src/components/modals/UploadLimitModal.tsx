@@ -1,13 +1,20 @@
 import { Accordion, Box, Divider, Group, Modal, Stack, Text, Title } from '@mantine/core';
 import { DroppedFile, DroppedGroup } from '@wails/S3Browser/models/bucket';
-import { Folder, TriangleAlert } from 'lucide-react';
-import { CSSProperties, memo, useCallback, useMemo, useState } from 'react';
+import { TriangleAlert } from 'lucide-react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import { formatFileSize, formatStringJson } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
 import { WARNING_BG_COLOR, WARNING_COLOR } from '@/components/modals/modalColors';
-import { FileRow, GroupStat, rowsHeight, UploadRow, VirtualRowList } from '@/components/modals/UploadFileList';
+import {
+  FileRow,
+  GroupRow,
+  GroupStat,
+  rowsHeight,
+  UploadRow,
+  VirtualRowList,
+} from '@/components/modals/UploadFileList';
 
 type UploadLimitModalProps = ModalProps & {
   groups: DroppedGroup[];
@@ -39,14 +46,14 @@ const FileList = memo(function FileList(props: FileListProps) {
   const { t } = useTranslation('uploadLimitModal');
 
   const renderRow = useCallback(
-    (row: UploadRow, key: string | number | bigint, style: CSSProperties) => {
+    (row: UploadRow, key: string | number | bigint, top: number) => {
       if (row.kind === 'file') {
         return (
           <FileRow
             key={key}
             file={row.file}
             checked={selected.has(row.file.path)}
-            style={style}
+            top={top}
             largeLabel={t('large')}
             titleBy="relKey"
             onToggleFile={onToggleFile}
@@ -55,20 +62,16 @@ const FileList = memo(function FileList(props: FileListProps) {
       }
 
       const stat = stats[row.index];
-      const over = largeOnly ? stat.selectedLarge > largeFileMaxCount : stat.selected > maxFilesPerFolder;
-      return (
-        <Group key={key} style={style} gap="xs" wrap="nowrap" px="xs" bg="var(--mantine-color-default-hover)">
-          <Folder size="16px" style={{ flexShrink: 0 }} />
-          <Text fw={600} truncate="end" style={{ flex: 1, minWidth: 0 }} title={row.group.name}>
-            {row.group.name || t('rootFolder')}
-          </Text>
-          <Text size="sm" c={over ? 'red' : 'dimmed'} fw={over ? 600 : undefined} style={{ flexShrink: 0 }}>
-            {largeOnly
-              ? formatStringJson(t('selectedLarge'), { selected: stat.selectedLarge, max: largeFileMaxCount })
-              : formatStringJson(t('selectedCount'), { selected: stat.selected, max: maxFilesPerFolder })}
-          </Text>
-        </Group>
-      );
+      const counter = largeOnly
+        ? {
+            largeText: formatStringJson(t('selectedLarge'), { selected: stat.selectedLarge, max: largeFileMaxCount }),
+            largeOver: stat.selectedLarge > largeFileMaxCount,
+          }
+        : {
+            countText: formatStringJson(t('selectedCount'), { selected: stat.selected, max: maxFilesPerFolder }),
+            countOver: stat.selected > maxFilesPerFolder,
+          };
+      return <GroupRow key={key} group={row.group} top={top} rootLabel={t('rootFolder')} {...counter} />;
     },
     [selected, stats, maxFilesPerFolder, largeFileMaxCount, largeOnly, onToggleFile, t]
   );
@@ -268,7 +271,7 @@ export default createMantineModal<UploadLimitModalProps, DroppedFile[]>(props =>
 
         <Divider />
 
-        <Group p="8px" justify="space-between">
+        <Group p="8px" justify="space-between" wrap="nowrap">
           <Button onClick={onClickCancel} color="red">
             {t('common:button.cancel')}
           </Button>

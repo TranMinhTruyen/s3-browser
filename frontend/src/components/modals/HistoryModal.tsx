@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { GetDownloadHistory, OpenDownloadDest } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { DownloadHistoryItem } from '@wails/S3Browser/models';
 import dayjs from 'dayjs';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
 import { callIPC } from '@/common/utils/ipcUtils';
@@ -14,6 +14,66 @@ import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 
 const PAGE_SIZE = 10;
 
+// Header (8px*2 padding + 28px close button) + 2 dividers (1px) + footer (8px*2 padding + 36px button) = 98px, rounded up.
+const MODAL_CHROME_HEIGHT = '104px';
+// Fixed body height on tall screens; shrinks on short ones so Modal.Content never exceeds its max-height.
+const BODY_HEIGHT = `min(650px, calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT}))`;
+
+type HistoryCardProps = {
+  item: DownloadHistoryItem;
+};
+
+/** One download history entry: name, size, time, status and a link to the destination. */
+const HistoryCard = memo(function HistoryCard(props: HistoryCardProps) {
+  const { item } = props;
+  const { t } = useTranslation('historyModal');
+
+  const onClickOpenDest = useCallback(async () => {
+    if (!item.fileName || !item.destPath) return;
+    await callIPC(OpenDownloadDest, [item.fileName, item.destPath]);
+  }, [item.fileName, item.destPath]);
+
+  return (
+    <Card padding="8px" orientation="horizontal" withBorder>
+      <Card.Section inheritPadding px="md" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' }}>
+        <Stack style={{ flex: 1, minWidth: 0 }}>
+          <Text size="xl" truncate="end" fw={500}>
+            {item.fileName}
+          </Text>
+          <Group gap="xl" wrap="nowrap">
+            <Box miw="100px">
+              <Text c="dimmed">{t('label.sizeLbl')}</Text>
+              <Text>{formatFileSize(item.size ?? 0)}</Text>
+            </Box>
+
+            <Box miw="100px">
+              <Text c="dimmed">{t('label.downloadAtLbl')}</Text>
+              <Text>{dayjs(item.updatedAt).format(FULL_DATE_TIME_FORMAT)}</Text>
+            </Box>
+
+            <Box miw="120px">
+              <Text c="dimmed">{t('label.statusLbl')}</Text>
+              <Text>{item.status}</Text>
+            </Box>
+
+            <Box style={{ flex: 1, minWidth: 0 }}>
+              <Text c="dimmed">{t('label.destPathLbl')}</Text>
+              {item.destPath ? (
+                <Anchor onClick={onClickOpenDest}>
+                  <Text truncate="end">{item.destPath}</Text>
+                </Anchor>
+              ) : (
+                <Text>{t('label.emptyLbl')}</Text>
+              )}
+            </Box>
+          </Group>
+        </Stack>
+      </Card.Section>
+    </Card>
+  );
+});
+
+/** Paged, virtualized list of past downloads; loads the next page near the end of the list. */
 export default createMantineModal<{}, false>(props => {
   const { mantine, ...restProps } = props;
 
@@ -64,10 +124,10 @@ export default createMantineModal<{}, false>(props => {
     setIsLoadingMore(false);
   }, [afterID, startRequest]);
 
-  const onClickOpenFile = useCallback(async (fileName?: string, path?: string) => {
-    if (!fileName || !path) return;
-    await callIPC(OpenDownloadDest, [fileName, path]);
-  }, []);
+  const onClickCancel = useCallback(() => {
+    mantine.handler.resolve(false);
+    mantine.handler.hide();
+  }, [mantine.handler]);
 
   useEffect(() => {
     loadFirstPage();
@@ -122,11 +182,7 @@ export default createMantineModal<{}, false>(props => {
 
         <Divider />
 
-        <Modal.Body
-          ref={scrollRef}
-          p="8px"
-          style={{ position: 'relative', minHeight: '650px', maxHeight: '650px', overflow: 'auto' }}
-        >
+        <Modal.Body ref={scrollRef} p="8px" style={{ position: 'relative', overflow: 'auto', height: BODY_HEIGHT }}>
           <div ref={listRef} style={{ position: 'relative', height: virtualizer.getTotalSize() }}>
             {virtualItems.map(row => {
               const item = historyList[row.index];
@@ -141,51 +197,7 @@ export default createMantineModal<{}, false>(props => {
                     transform: `translateY(${row.start - scrollMargin}px)`,
                   }}
                 >
-                  <Card padding="8px" orientation="horizontal" withBorder>
-                    <Card.Section
-                      inheritPadding
-                      px="md"
-                      style={{
-                        flex: 1,
-                        minWidth: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Stack style={{ flex: 1, minWidth: 0 }}>
-                        <Text size="xl" truncate="end" fw={500}>
-                          {item.fileName}
-                        </Text>
-                        <Group gap="xl" wrap="nowrap">
-                          <Box miw="100px">
-                            <Text c="dimmed">{t('label.sizeLbl')}</Text>
-                            <Text>{formatFileSize(item.size ?? 0)}</Text>
-                          </Box>
-
-                          <Box miw="100px">
-                            <Text c="dimmed">{t('label.downloadAtLbl')}</Text>
-                            <Text>{dayjs(item.updatedAt).format(FULL_DATE_TIME_FORMAT)}</Text>
-                          </Box>
-
-                          <Box miw="120px">
-                            <Text c="dimmed">{t('label.statusLbl')}</Text>
-                            <Text>{item.status}</Text>
-                          </Box>
-
-                          <Box style={{ flex: 1, minWidth: 0 }}>
-                            <Text c="dimmed">{t('label.destPathLbl')}</Text>
-                            {item.destPath ? (
-                              <Anchor onClick={() => onClickOpenFile(item.fileName, item.destPath)}>
-                                <Text truncate="end">{item.destPath}</Text>
-                              </Anchor>
-                            ) : (
-                              <Text>{t('label.emptyLbl')}</Text>
-                            )}
-                          </Box>
-                        </Group>
-                      </Stack>
-                    </Card.Section>
-                  </Card>
+                  <HistoryCard item={item} />
                 </div>
               );
             })}
@@ -199,14 +211,8 @@ export default createMantineModal<{}, false>(props => {
 
         <Divider />
 
-        <Group p="8px" justify="flex-start">
-          <Button
-            onClick={() => {
-              mantine.handler.resolve(false);
-              mantine.handler.hide();
-            }}
-            color="red"
-          >
+        <Group p="8px" justify="space-between" wrap="nowrap">
+          <Button onClick={onClickCancel} color="red">
             {t('common:button.cancel')}
           </Button>
         </Group>
