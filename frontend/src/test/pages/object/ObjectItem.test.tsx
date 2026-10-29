@@ -91,6 +91,26 @@ describe('ObjectItem', () => {
     expect(onOpenFolder).not.toHaveBeenCalled();
   });
 
+  it('offers only Delete in the folder menu', async () => {
+    const { user } = setup(folderItem);
+    await user.click(screen.getByRole('button'));
+    expect(await screen.findByText('Delete')).toBeInTheDocument();
+    expect(screen.queryByText('Download')).not.toBeInTheDocument();
+  });
+
+  it('does not open the detail when the checkbox area is clicked', async () => {
+    const { user, onOpenDetail } = setup(fileItem);
+    const section = screen.getByRole('checkbox').closest<HTMLElement>('.mantine-Card-section')!;
+    await user.click(section);
+    expect(onOpenDetail).not.toHaveBeenCalled();
+  });
+
+  it('does not open a folder when the menu area is clicked', async () => {
+    const { user, onOpenFolder } = setup(folderItem);
+    await user.click(screen.getByRole('button'));
+    expect(onOpenFolder).not.toHaveBeenCalled();
+  });
+
   it('shows a loading menu button while deleting', () => {
     useTabListStore.getState().setDeleting(TAB_ID, [fileItem.key], true);
     setup(fileItem);

@@ -793,6 +793,114 @@ describe('ObjectListView', () => {
     });
   });
 
+  describe('empty state', () => {
+    const searchMock = vi.mocked(SearchObject);
+    const EMPTY_FOLDER = 'This folder is empty';
+    const NO_MATCH = 'No matching objects';
+    const pending = () => new Promise(() => {}) as never;
+
+    it('shows the empty folder message once an empty folder has loaded without a cursor', async () => {
+      listMock.mockResolvedValue(page([]));
+      renderList();
+      expect(await screen.findByText(EMPTY_FOLDER)).toBeInTheDocument();
+      expect(screen.queryByText(NO_MATCH)).not.toBeInTheDocument();
+    });
+
+    it('shows the search message instead when a keyword is applied', async () => {
+      searchMock.mockResolvedValue(page([]));
+      renderList({ keyword: 'kw' });
+      expect(await screen.findByText(NO_MATCH)).toBeInTheDocument();
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+    });
+
+    it('does not show it while loading', async () => {
+      listMock.mockImplementation(pending);
+      renderList();
+      await waitFor(() => expect(listMock).toHaveBeenCalled());
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+    });
+
+    it('does not show it when the first page failed', async () => {
+      listMock.mockRejectedValue(new Error('boom'));
+      renderList();
+      await waitFor(() => expect(listMock).toHaveBeenCalled());
+      await act(async () => {});
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+    });
+
+    it('does not show it while a cursor is left', async () => {
+      listMock.mockResolvedValueOnce(page([], 'c1')).mockImplementation(pending);
+      renderList();
+      await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+    });
+
+    it('does not show it for the previous list right after the prefix changes', async () => {
+      listMock.mockResolvedValueOnce(page([])).mockImplementation(pending);
+      renderList();
+      expect(await screen.findByText(EMPTY_FOLDER)).toBeInTheDocument();
+      act(() => useTabListStore.getState().changePrefix(TAB_ID, 'other/'));
+      await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+    });
+
+    it('does not show it for the previous list right after the keyword changes', async () => {
+      listMock.mockResolvedValue(page([]));
+      searchMock.mockImplementation(pending);
+      const { setKeyword } = renderList();
+      expect(await screen.findByText(EMPTY_FOLDER)).toBeInTheDocument();
+      setKeyword('kw');
+      await waitFor(() => expect(searchMock).toHaveBeenCalled());
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+      expect(screen.queryByText(NO_MATCH)).not.toBeInTheDocument();
+    });
+
+    it('does not show it without a profile', () => {
+      renderList({ withProfile: false });
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+    });
+
+    it('does not show it without a bucket', () => {
+      renderList({ bucket: null });
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+    });
+
+    it('shows it after a refresh finds the folder empty, but not while the refresh is pending', async () => {
+      let finish: (v: unknown) => void = () => {};
+      listMock.mockResolvedValueOnce(page([fileA]));
+      const { ref } = renderList();
+      await screen.findByText('a.txt');
+      listMock.mockImplementationOnce(() => new Promise(r => (finish = r)) as never);
+      act(() => {
+        ref.current?.onRefresh?.();
+      });
+      await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+      await act(async () => finish(page([])));
+      expect(await screen.findByText(EMPTY_FOLDER)).toBeInTheDocument();
+      expect(screen.queryByText('a.txt')).not.toBeInTheDocument();
+    });
+
+    it('shows it after the last object is deleted', async () => {
+      confirmMock.mockResolvedValue(true as never);
+      listMock.mockResolvedValueOnce(page([fileA])).mockResolvedValue(page([]));
+      const { user } = renderList();
+      await screen.findByText('a.txt');
+      await user.click(within(cardOf('a.txt')).getByRole('button'));
+      await user.click(await screen.findByText('Delete'));
+      expect(await screen.findByText(EMPTY_FOLDER)).toBeInTheDocument();
+    });
+
+    it('hides it when the connection is lost', async () => {
+      listMock.mockResolvedValue(page([]));
+      const { disconnect } = renderList();
+      expect(await screen.findByText(EMPTY_FOLDER)).toBeInTheDocument();
+      disconnect();
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+    });
+  });
+
   describe('file drop limits', () => {
     const getHandler = () => vi.mocked(Events.On).mock.calls.at(-1)![1] as unknown as (e: { data: unknown }) => void;
     const file = { path: 'C:/x.txt', relKey: 'x.txt' };
