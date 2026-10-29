@@ -17,11 +17,23 @@
       "Bash(node_modules/.bin/tsc.exe *)",
       "Bash(node_modules/.bin/biome.exe *)",
       "Bash(node_modules/.bin/vitest.exe *)",
-      "Bash(go tool wails3 *)"
+      "Bash(go tool wails3 *)",
+      "Bash(git branch --show-current)",
+      "Bash(git branch --list *)",
+      "Bash(git rev-parse *)",
+      "Bash(git ls-remote *)",
+      "Bash(git show *)",
+      "Bash(git fetch origin master)",
+      "Bash(git switch -c SP-*)",
+      "Bash(git add -A -- *)",
+      "Bash(git commit -F - *)",
+      "Bash(git push -u origin SP-*)",
+      "Bash(gh auth status*)",
+      "Bash(gh pr list *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr create --base master *)"
     ],
     "deny": [
-      "Bash(git commit *)",
-      "Bash(git push *)",
       "Bash(git reset *)",
       "Bash(git checkout *)",
       "Bash(git restore *)",
@@ -40,7 +52,23 @@
       "Edit(**/.env)",
       "Edit(**/.env.*)",
       "Read(**/.env)",
-      "Read(**/.env.*)"
+      "Read(**/.env.*)",
+      "Bash(git commit --amend*)",
+      "Bash(git commit * --amend*)",
+      "Bash(git commit * --no-verify*)",
+      "Bash(git commit -n*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f*)",
+      "Bash(git push * master*)",
+      "Bash(git push * HEAD:master*)",
+      "Bash(git push --delete*)",
+      "Bash(git push * --delete*)",
+      "Bash(git push * :*)",
+      "Bash(git branch -d*)",
+      "Bash(git branch -D*)",
+      "Bash(gh pr merge*)"
     ]
   }
 }
