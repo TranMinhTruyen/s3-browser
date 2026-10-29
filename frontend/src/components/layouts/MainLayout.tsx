@@ -27,7 +27,6 @@ function MainLayout() {
     <AppShell header={{ height: '48px' }} styles={{ main: { height: '100vh' } }}>
       <AppShell.Header>
         <Group h="100%" px="sm" style={{ backgroundColor: INFO_BG_COLOR }}>
-          <Group gap="xs"></Group>
           <Group ml="auto">
             <Tooltip label={tSetting('title')}>
               <ActionIcon aria-label={tSetting('title')} color="gray" onClick={onClickSetting}>

@@ -61,4 +61,13 @@ describe('MainLayout', () => {
     const history = buttons.indexOf(screen.getByRole('button', { name: 'Download history' }));
     expect(setting).toBeLessThan(history);
   });
+
+  it('has no empty group in the header', () => {
+    renderLayout();
+
+    const header = screen.getByRole('banner');
+    const groups = Array.from(header.querySelectorAll('.mantine-Group-root'));
+    expect(groups.length).toBeGreaterThan(0);
+    for (const group of groups) expect(group).not.toBeEmptyDOMElement();
+  });
 });
