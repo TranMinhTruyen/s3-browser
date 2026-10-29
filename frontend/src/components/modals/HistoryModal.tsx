@@ -14,6 +14,11 @@ import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 
 const PAGE_SIZE = 10;
 
+// Header (8px*2 padding + 28px close button) + 2 dividers (1px) + footer (8px*2 padding + 36px button) = 98px, rounded up.
+const MODAL_CHROME_HEIGHT = '104px';
+// Fixed body height on tall screens; shrinks on short ones so Modal.Content never exceeds its max-height.
+const BODY_HEIGHT = `min(650px, calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT}))`;
+
 type HistoryCardProps = {
   item: DownloadHistoryItem;
 };
@@ -162,19 +167,12 @@ export default createMantineModal<{}, false>(props => {
   return (
     <Modal.Root {...mantine.props} centered {...restProps} size="80%">
       <Modal.Overlay />
-      <Modal.Content
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          height: 'min(745px, calc(100dvh - 2 * var(--modal-y-offset)))',
-          overflow: 'hidden',
-        }}
-      >
+      <Modal.Content>
         <Modal.Header
           pos="relative"
           p="8px"
           mih="0px"
-          style={{ justifyContent: 'flex-end', backgroundColor: INFO_BG_COLOR, flexShrink: 0 }}
+          style={{ justifyContent: 'flex-end', backgroundColor: INFO_BG_COLOR }}
         >
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
             <Title order={4}>{t('title')}</Title>
@@ -184,7 +182,7 @@ export default createMantineModal<{}, false>(props => {
 
         <Divider />
 
-        <Modal.Body ref={scrollRef} p="8px" style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'auto' }}>
+        <Modal.Body ref={scrollRef} p="8px" style={{ position: 'relative', overflow: 'auto', height: BODY_HEIGHT }}>
           <div ref={listRef} style={{ position: 'relative', height: virtualizer.getTotalSize() }}>
             {virtualItems.map(row => {
               const item = historyList[row.index];
@@ -213,7 +211,7 @@ export default createMantineModal<{}, false>(props => {
 
         <Divider />
 
-        <Group p="8px" justify="space-between" wrap="nowrap" style={{ flexShrink: 0 }}>
+        <Group p="8px" justify="space-between" wrap="nowrap">
           <Button onClick={onClickCancel} color="red">
             {t('common:button.cancel')}
           </Button>
