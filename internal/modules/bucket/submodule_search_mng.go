@@ -37,6 +37,7 @@ type submoduleSearchMng struct {
 	appContext func() context.Context
 }
 
+// newSubmoduleSearchMng builds the search submodule on the shared connection store.
 func newSubmoduleSearchMng(
 	app *application.App,
 	logger *slog.Logger,
