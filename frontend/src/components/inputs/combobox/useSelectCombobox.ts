@@ -6,18 +6,26 @@ type UseSelectComboboxOptions = {
   value?: string | null;
   defaultValue?: string | null;
   onChange?: (value: string | null) => void;
+  // Focus the search box when the dropdown opens.
+  focusSearch?: boolean;
+  // Runs on every close path (Escape, trigger click, outside click, option submit).
+  onClose?: () => void;
 };
 
 /**
  * Shared state of the single-select comboboxes: a controlled/uncontrolled value plus the Mantine
  * combobox store, wired so the active option is highlighted when the dropdown opens.
  */
-export function useSelectCombobox({ value, defaultValue, onChange }: UseSelectComboboxOptions) {
+export function useSelectCombobox({ value, defaultValue, onChange, focusSearch, onClose }: UseSelectComboboxOptions) {
   const [current, handleChange] = useUncontrolled<string | null>({ value, defaultValue, finalValue: null, onChange });
 
   const combobox = useCombobox({
-    onDropdownClose: () => combobox.resetSelectedOption(),
+    onDropdownClose: () => {
+      combobox.resetSelectedOption();
+      onClose?.();
+    },
     onDropdownOpen: eventSource => {
+      if (focusSearch) combobox.focusSearchInput();
       if (eventSource === 'keyboard') {
         combobox.selectActiveOption();
       } else {

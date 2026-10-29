@@ -4,14 +4,19 @@
   },
   "tooltip": {
     "closeTab": "Đóng tab",
+    "dragTab": "Kéo để đổi vị trí",
     "connect": "Kết nối",
     "refresh": "Làm mới {target}",
     "addTab": "Thêm tab",
+    "scrollLeft": "Cuộn sang trái",
+    "scrollRight": "Cuộn sang phải",
     "search": "Tìm kiếm",
     "clearSearch": "Xoá tìm kiếm",
     "upload": "Tải file lên"
   },
   "search": {
+    "placeholderProfile": "Tìm profile",
+    "emptyProfile": "Không tìm thấy profile",
     "placeholderObject": "Tìm theo key",
     "placeholderBucket": "Tìm theo tên"
   }

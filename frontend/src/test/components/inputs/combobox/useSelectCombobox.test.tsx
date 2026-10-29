@@ -75,4 +75,31 @@ describe('useSelectCombobox', () => {
     act(() => result.current.combobox.openDropdown('mouse'));
     expect(result.current.combobox.dropdownOpened).toBe(true);
   });
+
+  it.each([
+    ['keyboard', true],
+    ['mouse', true],
+    ['keyboard', false],
+  ] as const)('opening by %s with focusSearch=%s', (source, focusSearch) => {
+    const { result } = renderHook(() => useSelectCombobox({ focusSearch }), { wrapper });
+    const spy = vi.spyOn(result.current.combobox, 'focusSearchInput');
+    act(() => result.current.combobox.openDropdown(source));
+    expect(spy).toHaveBeenCalledTimes(focusSearch ? 1 : 0);
+  });
+
+  it('calls onClose when the dropdown closes, not when it opens', () => {
+    const onClose = vi.fn();
+    const { result } = renderHook(() => useSelectCombobox({ onClose }), { wrapper });
+    act(() => result.current.combobox.openDropdown());
+    expect(onClose).not.toHaveBeenCalled();
+    act(() => result.current.combobox.closeDropdown());
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes without error when onClose is not given', () => {
+    const { result } = renderHook(() => useSelectCombobox({}), { wrapper });
+    act(() => result.current.combobox.openDropdown());
+    act(() => result.current.combobox.closeDropdown());
+    expect(result.current.combobox.dropdownOpened).toBe(false);
+  });
 });

@@ -88,6 +88,8 @@ function TabActionBar(props: TabActionBarProps) {
           value={selectedProfileId}
           onChange={onChangeSelectProfile}
           data={profileOptions}
+          searchPlaceholder={t('search.placeholderProfile')}
+          emptyText={t('search.emptyProfile')}
           style={{ width: '200px' }}
         />
 
