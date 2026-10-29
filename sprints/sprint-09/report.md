@@ -1,5 +1,5 @@
 ## Kết quả sprint-09
-- Trạng thái: Hoàn thành
+- Trạng thái: **HOÀN TẤT (2026-10-29).** PR #9 (R2) và #10 (R1 + R3) đã merge vào `master`. Chi tiết R3 và phần bổ sung R1 xem `plan.md` mục 2–3.
 - Tổng thay đổi (không tính tài liệu sprint): +1224 / -44 dòng
   - SP-09/tab_drag_drop: +556 / -34 (16 file)
   - SP-09/tab_persistence: +668 / -10 (20 file)

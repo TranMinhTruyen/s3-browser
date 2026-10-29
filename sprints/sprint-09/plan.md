@@ -1,5 +1,7 @@
 # Plan sprint-09
 
+Trạng thái: **HOÀN TẤT** (2026-10-29). PR #9 (R2) và #10 (R1 + R3) đã merge vào `master`.
+
 > Phân tích ban đầu của R1, R2 nằm ở `sprints/sprint-08/plan.md` mục 8. File này ghi lại phạm vi thực tế đã làm, kể cả phần bổ sung trong sprint.
 
 ## 1. Branch và PR
