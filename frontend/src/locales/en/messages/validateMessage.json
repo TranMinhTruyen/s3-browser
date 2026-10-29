@@ -1,5 +1,4 @@
 {
   "V000001": "{0} is required",
-  "V000002": "{0} max length is {1}",
-  "V000003": "{0} format invalid"
+  "V000002": "{0} max length is {1}"
 }
