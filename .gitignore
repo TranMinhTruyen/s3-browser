@@ -39,3 +39,6 @@ frontend/bindings
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# --- Test coverage ---
+frontend/coverage/

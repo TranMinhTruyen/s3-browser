@@ -95,6 +95,13 @@ describe('tabListStore', () => {
       expect(Object.keys(state().tabList)).toHaveLength(2);
     });
 
+    it.each(['toString', 'constructor', '__proto__'])('ignores the inherited key %s', key => {
+      state().addTab();
+      const before = state().tabList;
+      state().closeTab(key);
+      expect(state().tabList).toBe(before);
+    });
+
     it('keeps the active tab when closing another one', () => {
       const first = activeId();
       state().addTab();
@@ -139,6 +146,18 @@ describe('tabListStore', () => {
     expect(state().tabList.ghost).toBeUndefined();
   });
 
+  it('changeCurrentView to bucketList clears bucket, folder, selection and detail', () => {
+    const id = activeId();
+    state().changeCurrentView(id, 'objectList', 'bkt');
+    state().changePrefix(id, 'a/');
+    state().addSelectItem(id, ['x']);
+    state().openDetail(id, item);
+    state().changeCurrentView(id, 'bucketList');
+    expect(state().tabList[id]).toMatchObject({ currentView: 'bucketList', prefix: '', selectionItem: [] });
+    expect(state().tabList[id].bucket).toBeUndefined();
+    expect(state().tabList[id].detailItem).toBeUndefined();
+  });
+
   it('changePrefix clears selection and detail', () => {
     const id = activeId();
     state().addSelectItem(id, ['x']);
@@ -165,6 +184,38 @@ describe('tabListStore', () => {
     state().clearProfile('p1');
     expect(state().tabList[mine]).toMatchObject({ profileId: null, currentView: 'bucketList' });
     expect(state().tabList[other].profileId).toBe('p2');
+  });
+
+  it('resetViewByProfile and clearProfile clear bucket, folder, selection and detail', () => {
+    const mine = activeId();
+    const dirty = { currentView: 'objectList' as const, bucket: 'b', prefix: 'x/', selectionItem: ['k'] };
+    state().updateTab(mine, { profileId: 'p1', ...dirty, detailItem: item });
+    state().addTab();
+    const other = activeId();
+    state().updateTab(other, { profileId: 'p2', ...dirty, detailItem: item });
+
+    state().resetViewByProfile('p1');
+    expect(state().tabList[mine]).toMatchObject({
+      profileId: 'p1',
+      currentView: 'bucketList',
+      prefix: '',
+      selectionItem: [],
+    });
+    expect(state().tabList[mine].bucket).toBeUndefined();
+    expect(state().tabList[mine].detailItem).toBeUndefined();
+    expect(state().tabList[other]).toMatchObject({ ...dirty, detailItem: item });
+
+    state().updateTab(mine, { ...dirty, detailItem: item });
+    state().clearProfile('p1');
+    expect(state().tabList[mine]).toMatchObject({
+      profileId: null,
+      currentView: 'bucketList',
+      prefix: '',
+      selectionItem: [],
+    });
+    expect(state().tabList[mine].bucket).toBeUndefined();
+    expect(state().tabList[mine].detailItem).toBeUndefined();
+    expect(state().tabList[other]).toMatchObject({ profileId: 'p2', ...dirty });
   });
 
   it('selection actions', () => {
@@ -244,6 +295,11 @@ describe('tabListStore', () => {
 
     it('falls back to the first tab when the active tab is unknown', () => {
       state().restoreTabs({ tabs: [{ id: 'a' }, { id: 'b' }], activeTab: 'zzz' } as never);
+      expect(activeId()).toBe('a');
+    });
+
+    it.each(['toString', 'constructor'])('falls back to the first tab for inherited active tab %s', key => {
+      state().restoreTabs({ tabs: [{ id: 'a' }, { id: 'b' }], activeTab: key } as never);
       expect(activeId()).toBe('a');
     });
 
