@@ -1,7 +1,7 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MainLayout from '@/components/layouts/MainLayout';
 import { showHistoryModal, showSettingModal } from '@/components/modals/lazyModals';
 import { renderWithProviders } from '@/test/renderWithProviders';
@@ -13,6 +13,21 @@ vi.mock('@/components/modals/lazyModals', () => ({
   showConnectModal: vi.fn(),
   showHistoryModal: vi.fn(),
   showSettingModal: vi.fn(),
+}));
+
+const rt = vi.hoisted(() => ({ toggleMaximise: vi.fn() }));
+
+vi.mock('@wailsio/runtime', () => ({
+  Window: {
+    IsMaximised: () => Promise.resolve(false),
+    Minimise: vi.fn(),
+    ToggleMaximise: rt.toggleMaximise,
+    Close: vi.fn(),
+  },
+  Events: {
+    On: () => () => {},
+    Types: { Common: { WindowMaximise: 'max', WindowUnMaximise: 'unmax', WindowRestore: 'restore' } },
+  },
 }));
 
 const renderLayout = () =>
@@ -27,6 +42,10 @@ const renderLayout = () =>
   );
 
 describe('MainLayout', () => {
+  beforeEach(() => {
+    rt.toggleMaximise.mockClear();
+  });
+
   it('renders the navbar, the routed page and the transfer windows', () => {
     renderLayout();
 
@@ -69,5 +88,30 @@ describe('MainLayout', () => {
     const groups = Array.from(header.querySelectorAll('.mantine-Group-root'));
     expect(groups.length).toBeGreaterThan(0);
     for (const group of groups) expect(group).not.toBeEmptyDOMElement();
+  });
+
+  it('shows the app name and the window controls in the header', async () => {
+    renderLayout();
+
+    expect(screen.getByText('S3Browser')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Maximise' })).toBeInTheDocument();
+  });
+
+  it('toggles maximise when the empty header area is double-clicked', async () => {
+    renderLayout();
+    await screen.findByRole('button', { name: 'Maximise' });
+
+    fireEvent.doubleClick(screen.getByText('S3Browser'));
+
+    expect(rt.toggleMaximise).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not toggle maximise when a header button is double-clicked', async () => {
+    renderLayout();
+    const button = await screen.findByRole('button', { name: 'Settings' });
+
+    fireEvent.doubleClick(button);
+
+    expect(rt.toggleMaximise).not.toHaveBeenCalled();
   });
 });
