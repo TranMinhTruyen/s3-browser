@@ -1,5 +1,5 @@
 import { Divider, Group, Modal, Paper, Stack, Title } from '@mantine/core';
-import { type ChangeEvent, useCallback, useMemo } from 'react';
+import { type ChangeEvent, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
@@ -25,6 +25,8 @@ export default createMantineModal<{}, boolean>(props => {
   const { mantine, ...restProps } = props;
 
   const { t } = useTranslation('settingModal');
+  // While saving, every button and every way of closing the modal is locked.
+  const [saving, setSaving] = useState(false);
 
   const draft = useSettingStore(useShallow(s => s.draft));
   const autostartSupported = useSettingStore(s => s.autostartSupported);
@@ -72,9 +74,10 @@ export default createMantineModal<{}, boolean>(props => {
 
   // Closing without saving undoes the preview (back to the last applied values).
   const onCloseModal = useCallback(() => {
+    if (saving) return;
     revert();
     mantine.props.onClose();
-  }, [revert, mantine.props]);
+  }, [saving, revert, mantine.props]);
 
   const onClickCancel = useCallback(() => {
     revert();
@@ -91,14 +94,27 @@ export default createMantineModal<{}, boolean>(props => {
   }, [apply, t]);
 
   const onClickSave = useCallback(async () => {
-    if (!(await save())) return;
+    setSaving(true);
+    const ok = await save();
+    if (!ok) {
+      setSaving(false);
+      return;
+    }
     toast.success(t('message.saved'));
     mantine.handler.resolve(true);
     mantine.handler.hide();
   }, [save, t, mantine.handler]);
 
   return (
-    <Modal.Root {...mantine.props} onClose={onCloseModal} centered {...restProps} size="560px">
+    <Modal.Root
+      {...mantine.props}
+      onClose={onCloseModal}
+      centered
+      {...restProps}
+      closeOnEscape={!saving}
+      closeOnClickOutside={!saving}
+      size="560px"
+    >
       <Modal.Overlay />
       <Modal.Content>
         <Modal.Header
@@ -110,7 +126,7 @@ export default createMantineModal<{}, boolean>(props => {
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
             <Title order={4}>{t('title')}</Title>
           </Group>
-          <Modal.CloseButton size="md" aria-label={t('common:button.close')} />
+          <Modal.CloseButton size="md" disabled={saving} aria-label={t('common:button.close')} />
         </Modal.Header>
 
         <Divider />
@@ -158,17 +174,19 @@ export default createMantineModal<{}, boolean>(props => {
 
         {/* Cancel on the left, actions on the right; nowrap keeps the layout stable when text width changes. */}
         <Group p="8px" justify="space-between" wrap="nowrap">
-          <Button color="red" onClick={onClickCancel}>
+          <Button color="red" onClick={onClickCancel} disabled={saving}>
             {t('button.cancel')}
           </Button>
           <Group gap="xs" wrap="nowrap">
-            <Button color="gray" onClick={onClickReset}>
+            <Button color="gray" onClick={onClickReset} disabled={saving}>
               {t('button.reset')}
             </Button>
-            <Button color="teal" onClick={onClickApply}>
+            <Button color="teal" onClick={onClickApply} disabled={saving}>
               {t('button.apply')}
             </Button>
-            <Button onClick={onClickSave}>{t('button.save')}</Button>
+            <Button onClick={onClickSave} loading={saving}>
+              {t('button.save')}
+            </Button>
           </Group>
         </Group>
       </Modal.Content>
