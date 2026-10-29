@@ -174,4 +174,70 @@ describe('tabListStore', () => {
     expect(state().uploadingTabId).toBe('t1');
     expect(invalidateLoads).toHaveBeenCalledWith('tabList');
   });
+
+  it('serializeTabs lists tabs in order with a null profile by default', () => {
+    const first = activeId();
+    state().updateTab(first, { profileId: 'p1' });
+    state().addTab();
+    const second = activeId();
+    expect(state().serializeTabs()).toEqual({
+      tabs: [
+        { id: first, profileId: 'p1' },
+        { id: second, profileId: null },
+      ],
+      activeTab: second,
+    });
+  });
+
+  describe('restoreTabs', () => {
+    it('rebuilds tabs with their profile and active tab', () => {
+      state().restoreTabs({
+        tabs: [
+          { id: 'a', profileId: 'p1' },
+          { id: 'b', profileId: null },
+        ],
+        activeTab: 'b',
+      });
+      expect(Object.keys(state().tabList)).toEqual(['a', 'b']);
+      expect(state().tabList.a).toMatchObject({ profileId: 'p1', currentView: 'bucketList', prefix: '' });
+      expect(state().tabList.b.profileId).toBeNull();
+      expect(activeId()).toBe('b');
+    });
+
+    it('falls back to the first tab when the active tab is unknown', () => {
+      state().restoreTabs({ tabs: [{ id: 'a' }, { id: 'b' }], activeTab: 'zzz' } as never);
+      expect(activeId()).toBe('a');
+    });
+
+    it.each([
+      ['empty list', { tabs: [], activeTab: 'a' }],
+      ['missing list', { activeTab: 'a' }],
+      ['only empty ids', { tabs: [{ id: '', profileId: null }], activeTab: '' }],
+      [
+        'duplicate ids',
+        {
+          tabs: [
+            { id: 'a', profileId: null },
+            { id: 'a', profileId: 'p1' },
+          ],
+          activeTab: 'a',
+        },
+      ],
+    ])('keeps the current tabs for %s', (_name, saved) => {
+      const before = state().serializeTabs();
+      state().restoreTabs(saved as never);
+      expect(state().serializeTabs()).toEqual(before);
+    });
+
+    it('drops empty ids but keeps the valid ones', () => {
+      state().restoreTabs({
+        tabs: [
+          { id: '', profileId: null },
+          { id: 'a', profileId: null },
+        ],
+        activeTab: 'a',
+      });
+      expect(Object.keys(state().tabList)).toEqual(['a']);
+    });
+  });
 });

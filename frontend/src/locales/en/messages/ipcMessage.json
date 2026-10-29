@@ -63,6 +63,9 @@
     "STE001": "Error while loading settings.",
     "STE002": "Error while saving settings.",
     "STE003": "Cannot change launch on Windows startup, other settings were saved.",
-    "STE004": "Invalid setting value."
+    "STE004": "Invalid setting value.",
+    "STE005": "Error while loading tabs.",
+    "STE006": "Error while saving tabs.",
+    "STE007": "Invalid tab data."
   }
 }

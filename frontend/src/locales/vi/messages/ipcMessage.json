@@ -63,6 +63,9 @@
     "STE001": "Lỗi khi tải cài đặt",
     "STE002": "Lỗi khi lưu cài đặt",
     "STE003": "Không thể thay đổi khởi động cùng Windows, các cài đặt khác đã được lưu",
-    "STE004": "Giá trị cài đặt không hợp lệ"
+    "STE004": "Giá trị cài đặt không hợp lệ",
+    "STE005": "Lỗi khi tải các tab",
+    "STE006": "Lỗi khi lưu các tab",
+    "STE007": "Dữ liệu tab không hợp lệ"
   }
 }
