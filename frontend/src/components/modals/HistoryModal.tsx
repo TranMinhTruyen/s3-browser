@@ -162,12 +162,19 @@ export default createMantineModal<{}, false>(props => {
   return (
     <Modal.Root {...mantine.props} centered {...restProps} size="80%">
       <Modal.Overlay />
-      <Modal.Content>
+      <Modal.Content
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: 'min(745px, calc(100dvh - 2 * var(--modal-y-offset)))',
+          overflow: 'hidden',
+        }}
+      >
         <Modal.Header
           pos="relative"
           p="8px"
           mih="0px"
-          style={{ justifyContent: 'flex-end', backgroundColor: INFO_BG_COLOR }}
+          style={{ justifyContent: 'flex-end', backgroundColor: INFO_BG_COLOR, flexShrink: 0 }}
         >
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
             <Title order={4}>{t('title')}</Title>
@@ -177,11 +184,7 @@ export default createMantineModal<{}, false>(props => {
 
         <Divider />
 
-        <Modal.Body
-          ref={scrollRef}
-          p="8px"
-          style={{ position: 'relative', minHeight: '650px', maxHeight: '650px', overflow: 'auto' }}
-        >
+        <Modal.Body ref={scrollRef} p="8px" style={{ position: 'relative', flex: 1, minHeight: 0, overflow: 'auto' }}>
           <div ref={listRef} style={{ position: 'relative', height: virtualizer.getTotalSize() }}>
             {virtualItems.map(row => {
               const item = historyList[row.index];
@@ -210,7 +213,7 @@ export default createMantineModal<{}, false>(props => {
 
         <Divider />
 
-        <Group p="8px" justify="space-between" wrap="nowrap">
+        <Group p="8px" justify="space-between" wrap="nowrap" style={{ flexShrink: 0 }}>
           <Button onClick={onClickCancel} color="red">
             {t('common:button.cancel')}
           </Button>
