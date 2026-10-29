@@ -9,6 +9,7 @@ import NiceModal from '@ebay/nice-modal-react';
 import { useSettingStore } from '@/common/stores/settingStore';
 import { installDropTargetCleanup } from '@/common/utils/dropTargetUtils';
 import { settingColorSchemeManager } from '@/common/utils/settingUtils';
+import MotionProvider from '@/components/providers/MotionProvider';
 
 installDropTargetCleanup();
 
@@ -19,7 +20,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MantineProvider colorSchemeManager={settingColorSchemeManager}>
       <NiceModal.Provider>
-        <App />
+        <MotionProvider>
+          <App />
+        </MotionProvider>
       </NiceModal.Provider>
     </MantineProvider>
   </StrictMode>

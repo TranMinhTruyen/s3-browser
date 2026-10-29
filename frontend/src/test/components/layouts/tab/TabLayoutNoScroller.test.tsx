@@ -6,6 +6,7 @@ import { renderWithProviders } from '@/test/renderWithProviders';
 
 vi.mock('@/components/layouts/tab/components/TabDetail', () => ({ default: () => <div>tab detail</div> }));
 vi.mock('@/components/layouts/tab/components/TabLabel', () => ({ default: () => <span>tab label</span> }));
+vi.mock('motion/react', async () => (await import('@/test/_helpers/mockMotion')).motionMock);
 // A scroller without the `.mantine-Scroller-container` element: the scroll sync must be skipped.
 vi.mock('@mantine/core', async importOriginal => ({
   ...(await importOriginal<typeof import('@mantine/core')>()),
