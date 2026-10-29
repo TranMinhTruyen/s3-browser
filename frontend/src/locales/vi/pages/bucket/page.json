@@ -1,4 +1,5 @@
 {
+  "empty": "Chưa có bucket",
   "tooltip": {
     "bucketList": "danh sách bucket"
   },

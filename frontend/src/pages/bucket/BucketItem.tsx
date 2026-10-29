@@ -1,4 +1,4 @@
-import { Box, Card, Stack, Text } from '@mantine/core';
+import { Card, Stack, Text } from '@mantine/core';
 import { Bucket } from '@wails/S3Browser/models/bucket';
 import dayjs from 'dayjs';
 import { Folder } from 'lucide-react';
@@ -12,7 +12,7 @@ type BucketItemProps = {
   onSelectBucket?: (bucketName: string | undefined) => void;
 };
 
-/** One row of the bucket list: name, creation date and actions. */
+/** One row of the bucket list: name and creation date; clicking it opens the bucket. */
 function BucketItem(props: BucketItemProps) {
   const { item, onSelectBucket } = props;
   const { t } = useTranslation('bucket', { keyPrefix: 'page' });
@@ -48,18 +48,17 @@ function BucketItem(props: BucketItemProps) {
           alignItems: 'center',
         }}
       >
-        <Stack>
+        {/* miw=0 lets the flex item shrink, so a long bucket name is truncated instead of overflowing. */}
+        <Stack miw={0}>
           <Text size="xl" fw="bold" truncate="end">
             {item.name}
           </Text>
-          <Box>
-            <Text>
-              <Text span fw={500}>
-                {t('label.createDate')}
-              </Text>{' '}
-              {dayjs(item.creationDate).format(FULL_DATE_TIME_FORMAT)}
-            </Text>
-          </Box>
+          <Text>
+            <Text span fw={500}>
+              {t('label.createDate')}
+            </Text>{' '}
+            {dayjs(item.creationDate).format(FULL_DATE_TIME_FORMAT)}
+          </Text>
         </Stack>
       </Card.Section>
     </Card>
