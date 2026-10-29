@@ -22,6 +22,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 const callIPCMock = vi.mocked(callIPC);
 const flush = () => act(async () => {});
 const state = () => useSettingStore.getState();
+const realSave = state().save;
 
 function open() {
   renderWithProviders(<div />);
@@ -40,6 +41,7 @@ async function pickOption(user: ReturnType<typeof userEvent.setup>, label: strin
 describe('SettingModal', () => {
   beforeEach(() => {
     useModalStackStore.getState().reset();
+    useSettingStore.setState({ save: realSave });
     state().reset();
     vi.clearAllMocks();
   });
@@ -246,6 +248,21 @@ describe('SettingModal', () => {
       expect(toast.success).not.toHaveBeenCalled();
     });
 
+    it('unlocks the buttons, shows no toast and stays open when save() rejects', async () => {
+      const user = userEvent.setup();
+      useSettingStore.setState({ save: vi.fn().mockRejectedValue(new Error('boom')) });
+      let settled = false;
+      open().then(() => (settled = true));
+      await flush();
+
+      await user.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled());
+      expect(screen.getByRole('button', { name: 'Close' })).toBeEnabled();
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(settled).toBe(false);
+    });
+
     it('closes again with Escape after a failed save', async () => {
       const user = userEvent.setup();
       const finish = pendingSave();
@@ -293,6 +310,44 @@ describe('SettingModal', () => {
       );
       expect(state().saved.launchOnStartup).toBe(false);
       expect(state().draft.launchOnStartup).toBe(false);
+    });
+  });
+
+  describe('when another modal is on top', () => {
+    it('ignores Escape and overlay click: no revert and the modal stays open', async () => {
+      const user = userEvent.setup();
+      let settled = false;
+      open().then(() => (settled = true));
+      await flush();
+
+      await pickOption(user, 'Theme', 'Dark');
+      act(() => useModalStackStore.getState().acquire('other-modal'));
+      const applyCalls = vi.mocked(applySettings).mock.calls.length;
+
+      await user.keyboard('{Escape}');
+      const overlay = document.querySelector('.mantine-Modal-overlay');
+      expect(overlay).not.toBeNull();
+      await user.click(overlay as Element);
+      await flush();
+
+      expect(settled).toBe(false);
+      expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue('Dark');
+      expect(state().draft.theme).toBe('dark');
+      expect(vi.mocked(applySettings).mock.calls.length).toBe(applyCalls);
+    });
+
+    it('closes with Escape again once it is topmost', async () => {
+      const user = userEvent.setup();
+      const result = open();
+      await flush();
+
+      act(() => useModalStackStore.getState().acquire('other-modal'));
+      await user.keyboard('{Escape}');
+      act(() => useModalStackStore.getState().release('other-modal'));
+      await flush();
+      await user.keyboard('{Escape}');
+
+      await expect(result).resolves.toBeNull();
     });
   });
 

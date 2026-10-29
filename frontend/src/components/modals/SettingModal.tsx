@@ -74,10 +74,9 @@ export default createMantineModal<{}, boolean>(props => {
 
   // Closing without saving undoes the preview (back to the last applied values).
   const onCloseModal = useCallback(() => {
-    if (saving) return;
     revert();
     mantine.props.onClose();
-  }, [saving, revert, mantine.props]);
+  }, [revert, mantine.props]);
 
   const onClickCancel = useCallback(() => {
     revert();
@@ -93,9 +92,11 @@ export default createMantineModal<{}, boolean>(props => {
     toast.success(t('message.applied'));
   }, [apply, t]);
 
+  // After a successful save the lock stays until the modal is hidden, so no second save can start.
   const onClickSave = useCallback(async () => {
     setSaving(true);
-    const ok = await save();
+    // callIPC already reported any failure to the user, so a rejection is treated like a failed save.
+    const ok = await save().catch(() => false);
     if (!ok) {
       setSaving(false);
       return;
@@ -111,8 +112,8 @@ export default createMantineModal<{}, boolean>(props => {
       onClose={onCloseModal}
       centered
       {...restProps}
-      closeOnEscape={!saving}
-      closeOnClickOutside={!saving}
+      closeOnEscape={mantine.props.closeOnEscape && !saving}
+      closeOnClickOutside={mantine.props.closeOnClickOutside && !saving}
       size="560px"
     >
       <Modal.Overlay />
