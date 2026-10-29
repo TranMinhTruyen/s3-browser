@@ -6,7 +6,7 @@
 
 | Yêu cầu | Branch | PR |
 |---|---|---|
-| R1 + R3 | `SP-09/tab_drag_drop_profile_list` (đổi tên từ `SP-09/tab_drag_drop`) | #8 |
+| R1 + R3 | `SP-09/tab_drag_drop_profile_list` (đổi tên từ `SP-09/tab_drag_drop`) | #10 (thay #8, bị đóng khi đổi tên branch) |
 | R2 | `SP-09/tab_persistence` | #9 |
 
 R3 phát sinh khi đang làm R1 và sửa cùng vùng UI (TabActionBar, select), nên gộp vào branch của R1.
