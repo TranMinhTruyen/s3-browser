@@ -11,7 +11,8 @@ interface ProfileState {
 }
 
 interface ProfileAction {
-  loadConnectionProfiles: () => Promise<void>;
+  // Resolves true when the profiles were loaded.
+  loadConnectionProfiles: () => Promise<boolean>;
   getConnectionProfileById: (key?: string | null) => ConnectionProfile | null | undefined;
   updateConnectionProfiles: (key: string, data: ConnectionProfile) => void;
   deleteConnectionProfiles: (key: string) => void;
@@ -28,10 +29,11 @@ export const useProfileStore = createAppStore<ProfileState & ProfileAction>(
     loadConnectionProfiles: async () => {
       const output = await callIPC(GetAllConnectionProfile, [], { scope: `${SCOPE}/loadConnectionProfiles` });
       if (!output) {
-        return;
+        return false;
       }
 
       set({ connectionProfiles: output.connectionProfiles ?? {} }, undefined, `${SCOPE}/setConnectionProfiles`);
+      return true;
     },
 
     getConnectionProfileById: (key?: string | null) => {

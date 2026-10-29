@@ -4,12 +4,15 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { useMasterDataStore } from '@/common/stores/masterDataStore';
 import MainLayout from '@/components/layouts/MainLayout';
+import { useTabPersistence } from '@/components/layouts/tab/useTabPersistence';
 import RouterItems from '@/components/router/RouterItem';
 import i18n from '@/locales/i18n';
 
 function App() {
   const loadAll = useMasterDataStore(m => m.loadAll);
   const reset = useMasterDataStore(m => m.reset);
+
+  useTabPersistence();
 
   useLayoutEffect(() => {
     loadAll();

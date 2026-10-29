@@ -38,3 +38,13 @@ func (h *SettingHandler) SaveSettings(input models.SaveSettingInput) models.Outp
 func (h *SettingHandler) ResetSettings() models.Output[models.SettingsOutput] {
 	return h.setting.ResetSettings()
 }
+
+// GetTabState returns the remembered tabs.
+func (h *SettingHandler) GetTabState() models.Output[models.TabState] {
+	return h.setting.GetTabState()
+}
+
+// SaveTabState saves the tab order, active tab and profile of each tab.
+func (h *SettingHandler) SaveTabState(input models.SaveTabStateInput) models.Output[models.TabState] {
+	return h.setting.SaveTabState(input)
+}

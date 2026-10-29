@@ -130,4 +130,10 @@ type (
 	SaveSettingInput = setting.SaveSettingInput
 	// SettingsOutput re-exports setting.SettingsOutput.
 	SettingsOutput = setting.SettingsOutput
+	// TabItem re-exports setting.TabItem.
+	TabItem = setting.TabItem
+	// TabState re-exports setting.TabState.
+	TabState = setting.TabState
+	// SaveTabStateInput re-exports setting.SaveTabStateInput.
+	SaveTabStateInput = setting.SaveTabStateInput
 )
