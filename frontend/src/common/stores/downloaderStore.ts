@@ -61,7 +61,7 @@ export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAct
           }
         },
         undefined,
-        `${SCOPE}/addDownloadItems`
+        `${SCOPE}/upsertDownloadItems`
       );
     },
 
