@@ -41,9 +41,9 @@ func portableWindowsOptions(appName string) (application.WindowsOptions, error) 
 }
 
 // backgroundColour is the native window background for the saved theme, so the window does not flash the wrong
-// colour before the page renders. "auto" uses the light colour because only the page knows the OS scheme.
-func backgroundColour(theme string) application.RGBA {
-	if theme == "dark" {
+// colour before the page renders. "auto" follows the OS scheme (osDark, see osDarkMode).
+func backgroundColour(theme string, osDark bool) application.RGBA {
+	if theme == "dark" || (theme == "auto" && osDark) {
 		return application.NewRGBA(36, 36, 36, 255)
 	}
 	return application.NewRGBA(255, 255, 255, 255)
@@ -83,13 +83,14 @@ func main() {
 	mainApp.RegisterService(application.NewService(app.ProfileHandler))
 	mainApp.RegisterService(application.NewService(app.SettingHandler))
 
+	theme := app.SettingHandler.GetSettings().Body.Settings.Theme
 	mainWindow := mainApp.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:                  cfg.Name,
 		MinWidth:               1024,
 		MinHeight:              768,
 		Frameless:              true,
 		StartState:             application.WindowStateMaximised,
-		BackgroundColour:       backgroundColour(app.SettingHandler.GetSettings().Body.Settings.Theme),
+		BackgroundColour:       backgroundColour(theme, osDarkMode()),
 		OpenInspectorOnStartup: DevMode,
 		EnableFileDrop:         true,
 	})
