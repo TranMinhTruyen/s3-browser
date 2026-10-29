@@ -14,7 +14,7 @@ File này được Claude Code tự động load cho session chính và mọi su
 ## 2. Luật bắt buộc
 
 1. Luôn trả lời bằng **tiếng Việt**; giữ nguyên tên định danh trong code bằng tiếng Anh.
-2. **Không bao giờ** chạy `git commit`, `git push`, `git reset`, `git checkout`, `git stash` hay lệnh nào thay đổi lịch sử git. Khi được yêu cầu, chỉ soạn commit message cho các thay đổi đã stage (`git diff --cached`) bằng skill `/commit-message`.
+2. **Không bao giờ** chạy `git commit`, `git push`, `git switch`, `git reset`, `git checkout`, `git stash` hay lệnh nào thay đổi branch hoặc lịch sử git. **Ngoại lệ duy nhất**: agent `git-flow`, khi được `orchestrator` gọi trong quy trình sprint, được tách branch `SP-NN/<slug>` từ `origin/master`, commit local, và chỉ push + tạo PR vào `master` sau khi người dùng đồng ý. Không agent nào được push vào `master`, force push hay merge PR. Ngoài quy trình sprint, khi được yêu cầu chỉ soạn commit message cho các thay đổi đã stage (`git diff --cached`) bằng skill `/commit-message`.
 3. Không tự ý quyết định phần yêu cầu chưa rõ: ghi lại thành câu hỏi và chờ người dùng trả lời.
 4. Không sửa tay code sinh tự động: `internal/pkg/db/sqlc/**`, `frontend/bindings/**`. Các đường dẫn này, cùng `.claude/**`, `CLAUDE.md`, `go.sum`, `.env*`, bị chặn ghi trong `.claude/settings.json`; chỉ được thay đổi qua lệnh sinh code tương ứng hoặc do người dùng tự sửa.
 5. Chỉ format/lint frontend bằng **biome** và **oxlint**, không dùng prettier/eslint.
@@ -31,13 +31,16 @@ File này được Claude Code tự động load cho session chính và mọi su
 | B1   | Phân tích yêu cầu, liệt kê câu hỏi chưa rõ                                                                                                                                                              | `planner`                                                                   |
 | B2   | Lập plan, chia task backend/frontend, liệt kê rủi ro                                                                                                                                                    | `planner`                                                                   |
 | B3   | Hỏi người dùng có triển khai không; chưa được đồng ý thì dừng                                                                                                                                           | `orchestrator`                                                              |
-| B4   | **Tuần tự**: Go → skill `wails3-bindings` (`go tool wails3 generate bindings -clean=true -ts`) → Frontend → FE test → verify → review. Lặp lại **tối đa 3 vòng**; quá 3 vòng thì dừng và hỏi người dùng | `go-backend`, `react-frontend`, `react-tester`, `verifier`, `code-reviewer` |
+| B3.5 | Tách branch `SP-NN/<slug>` từ `origin/master` cho từng yêu cầu (mỗi yêu cầu một branch, trừ khi plan gộp)                                                                                              | `git-flow`                                                                  |
+| B4   | Làm **lần lượt từng branch**. Trong mỗi branch, **tuần tự**: Go → skill `wails3-bindings` (`go tool wails3 generate bindings -clean=true -ts`) → Frontend → FE test → verify → review. Lặp lại **tối đa 3 vòng**; quá 3 vòng thì dừng và hỏi người dùng. Đạt thì commit local | `go-backend`, `react-frontend`, `react-tester`, `verifier`, `code-reviewer`, `git-flow` |
 | B5   | Báo cáo: số dòng thêm/xoá, file sửa, file mới, phần chưa làm được                                                                                                                                       | `orchestrator`                                                              |
+| B6   | Hỏi người dùng một lần; đồng ý thì push các branch và tạo PR vào `master` bằng `gh` CLI (người dùng tự merge)                                                                                           | `orchestrator`, `git-flow`                                                  |
 - Yêu cầu lấy từ thư mục `sprints/sprint-NN/` (xem `sprints/README.md`), tạo bằng skill `/new-sprint <tên>`.
 - Làm theo sprint: chạy `claude --agent orchestrator`. Orchestrator **không** phải agent mặc định.
 - Sửa nhỏ: mở `claude` bình thường và gọi thẳng `go-backend` hoặc `react-frontend`.
 - Viết bù test cho code cũ: mở `claude` bình thường và gọi thẳng `react-tester` kèm thư mục cần test (ví dụ `dùng react-tester viết test cho frontend/src/pages/bucket`).
 - Không bao giờ chạy hai agent viết code song song.
+- Tạo PR cần `gh` CLI đã cài và đăng nhập (`gh auth login`) trên máy.
 
 ## 4. Skill
 
