@@ -13,6 +13,31 @@ import ConfirmModal from '@/components/modals/ConfirmModal';
 import { showConnectModal } from '@/components/modals/lazyModals';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
+// jsdom has no layout, so render every row except the keys listed in `hidden` (scrolled out of the range).
+const virtual = vi.hoisted(() => ({
+  hidden: new Set<string>(),
+  options: null as null | Record<string, unknown>,
+}));
+vi.mock('@tanstack/react-virtual', () => ({
+  useVirtualizer: (options: {
+    count: number;
+    getItemKey: (i: number) => string;
+    estimateSize: () => number;
+    getScrollElement: () => unknown;
+  }) => {
+    virtual.options = { ...options, estimate: options.estimateSize() };
+    return {
+      getVirtualItems: () =>
+        Array.from({ length: options.count }, (_, index) => ({
+          key: options.getItemKey(index),
+          index,
+          start: index * 72,
+        })).filter(row => !virtual.hidden.has(String(row.key))),
+      getTotalSize: () => options.count * 72,
+      measureElement: () => {},
+    };
+  },
+}));
 vi.mock('@wailsio/runtime', async importOriginal => {
   const actual = await importOriginal<typeof import('@wailsio/runtime')>();
   return { ...actual, Events: { ...actual.Events, On: vi.fn() } };
@@ -73,6 +98,7 @@ async function clickMenuItem(user: ReturnType<typeof userEvent.setup>, name: str
 describe('ConnectionProfiles', () => {
   beforeEach(() => {
     ipcResult = new Map();
+    virtual.hidden = new Set();
     handlers = {};
     loadConnectionProfiles.mockResolvedValue(undefined);
     callIPCMock.mockImplementation((async (binding: unknown) => ipcResult.get(binding) ?? null) as never);
@@ -111,6 +137,50 @@ describe('ConnectionProfiles', () => {
       expect(status('off-name').style.color).toBe('var(--mantine-color-red-light-color)');
       expect(card('on-name').querySelector('.lucide-cable')).toBeInTheDocument();
       expect(card('off-name').querySelector('.lucide-unplug')).toBeInTheDocument();
+    });
+  });
+
+  describe('virtualization', () => {
+    it('keys rows by profile id, estimates 64px, and attaches the scroll container', () => {
+      renderProfiles({ a: profile('a'), b: profile('b') });
+
+      const opts = virtual.options as {
+        count: number;
+        gap: number;
+        overscan: number;
+        estimate: number;
+        getScrollElement: () => HTMLElement;
+        getItemKey: (i: number) => string;
+      };
+      expect(opts.count).toBe(2);
+      expect(opts.gap).toBe(8);
+      expect(opts.overscan).toBe(5);
+      expect(opts.estimate).toBe(64);
+      expect(opts.getItemKey(1)).toBe('b');
+      expect(opts.getScrollElement()).toContainElement(screen.getByText('a-name'));
+    });
+
+    it('only renders the rows the virtualizer returns', () => {
+      virtual.hidden = new Set(['b']);
+      renderProfiles({ a: profile('a'), b: profile('b') });
+
+      expect(screen.getByText('a-name')).toBeInTheDocument();
+      expect(screen.queryByText('b-name')).not.toBeInTheDocument();
+    });
+
+    it('clears the opened menu when its item leaves the rendered rows, so it stays closed on return', async () => {
+      renderProfiles({ a: profile('a'), b: profile('b') });
+      fireEvent.contextMenu(card('a-name'));
+      expect(await screen.findAllByRole('menuitem')).not.toHaveLength(0);
+
+      virtual.hidden = new Set(['a']);
+      act(() => useProfileStore.getState().updateConnectionProfiles('b', profile('b', { name: 'Bee' })));
+      await waitFor(() => expect(screen.queryByText('a-name')).not.toBeInTheDocument());
+
+      virtual.hidden = new Set();
+      act(() => useProfileStore.getState().updateConnectionProfiles('b', profile('b', { name: 'Bee2' })));
+      expect(await screen.findByText('a-name')).toBeInTheDocument();
+      await waitFor(() => expect(screen.queryByRole('menuitem')).not.toBeInTheDocument());
     });
   });
 

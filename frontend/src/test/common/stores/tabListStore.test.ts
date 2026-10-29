@@ -48,6 +48,44 @@ describe('tabListStore', () => {
     expect(state().tabList.ghost).toBeUndefined();
   });
 
+  describe('moveTab', () => {
+    const order = () => Object.keys(state().tabList);
+
+    it('moves a tab to the position of the target and keeps the active tab', () => {
+      state().addTab();
+      state().addTab();
+      const [a, b, c] = order();
+      const active = activeId();
+
+      state().moveTab(a, c);
+      expect(order()).toEqual([b, c, a]);
+      state().moveTab(a, b);
+      expect(order()).toEqual([a, b, c]);
+      expect(activeId()).toBe(active);
+    });
+
+    it('keeps the tab data when reordering', () => {
+      state().addTab();
+      const [a, b] = order();
+      state().updateTab(a, { prefix: 'photos/' });
+      state().moveTab(a, b);
+      expect(state().tabList[a].prefix).toBe('photos/');
+    });
+
+    it.each([
+      ['same id', 0, 0],
+      ['unknown active id', -1, 0],
+      ['unknown over id', 0, -1],
+    ])('does nothing for %s', (_name, from, to) => {
+      state().addTab();
+      const ids = order();
+      const before = state().tabList;
+      state().moveTab(from < 0 ? 'ghost' : ids[from], to < 0 ? 'ghost' : ids[to]);
+      expect(state().tabList).toBe(before);
+      expect(order()).toEqual(ids);
+    });
+  });
+
   describe('closeTab', () => {
     it('does nothing for the last tab or an unknown tab', () => {
       state().closeTab(activeId());
