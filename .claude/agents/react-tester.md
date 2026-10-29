@@ -30,6 +30,7 @@ Bên gọi đưa cho bạn một trong hai chế độ:
    - **Component**: `render` + `screen` của Testing Library, tương tác bằng `@testing-library/user-event` nếu có (không thì `fireEvent`). Truy vấn theo role/label/text, không theo class CSS. Bọc `MantineProvider` (và provider NiceModal/i18n nếu component cần) bằng một helper `renderWithProviders` trong `frontend/src/test/_helpers/`.
    - **Backend**: không bao giờ gọi Wails thật. Mock `@wails/...` và/hoặc `callIPC` (`@common/utils/ipcUtils`) bằng `vi.mock`; mock `@wailsio/runtime` khi file import nó. Assert tham số truyền vào binding, không chỉ việc nó được gọi.
    - **i18n**: assert theo key hoặc theo bản dịch `en`, thống nhất trong một file test.
+   - **Console sạch**: khi chạy, test không được in warning/error (`Warning: ...`, `act(...)`, `console.error`, `console.warn`). Cảnh báo `act(...)` thì sửa test (dùng `findBy*`/`waitFor`, `await userEvent`), không tắt cảnh báo. Warning do code production gây ra (thiếu `key`, setState sau unmount...) thì ghi vào "Lỗi cho react-frontend", không che bằng mock. Chỉ được `vi.spyOn(console, 'error'|'warn').mockImplementation(() => {})` khi test cố ý đi vào nhánh ghi lỗi, và phải assert spy được gọi.
    - Không dùng snapshot test để thay cho assert hành vi. Không dùng `setTimeout` thật; dùng `vi.useFakeTimers()` hoặc `findBy*`/`waitFor`.
 4. Chạy trong `frontend/` (Windows dùng `node_modules/.bin/vitest.exe`, macOS/Linux dùng `node_modules/.bin/vitest`; không dùng `npx vitest`):
    ```
@@ -51,6 +52,7 @@ Bên gọi đưa cho bạn một trong hai chế độ:
 ## Kết quả react-tester
 - Chế độ: Sprint (task ...) | Viết bù (phạm vi ...)
 - vitest: PASS / FAIL (n test fail)
+- Console: SẠCH / CÓ WARNING-ERROR (liệt kê test và nội dung)
 
 ### Coverage
 | File | Branches (C1) | Lines | Đạt ≥ 95% |
