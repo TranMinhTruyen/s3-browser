@@ -87,6 +87,7 @@ func main() {
 		Title:                  cfg.Name,
 		MinWidth:               1024,
 		MinHeight:              768,
+		Frameless:              true,
 		StartState:             application.WindowStateMaximised,
 		BackgroundColour:       backgroundColour(app.SettingHandler.GetSettings().Body.Settings.Theme),
 		OpenInspectorOnStartup: DevMode,

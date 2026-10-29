@@ -9,5 +9,12 @@
     "clear": "Clear",
     "close": "Close"
   },
+  "appName": "S3Browser",
+  "window": {
+    "minimise": "Minimise",
+    "maximise": "Maximise",
+    "restore": "Restore",
+    "close": "Close"
+  },
   "modalLoadError": "Could not open the dialog. Please try again."
 }

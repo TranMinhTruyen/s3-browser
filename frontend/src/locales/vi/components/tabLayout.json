@@ -4,7 +4,7 @@
   },
   "tooltip": {
     "closeTab": "Đóng tab",
-    "dragTab": "Kéo để đổi vị trí",
+    "dragTab": "Kéo để đổi vị trí (Ctrl+Shift+←/→)",
     "connect": "Kết nối",
     "refresh": "Làm mới {target}",
     "addTab": "Thêm tab",
