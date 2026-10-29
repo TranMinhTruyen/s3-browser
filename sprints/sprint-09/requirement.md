@@ -29,9 +29,24 @@ Cho phép kéo thả tab để thay đổi vị trí, và ghi nhớ các tab đa
   - [ ] Mở app lại thì load lại hết các tab đã nhớ kèm profile của tab đó
   - [ ] Không tự connect; user sẽ tự connect thủ công
 
+### R3: Tối ưu danh sách profile và đồng bộ select (bổ sung trong sprint)
+
+- **Mô tả:**
+  - Danh sách profile ở navbar phải virtualize, chịu được 200 profile.
+  - Select profile ở thanh action của tab có ô search trong dropdown giống select bucket.
+  - Màu nền, viền và đổ bóng dropdown của mọi combobox/select đồng bộ, dễ nhìn ở cả light/dark.
+- **Nền tảng:** Cả hai
+- **Màn hình liên quan:** LeftNavbar (ConnectionProfiles), TabActionBar, mọi Select/Combobox
+- **Tiêu chí chấp nhận:**
+  - [ ] 200 profile cuộn mượt, chỉ render các dòng đang hiện; một profile đổi trạng thái thì chỉ dòng đó render lại
+  - [ ] Giữ nguyên double click connect, context menu, spinner, màu profile, auto-connect, xoá có xác nhận
+  - [ ] Select profile có ô search tự focus khi mở, lọc không phân biệt hoa thường, từ khoá reset khi đóng
+  - [ ] Dropdown của mọi combobox/select có cùng nền, viền, đổ bóng (đặt một lần trong theme Mantine)
+
 ## Ngoài phạm vi
 
 - Tự động connect lại các tab đã nhớ.
+- R3: virtualize dropdown select profile (vẫn render đủ option, có `mah` + search lọc); giới hạn số kết nối đồng thời khi auto-connect.
 
 ## Ràng buộc / ghi chú
 

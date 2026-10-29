@@ -1,34 +1,26 @@
-import { Box, Card, isLightColor, Loader, Menu, Stack, Text } from '@mantine/core';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { ConnectS3ByProfile, Disconnect } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { DeleteProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
 import { Events } from '@wailsio/runtime';
-import { Cable, PlugZap, SquarePen, Trash, Unplug } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConnectionProfile, useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
-import classes from '@/components/layouts/layout.module.css';
+import ConnectionProfileItem from '@/components/layouts/navbar/components/ConnectionProfileItem';
 import ConfirmModal from '@/components/modals/ConfirmModal';
 import { showConnectModal } from '@/components/modals/lazyModals';
 
-/** Black/white text that contrasts with the user-chosen profile color; theme text when no color is set. */
-const getProfileTextColor = (color?: string) =>
-  color
-    ? isLightColor(color)
-      ? 'var(--mantine-color-black)'
-      : 'var(--mantine-color-white)'
-    : 'var(--mantine-color-text)';
+// Initial row height (2 text lines + card padding); the real height comes from measureElement.
+const ESTIMATED_ITEM_HEIGHT = 64;
 
 function ConnectionProfiles() {
-  const { t } = useTranslation('connectionProfiles');
-
   const [connectingKeys, setConnectingKeys] = useState<Set<string>>(new Set());
   const [openedMenuKey, setOpenedMenuKey] = useState<string | null>(null);
 
   const connectionProfiles = useProfileStore(s => s.connectionProfiles);
   const autoConnectDoneRef = useRef(false);
   const connectingRef = useRef(new Set<string>());
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const loadConnectionProfiles = useProfileStore(s => s.loadConnectionProfiles);
   const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
@@ -69,8 +61,10 @@ function ConnectionProfiles() {
     });
   }, []);
 
+  // Handlers take the key and read the latest profile from the store, so they stay stable for memoized items.
   const onClickConnect = useCallback(
-    (key: string, value: ConnectionProfile) => async () => {
+    async (key: string) => {
+      const value = getConnectionProfileById(key);
       if (!value || value.isConnected || connectingRef.current.has(key)) return;
       if (autoConnectDoneRef.current && !value.secretKey) {
         onClickOpenConnectModal(value, 'manualconnect');
@@ -86,11 +80,12 @@ function ConnectionProfiles() {
         setConnecting(key, false);
       }
     },
-    [onClickOpenConnectModal, updateConnectionProfiles, setConnecting]
+    [getConnectionProfileById, onClickOpenConnectModal, updateConnectionProfiles, setConnecting]
   );
 
   const onClickDisconnect = useCallback(
-    (key: string, value: ConnectionProfile) => async () => {
+    async (key: string) => {
+      const value = getConnectionProfileById(key);
       if (!value || !value.isConnected || connectingRef.current.has(key)) return;
       setConnecting(key, true);
       try {
@@ -103,19 +98,21 @@ function ConnectionProfiles() {
         setConnecting(key, false);
       }
     },
-    [updateConnectionProfiles, resetViewByProfile, setConnecting]
+    [getConnectionProfileById, updateConnectionProfiles, resetViewByProfile, setConnecting]
   );
 
   const onClickEditProfile = useCallback(
-    (value: ConnectionProfile) => () => {
-      onClickOpenConnectModal(value, 'editProfile');
+    (key: string) => {
+      const value = getConnectionProfileById(key);
+      if (value) onClickOpenConnectModal(value, 'editProfile');
     },
-    [onClickOpenConnectModal]
+    [getConnectionProfileById, onClickOpenConnectModal]
   );
 
   const onClickDeleteProfile = useCallback(
-    (key: string, value: ConnectionProfile) => async () => {
-      if (!value.id || connectingRef.current.has(key)) return;
+    async (key: string) => {
+      const value = getConnectionProfileById(key);
+      if (!value?.id || connectingRef.current.has(key)) return;
 
       // The backend disconnects before deleting and refuses while transfers are running,
       // so the connection is kept if the delete is rejected.
@@ -149,120 +146,82 @@ function ConnectionProfiles() {
     [deleteConnectionProfiles, clearProfile, loadConnectionProfiles, getConnectionProfileById, resetViewByProfile]
   );
 
-  const onClickMenuChange = useCallback(
-    (key: string) => (opened: boolean) => {
-      setOpenedMenuKey(prev => {
-        if (opened) return key;
-        return prev === key ? null : prev;
-      });
-    },
-    []
-  );
+  const onChangeMenu = useCallback((key: string, opened: boolean) => {
+    setOpenedMenuKey(prev => {
+      if (opened) return key;
+      return prev === key ? null : prev;
+    });
+  }, []);
 
   useEffect(() => {
     if (autoConnectDoneRef.current) return;
 
-    const entries = Object.entries(connectionProfiles);
-    if (entries.length === 0) return;
+    const keys = Object.keys(connectionProfiles);
+    if (keys.length === 0) return;
 
     autoConnectDoneRef.current = true;
 
-    entries.forEach(([key, value]) => {
+    keys.forEach(key => {
+      const value = connectionProfiles[key];
       if (!value?.autoConnect || value.isConnected) return;
-      void onClickConnect(key, value)();
+      void onClickConnect(key);
     });
     // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [connectionProfiles]);
 
-  const connectionProfilesComponent = Object.entries(connectionProfiles)
-    .filter((entry): entry is [string, ConnectionProfile] => entry[1] !== undefined)
-    .map(([key, value]) => {
-      return (
-        <Menu key={key} width={200} opened={openedMenuKey === key} onChange={onClickMenuChange(key)}>
-          <Menu.ContextMenu>
-            <Card
-              padding="8px"
-              withBorder
-              orientation="horizontal"
-              onDoubleClick={onClickConnect(key, value)}
-              c={getProfileTextColor(value.color)}
-              className={classes.card}
-            >
-              <Card.Section
-                inheritPadding
-                style={{
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  minWidth: '40px',
-                  justifyContent: 'center',
-                  // Status uses Mantine "light" variant colors: connected = green, disconnected = red
-                  color: value.isConnected
-                    ? 'var(--mantine-color-green-light-color)'
-                    : 'var(--mantine-color-red-light-color)',
-                  backgroundColor: value.isConnected
-                    ? 'var(--mantine-color-green-light)'
-                    : 'var(--mantine-color-red-light)',
-                }}
-              >
-                {connectingKeys.has(key) ? (
-                  <Loader color="blue" size="sm" />
-                ) : value.isConnected ? (
-                  <Cable />
-                ) : (
-                  <Unplug />
-                )}
-              </Card.Section>
-              <Card.Section
-                px="xs"
-                inheritPadding
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  backgroundColor: value.color ?? 'var(--mantine-color-body)',
-                }}
-              >
-                <Box>
-                  <Text c="inherit" truncate="end">
-                    {value.name}
-                  </Text>
-                  <Text c="dimmed">{value.provider}</Text>
-                </Box>
-              </Card.Section>
-            </Card>
-          </Menu.ContextMenu>
+  const entries = useMemo(
+    () => Object.entries(connectionProfiles).filter((e): e is [string, ConnectionProfile] => e[1] !== undefined),
+    [connectionProfiles]
+  );
 
-          <Menu.Dropdown>
-            {!value.isConnected && (
-              <Menu.Item leftSection={<PlugZap size="16px" />} onClick={onClickConnect(key, value)}>
-                {t('contextMenu.connect')}
-              </Menu.Item>
-            )}
-            {value.isConnected && (
-              <Menu.Item leftSection={<Unplug size="16px" />} color="red" onClick={onClickDisconnect(key, value)}>
-                {t('contextMenu.disconnect')}
-              </Menu.Item>
-            )}
-            {!value.isConnected && (
-              <Menu.Item leftSection={<SquarePen size="16px" />} onClick={onClickEditProfile(value)}>
-                {t('contextMenu.edit')}
-              </Menu.Item>
-            )}
-            <Menu.Divider />
-            <Menu.Item leftSection={<Trash size="16px" />} color="red" onClick={onClickDeleteProfile(key, value)}>
-              {t('contextMenu.delete')}
-            </Menu.Item>
-          </Menu.Dropdown>
-        </Menu>
-      );
-    });
+  // React Compiler is disabled, so this compiler-only lint does not apply.
+  // oxlint-disable-next-line react/incompatible-library
+  const virtualizer = useVirtualizer({
+    count: entries.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ESTIMATED_ITEM_HEIGHT,
+    getItemKey: idx => entries[idx][0],
+    gap: 8,
+    overscan: 5,
+  });
+
+  const virtualItems = virtualizer.getVirtualItems();
+
+  // An item scrolled out of the rendered range unmounts and closes its menu; clear the stale key.
+  useEffect(() => {
+    if (openedMenuKey && !virtualItems.some(row => entries[row.index]?.[0] === openedMenuKey)) {
+      setOpenedMenuKey(null);
+    }
+  }, [openedMenuKey, virtualItems, entries]);
 
   return (
-    <Stack h="100%" gap="8px" align="stretch">
-      {connectionProfilesComponent}
-    </Stack>
+    <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px' }}>
+      <div style={{ position: 'relative', height: virtualizer.getTotalSize() }}>
+        {virtualItems.map(row => {
+          const [key, profile] = entries[row.index];
+          return (
+            <div
+              key={key}
+              data-index={row.index}
+              ref={virtualizer.measureElement}
+              style={{ position: 'absolute', width: '100%', transform: `translateY(${row.start}px)` }}
+            >
+              <ConnectionProfileItem
+                profileKey={key}
+                profile={profile}
+                connecting={connectingKeys.has(key)}
+                menuOpened={openedMenuKey === key}
+                onConnect={onClickConnect}
+                onDisconnect={onClickDisconnect}
+                onEdit={onClickEditProfile}
+                onDelete={onClickDeleteProfile}
+                onMenuChange={onChangeMenu}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

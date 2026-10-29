@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { GetListBucket, SearchBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -83,6 +83,16 @@ describe('BucketPicker', () => {
     const options = screen.getAllByRole('option', { hidden: true });
     expect(options.find(o => o.textContent === 'beta')).toHaveAttribute('data-combobox-active', 'true');
     expect(options.find(o => o.textContent === 'alpha')).not.toHaveAttribute('data-combobox-active');
+  });
+
+  it('focuses the search box when the dropdown opens', async () => {
+    answerWith(page(['alpha']));
+    // jsdom cannot focus inside the display:none transition wrapper, so assert the focus() call target.
+    const focus = vi.spyOn(HTMLInputElement.prototype, 'focus');
+    const { user } = setup();
+    await user.click(trigger());
+    const search = await screen.findByPlaceholderText('Search bucket');
+    await waitFor(() => expect(focus.mock.contexts).toContain(search));
   });
 
   it('shows the empty message when there are no buckets', async () => {

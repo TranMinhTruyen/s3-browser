@@ -30,6 +30,8 @@ interface TabListAction {
   addTab: () => void;
   updateTab: (tabId: string, patch: Partial<TabDetail>) => void;
   closeTab: (tabId: string) => void;
+  // Move a tab to the position of `overId`. Does not change the active tab.
+  moveTab: (activeId: string, overId: string) => void;
 
   // `bucket` is the bucket to open when switching to the object list.
   changeCurrentView: (tabId: string, currentView: 'bucketList' | 'objectList', bucket?: string) => void;
@@ -119,6 +121,18 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
         undefined,
         `${SCOPE}/closeTab`
       );
+    },
+
+    moveTab: (activeId, overId) => {
+      const { tabList } = get();
+      const keys = Object.keys(tabList);
+      const from = keys.indexOf(activeId);
+      const to = keys.indexOf(overId);
+      if (from < 0 || to < 0 || from === to) return;
+
+      keys.splice(to, 0, ...keys.splice(from, 1));
+      // Rebuild the object: key order is the tab order.
+      set({ tabList: Object.fromEntries(keys.map(k => [k, tabList[k]])) }, undefined, `${SCOPE}/moveTab`);
     },
 
     changeCurrentView: (tabId: string, currentView: 'bucketList' | 'objectList', bucket?: string) => {

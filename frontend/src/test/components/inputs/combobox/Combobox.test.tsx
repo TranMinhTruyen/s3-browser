@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import Combobox from '@/components/inputs/combobox/Combobox';
@@ -75,6 +75,81 @@ describe('Combobox', () => {
   it('ignores a value that is not in the data and translates the error', () => {
     renderWithProviders(<Combobox label="Pick" data={data} value="zzz" error="V000001" />);
     expect(screen.getByText('Pick is required')).toBeInTheDocument();
+  });
+
+  describe('search', () => {
+    const open = () => userEvent.click(screen.getByRole('button', { name: /Pick/ }));
+    const optionNames = () => screen.queryAllByRole('option', { hidden: true }).map(o => o.textContent);
+
+    it('does not render a search box without searchPlaceholder', async () => {
+      renderWithProviders(<Combobox label="Pick" data={data} />);
+      await open();
+      expect(screen.queryByPlaceholderText('Find')).not.toBeInTheDocument();
+      expect(optionNames()).toEqual(['Alpha', 'Beta']);
+    });
+
+    it('filters options by name ignoring case and surrounding spaces', async () => {
+      renderWithProviders(<Combobox label="Pick" data={data} searchPlaceholder="Find" />);
+      await open();
+      fireEvent.change(await screen.findByPlaceholderText('Find'), { target: { value: '  BE ' } });
+      expect(optionNames()).toEqual(['Beta']);
+    });
+
+    it('shows all options for a blank keyword', async () => {
+      renderWithProviders(<Combobox label="Pick" data={data} searchPlaceholder="Find" />);
+      await open();
+      fireEvent.change(await screen.findByPlaceholderText('Find'), { target: { value: '   ' } });
+      expect(optionNames()).toEqual(['Alpha', 'Beta']);
+    });
+
+    it('shows emptyText when nothing matches', async () => {
+      renderWithProviders(<Combobox label="Pick" data={data} searchPlaceholder="Find" emptyText="Nothing here" />);
+      await open();
+      fireEvent.change(await screen.findByPlaceholderText('Find'), { target: { value: 'zzz' } });
+      expect(optionNames()).toEqual([]);
+      expect(screen.getByText('Nothing here')).toBeInTheDocument();
+    });
+
+    it('shows no empty message when nothing matches and emptyText is not given', async () => {
+      renderWithProviders(<Combobox label="Pick" data={data} searchPlaceholder="Find" />);
+      await open();
+      fireEvent.change(await screen.findByPlaceholderText('Find'), { target: { value: 'zzz' } });
+      expect(optionNames()).toEqual([]);
+      expect(screen.queryByText('Nothing here')).not.toBeInTheDocument();
+    });
+
+    it('does not show emptyText while options are listed', async () => {
+      renderWithProviders(<Combobox label="Pick" data={data} searchPlaceholder="Find" emptyText="Nothing here" />);
+      await open();
+      expect(screen.queryByText('Nothing here')).not.toBeInTheDocument();
+    });
+
+    it('focuses the search box when the dropdown opens', async () => {
+      // jsdom cannot focus inside the display:none transition wrapper, so assert the focus() call target.
+      const focus = vi.spyOn(HTMLInputElement.prototype, 'focus');
+      renderWithProviders(<Combobox label="Pick" data={data} searchPlaceholder="Find" />);
+      await open();
+      const search = await screen.findByPlaceholderText('Find');
+      await waitFor(() => expect(focus.mock.contexts).toContain(search));
+    });
+
+    it.each([
+      ['pressing Escape', async () => userEvent.keyboard('{Escape}')],
+      ['clicking outside', async () => userEvent.click(document.body)],
+      ['clicking the trigger', async () => userEvent.click(screen.getByRole('button', { name: /Pick/ }))],
+      ['choosing an option', async () => userEvent.click(screen.getByRole('option', { name: 'Beta', hidden: true }))],
+    ])('resets the keyword after closing by %s and reopening', async (_name, close) => {
+      renderWithProviders(<Combobox label="Pick" data={data} searchPlaceholder="Find" />);
+      await open();
+      fireEvent.change(await screen.findByPlaceholderText('Find'), { target: { value: 'be' } });
+      expect(optionNames()).toEqual(['Beta']);
+
+      await close();
+      await open();
+
+      expect(await screen.findByPlaceholderText('Find')).toHaveValue('');
+      expect(optionNames()).toEqual(['Alpha', 'Beta']);
+    });
   });
 
   it('forwards focus and blur', async () => {

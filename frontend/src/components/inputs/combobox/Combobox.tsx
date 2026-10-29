@@ -11,7 +11,7 @@ import {
 import { GetInputPropsReturnType } from '@mantine/form';
 import { useElementSize } from '@mantine/hooks';
 import { CheckIcon } from 'lucide-react';
-import { memo, useMemo } from 'react';
+import { ChangeEvent, memo, useCallback, useMemo, useState } from 'react';
 import { useFieldError } from '@/common/hooks/useFieldError';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
 import ComboboxClearButton from '@/components/inputs/combobox/ComboboxClearButton';
@@ -32,6 +32,9 @@ type ComboboxProps = Omit<MComboboxProps, 'store' | 'onOptionSubmit' | 'children
     style?: CSSProperties;
     inputClassNames?: InputBaseProps['classNames'];
     inputStyles?: InputBaseProps['styles'];
+    // When set, a search box is shown at the top of the dropdown and filters the options by name.
+    searchPlaceholder?: string;
+    emptyText?: string;
   };
 
 const ComboboxOption = memo(function ComboboxOption({ item, active }: { item: ComboboxItem; active: boolean }) {
@@ -65,13 +68,22 @@ function Combobox(props: ComboboxProps) {
     style,
     inputClassNames,
     inputStyles,
+    searchPlaceholder,
+    emptyText,
     ...rest
   } = props;
+
+  const hasSearch = searchPlaceholder !== undefined;
+  const [keyword, setKeyword] = useState('');
+  // Clear the filter on every close path so the dropdown reopens with the full list.
+  const onCloseDropdown = useCallback(() => setKeyword(''), []);
 
   const { combobox, current, onSubmitOption, onClear, onClickToggle } = useSelectCombobox({
     value,
     defaultValue,
     onChange,
+    focusSearch: hasSearch,
+    onClose: onCloseDropdown,
   });
 
   const { ref: targetRef, width: targetWidth } = useElementSize<HTMLButtonElement>();
@@ -79,6 +91,13 @@ function Combobox(props: ComboboxProps) {
   const formatError = useFieldError();
   const translatedError = formatError(error, label);
   const itemsByValue = useMemo(() => new Map(data.map(item => [item.value, item])), [data]);
+
+  const filteredData = useMemo(() => {
+    const kw = keyword.trim().toLowerCase();
+    return kw ? data.filter(item => item.name.toLowerCase().includes(kw)) : data;
+  }, [data, keyword]);
+
+  const onChangeKeyword = useCallback((e: ChangeEvent<HTMLInputElement>) => setKeyword(e.currentTarget.value), []);
 
   const selected = !isNullOrEmpty(current) ? itemsByValue.get(current) : undefined;
   const showClear = !isNullOrEmpty(current) && !disabled;
@@ -117,10 +136,12 @@ function Combobox(props: ComboboxProps) {
       </MCombobox.Target>
 
       <MCombobox.Dropdown miw={targetWidth}>
+        {hasSearch && <MCombobox.Search value={keyword} onChange={onChangeKeyword} placeholder={searchPlaceholder} />}
         <MCombobox.Options mah={250} style={{ overflowY: 'auto' }}>
-          {data.map(item => (
+          {filteredData.map(item => (
             <ComboboxOption key={item.value} item={item} active={item.value === current} />
           ))}
+          {filteredData.length === 0 && emptyText && <MCombobox.Empty>{emptyText}</MCombobox.Empty>}
         </MCombobox.Options>
       </MCombobox.Dropdown>
     </MCombobox>

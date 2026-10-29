@@ -7,9 +7,11 @@ import './style.css';
 import '@mantine/core/styles.css';
 import NiceModal from '@ebay/nice-modal-react';
 import { useSettingStore } from '@/common/stores/settingStore';
+import { appTheme } from '@/common/theme/appTheme';
 import { installDropTargetCleanup } from '@/common/utils/dropTargetUtils';
 import { settingColorSchemeManager } from '@/common/utils/settingUtils';
 import { normalizeTabProfilesFromDisk, restoreTabsFromDisk } from '@/common/utils/tabPersistence';
+import MotionProvider from '@/components/providers/MotionProvider';
 
 installDropTargetCleanup();
 
@@ -22,9 +24,11 @@ await normalizeTabProfilesFromDisk();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <MantineProvider colorSchemeManager={settingColorSchemeManager}>
+    <MantineProvider theme={appTheme} colorSchemeManager={settingColorSchemeManager}>
       <NiceModal.Provider>
-        <App />
+        <MotionProvider>
+          <App />
+        </MotionProvider>
       </NiceModal.Provider>
     </MantineProvider>
   </StrictMode>

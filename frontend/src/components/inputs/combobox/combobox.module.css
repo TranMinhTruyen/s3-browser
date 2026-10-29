@@ -1,0 +1,28 @@
+/* Shared look of the select dropdowns (Combobox, BucketPicker) in light and dark themes. */
+.dropdown {
+  background-color: light-dark(var(--mantine-color-white), var(--mantine-color-dark-7));
+  border: 1px solid light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3));
+  box-shadow: var(--mantine-shadow-md);
+}
+
+.search {
+  background-color: transparent;
+  border-bottom: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+}
+
+/* Hovered / keyboard-highlighted option. */
+.option[data-combobox-selected] {
+  background-color: light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
+  color: inherit;
+}
+
+/* Chosen option: tinted with the primary color so it differs from the hover state. */
+.option[data-combobox-active] {
+  background-color: var(--mantine-primary-color-light);
+  font-weight: 600;
+}
+
+/* Chosen option that is also hovered. */
+.option[data-combobox-active][data-combobox-selected] {
+  background-color: var(--mantine-primary-color-light-hover);
+}
