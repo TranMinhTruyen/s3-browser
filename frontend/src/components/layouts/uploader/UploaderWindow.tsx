@@ -1,23 +1,22 @@
-import { Affix, Box, CloseButton, Divider, Group, Paper, Text } from '@mantine/core';
+import { Affix, CloseButton, Divider, Group, Paper, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { CancelAllUploads } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Events } from '@wailsio/runtime';
 import { Upload, X } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/shallow';
 import { useDownloaderStore } from '@/common/stores/downloaderStore';
 import { selectUploadingIds, useUploaderStore } from '@/common/stores/uploaderStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
+import { ITEM_HEIGHT } from '@/components/layouts/transferItem';
 import UploaderItem from '@/components/layouts/uploader/UploaderItem';
+import VirtualItemList from '@/components/layouts/VirtualItemList';
 
 const EDGE = 16;
 const GAP = 16;
 const WINDOW_WIDTH = 400;
-const LIST_MAX_HEIGHT = 260;
-const ITEM_HEIGHT = 80;
 const ITEM_GAP = 8;
 
 /** Floating upload progress window (or a button when closed), placed next to the downloader. */
@@ -69,20 +68,7 @@ function UploaderWindow() {
     };
   }, [finishUpload]);
 
-  // State, not a ref: Affix renders through a Portal that mounts one render late, so a ref would still be null
-  // when the virtualizer reads it and nothing would re-render it, leaving the list empty.
-  const [listElement, setListElement] = useState<HTMLDivElement | null>(null);
-
-  // React Compiler is disabled, so this compiler-only lint does not apply.
-  // oxlint-disable-next-line react/incompatible-library
-  const virtualizer = useVirtualizer({
-    count: uploadItemIds.length,
-    getScrollElement: () => listElement,
-    estimateSize: () => ITEM_HEIGHT,
-    getItemKey: idx => uploadItemIds[idx],
-    gap: ITEM_GAP,
-    overscan: 5,
-  });
+  const renderItem = useCallback((id: string) => <UploaderItem id={id} />, []);
 
   const onClickCancelAll = useCallback(async () => {
     await callIPC(CancelAllUploads, []);
@@ -97,7 +83,7 @@ function UploaderWindow() {
     const bottom = EDGE + (hasDownloader ? downloaderHeight + GAP : 0);
     return (
       <Affix position={{ bottom, right: EDGE }}>
-        <ActionIcon onClick={handlers.open} size="xl" aria-label={t('title')}>
+        <ActionIcon onClick={openWindow} size="xl" aria-label={t('title')}>
           <Upload />
         </ActionIcon>
       </Affix>
@@ -128,25 +114,7 @@ function UploaderWindow() {
 
         <Divider />
 
-        <Box ref={setListElement} p="8px" style={{ maxHeight: `${LIST_MAX_HEIGHT}px`, overflow: 'auto' }}>
-          <div style={{ position: 'relative', height: virtualizer.getTotalSize(), width: '100%' }}>
-            {virtualizer.getVirtualItems().map(row => (
-              <div
-                key={row.key}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: ITEM_HEIGHT,
-                  transform: `translateY(${row.start}px)`,
-                }}
-              >
-                <UploaderItem id={uploadItemIds[row.index]} />
-              </div>
-            ))}
-          </div>
-        </Box>
+        <VirtualItemList ids={uploadItemIds} gap={ITEM_GAP} itemHeight={ITEM_HEIGHT} renderItem={renderItem} />
       </Paper>
     </Affix>
   );
