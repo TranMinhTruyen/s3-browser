@@ -82,22 +82,22 @@ describe('SortableTab', () => {
     expect(onPointerDown).toHaveBeenCalled();
   });
 
-  it('is at rest when not dragging', () => {
+  it('is visible when not dragging', () => {
     renderTab(true);
     const wrapper = screen.getByRole('tab').parentElement!;
-    expect(JSON.parse(wrapper.getAttribute('data-animate')!)).toMatchObject({ opacity: 1, scale: 1 });
-    expect(wrapper.style.boxShadow).toBe('none');
-    expect(wrapper.parentElement!.style.zIndex).toBe('');
+    expect(wrapper).toHaveAttribute('data-animate', '"visible"');
+    expect(wrapper.parentElement!.style.visibility).toBe('');
   });
 
-  it('lifts the tab while dragging', () => {
+  it('only holds its slot while dragging (hidden, no lift) and follows the dnd-kit transform', () => {
     sortable.isDragging = true;
     sortable.transform = { x: 12, y: 0, scaleX: 1, scaleY: 1 };
     renderTab(true);
-    const wrapper = screen.getByRole('tab').parentElement!;
-    expect(JSON.parse(wrapper.getAttribute('data-animate')!)).toMatchObject({ scale: 1.04 });
-    expect(wrapper.style.boxShadow).toBe('var(--mantine-shadow-md)');
-    expect(wrapper.parentElement!.style.zIndex).toBe('1');
+    const wrapper = screen.getByRole('tab', { hidden: true }).parentElement!;
+    expect(wrapper).toHaveAttribute('data-animate', '"visible"');
+    expect(wrapper.style.boxShadow).not.toBe('var(--mantine-shadow-md)');
+    expect(wrapper.parentElement!.style.visibility).toBe('hidden');
+    expect(wrapper.parentElement!.style.zIndex).toBe('');
     expect(wrapper.parentElement!.style.transform).toBe('translate3d(12px, 0px, 0)');
     expect(wrapper.parentElement!.style.transition).toBe('transform 200ms');
   });

@@ -1,5 +1,6 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import TabLayout from '@/components/layouts/tab/TabLayout';
 import { renderWithProviders } from '@/test/renderWithProviders';
@@ -7,13 +8,12 @@ import { renderWithProviders } from '@/test/renderWithProviders';
 vi.mock('@/components/layouts/tab/components/TabDetail', () => ({ default: () => <div>tab detail</div> }));
 vi.mock('@/components/layouts/tab/components/TabLabel', () => ({ default: () => <span>tab label</span> }));
 vi.mock('motion/react', async () => (await import('@/test/_helpers/mockMotion')).motionMock);
-// A scroller without the `.mantine-Scroller-container` element: the scroll sync must be skipped.
-vi.mock('@mantine/core', async importOriginal => ({
-  ...(await importOriginal<typeof import('@mantine/core')>()),
-  Scroller: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+// A scroller that never attaches the forwarded ref: the scroll-into-view sync must be skipped safely.
+vi.mock('@/components/layouts/tab/components/TabScroller', () => ({
+  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-describe('TabLayout without a scroller container', () => {
+describe('TabLayout without a scroller ref', () => {
   beforeEach(() => {
     useTabListStore.getState().reset();
   });

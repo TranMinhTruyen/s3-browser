@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTabListStore } from '@/common/stores/tabListStore';
@@ -120,6 +120,14 @@ describe('TabActionBar', () => {
     await user.click(screen.getAllByRole('button').find(b => b.getAttribute('aria-haspopup') === 'listbox')!);
     await user.click(await screen.findByRole('option', { name: 'Prof', hidden: true }));
     expect(h.onChangeSelectProfile).toHaveBeenCalledWith('p1');
+  });
+
+  it('lets the profile picker be searched and shows an empty message when nothing matches', async () => {
+    const { user } = setup();
+    await user.click(screen.getAllByRole('button').find(b => b.getAttribute('aria-haspopup') === 'listbox')!);
+    fireEvent.change(await screen.findByPlaceholderText('Search profile'), { target: { value: 'zzz' } });
+    expect(screen.queryByRole('option', { name: 'Prof', hidden: true })).not.toBeInTheDocument();
+    expect(screen.getByText('No profiles found')).toBeInTheDocument();
   });
 
   it('reports a submitted keyword and clears the search', async () => {

@@ -6,6 +6,7 @@ import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fadeScale, TRANSITION_FAST } from '@/common/cnst/motionConst';
 import TabLabel from '@/components/layouts/tab/components/TabLabel';
+import classes from './SortableTab.module.css';
 
 type SortableTabProps = {
   tabId: string;
@@ -13,11 +14,9 @@ type SortableTabProps = {
   onClickClose: (tabId: string, e: React.MouseEvent) => void;
 };
 
-const LIFT_SCALE = 1.04;
-
 /**
  * One draggable tab. Two nested elements keep transforms apart:
- * the outer one belongs to dnd-kit (position), the inner `m.div` to motion (lift, enter, exit).
+ * the outer one belongs to dnd-kit (position), the inner `m.div` to motion (enter, exit).
  */
 function SortableTab({ tabId, closable, onClickClose }: SortableTabProps) {
   const { t } = useTranslation('tabLayout');
@@ -29,23 +28,18 @@ function SortableTab({ tabId, closable, onClickClose }: SortableTabProps) {
 
   return (
     <div
+      className={classes.wrapper}
       ref={setNodeRef}
       style={{
         transform: CSS.Translate.toString(transform),
         transition,
-        zIndex: isDragging ? 1 : undefined,
+        // The DragOverlay shows the dragged tab; the original only holds its slot.
+        visibility: isDragging ? 'hidden' : undefined,
         position: 'relative',
         flexShrink: 0,
       }}
     >
-      <m.div
-        variants={fadeScale}
-        initial="hidden"
-        animate={{ ...fadeScale.visible, scale: isDragging ? LIFT_SCALE : 1 }}
-        exit="hidden"
-        transition={TRANSITION_FAST}
-        style={{ boxShadow: isDragging ? 'var(--mantine-shadow-md)' : 'none' }}
-      >
+      <m.div variants={fadeScale} initial="hidden" animate="visible" exit="hidden" transition={TRANSITION_FAST}>
         <Tabs.Tab
           value={tabId}
           p="8px"
@@ -55,7 +49,7 @@ function SortableTab({ tabId, closable, onClickClose }: SortableTabProps) {
           title={t('tooltip.dragTab')}
           styles={{
             tabLabel: { minWidth: 0, flex: 1 },
-            tab: { cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' },
+            tab: { cursor: 'grab', touchAction: 'none' },
           }}
           {...ariaAttributes}
           {...listeners}

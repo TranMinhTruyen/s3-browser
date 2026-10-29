@@ -24,7 +24,13 @@ const MotionConfig = ({ children, ...props }: { children?: ReactNode } & Record<
 };
 
 const makeComponent = (tag: string) => {
-  const Component = ({ animate, exit, children, ...props }: Record<string, unknown> & { children?: ReactNode }) => {
+  const Component = ({
+    animate,
+    exit,
+    whileTap,
+    children,
+    ...props
+  }: Record<string, unknown> & { children?: ReactNode }) => {
     const domProps = Object.fromEntries(Object.entries(props).filter(([key]) => !MOTION_PROPS.has(key)));
     return createElement(
       tag,
@@ -33,6 +39,7 @@ const makeComponent = (tag: string) => {
         // Exposes motion props so tests can assert them without running animations.
         'data-animate': animate === undefined ? undefined : JSON.stringify(animate),
         'data-exit': typeof exit === 'string' ? exit : undefined,
+        'data-while-tap': whileTap === undefined ? undefined : JSON.stringify(whileTap),
       },
       children
     );
@@ -53,8 +60,12 @@ const createProxy = () => {
   );
 };
 
+/** Value returned by the mocked `useReducedMotion`; tests flip it and reset it to false afterwards. */
+export const motionState = { reducedMotion: false };
+
 /** Drop-in replacement for the `motion/react` module: plain HTML elements, no animation. */
 export const motionMock = {
+  useReducedMotion: () => motionState.reducedMotion,
   m: createProxy(),
   motion: createProxy(),
   AnimatePresence: passThrough,

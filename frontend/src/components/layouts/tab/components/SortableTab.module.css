@@ -1,0 +1,21 @@
+/* Chrome-like separator between inactive tabs. Absolute, so it never affects layout. */
+.wrapper::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 1px;
+  height: 55%;
+  transform: translateY(-50%);
+  background-color: var(--mantine-color-default-border);
+  pointer-events: none;
+}
+
+/* Hide next to the active tab, after the last tab, and around the hovered tab. */
+.wrapper:last-child::after,
+.wrapper:has([data-active])::after,
+.wrapper:has(+ .wrapper [data-active])::after,
+.wrapper:hover::after,
+.wrapper:has(+ .wrapper:hover)::after {
+  display: none;
+}
