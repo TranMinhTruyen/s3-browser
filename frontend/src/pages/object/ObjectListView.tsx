@@ -242,7 +242,8 @@ function ObjectListView(props: ObjectListViewProps) {
   ]);
 
   const isEmpty = objectList.length === 0;
-  const showEmpty = !!keyword && isLoaded && isEmpty && !nextCursor;
+  // Only once this very list has loaded (not while loading, after an error, or on a stale previous list).
+  const showEmpty = !!connectionId && !!bucket && isLoaded && cursorKey === listKey && isEmpty && !nextCursor;
   // Retry after a failed page, or continue a search that found nothing yet.
   const showLoadMore = !!keyword && !!nextCursor && !isLoadingMore && (isEmpty || loadMoreError);
   // With no rows the list has no height, so the footer flows normally instead of hanging below the rows.
@@ -279,7 +280,7 @@ function ObjectListView(props: ObjectListViewProps) {
       ) : null}
       {showEmpty ? (
         <Center style={footerStyle} py="8px">
-          <Text c="dimmed">{t('search.empty')}</Text>
+          <Text c="dimmed">{keyword ? t('search.empty') : t('emptyFolder')}</Text>
         </Center>
       ) : null}
       {showLoadMore ? (

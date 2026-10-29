@@ -1,12 +1,13 @@
-import { CloseButton, Combobox, Group, Input, InputBase, Loader, Text, useCombobox } from '@mantine/core';
+import { Combobox, Group, Input, InputBase, Loader, Text, useCombobox } from '@mantine/core';
 import { useDebouncedValue, useElementSize } from '@mantine/hooks';
 import { GetListBucket, SearchBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Bucket } from '@wails/S3Browser/models/bucket';
 import { CheckIcon } from 'lucide-react';
-import { ChangeEvent, MouseEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
+import { ChangeEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { callIPC } from '@/common/utils/ipcUtils';
 import Button from '@/components/buttons/Button';
+import ComboboxClearButton from '@/components/inputs/combobox/ComboboxClearButton';
 
 // Buckets fetched per page.
 const BUCKET_PAGE_SIZE = 20;
@@ -32,7 +33,6 @@ function BucketPicker(props: BucketPickerProps) {
   const { connectionId, profileName, value, label, disabled, error, onChange } = props;
 
   const { t } = useTranslation('bucketPicker');
-  const { t: tCommon } = useTranslation('common');
 
   const [opened, setOpened] = useState(false);
   const [keyword, setKeyword] = useState('');
@@ -121,8 +121,6 @@ function BucketPicker(props: BucketPickerProps) {
     [onChange, closeDropdown]
   );
 
-  const onMouseDownClear = useCallback((e: MouseEvent<HTMLButtonElement>) => e.preventDefault(), []);
-
   const onClickToggle = useCallback(() => toggleDropdown(), [toggleDropdown]);
 
   const onClickClear = useCallback(() => onChange(null), [onChange]);
@@ -140,19 +138,7 @@ function BucketPicker(props: BucketPickerProps) {
           label={label}
           error={error}
           disabled={disabled}
-          rightSection={
-            showClear ? (
-              <CloseButton
-                size="sm"
-                variant="transparent"
-                aria-label={tCommon('button.clear')}
-                onMouseDown={onMouseDownClear}
-                onClick={onClickClear}
-              />
-            ) : (
-              <Combobox.Chevron />
-            )
-          }
+          rightSection={showClear ? <ComboboxClearButton onClear={onClickClear} /> : <Combobox.Chevron />}
           rightSectionPointerEvents={showClear ? 'all' : 'none'}
           onClick={onClickToggle}
         >

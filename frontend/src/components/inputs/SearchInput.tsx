@@ -17,6 +17,7 @@ type SearchInputProps = {
   onClear: () => void;
 };
 
+/** Search box with a clear button and a search button; Enter or the button submits the trimmed text. */
 function SearchInput(props: SearchInputProps) {
   const { value = '', placeholder, searchLabel, clearLabel, disabled, onSearch, onClear } = props;
 

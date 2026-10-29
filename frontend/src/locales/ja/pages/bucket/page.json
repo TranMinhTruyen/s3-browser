@@ -1,4 +1,5 @@
 {
+  "empty": "バケットがありません",
   "tooltip": {
     "bucketList": "バケット一覧"
   },
