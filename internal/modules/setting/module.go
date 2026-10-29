@@ -87,14 +87,6 @@ func (m *Module) SaveSettings(input models.SaveSettingInput) models.Output[model
 	return output
 }
 
-// ResetSettings returns the default settings without saving them; the user confirms with SaveSettings.
-func (m *Module) ResetSettings() models.Output[models.SettingsOutput] {
-	output := models.NewOutput[models.SettingsOutput]()
-	output.Body.AutostartSupported = autostartSupported()
-	output.Body.Settings = defaultSettings()
-	return output
-}
-
 // GetTabState returns the remembered tabs. A missing, malformed or invalid file yields an empty state.
 func (m *Module) GetTabState() models.Output[models.TabState] {
 	output := models.NewOutput[models.TabState]()
