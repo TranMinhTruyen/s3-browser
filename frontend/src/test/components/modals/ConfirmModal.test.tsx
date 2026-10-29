@@ -29,6 +29,19 @@ describe('ConfirmModal', () => {
     await expect(result).resolves.toBe(true);
   });
 
+  it('puts Cancel on the left and OK on the right of a non-wrapping footer', async () => {
+    renderWithProviders(<div />);
+    act(() => {
+      ConfirmModal.show({ type: 'info', confirmCode: 'C000004', params: { object: 'a.txt' } });
+    });
+    await flush();
+
+    const footer = screen.getByRole('button', { name: 'Cancel' }).parentElement as HTMLElement;
+    expect(footer.style.getPropertyValue('--group-wrap')).toBe('nowrap');
+    expect(footer.style.getPropertyValue('--group-justify')).toBe('space-between');
+    expect(Array.from(footer.querySelectorAll('button')).map(b => b.textContent)).toEqual(['Cancel', 'OK']);
+  });
+
   it('shows the warning title and resolves false on Cancel', async () => {
     renderWithProviders(<div />);
     let result: Promise<boolean | null> | undefined;

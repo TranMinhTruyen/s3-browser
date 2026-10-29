@@ -1,4 +1,4 @@
-import { Affix, Box, CloseButton, Divider, Group, Paper, Stack, Text } from '@mantine/core';
+import { Affix, CloseButton, Divider, Group, Paper, Text } from '@mantine/core';
 import { useElementSize } from '@mantine/hooks';
 import { CancelAllDownloads } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Events } from '@wailsio/runtime';
@@ -10,6 +10,11 @@ import { selectDownloadingIds, useDownloaderStore } from '@/common/stores/downlo
 import { callIPC } from '@/common/utils/ipcUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import DownloaderItem from '@/components/layouts/downloader/DownloaderItem';
+import { ITEM_HEIGHT } from '@/components/layouts/transferItem';
+import VirtualItemList from '@/components/layouts/VirtualItemList';
+
+// Same as the former Stack gap="xs" (10px), so rows keep their spacing.
+const ITEM_GAP = 10;
 
 /** Floating download progress window (or a button when closed); publishes its size for the uploader. */
 function DownloaderWindow() {
@@ -61,6 +66,8 @@ function DownloaderWindow() {
     await callIPC(CancelAllDownloads, []);
   }, []);
 
+  const renderItem = useCallback((id: string) => <DownloaderItem id={id} />, []);
+
   return rendered ? (
     <>
       {!visible ? (
@@ -91,13 +98,7 @@ function DownloaderWindow() {
 
             <Divider />
 
-            <Box p="8px" style={{ maxHeight: '260px', overflow: 'auto' }}>
-              <Stack gap="xs">
-                {downloadItemIds.map(id => (
-                  <DownloaderItem key={id} id={id} />
-                ))}
-              </Stack>
-            </Box>
+            <VirtualItemList ids={downloadItemIds} gap={ITEM_GAP} itemHeight={ITEM_HEIGHT} renderItem={renderItem} />
           </Paper>
         </Affix>
       )}

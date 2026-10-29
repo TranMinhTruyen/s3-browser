@@ -399,6 +399,40 @@ describe('UploadPickerModal', () => {
       expect(screen.getByRole('checkbox', { name: 'l2.bin' })).not.toBeChecked();
     });
 
+    it('turns the large counter red and bold only once it is over the limit', async () => {
+      const { user } = open();
+      await flush();
+      await drop(output([group('g', [file('g/l1.bin', { large: true }), file('g/l2.bin', { large: true })])]));
+      const counter = () => screen.getByText(/\d+\/1 large files/);
+      expect(counter().style.fontWeight).toBe('');
+      expect(counter().style.color).toContain('dimmed');
+
+      await user.click(screen.getByRole('checkbox', { name: 'l2.bin' }));
+
+      expect(counter().style.fontWeight).toBe('600');
+      expect(counter().style.color).toContain('red');
+    });
+
+    it('turns the file counter red and bold only once it is over the limit', async () => {
+      const { user } = open();
+      await flush();
+      await drop(output([group('g', [file('g/a.txt'), file('g/b.txt'), file('g/c.txt')])]));
+      const counter = () => screen.getByText(/\d+\/2 files/);
+      expect(counter().style.fontWeight).toBe('');
+
+      await user.click(screen.getByRole('checkbox', { name: 'c.txt' }));
+
+      expect(counter().style.fontWeight).toBe('600');
+      expect(counter().style.color).toContain('red');
+    });
+
+    it('shows the root label for files dropped outside any folder', async () => {
+      open();
+      await flush();
+      await drop(output([group('', [file('a.txt')])]));
+      expect(screen.getByText('(selected files)')).toBeInTheDocument();
+    });
+
     it('does not show a large counter or badge without large files', async () => {
       open();
       await flush();

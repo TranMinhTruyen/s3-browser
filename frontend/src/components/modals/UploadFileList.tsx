@@ -1,8 +1,8 @@
 import { Badge, Group, Text } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { DroppedFile, DroppedGroup } from '@wails/S3Browser/models/bucket';
-import { Trash2 } from 'lucide-react';
-import { ChangeEvent, CSSProperties, memo, ReactNode, useCallback, useRef } from 'react';
+import { Folder, Trash2 } from 'lucide-react';
+import { ChangeEvent, CSSProperties, memo, ReactNode, useCallback, useMemo, useRef } from 'react';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
@@ -18,10 +18,64 @@ const ROW_HEIGHT = 36;
 // Last path segment; paths use "\" on Windows and "/" elsewhere.
 const baseName = (path: string) => path.split(/[\\/]/).pop() || path;
 
+// Absolute position of a row inside the virtual list. Memoized by the rows, so `memo` keeps working
+// (a fresh style object on every render would defeat it).
+const useRowStyle = (top: number): CSSProperties =>
+  useMemo(
+    () => ({
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: ROW_HEIGHT,
+      transform: `translateY(${top}px)`,
+    }),
+    [top]
+  );
+
+type GroupRowProps = {
+  group: DroppedGroup;
+  // Offset of the row inside the virtual list.
+  top: number;
+  rootLabel: string;
+  // Counter texts; a counter is hidden when its text is not set.
+  largeText?: string;
+  countText?: string;
+  // Over the limit: the counter is highlighted.
+  largeOver?: boolean;
+  countOver?: boolean;
+};
+
+/** A group (folder) header line with its optional large-file and file counters. */
+export const GroupRow = memo(function GroupRow(props: GroupRowProps) {
+  const { group, top, rootLabel, largeText, countText, largeOver, countOver } = props;
+  const style = useRowStyle(top);
+
+  return (
+    <Group style={style} gap="xs" wrap="nowrap" px="xs" bg="var(--mantine-color-default-hover)">
+      <Folder size="16px" style={{ flexShrink: 0 }} />
+      <Text fw={600} truncate="end" style={{ flex: 1, minWidth: 0 }} title={group.name}>
+        {group.name || rootLabel}
+      </Text>
+      {largeText && (
+        <Text size="sm" c={largeOver ? 'red' : 'dimmed'} fw={largeOver ? 600 : undefined} style={{ flexShrink: 0 }}>
+          {largeText}
+        </Text>
+      )}
+      {countText && (
+        <Text size="sm" c={countOver ? 'red' : 'dimmed'} fw={countOver ? 600 : undefined} style={{ flexShrink: 0 }}>
+          {countText}
+        </Text>
+      )}
+    </Group>
+  );
+});
+
 type FileRowProps = {
   file: DroppedFile;
   checked: boolean;
-  style: CSSProperties;
+  // Offset of the row inside the virtual list.
+  top: number;
   largeLabel: string;
   // Which path is shown as the tooltip of the file name.
   titleBy: 'path' | 'relKey';
@@ -33,7 +87,8 @@ type FileRowProps = {
 
 /** One file line: checkbox with name, large badge, size and an optional remove button. */
 export const FileRow = memo(function FileRow(props: FileRowProps) {
-  const { file, checked, style, largeLabel, titleBy, onToggleFile, onRemoveFile, removeLabel } = props;
+  const { file, checked, top, largeLabel, titleBy, onToggleFile, onRemoveFile, removeLabel } = props;
+  const style = useRowStyle(top);
 
   const onChangeFile = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => onToggleFile(file.path, e.currentTarget.checked),
@@ -75,8 +130,8 @@ type VirtualRowListProps = {
   rows: UploadRow[];
   // Scroll area height (CSS value).
   height: string | number;
-  // Renders one row; `style` positions it inside the virtual list.
-  renderRow: (row: UploadRow, key: string | number | bigint, style: CSSProperties) => ReactNode;
+  // Renders one row; `top` is its offset inside the virtual list.
+  renderRow: (row: UploadRow, key: string | number | bigint, top: number) => ReactNode;
 };
 
 /** Virtualized scroll list of group/file rows; the caller decides how each row is drawn. */
@@ -101,16 +156,7 @@ export const VirtualRowList = memo(function VirtualRowList(props: VirtualRowList
   return (
     <div ref={scrollRef} style={{ height, overflow: 'auto', position: 'relative' }}>
       <div style={{ position: 'relative', height: virtualizer.getTotalSize(), width: '100%' }}>
-        {virtualizer.getVirtualItems().map(item =>
-          renderRow(rows[item.index], item.key, {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: ROW_HEIGHT,
-            transform: `translateY(${item.start}px)`,
-          })
-        )}
+        {virtualizer.getVirtualItems().map(item => renderRow(rows[item.index], item.key, item.start))}
       </div>
     </div>
   );

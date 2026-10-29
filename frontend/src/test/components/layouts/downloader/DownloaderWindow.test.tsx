@@ -2,7 +2,7 @@ import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CancelAllDownloads } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Events } from '@wailsio/runtime';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useDownloaderStore } from '@/common/stores/downloaderStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import DownloaderWindow from '@/components/layouts/downloader/DownloaderWindow';
@@ -24,6 +24,13 @@ vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
 
 const callIPCMock = vi.mocked(callIPC);
+// The REAL virtualizer is used; jsdom has no layout, so give every element a viewport.
+const sizes = [
+  ['offsetHeight', 260],
+  ['offsetWidth', 400],
+  ['clientHeight', 260],
+  ['clientWidth', 400],
+] as const;
 const state = () => useDownloaderStore.getState();
 
 const downloading = (id: string, fileName = `${id}.bin`) => ({ id, fileName, status: 'DOWNLOADING', version: 1 });
@@ -40,7 +47,14 @@ describe('DownloaderWindow', () => {
       return unsubscribe;
     }) as never);
     callIPCMock.mockResolvedValue(null as never);
+    for (const [prop, value] of sizes) {
+      Object.defineProperty(HTMLElement.prototype, prop, { configurable: true, value });
+    }
     state().reset();
+  });
+
+  afterEach(() => {
+    for (const [prop] of sizes) delete (HTMLElement.prototype as unknown as Record<string, unknown>)[prop];
   });
 
   it('renders nothing and publishes an empty size while nothing is downloading', () => {
@@ -61,6 +75,18 @@ describe('DownloaderWindow', () => {
     expect(screen.getByText('Downloading')).toBeInTheDocument();
     expect(screen.getByText('Object: a.bin')).toBeInTheDocument();
     expect(state().windowSize).toEqual({ width: 300, height: 120 });
+  });
+
+  it('lays the items out in the virtual list with a 10px gap', async () => {
+    renderWithProviders(<DownloaderWindow />);
+
+    emit('downloader:load-download-history', downloading('d1', 'a.bin'));
+    emit('downloader:load-download-history', downloading('d2', 'b.bin'));
+
+    const wrapper = (name: string) => screen.getByText(name).closest('[style*="translateY"]') as HTMLElement;
+    expect((await screen.findByText('Object: b.bin')).isConnected).toBe(true);
+    expect(wrapper('Object: a.bin').style.transform).toBe('translateY(0px)');
+    expect(wrapper('Object: b.bin').style.transform).toBe('translateY(90px)');
   });
 
   it('ignores a history event without data', () => {

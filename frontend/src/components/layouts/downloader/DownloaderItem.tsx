@@ -8,6 +8,7 @@ import { useDownloaderStore } from '@/common/stores/downloaderStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
+import { ITEM_HEIGHT } from '@/components/layouts/transferItem';
 
 type DownloaderItemProps = {
   id: string;
@@ -31,7 +32,7 @@ function DownloaderItem(props: DownloaderItemProps) {
   return (
     <Card
       padding="sm"
-      h="80px"
+      h={ITEM_HEIGHT}
       withBorder
       orientation="horizontal"
       onMouseEnter={handlerExpanded.open}
