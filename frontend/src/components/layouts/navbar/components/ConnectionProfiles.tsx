@@ -2,12 +2,14 @@ import { Text } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Disconnect } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { DeleteProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
+import type { ConnectionProfileInput } from '@wails/S3Browser/models';
 import { Events } from '@wailsio/runtime';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useConnectProfile } from '@/common/hooks/useConnectProfile';
 import { ConnectionProfile, useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
+import { needsManualInput } from '@/common/utils/authUtils';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ConnectionProfileItem from '@/components/layouts/navbar/components/ConnectionProfileItem';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
@@ -15,6 +17,15 @@ import { showConnectModal } from '@/components/modals/lazyModals';
 
 // Initial row height (2 text lines + card padding); the real height comes from measureElement.
 const ESTIMATED_ITEM_HEIGHT = 64;
+
+// The delete only needs the identity of the profile.
+const toDeleteInput = ({ id, name, version, authConfig }: ConnectionProfile): ConnectionProfileInput => ({
+  id,
+  name,
+  version,
+  authConfig,
+  authSecret: {},
+});
 
 function ConnectionProfiles() {
   const { t } = useTranslation('connectionProfiles');
@@ -63,7 +74,7 @@ function ConnectionProfiles() {
     async (key: string) => {
       const value = getConnectionProfileById(key);
       if (!value || value.isConnected || connectingRef.current.has(key)) return;
-      if (autoConnectDoneRef.current && !value.secretKey) {
+      if (autoConnectDoneRef.current && needsManualInput(value)) {
         onClickOpenConnectModal(value, 'manualconnect');
         return;
       }
@@ -124,7 +135,7 @@ function ConnectionProfiles() {
       });
       if (!confirmDelete) return;
 
-      const output = await callIPC(DeleteProfileById, [{ ...value }]);
+      const output = await callIPC(DeleteProfileById, [toDeleteInput(value)]);
       if (output) {
         deleteConnectionProfiles(value.id);
         clearProfile(value.id);

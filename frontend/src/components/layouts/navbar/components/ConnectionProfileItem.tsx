@@ -1,8 +1,9 @@
-import { Box, Card, isLightColor, Loader, Menu, Text } from '@mantine/core';
+import { Badge, Box, Card, Group, isLightColor, Loader, Menu, Text } from '@mantine/core';
 import { Cable, PlugZap, SquarePen, Trash, Unplug } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ConnectionProfile } from '@/common/stores/profileStore';
+import { getAuthType } from '@/common/utils/authUtils';
 import classes from '@/components/layouts/navbar/components/ConnectionProfileItem.module.css';
 
 /** Black/white text that contrasts with the user-chosen profile color; theme text when no color is set. */
@@ -37,7 +38,7 @@ function ConnectionProfileItem({
   onDelete,
   onMenuChange,
 }: ConnectionProfileItemProps) {
-  const { t } = useTranslation('connectionProfiles');
+  const { t } = useTranslation(['connectionProfiles', 'connectModal']);
 
   const onChangeMenu = useCallback((opened: boolean) => onMenuChange(profileKey, opened), [onMenuChange, profileKey]);
   const onClickConnect = useCallback(() => onConnect(profileKey), [onConnect, profileKey]);
@@ -91,9 +92,14 @@ function ConnectionProfileItem({
               <Text c="inherit" truncate="end" title={profile.name}>
                 {profile.name}
               </Text>
-              <Text c="dimmed" truncate="end">
-                {profile.provider}
-              </Text>
+              <Group gap="xs" wrap="nowrap">
+                <Text c="dimmed" truncate="end">
+                  {profile.provider}
+                </Text>
+                <Badge size="xs" variant="light" color="var(--mantine-color-gray-6)" style={{ flexShrink: 0 }}>
+                  {t(`connectModal:authType.${getAuthType(profile)}.label`)}
+                </Badge>
+              </Group>
             </Box>
           </Card.Section>
         </Card>

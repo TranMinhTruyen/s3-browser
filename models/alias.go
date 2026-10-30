@@ -108,6 +108,12 @@ type (
 	ConnectionProfileOutput = profile.ConnectionProfileOutput
 	// GetAllConnectionProfileOutput re-exports profile.GetAllConnectionProfileOutput.
 	GetAllConnectionProfileOutput = profile.GetAllConnectionProfileOutput
+	// AuthConfig re-exports profile.AuthConfig.
+	AuthConfig = profile.AuthConfig
+	// AuthSecret re-exports profile.AuthSecret.
+	AuthSecret = profile.AuthSecret
+	// AwsProfileOutput re-exports profile.AwsProfileOutput.
+	AwsProfileOutput = profile.AwsProfileOutput
 )
 
 // common functions

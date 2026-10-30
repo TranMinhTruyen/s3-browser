@@ -1,4 +1,4 @@
-// Package profile manages saved connection profiles and encrypts their secret keys.
+// Package profile manages saved connection profiles and encrypts their secrets.
 package profile
 
 import (
@@ -8,6 +8,7 @@ import (
 	"S3Browser/internal/pkg/utils"
 	"S3Browser/models"
 	"database/sql"
+	"errors"
 	"log/slog"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -32,6 +33,12 @@ var (
 	// PFE007 - Profile [{name}] has uploads or downloads in progress, cannot delete
 	PFE007 = "PFE007"
 
+	// PFE008 - Authentication method {authType} is not valid for provider {provider}.
+	PFE008 = "PFE008"
+
+	// PFE009 - Authentication settings are invalid.
+	PFE009 = "PFE009"
+
 	// PFS001 - Add new profile [{name}] success
 	PFS001 = "PFS001"
 
@@ -48,7 +55,8 @@ type Module struct {
 	app    *application.App
 	global *global.Module
 	q      *sqlc.Queries
-	km     *utils.KeyManager
+
+	submoduleAuthMng *submoduleAuthMng
 }
 
 // NewModule creates the profile module.
@@ -64,48 +72,63 @@ func NewModule(
 		app:    app,
 		global: global,
 		q:      sqlc.New(db),
-		km:     km,
+
+		submoduleAuthMng: newSubmoduleAuthMng(km),
 	}
 }
 
-// toProfileOutput maps a stored profile; secretKey is the plain text one, never the stored cipher.
-func toProfileOutput(p sqlc.ConnectionProfile, secretKey string) models.ConnectionProfileOutput {
+// toProfileOutput maps a stored profile for the frontend. It never exposes a secret, only their names.
+// On error (secret or auth_config unreadable) it still returns the readable part of the profile.
+func (m *Module) toProfileOutput(p sqlc.ConnectionProfile) (models.ConnectionProfileOutput, error) {
+	secrets, secretErr := m.submoduleAuthMng.open(p)
+	authConfig, configErr := parseAuthConfig(p)
+
 	return models.ConnectionProfileOutput{
-		ID:          p.ID,
-		Name:        p.Name.String,
-		Color:       p.Color.String,
-		Provider:    p.Provider,
-		Endpoint:    p.Endpoint,
-		Region:      p.Region,
-		AccessKey:   p.AccessKey,
-		SecretKey:   secretKey,
-		PathStyle:   p.PathStyle.Bool,
-		AutoConnect: p.AutoConnect.Bool,
-		CreatedAt:   p.CreatedAt.Time,
-		UpdatedAt:   p.UpdatedAt.Time,
-		Version:     p.Version,
-	}
+		ID:           p.ID,
+		Name:         p.Name.String,
+		Color:        p.Color.String,
+		Provider:     p.Provider,
+		Endpoint:     p.Endpoint,
+		Region:       p.Region,
+		AccessKey:    p.AccessKey.String,
+		PathStyle:    p.PathStyle.Bool,
+		AutoConnect:  p.AutoConnect.Bool,
+		CreatedAt:    p.CreatedAt.Time,
+		UpdatedAt:    p.UpdatedAt.Time,
+		Version:      p.Version,
+		IsConnected:  m.global.HasConn(p.ID),
+		AuthType:     p.AuthType,
+		AuthConfig:   authConfig,
+		SavedSecrets: secrets.names(),
+	}, errors.Join(secretErr, configErr)
 }
 
-// encryptSecret returns the cipher of the secret key to store, or "" when the user doesn't want
-// it saved. Intentional: on update, "" overwrites any secret stored before.
-func (m *Module) encryptSecret(input models.ConnectionProfileInput) (string, error) {
-	if !input.SavePassword {
-		return "", nil
+// outputErrorMessage maps an error of toProfileOutput to its message: PFE009 for a bad auth_config, else PFE002.
+func outputErrorMessage(err error) models.Message {
+	code := PFE002
+	if errors.Is(err, errInvalidAuthConfig) {
+		code = PFE009
 	}
-	return m.km.Encrypt(input.SecretKey)
+	return models.NewMessage(cnst.MessageTypeError, cnst.Profile, code, err.Error())
 }
 
-// CreateProfile saves a new profile. The secret key is stored encrypted, and only if SavePassword is set.
+// warnMessage is outputErrorMessage as a warning, for a profile that was saved but can't be read back fully.
+func warnMessage(err error) models.Message {
+	msg := outputErrorMessage(err)
+	msg.MessageType = cnst.MessageTypeWarn
+	return msg
+}
+
+// CreateProfile saves a new profile. Secrets are stored encrypted, and only if SavePassword is set.
+// An authType the provider doesn't support is rejected with PFE008 and nothing is written.
 func (m *Module) CreateProfile(
 	input models.ConnectionProfileInput,
 ) models.Output[models.ConnectionProfileOutput] {
 	output := models.NewOutput[models.ConnectionProfileOutput]()
 
-	encryptedSecret, err := m.encryptSecret(input)
-	if err != nil {
-		m.logger.Error("encrypted SecretKey failed", slog.Any("error", err))
-		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
+	auth, failure := m.submoduleAuthMng.prepare(input, nil)
+	if failure != nil {
+		return output.ThrowError(*failure)
 	}
 
 	params := sqlc.CreateProfileParams{
@@ -115,10 +138,13 @@ func (m *Module) CreateProfile(
 		Provider:    input.Provider,
 		Endpoint:    input.Endpoint,
 		Region:      input.Region,
-		AccessKey:   input.AccessKey,
-		SecretKey:   sql.NullString{String: encryptedSecret, Valid: true},
+		AccessKey:   auth.accessKey,
+		SecretKey:   auth.secretKey,
 		PathStyle:   sql.NullBool{Bool: input.PathStyle, Valid: true},
-		AutoConnect: sql.NullBool{Bool: input.AutoConnect, Valid: true},
+		AutoConnect: sql.NullBool{Bool: auth.autoConnect, Valid: true},
+		AuthType:    auth.authType,
+		AuthConfig:  auth.config,
+		AuthSecret:  auth.secret,
 	}
 
 	result, err := m.q.CreateProfile(m.app.Context(), params)
@@ -127,7 +153,11 @@ func (m *Module) CreateProfile(
 		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Profile, PFE001, err.Error()))
 	}
 
-	output.Body = toProfileOutput(result, input.SecretKey)
+	if output.Body, err = m.toProfileOutput(result); err != nil {
+		m.logger.Error("read saved profile failed", "connectionId", result.ID, "error", err)
+		// The profile is saved: report a warning, not a failure.
+		output.AddMessage(warnMessage(err))
+	}
 	output.AddMessage(models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Profile, PFS001, "", map[string]any{
 		"name": result.Name.String,
 	}))
@@ -136,13 +166,24 @@ func (m *Module) CreateProfile(
 }
 
 // UpdateProfileById updates a profile; input.Version is the optimistic-lock value the caller last read.
+// An empty secret keeps the stored one; SavePassword=false deletes every stored secret.
 func (m *Module) UpdateProfileById(input models.ConnectionProfileInput) models.Output[models.ConnectionProfileOutput] {
 	output := models.NewOutput[models.ConnectionProfileOutput]()
 
-	encryptedSecret, err := m.encryptSecret(input)
-	if err != nil {
-		m.logger.Error("encrypted SecretKey failed", slog.Any("error", err))
-		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
+	// The stored row is only needed to keep secrets the caller left empty.
+	var stored *sqlc.ConnectionProfile
+	if input.SavePassword {
+		row, err := m.q.SelectConnectionProfileById(m.app.Context(), input.Id)
+		if err != nil {
+			m.logger.Error("get stored profile failed", "connectionId", input.Id, "error", err)
+			return output.ThrowError(updateError(input.Name, err))
+		}
+		stored = &row
+	}
+
+	auth, failure := m.submoduleAuthMng.prepare(input, stored)
+	if failure != nil {
+		return output.ThrowError(*failure)
 	}
 
 	params := sqlc.UpdateConnectionProfileByIdParams{
@@ -152,29 +193,38 @@ func (m *Module) UpdateProfileById(input models.ConnectionProfileInput) models.O
 		Provider:    input.Provider,
 		Endpoint:    input.Endpoint,
 		Region:      input.Region,
-		AccessKey:   input.AccessKey,
-		SecretKey:   sql.NullString{String: encryptedSecret, Valid: true},
+		AccessKey:   auth.accessKey,
+		SecretKey:   auth.secretKey,
 		PathStyle:   sql.NullBool{Bool: input.PathStyle, Valid: true},
-		AutoConnect: sql.NullBool{Bool: input.AutoConnect, Valid: true},
+		AutoConnect: sql.NullBool{Bool: auth.autoConnect, Valid: true},
+		AuthType:    auth.authType,
+		AuthConfig:  auth.config,
+		AuthSecret:  auth.secret,
 		Version:     input.Version,
 	}
 
 	result, err := m.q.UpdateConnectionProfileById(m.app.Context(), params)
 	if err != nil {
 		m.logger.Error("update connection profile failed", "connectionId", input.Id, "error", err)
-		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Profile, PFE005, err.Error(), map[string]any{
-				"name": input.Name,
-			}),
-		)
+		return output.ThrowError(updateError(input.Name, err))
 	}
 
-	output.Body = toProfileOutput(result, input.SecretKey)
+	if output.Body, err = m.toProfileOutput(result); err != nil {
+		m.logger.Error("read saved profile failed", "connectionId", result.ID, "error", err)
+		output.AddMessage(warnMessage(err))
+	}
 	output.AddMessage(models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Profile, PFS002, "", map[string]any{
 		"name": result.Name.String,
 	}))
 
 	return output
+}
+
+// updateError is the PFE005 message of a failed update of profile name.
+func updateError(name string, err error) models.Message {
+	return models.NewParamsMessage(cnst.MessageTypeError, cnst.Profile, PFE005, err.Error(), map[string]any{
+		"name": name,
+	})
 }
 
 // DeleteProfileById closes the profile's active connection (if any), then deletes the profile.
@@ -213,7 +263,7 @@ func (m *Module) DeleteProfileById(input models.ConnectionProfileInput) models.O
 	return output
 }
 
-// GetConnectionProfileById returns a profile with its secret key decrypted.
+// GetConnectionProfileById returns a profile; its secrets are not included, only the names in SavedSecrets.
 func (m *Module) GetConnectionProfileById(connectionID string) models.Output[models.ConnectionProfileOutput] {
 	output := models.NewOutput[models.ConnectionProfileOutput]()
 
@@ -223,20 +273,55 @@ func (m *Module) GetConnectionProfileById(connectionID string) models.Output[mod
 		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Profile, PFE003, err.Error()))
 	}
 
-	decrypted := ""
-	if result.SecretKey.String != "" {
-		if decrypted, err = m.km.Decrypt(result.SecretKey.String); err != nil {
-			return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
-		}
+	if output.Body, err = m.toProfileOutput(result); err != nil {
+		m.logger.Error("error while read profile", "connectionId", connectionID, "error", err)
+		return output.ThrowError(outputErrorMessage(err))
 	}
 
-	output.Body = toProfileOutput(result, decrypted)
+	return output
+}
+
+// GetConnectInput returns a saved profile as a connect input with its secrets decrypted. It is for the
+// backend only (no handler exposes it): the frontend never receives the secrets.
+func (m *Module) GetConnectInput(connectionID string) models.Output[models.ConnectionProfileInput] {
+	output := models.NewOutput[models.ConnectionProfileInput]()
+
+	row, err := m.q.SelectConnectionProfileById(m.app.Context(), connectionID)
+	if err != nil {
+		m.logger.Error("error while get profile", slog.Any("error", err))
+		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Profile, PFE003, err.Error()))
+	}
+
+	secrets, secretErr := m.submoduleAuthMng.open(row)
+	authConfig, configErr := parseAuthConfig(row)
+	if err := errors.Join(secretErr, configErr); err != nil {
+		m.logger.Error("error while read profile", "connectionId", connectionID, "error", err)
+		return output.ThrowError(outputErrorMessage(err))
+	}
+
+	output.Body = models.ConnectionProfileInput{
+		Id:          row.ID,
+		Name:        row.Name.String,
+		Color:       row.Color.String,
+		Provider:    row.Provider,
+		Endpoint:    row.Endpoint,
+		Region:      row.Region,
+		AccessKey:   row.AccessKey.String,
+		SecretKey:   secrets.secretKey,
+		PathStyle:   row.PathStyle.Bool,
+		AutoConnect: row.AutoConnect.Bool,
+		Version:     row.Version,
+		AuthType:    row.AuthType,
+		AuthConfig:  authConfig,
+		AuthSecret:  secrets.AuthSecret,
+	}
 
 	return output
 }
 
 // GetAllConnectionProfile returns every profile keyed by id, with IsConnected set from the live
-// connections. A secret that fails to decrypt is reported with PFE002 but its profile is still returned.
+// connections. A profile whose secret or auth_config is unreadable is reported with PFE002/PFE009
+// but still returned.
 func (m *Module) GetAllConnectionProfile() models.Output[models.GetAllConnectionProfileOutput] {
 	output := models.NewOutput[models.GetAllConnectionProfileOutput]()
 
@@ -248,30 +333,12 @@ func (m *Module) GetAllConnectionProfile() models.Output[models.GetAllConnection
 
 	profiles := make(map[string]models.ConnectionProfileOutput, len(result))
 	for _, item := range result {
-		decrypted := ""
-		if item.SecretKey.String != "" {
-			if decrypted, err = m.km.Decrypt(item.SecretKey.String); err != nil {
-				output.AddMessage(models.NewMessage(cnst.MessageTypeError, cnst.Profile, PFE002, err.Error()))
-			}
+		profile, err := m.toProfileOutput(item)
+		if err != nil {
+			m.logger.Error("error while read profile", "connectionId", item.ID, "error", err)
+			output.AddMessage(outputErrorMessage(err))
 		}
-
-		// The list query returns different column names, so it can't share toProfileOutput directly.
-		profiles[item.ConnectionID] = models.ConnectionProfileOutput{
-			ID:          item.ConnectionID,
-			Name:        item.ConnectionName.String,
-			Color:       item.Color.String,
-			Provider:    item.Provider,
-			Endpoint:    item.Endpoint,
-			Region:      item.Region,
-			AccessKey:   item.AccessKey,
-			SecretKey:   decrypted,
-			PathStyle:   item.PathStyle.Bool,
-			AutoConnect: item.AutoConnect.Bool,
-			IsConnected: m.global.HasConn(item.ConnectionID),
-			CreatedAt:   item.CreatedAt.Time,
-			UpdatedAt:   item.UpdatedAt.Time,
-			Version:     item.Version,
-		}
+		profiles[item.ID] = profile
 	}
 
 	output.Body = models.GetAllConnectionProfileOutput{ConnectionProfiles: profiles}

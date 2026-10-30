@@ -15,13 +15,16 @@ type ConnectionProfile struct {
 	Provider    string         `json:"provider"`
 	Endpoint    string         `json:"endpoint"`
 	Region      string         `json:"region"`
-	AccessKey   string         `json:"access_key"`
+	AccessKey   sql.NullString `json:"access_key"`
 	SecretKey   sql.NullString `json:"secret_key"`
 	PathStyle   sql.NullBool   `json:"path_style"`
 	AutoConnect sql.NullBool   `json:"auto_connect"`
 	CreatedAt   sql.NullTime   `json:"created_at"`
 	UpdatedAt   sql.NullTime   `json:"updated_at"`
 	Version     int64          `json:"version"`
+	AuthType    string         `json:"auth_type"`
+	AuthConfig  sql.NullString `json:"auth_config"`
+	AuthSecret  sql.NullString `json:"auth_secret"`
 }
 
 type DownloadHistory struct {

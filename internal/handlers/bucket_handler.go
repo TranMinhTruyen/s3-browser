@@ -42,6 +42,11 @@ func (h *BucketHandler) ConnectS3ByProfile(connectionId string) models.Output[mo
 	return h.bucket.ConnectByProfile(connectionId)
 }
 
+// ListAwsProfiles lists the profiles of the AWS CLI config files; empty paths mean the standard files.
+func (h *BucketHandler) ListAwsProfiles(configFile, credentialsFile string) models.Output[[]models.AwsProfileOutput] {
+	return h.bucket.ListAwsProfiles(configFile, credentialsFile)
+}
+
 // DisconnectAll closes every connection.
 func (h *BucketHandler) DisconnectAll() {
 	h.bucket.DisconnectAll()

@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useConnectProfile } from '@/common/hooks/useConnectProfile';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
+import { needsManualInput } from '@/common/utils/authUtils';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
 import { ensureUploadIdle, runUpload } from '@/common/utils/uploadUtils';
 import ObjectDetailDrawer from '@/components/layouts/tab/components/ObjectDetailDrawer';
@@ -61,7 +62,7 @@ function TabDetail(props: TabDetailProps) {
     const profile = selectedProfile;
 
     if (!profile || profile.isConnected) return;
-    if (!profile.accessKey) {
+    if (needsManualInput(profile)) {
       showConnectModal({
         mode: 'manualconnect',
         connectionProfile: { ...profile },

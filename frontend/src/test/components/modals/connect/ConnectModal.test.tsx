@@ -12,7 +12,7 @@ import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import ConnectModal from '@/components/modals/connect/ConnectModal';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({ ConnectS3: vi.fn() }));
+vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({ ConnectS3: vi.fn(), ListAwsProfiles: vi.fn() }));
 vi.mock('@wails/S3Browser/internal/handlers/profilehandler', () => ({
   CreateProfile: vi.fn(),
   UpdateProfileById: vi.fn(),
@@ -35,7 +35,7 @@ const profile = (extra: Partial<ConnectionProfileOutput> = {}) =>
     endpoint: 'https://s3.example.com',
     region: 'ap-northeast-1',
     accessKey: 'AK',
-    secretKey: 'SK',
+    savedSecrets: ['secretKey'],
     version: 3,
     ...extra,
   });
@@ -84,8 +84,7 @@ describe('ConnectModal', () => {
 
       await user.click(button('Connect'));
 
-      expect(await screen.findByText('Endpoint is required')).toBeInTheDocument();
-      expect(screen.getByText('Access key is required')).toBeInTheDocument();
+      expect(await screen.findByText('Access key is required')).toBeInTheDocument();
       expect(screen.getByText('Secret key is required')).toBeInTheDocument();
       expect(screen.getByText('Region is required')).toBeInTheDocument();
       expect(callIPCMock).not.toHaveBeenCalled();
@@ -119,6 +118,10 @@ describe('ConnectModal', () => {
           pathStyle: false,
           savePassword: false,
           autoConnect: false,
+          authType: 'static',
+          authConfig: {},
+          authSecret: { sessionToken: '' },
+          mfaCode: '',
           id: '',
           version: 1,
         },
@@ -150,13 +153,14 @@ describe('ConnectModal', () => {
 
       expect(field(/Endpoint/)).toHaveValue('');
       await user.click(button('Connect'));
-      expect(await screen.findByText('Endpoint is required')).toBeInTheDocument();
+      expect(await screen.findByText('Access key is required')).toBeInTheDocument();
     });
 
     it('keeps the modal open when the connection fails', async () => {
       callIPCMock.mockResolvedValue({ isConnected: false } as never);
       const user = await open({ mode: 'manualconnect', connectionProfile: profile() });
 
+      fireEvent.change(field(/Secret key/), { target: { value: 'SK' } });
       await user.click(button('Connect'));
       await waitFor(() => expect(callIPCMock).toHaveBeenCalledTimes(1));
       await flush();
@@ -167,15 +171,18 @@ describe('ConnectModal', () => {
   });
 
   describe('manualconnect mode', () => {
-    it('prefills the form, marks the secret key as saved and connects as an existing profile', async () => {
+    it('prefills the form, marks the secrets as saved and connects as an existing profile', async () => {
       callIPCMock.mockResolvedValue({ isConnected: true } as never);
       const connectionProfile = profile();
       const user = await open({ mode: 'manualconnect', connectionProfile });
 
       expect(field(/Profile name/)).toHaveValue('my profile');
       expect(field(/Endpoint/)).toHaveValue('https://s3.example.com');
-      expect(screen.getByRole('checkbox', { name: 'Save secret key' })).toBeChecked();
+      expect(field(/Access key/)).toHaveValue('AK');
+      expect(screen.getByRole('checkbox', { name: 'Save secrets' })).toBeChecked();
 
+      // The backend never returns the secret, so it has to be typed again.
+      fireEvent.change(field(/Secret key/), { target: { value: 'SK' } });
       await user.click(button('Connect'));
 
       await waitFor(() => expect(callIPCMock).toHaveBeenCalledTimes(1));
@@ -191,9 +198,9 @@ describe('ConnectModal', () => {
     });
 
     it('leaves the saved-secret checkbox off when the profile has no secret key', async () => {
-      const user = await open({ mode: 'manualconnect', connectionProfile: profile({ secretKey: '' }) });
+      const user = await open({ mode: 'manualconnect', connectionProfile: profile({ savedSecrets: [] }) });
 
-      expect(screen.getByRole('checkbox', { name: 'Save secret key' })).not.toBeChecked();
+      expect(screen.getByRole('checkbox', { name: 'Save secrets' })).not.toBeChecked();
       // The secret key is required to connect.
       await user.click(button('Connect'));
       expect(await screen.findByText('Secret key is required')).toBeInTheDocument();
@@ -204,6 +211,7 @@ describe('ConnectModal', () => {
       callIPCMock.mockResolvedValue({ isConnected: true } as never);
       const user = await open({ mode: 'manualconnect', connectionProfile: profile({ id: '', version: undefined }) });
 
+      fireEvent.change(field(/Secret key/), { target: { value: 'SK' } });
       await user.click(button('Connect'));
 
       await waitFor(() => expect(callIPCMock).toHaveBeenCalledTimes(1));
@@ -216,6 +224,7 @@ describe('ConnectModal', () => {
       callIPCMock.mockResolvedValue({ isConnected: true } as never);
       const user = await open({ mode: 'manualconnect', connectionProfile: profile() });
 
+      fireEvent.change(field(/Secret key/), { target: { value: 'SK' } });
       await user.click(button('Test connection'));
 
       await waitFor(() => expect(callIPCMock).toHaveBeenCalledTimes(1));
@@ -269,7 +278,8 @@ describe('ConnectModal', () => {
 
       await user.click(button('Create profile'));
 
-      expect(await screen.findByText('Endpoint is required')).toBeInTheDocument();
+      expect(await screen.findByText('Access key is required')).toBeInTheDocument();
+      expect(screen.getByText('Region is required')).toBeInTheDocument();
       expect(screen.queryByText('Secret key is required')).not.toBeInTheDocument();
       expect(callIPCMock).not.toHaveBeenCalled();
     });
@@ -359,7 +369,7 @@ describe('ConnectModal', () => {
 
     it('does not require the secret key to save the profile', async () => {
       confirmMock.mockResolvedValue(true);
-      const user = await open({ mode: 'editProfile', connectionProfile: profile({ secretKey: '' }) });
+      const user = await open({ mode: 'editProfile', connectionProfile: profile({ savedSecrets: [] }) });
 
       await user.click(button('Update profile'));
 
@@ -387,7 +397,7 @@ describe('ConnectModal', () => {
 
     it('enables auto connect only with a saved secret key, and clears it when saving is turned off', async () => {
       const user = await open();
-      const save = () => screen.getByRole('checkbox', { name: 'Save secret key' });
+      const save = () => screen.getByRole('checkbox', { name: 'Save secrets' });
       const auto = () => screen.getByRole('checkbox', { name: 'Auto connect' });
       expect(auto()).toBeDisabled();
 
