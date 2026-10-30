@@ -15,7 +15,7 @@ var (
 	languages = []string{"en", "vi", "ja"}
 )
 
-// defaultSettings is what the app uses when nothing is saved, and what "reset" returns.
+// defaultSettings is what the app uses when nothing is saved, and the fallback for any unknown value.
 func defaultSettings() models.AppSettings {
 	return models.AppSettings{Theme: "light", Font: "nunito", Language: "en"}
 }

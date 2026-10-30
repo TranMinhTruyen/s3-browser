@@ -9,6 +9,12 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import Button from '@/components/buttons/Button';
 import BucketItem from '@/pages/bucket/BucketItem';
 
+// Buckets fetched per page.
+const BUCKET_PAGE_SIZE = 10;
+// Row height before measuring, and the gap between rows.
+const ROW_ESTIMATE_SIZE = 88;
+const ROW_GAP = 8;
+
 export type BucketListViewRef = {
   onRefresh?: () => Promise<void>;
 };
@@ -61,7 +67,9 @@ function BucketListView(props: BucketListViewProps) {
       if (keyword) {
         return callIPC(SearchBucket, [{ connectionId, profileName, keyword, nextCursor: cursor }], { signal });
       }
-      return callIPC(GetListBucket, [{ connectionId, profileName, nextCursor: cursor, limit: 10 }], { signal });
+      return callIPC(GetListBucket, [{ connectionId, profileName, nextCursor: cursor, limit: BUCKET_PAGE_SIZE }], {
+        signal,
+      });
     },
     [profileName, connectionId, keyword]
   );
@@ -143,9 +151,9 @@ function BucketListView(props: BucketListViewProps) {
   const virtualizer = useVirtualizer({
     count: bucketList.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 88,
+    estimateSize: () => ROW_ESTIMATE_SIZE,
     getItemKey: idx => bucketList[idx].name ?? idx,
-    gap: 8,
+    gap: ROW_GAP,
     overscan: 5,
     scrollMargin,
     enabled: active,
@@ -177,7 +185,8 @@ function BucketListView(props: BucketListViewProps) {
   ]);
 
   const isEmpty = bucketList.length === 0;
-  const showEmpty = !!keyword && isLoaded && isEmpty && !nextCursor;
+  // Only once this very list has loaded (not while loading, after an error, or on a stale previous list).
+  const showEmpty = !!connectionId && isLoaded && cursorKey === listKey && isEmpty && !nextCursor;
   // Retry after a failed page, or continue a search that found nothing yet.
   const showLoadMore = !!keyword && !!nextCursor && !isLoadingMore && (isEmpty || loadMoreError);
   // With no rows the list has no height, so the footer flows normally instead of hanging below the rows.
@@ -206,7 +215,7 @@ function BucketListView(props: BucketListViewProps) {
       ) : null}
       {showEmpty ? (
         <Center style={footerStyle} py="8px">
-          <Text c="dimmed">{t('search.empty')}</Text>
+          <Text c="dimmed">{keyword ? t('search.empty') : t('empty')}</Text>
         </Center>
       ) : null}
       {showLoadMore ? (

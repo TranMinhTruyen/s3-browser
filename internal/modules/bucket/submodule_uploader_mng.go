@@ -271,8 +271,9 @@ func (m *submoduleUploaderMng) uploadOne(
 	m.jobs.Store(id, uploaderJob{cancel: cancel})
 	defer func() { cancel(); m.jobs.Delete(id) }()
 
-	// The size is for the UI only (uploadFile reads it again from the open file); a stat
-	// error is not fatal here because uploadFile reports it.
+	// This stats the file again (groupUploadItems did it too): one cheap call per file, and
+	// keeping it here avoids passing sizes around. The size is for the UI only (uploadFile reads it
+	// again from the open file); a stat error is not fatal here because uploadFile reports it.
 	var total int64
 	if info, statErr := os.Stat(item.Path); statErr == nil {
 		total = info.Size()

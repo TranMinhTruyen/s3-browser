@@ -3,7 +3,10 @@ import { useAutoLoading } from '@/components/buttons/useAutoLoading';
 
 interface ButtonProps extends MButtonProps, ElementProps<'button', keyof MButtonProps> {}
 
-/** Mantine button that shows a loader (and disables itself) while an async `onClick` is pending. */
+/**
+ * Mantine button that shows a loader and disables itself while an async `onClick` is pending.
+ * An explicit `loading` prop wins. Defaults: size `sm`, variant `light`; other props go to Mantine.
+ */
 function Button(props: ButtonProps) {
   const { size = 'sm', loading, onClick, disabled, ...restProps } = props;
 

@@ -25,6 +25,7 @@ type submoduleConnMng struct {
 	submoduleCfgMng *submoduleCfgMng
 }
 
+// newSubmoduleConnMng wires the connection submodule to the app, store, profiles and client builder.
 func newSubmoduleConnMng(
 	app *application.App,
 	logger *slog.Logger,

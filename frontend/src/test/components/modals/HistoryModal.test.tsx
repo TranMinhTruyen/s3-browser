@@ -234,6 +234,51 @@ describe('HistoryModal', () => {
     expect(callIPCMock).toHaveBeenCalledTimes(1);
   });
 
+  it('shows the placeholder and opens nothing for an item without destination', async () => {
+    callIPCMock.mockResolvedValueOnce(pageOf([item('a', { destPath: '' })]));
+    open();
+    await flush();
+
+    await userEvent.click(screen.getByText('EMPTY'));
+
+    expect(callIPCMock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('/dl/a.bin')).not.toBeInTheDocument();
+  });
+
+  it('does not open anything when the file name is empty', async () => {
+    callIPCMock.mockResolvedValueOnce(pageOf([item('a', { fileName: '' })]));
+    open();
+    await flush();
+
+    await userEvent.click(screen.getByText('/dl/a.bin'));
+
+    expect(callIPCMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('closes the modal after Cancel', async () => {
+    callIPCMock.mockResolvedValueOnce(pageOf([]));
+    renderWithProviders(<div />);
+    act(() => {
+      HistoryModal.show();
+    });
+    await flush();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await waitFor(() => expect(screen.queryByText('Download history')).not.toBeInTheDocument());
+  });
+
+  it('puts the Cancel button alone on the left of a non-wrapping footer', async () => {
+    callIPCMock.mockResolvedValueOnce(pageOf([]));
+    open();
+    await flush();
+
+    const footer = screen.getByRole('button', { name: 'Cancel' }).parentElement as HTMLElement;
+    expect(footer.style.getPropertyValue('--group-wrap')).toBe('nowrap');
+    expect(footer.style.getPropertyValue('--group-justify')).toBe('space-between');
+    expect(footer.querySelectorAll('button')).toHaveLength(1);
+  });
+
   it('resolves false from the Cancel button', async () => {
     callIPCMock.mockResolvedValueOnce(pageOf([]));
     renderWithProviders(<div />);

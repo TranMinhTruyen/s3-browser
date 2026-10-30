@@ -20,6 +20,7 @@ type submoduleBucketMng struct {
 	global *global.Module
 }
 
+// newSubmoduleBucketMng builds the bucket submodule on the shared connection store.
 func newSubmoduleBucketMng(
 	app *application.App,
 	logger *slog.Logger,

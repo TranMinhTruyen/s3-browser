@@ -4,7 +4,7 @@
   },
   "tooltip": {
     "closeTab": "Close tab",
-    "dragTab": "Drag to reorder",
+    "dragTab": "Drag to reorder (Ctrl+Shift+←/→)",
     "connect": "Connect",
     "refresh": "Refresh {target}",
     "addTab": "Add tab",

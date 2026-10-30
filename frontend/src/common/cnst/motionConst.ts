@@ -8,3 +8,9 @@ export const fadeScale: Variants = {
   hidden: { opacity: 0, scale: 0.9 },
   visible: { opacity: 1, scale: 1 },
 };
+
+/** Exit that also collapses the width, so the tabs after a closed one slide over instead of jumping. */
+export const fadeCollapse: Variants = {
+  ...fadeScale,
+  collapse: { opacity: 0, width: 0, overflow: 'hidden' },
+};

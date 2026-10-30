@@ -8,6 +8,7 @@ import { useUploaderStore } from '@/common/stores/uploaderStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
+import { ITEM_HEIGHT } from '@/components/layouts/transferItem';
 
 type UploaderItemProps = {
   id: string;
@@ -34,7 +35,7 @@ function UploaderItem(props: UploaderItemProps) {
   return (
     <Card
       padding="sm"
-      h="80px"
+      h={ITEM_HEIGHT}
       withBorder
       orientation="horizontal"
       onMouseEnter={handlerExpanded.open}

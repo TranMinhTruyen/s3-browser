@@ -9,6 +9,13 @@
     "clear": "クリア",
     "close": "閉じる"
   },
+  "appName": "S3Browser",
+  "window": {
+    "minimise": "最小化",
+    "maximise": "最大化",
+    "restore": "元に戻す",
+    "close": "閉じる"
+  },
   "modalLoadError": "ダイアログを開けませんでした。もう一度お試しください。",
   "modalLoading": "ダイアログを読み込み中..."
 }

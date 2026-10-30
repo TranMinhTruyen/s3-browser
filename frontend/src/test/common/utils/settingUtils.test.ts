@@ -75,3 +75,39 @@ describe('applySettings', () => {
     expect(i18n.changeLanguage).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('applySettings color scheme attribute', () => {
+  const originalMatchMedia = window.matchMedia;
+  const mockPrefersDark = (matches: boolean) => {
+    window.matchMedia = vi.fn().mockReturnValue({ matches }) as unknown as typeof window.matchMedia;
+  };
+
+  beforeEach(() => {
+    vi.spyOn(i18n, 'changeLanguage').mockResolvedValue(i18n.t);
+  });
+
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
+    document.documentElement.removeAttribute('data-mantine-color-scheme');
+    settingColorSchemeManager.clear();
+  });
+
+  it.each([
+    ['light', false, 'light'],
+    ['dark', false, 'dark'],
+    ['auto', true, 'dark'],
+    ['auto', false, 'light'],
+  ] as const)('theme %s with OS dark=%s sets %s on <html>', (theme, osDark, expected) => {
+    mockPrefersDark(osDark);
+    applySettings({ ...DEFAULT_SETTINGS, theme });
+    expect(document.documentElement.getAttribute('data-mantine-color-scheme')).toBe(expected);
+  });
+
+  it('queries prefers-color-scheme dark only for auto', () => {
+    mockPrefersDark(true);
+    applySettings({ ...DEFAULT_SETTINGS, theme: 'light' });
+    expect(window.matchMedia).not.toHaveBeenCalled();
+    applySettings({ ...DEFAULT_SETTINGS, theme: 'auto' });
+    expect(window.matchMedia).toHaveBeenCalledWith('(prefers-color-scheme: dark)');
+  });
+});

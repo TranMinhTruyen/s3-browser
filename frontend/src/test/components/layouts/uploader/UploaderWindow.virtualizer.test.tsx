@@ -20,6 +20,8 @@ vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: v
 describe('UploaderWindow with the real virtualizer', () => {
   let handlers: Record<string, (e: { data: unknown }) => void>;
   const sizes = [
+    ['offsetHeight', 260],
+    ['offsetWidth', 400],
     ['clientHeight', 260],
     ['clientWidth', 400],
   ] as const;
@@ -52,5 +54,22 @@ describe('UploaderWindow with the real virtualizer', () => {
 
     expect(screen.getByText('Uploading')).toBeInTheDocument();
     expect(await screen.findByText('Object: a.bin')).toBeInTheDocument();
+  });
+
+  it('lays the items out in the virtual list with an 8px gap', async () => {
+    renderWithProviders(<UploaderWindow />);
+
+    for (const id of ['u1', 'u2']) {
+      act(() =>
+        handlers['uploader:upload-started']({
+          data: { uploadId: id, fileName: `${id}.bin`, key: `${id}.bin`, bucket: 'bkt', total: 2048 },
+        })
+      );
+    }
+
+    const wrapper = (name: string) => screen.getByText(name).closest('[style*="translateY"]') as HTMLElement;
+    await screen.findByText('Object: u2.bin');
+    expect(wrapper('Object: u1.bin').style.transform).toBe('translateY(0px)');
+    expect(wrapper('Object: u2.bin').style.transform).toBe('translateY(88px)');
   });
 });

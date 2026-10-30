@@ -1,5 +1,7 @@
 import { MouseEvent, useCallback, useState } from 'react';
 
+const noop = () => {};
+
 /**
  * Tracks the loading state of a button-like element whose `onClick` may be async.
  * An explicit `loading` prop wins; otherwise the state follows the Promise returned by `onClick`.
@@ -20,7 +22,8 @@ export function useAutoLoading(
       if (typeof result?.then !== 'function') return;
 
       setAutoLoading(true);
-      void result.finally(() => setAutoLoading(false));
+      // Errors are swallowed here on purpose: the handler reports them to the user itself (callIPC / toast).
+      result.finally(() => setAutoLoading(false)).catch(noop);
     },
     [onClick]
   );
