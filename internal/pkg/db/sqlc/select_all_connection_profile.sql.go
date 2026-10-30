@@ -7,69 +7,43 @@ package sqlc
 
 import (
 	"context"
-	"database/sql"
 )
 
 const selectAllConnectionProfile = `-- name: SelectAllConnectionProfile :many
 SELECT
-    cp.id AS connection_id
-    , cp.NAME AS connection_name
-    , cp.color
-    , cp.provider
-    , cp.endpoint
-    , cp.access_key
-    , cp.secret_key
-    , cp.region
-    , cp.path_style
-    , cp.auto_connect
-    , cp.created_at
-    , cp.updated_at
-    , cp.version
+    cp.id, cp.name, cp.color, cp.provider, cp.endpoint, cp.region, cp.access_key, cp.secret_key, cp.path_style, cp.auto_connect, cp.created_at, cp.updated_at, cp.version, cp.auth_type, cp.auth_config, cp.auth_secret
 FROM
     connection_profiles cp
 ORDER BY
     cp.created_at
 `
 
-type SelectAllConnectionProfileRow struct {
-	ConnectionID   string         `json:"connection_id"`
-	ConnectionName sql.NullString `json:"connection_name"`
-	Color          sql.NullString `json:"color"`
-	Provider       string         `json:"provider"`
-	Endpoint       string         `json:"endpoint"`
-	AccessKey      string         `json:"access_key"`
-	SecretKey      sql.NullString `json:"secret_key"`
-	Region         string         `json:"region"`
-	PathStyle      sql.NullBool   `json:"path_style"`
-	AutoConnect    sql.NullBool   `json:"auto_connect"`
-	CreatedAt      sql.NullTime   `json:"created_at"`
-	UpdatedAt      sql.NullTime   `json:"updated_at"`
-	Version        int64          `json:"version"`
-}
-
-func (q *Queries) SelectAllConnectionProfile(ctx context.Context) ([]SelectAllConnectionProfileRow, error) {
+func (q *Queries) SelectAllConnectionProfile(ctx context.Context) ([]ConnectionProfile, error) {
 	rows, err := q.query(ctx, q.selectAllConnectionProfileStmt, selectAllConnectionProfile)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []SelectAllConnectionProfileRow{}
+	items := []ConnectionProfile{}
 	for rows.Next() {
-		var i SelectAllConnectionProfileRow
+		var i ConnectionProfile
 		if err := rows.Scan(
-			&i.ConnectionID,
-			&i.ConnectionName,
+			&i.ID,
+			&i.Name,
 			&i.Color,
 			&i.Provider,
 			&i.Endpoint,
+			&i.Region,
 			&i.AccessKey,
 			&i.SecretKey,
-			&i.Region,
 			&i.PathStyle,
 			&i.AutoConnect,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Version,
+			&i.AuthType,
+			&i.AuthConfig,
+			&i.AuthSecret,
 		); err != nil {
 			return nil, err
 		}

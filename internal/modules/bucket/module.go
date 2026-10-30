@@ -125,6 +125,30 @@ var (
 	// Choose files error.
 	S3E029 = "S3E029"
 
+	// Credentials of profile {name} expired, please connect again.
+	S3E030 = "S3E030"
+
+	// Assume role {roleArn} failed: role not found or not allowed (sts:AssumeRole).
+	S3E031 = "S3E031"
+
+	// MFA code is invalid or expired.
+	S3E032 = "S3E032"
+
+	// AWS CLI profile {profile} not found or invalid.
+	S3E033 = "S3E033"
+
+	// SSO session of profile {profile} expired, run: aws sso login --profile {profile}
+	S3E034 = "S3E034"
+
+	// No credentials found in the environment (default chain).
+	S3E035 = "S3E035"
+
+	// credential_process of profile {profile} failed.
+	S3E036 = "S3E036"
+
+	// Read AWS config files error.
+	S3E045 = "S3E045"
+
 	// ---- Warning ----
 
 	// Access bucket is limited.
@@ -160,6 +184,7 @@ type Module struct {
 	submoduleBucketMng          *submoduleBucketMng
 	submoduleObjMng             *submoduleObjMng
 	submoduleSearchMng          *submoduleSearchMng
+	submoduleAwsProfilesMng     *submoduleAwsProfilesMng
 	submoduleDownloaderMng      *submoduleDownloaderMng
 	submoduleUploaderMng        *submoduleUploaderMng
 }
@@ -178,6 +203,7 @@ func NewModule(
 	submoduleBucketMng := newSubmoduleBucketMng(app, logger, global)
 	submoduleObjMng := newSubmoduleObjMng(app, logger, global)
 	submoduleSearchMng := newSubmoduleSearchMng(app, logger, global)
+	submoduleAwsProfilesMng := newSubmoduleAwsProfilesMng(logger)
 	submoduleDownloaderMng := newSubmoduleDownloaderMng(app, logger, global, submoduleDownloadHistoryMng)
 	submoduleUploaderMng := newSubmoduleUploaderMng(app, logger, global)
 
@@ -192,6 +218,7 @@ func NewModule(
 		submoduleBucketMng:          submoduleBucketMng,
 		submoduleObjMng:             submoduleObjMng,
 		submoduleSearchMng:          submoduleSearchMng,
+		submoduleAwsProfilesMng:     submoduleAwsProfilesMng,
 		submoduleDownloaderMng:      submoduleDownloaderMng,
 		submoduleUploaderMng:        submoduleUploaderMng,
 	}
@@ -219,6 +246,13 @@ func (m *Module) TestConnection(input models.ConnectionProfileInput) models.Outp
 // loading its connection settings from the profile module.
 func (m *Module) ConnectByProfile(connectionId string) models.Output[models.ConnectOutput] {
 	return m.submoduleConnMng.profileConnectAction(connectionId)
+}
+
+// ListAwsProfiles returns the profiles of the AWS CLI config and credentials files (empty paths mean the standard
+// files). It only parses the files, so it never runs a credential_process. Missing files give an empty list;
+// an unreadable file gives S3E045.
+func (m *Module) ListAwsProfiles(configFile, credentialsFile string) models.Output[[]models.AwsProfileOutput] {
+	return m.submoduleAwsProfilesMng.list(configFile, credentialsFile)
 }
 
 // Disconnect closes the active connection identified by connectionId

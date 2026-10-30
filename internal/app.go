@@ -29,8 +29,9 @@ type App struct {
 }
 
 // NewApp opens and migrates the database, builds the modules, then the handlers on top of them.
-// It panics when the database or the encryption key is unusable, because the app cannot run without them.
-func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
+// A failed migration is returned as an error (the message holds the backup path) so main can tell the user;
+// it panics when the encryption key is unusable, because the app cannot run without it.
+func NewApp(app *application.App, cfg Config, logger *slog.Logger) (*App, error) {
 	log := logger.With("component", "app")
 
 	sqlDb := db.InitDB(app.Context(), cfg.Name)
@@ -39,7 +40,7 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 			log.Error("close db failed", "error", closeErr)
 		}
 		log.Error("failed to run migrations", "error", err)
-		panic(err)
+		return nil, err
 	}
 
 	km, err := utils.NewKeyManager(cfg.Name)
@@ -68,7 +69,7 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) *App {
 		MasterHandler:  masterHandler,
 		ProfileHandler: profileHandler,
 		SettingHandler: settingHandler,
-	}
+	}, nil
 }
 
 // Shutdown cancels running transfers, closes every connection and the database.

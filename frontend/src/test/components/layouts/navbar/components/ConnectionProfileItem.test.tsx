@@ -50,6 +50,19 @@ describe('ConnectionProfileItem', () => {
       expect(screen.getByText('aws')).toBeInTheDocument();
     });
 
+    it('shows the authentication method badge, static for a profile saved before auth types existed', () => {
+      renderItem();
+
+      expect(screen.getByText('Access key')).toBeInTheDocument();
+    });
+
+    it('shows the label of the profile authentication method', () => {
+      renderItem({ authType: 'assumeRole' });
+
+      expect(screen.getByText('Assume role')).toBeInTheDocument();
+      expect(screen.queryByText('Access key')).not.toBeInTheDocument();
+    });
+
     it.each([
       ['light color', '#ffffff', 'var(--mantine-color-black)'],
       ['dark color', '#000000', 'var(--mantine-color-white)'],

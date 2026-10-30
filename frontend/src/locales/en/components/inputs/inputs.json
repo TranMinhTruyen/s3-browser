@@ -1,4 +1,10 @@
 {
+  "awsProfileCombobox": {
+    "label": "AWS CLI profile",
+    "searchPlaceholder": "Search profile",
+    "empty": "No profiles found. Check the ~/.aws/config file.",
+    "credentialProcessWarning": "This profile runs its credential_process command when connecting."
+  },
   "regionCombobox": {
     "label": "Region",
     "placeholder": "Select region",
