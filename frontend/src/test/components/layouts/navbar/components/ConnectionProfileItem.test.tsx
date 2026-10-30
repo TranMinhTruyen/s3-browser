@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ConnectionProfile } from '@/common/stores/profileStore';
 import ConnectionProfileItem from '@/components/layouts/navbar/components/ConnectionProfileItem';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 const onConnect = vi.fn();
 const onDisconnect = vi.fn();

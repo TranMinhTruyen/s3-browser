@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import LeftNavbar from '@/components/layouts/navbar/LeftNavbar';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 vi.mock('@/components/layouts/navbar/components/HeaderButtonGroup', () => ({
   default: () => <div>header buttons</div>,

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import SegmentedControl from '@/components/inputs/SegmentedControl';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 describe('CheckBoxInput', () => {
   it('toggles and reports the change', async () => {

@@ -3,7 +3,7 @@ sql:
   - engine: "sqlite"
     queries:
       - "internal/pkg/db/queries/master"
-      - "internal/pkg/db/queries/profiles"
+      - "internal/pkg/db/queries/profile"
       - "internal/pkg/db/queries/bucket"
     schema: "internal/pkg/db/schemas"
     gen:

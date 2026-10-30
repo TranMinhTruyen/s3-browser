@@ -13,9 +13,9 @@ import { useElementSize } from '@mantine/hooks';
 import { CheckIcon } from 'lucide-react';
 import { ChangeEvent, memo, useCallback, useMemo, useState } from 'react';
 import { useFieldError } from '@/common/hooks/useFieldError';
+import { useSelectCombobox } from '@/common/hooks/useSelectCombobox';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
 import ComboboxClearButton from '@/components/inputs/combobox/ComboboxClearButton';
-import { useSelectCombobox } from '@/components/inputs/combobox/useSelectCombobox';
 
 type ComboboxItem = { name: string; value: string };
 

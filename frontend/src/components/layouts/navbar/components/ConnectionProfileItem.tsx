@@ -3,7 +3,7 @@ import { Cable, PlugZap, SquarePen, Trash, Unplug } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ConnectionProfile } from '@/common/stores/profileStore';
-import classes from '@/components/layouts/layout.module.css';
+import classes from '@/components/layouts/navbar/components/ConnectionProfileItem.module.css';
 
 /** Black/white text that contrasts with the user-chosen profile color; theme text when no color is set. */
 const getProfileTextColor = (color?: string) =>

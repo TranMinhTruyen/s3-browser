@@ -6,13 +6,13 @@ import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
 import { Output } from '@wails/S3Browser/models/common';
 import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useFilesDroppedUpload } from '@/common/hooks/useFilesDroppedUpload';
+import { useObjectPaging } from '@/common/hooks/useObjectPaging';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import Button from '@/components/buttons/Button';
-import ConfirmModal from '@/components/modals/ConfirmModal';
+import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import ObjectItem from '@/pages/object/ObjectItem';
-import { useFilesDroppedUpload } from '@/pages/object/useFilesDroppedUpload';
-import { useObjectPaging } from '@/pages/object/useObjectPaging';
 
 // Download or delete is refused above this many objects at once.
 const MAX_OBJECTS_PER_ACTION = 5;

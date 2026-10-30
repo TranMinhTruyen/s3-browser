@@ -10,7 +10,7 @@ import { ConnectionProfile, useProfileStore } from '@/common/stores/profileStore
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ConnectionProfileItem from '@/components/layouts/navbar/components/ConnectionProfileItem';
-import ConfirmModal from '@/components/modals/ConfirmModal';
+import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import { showConnectModal } from '@/components/modals/lazyModals';
 
 // Initial row height (2 text lines + card padding); the real height comes from measureElement.

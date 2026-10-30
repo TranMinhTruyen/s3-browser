@@ -1,5 +1,5 @@
 import { ElementProps, ActionIcon as MActionIcon, ActionIconProps as MActionIconProps } from '@mantine/core';
-import { useAutoLoading } from '@/components/buttons/useAutoLoading';
+import { useAutoLoading } from '@/common/hooks/useAutoLoading';
 
 interface ActionIconProps extends MActionIconProps, ElementProps<'button', keyof MActionIconProps> {}
 

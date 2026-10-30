@@ -3,7 +3,7 @@ import { createRef } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import TabScroller from '@/components/layouts/tab/components/TabScroller';
 import { motionState } from '@/test/_helpers/mockMotion';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 vi.mock('motion/react', async () => (await import('@/test/_helpers/mockMotion')).motionMock);
 
