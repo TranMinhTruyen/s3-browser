@@ -79,8 +79,12 @@ func backupBeforeMigrate(ctx context.Context, sqlDB *sql.DB, version int64) (str
 		return "", nil
 	}
 	pending, err := goose.CollectMigrations("schemas", version, math.MaxInt64)
-	if err != nil || len(pending) == 0 {
-		return "", err
+	// goose reports "no migration files" when none is newer than version, i.e. nothing is pending.
+	if errors.Is(err, goose.ErrNoMigrationFiles) || (err == nil && len(pending) == 0) {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("collect pending migrations: %w", err)
 	}
 
 	var dbPath string
