@@ -50,6 +50,25 @@ describe('profileStore', () => {
     expect(state().connectionProfiles).toEqual({});
   });
 
+  it('loaded is false until the profiles are loaded successfully', async () => {
+    expect(state().loaded).toBe(false);
+    callIPCMock.mockResolvedValueOnce(null);
+    await state().loadConnectionProfiles();
+    expect(state().loaded).toBe(false);
+
+    callIPCMock.mockResolvedValueOnce({});
+    await state().loadConnectionProfiles();
+    expect(state().loaded).toBe(true);
+  });
+
+  it('reset sets loaded back to false', async () => {
+    callIPCMock.mockResolvedValueOnce({ connectionProfiles: { p1: profile } });
+    await state().loadConnectionProfiles();
+    state().reset();
+    expect(state().loaded).toBe(false);
+    expect(state().connectionProfiles).toEqual({});
+  });
+
   it('reset invalidates the scope', () => {
     state().reset();
     expect(invalidateLoads).toHaveBeenCalledWith('profile');

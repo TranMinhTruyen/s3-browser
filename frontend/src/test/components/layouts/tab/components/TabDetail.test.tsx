@@ -9,8 +9,7 @@ import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import TabDetail from '@/components/layouts/tab/components/TabDetail';
-import { showConnectModal } from '@/components/modals/lazyModals';
-import UploadPickerModal from '@/components/modals/UploadPickerModal';
+import { showConnectModal, showUploadPickerModal } from '@/components/modals/lazyModals';
 import { renderWithProviders } from '@/test/renderWithProviders';
 
 type BucketStubProps = {
@@ -58,8 +57,7 @@ vi.mock('@/components/layouts/tab/components/ObjectDetailDrawer', () => ({
     <div>{`drawer ${connectionId} ${bucket}`}</div>
   ),
 }));
-vi.mock('@/components/modals/lazyModals', () => ({ showConnectModal: vi.fn() }));
-vi.mock('@/components/modals/UploadPickerModal', () => ({ default: { show: vi.fn() } }));
+vi.mock('@/components/modals/lazyModals', () => ({ showConnectModal: vi.fn(), showUploadPickerModal: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn() }));
 vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
@@ -542,7 +540,7 @@ describe('TabDetail', () => {
   });
 
   describe('upload', () => {
-    const pickerMock = vi.mocked(UploadPickerModal.show);
+    const pickerMock = vi.mocked(showUploadPickerModal);
     const file = (name: string) => ({ path: `/local/${name}`, relKey: name, size: 1, isLarge: false });
     const picked = (bucket: string, names: string[] = ['a.txt']) => ({ bucket, files: names.map(file) });
     const uploadBtn = () => btn('Upload files');
@@ -623,6 +621,15 @@ describe('TabDetail', () => {
       pickerMock.mockResolvedValue(null as never);
       const user = setup();
       await user.click(uploadBtn());
+      expect(callIPC).not.toHaveBeenCalled();
+      expect(useTabListStore.getState().uploadingTabId).toBeNull();
+    });
+
+    it('does not upload when the picker chunk failed to load (undefined)', async () => {
+      pickerMock.mockResolvedValue(undefined);
+      const user = setup();
+      await user.click(uploadBtn());
+      await waitFor(() => expect(pickerMock).toHaveBeenCalledTimes(1));
       expect(callIPC).not.toHaveBeenCalled();
       expect(useTabListStore.getState().uploadingTabId).toBeNull();
     });

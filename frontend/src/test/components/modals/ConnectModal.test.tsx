@@ -65,6 +65,19 @@ describe('ConnectModal', () => {
     callIPCMock.mockResolvedValue(null);
   });
 
+  describe('footer', () => {
+    it.each([['connect'], ['manualconnect'], ['createProfile'], ['editProfile']] as const)(
+      'keeps its buttons on one line in %s mode, so the layout does not jump when the language changes',
+      async mode => {
+        await open({ mode, connectionProfile: profile() });
+
+        const footer = button('Test connection').parentElement!;
+        expect(footer).toHaveStyle({ '--group-wrap': 'nowrap', '--group-justify': 'space-between' });
+        expect(footer.querySelectorAll('button')).toHaveLength(2);
+      }
+    );
+  });
+
   describe('connect mode', () => {
     it('shows the required-field errors and does not call the backend when the form is empty', async () => {
       const user = await open();

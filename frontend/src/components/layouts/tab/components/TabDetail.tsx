@@ -1,17 +1,15 @@
 import { Divider, Group, Paper, Stack } from '@mantine/core';
-import { ConnectS3ByProfile } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import { useConnectProfile } from '@/common/hooks/useConnectProfile';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
-import { callIPC } from '@/common/utils/ipcUtils';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
 import { ensureUploadIdle, runUpload } from '@/common/utils/uploadUtils';
 import ObjectDetailDrawer from '@/components/layouts/tab/components/ObjectDetailDrawer';
 import TabActionBar from '@/components/layouts/tab/components/TabActionBar';
 import TabBreadcrumb from '@/components/layouts/tab/components/TabBreadcrumb';
-import { showConnectModal } from '@/components/modals/lazyModals';
-import UploadPickerModal from '@/components/modals/UploadPickerModal';
+import { showConnectModal, showUploadPickerModal } from '@/components/modals/lazyModals';
 import BucketListView, { BucketListViewRef } from '@/pages/bucket/BucketListView';
 import ObjectListView, { ObjectListViewRef } from '@/pages/object/ObjectListView';
 import classes from '@/pages/object/page.module.css';
@@ -52,7 +50,7 @@ function TabDetail(props: TabDetailProps) {
     [profileNames]
   );
   const updateTab = useTabListStore(s => s.updateTab);
-  const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
+  const connectProfile = useConnectProfile();
   const changeCurrentView = useTabListStore(s => s.changeCurrentView);
   const changePrefix = useTabListStore(s => s.changePrefix);
   const clearSelectItem = useTabListStore(s => s.clearSelectItem);
@@ -71,11 +69,8 @@ function TabDetail(props: TabDetailProps) {
       return;
     }
 
-    const output = await callIPC(ConnectS3ByProfile, [selectedProfileId]);
-    if (output?.isConnected) {
-      updateConnectionProfiles(selectedProfileId, { ...profile, isConnected: true });
-    }
-  }, [selectedProfile, updateConnectionProfiles, selectedProfileId]);
+    await connectProfile(selectedProfileId, profile);
+  }, [selectedProfile, connectProfile, selectedProfileId]);
 
   // The keyword only lives in the context (profile, bucket, folder, view) it was entered in. When the context
   // changes it is dropped during render (before commit), so the list loads once and a later return to the
@@ -155,7 +150,8 @@ function TabDetail(props: TabDetailProps) {
     const profileName = selectedProfile.name;
     const inBucket = currentView === 'objectList' && !!selectedBucket;
     const uploadPrefix = inBucket ? prefix : '';
-    const picked = await UploadPickerModal.show({
+    // undefined: the modal chunk failed to load (already toasted) or the user cancelled; either way nothing to upload.
+    const picked = await showUploadPickerModal({
       tabId,
       connectionId,
       profileName,

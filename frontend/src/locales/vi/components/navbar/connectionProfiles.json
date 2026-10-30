@@ -9,5 +9,8 @@
     "connect": "Kết nối",
     "createProfile": "Tạo hồ sơ kết nối",
     "refresh": "Làm mới danh sách hồ sơ kết nối"
+  },
+  "profile": {
+    "empty": "Chưa có hồ sơ kết nối. Dùng các nút phía trên để tạo mới."
   }
 }
