@@ -5,10 +5,10 @@ import { type MouseEvent, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet } from 'react-router-dom';
 import ActionIcon from '@/components/buttons/ActionIcon';
-import DownloaderWindow from '@/components/layouts/downloader/DownloaderWindow';
 import LeftNavbar from '@/components/layouts/navbar/LeftNavbar';
-import UploaderWindow from '@/components/layouts/uploader/UploaderWindow';
-import WindowControls from '@/components/layouts/WindowControls';
+import DownloaderWindow from '@/components/layouts/transfer/downloader/DownloaderWindow';
+import UploaderWindow from '@/components/layouts/transfer/uploader/UploaderWindow';
+import WindowControls from '@/components/layouts/window/WindowControls';
 import { showHistoryModal, showSettingModal } from '@/components/modals/lazyModals';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 
@@ -44,7 +44,7 @@ function MainLayout() {
             <Text fw={600}>{tCommon('appName')}</Text>
           </Group>
 
-          <Group ml="auto" style={{ '--wails-draggable': 'no-drag' }}>
+          <Group gap="xs" wrap="nowrap" ml="auto" style={{ '--wails-draggable': 'no-drag' }}>
             <Tooltip label={tSetting('title')}>
               <ActionIcon aria-label={tSetting('title')} color="gray" onClick={onClickSetting}>
                 <Settings />

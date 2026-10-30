@@ -4,10 +4,12 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import MainLayout from '@/components/layouts/MainLayout';
 import { showHistoryModal, showSettingModal } from '@/components/modals/lazyModals';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-vi.mock('@/components/layouts/downloader/DownloaderWindow', () => ({ default: () => <div>downloader window</div> }));
-vi.mock('@/components/layouts/uploader/UploaderWindow', () => ({ default: () => <div>uploader window</div> }));
+vi.mock('@/components/layouts/transfer/downloader/DownloaderWindow', () => ({
+  default: () => <div>downloader window</div>,
+}));
+vi.mock('@/components/layouts/transfer/uploader/UploaderWindow', () => ({ default: () => <div>uploader window</div> }));
 vi.mock('@/components/layouts/navbar/LeftNavbar', () => ({ default: () => <div>left navbar</div> }));
 vi.mock('@/components/modals/lazyModals', () => ({
   showConnectModal: vi.fn(),

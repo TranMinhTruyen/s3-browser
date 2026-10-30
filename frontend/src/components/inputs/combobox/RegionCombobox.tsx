@@ -4,10 +4,10 @@ import { MasterOutput } from '@wails/S3Browser/models/master';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFieldError } from '@/common/hooks/useFieldError';
+import { useSelectCombobox } from '@/common/hooks/useSelectCombobox';
 import { useMasterDataStore } from '@/common/stores/masterDataStore';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
 import ComboboxClearButton from '@/components/inputs/combobox/ComboboxClearButton';
-import { useSelectCombobox } from '@/components/inputs/combobox/useSelectCombobox';
 
 type RegionOptionProps = {
   item: MasterOutput;

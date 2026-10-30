@@ -20,11 +20,11 @@ const chunk = (key: ModalKey) => async () => {
 vi.mock('sonner', () => ({ toast: h.toast }));
 
 const CHUNKS: [string, ModalKey][] = [
-  ['ConnectModal', 'connect'],
-  ['HistoryModal', 'history'],
-  ['SettingModal', 'setting'],
-  ['UploadPickerModal', 'uploadPicker'],
-  ['UploadLimitModal', 'uploadLimit'],
+  ['connect/ConnectModal', 'connect'],
+  ['history/HistoryModal', 'history'],
+  ['setting/SettingModal', 'setting'],
+  ['upload/UploadPickerModal', 'uploadPicker'],
+  ['upload/UploadLimitModal', 'uploadLimit'],
 ];
 
 const PROPS = { picker: { tabId: 't' } as never, limit: { groups: [] } as never };
@@ -100,7 +100,7 @@ describe('lazyModals', () => {
     // ConnectModal chunk is evaluated instead.
     const { i18n } = await loadModule();
     vi.resetModules();
-    vi.doUnmock('@/components/modals/ConnectModal');
+    vi.doUnmock('@/components/modals/connect/ConnectModal');
     vi.doMock('@/common/utils/modalUtils', () => ({
       createMantineModal: () => {
         throw 'plain failure';

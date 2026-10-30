@@ -2,7 +2,7 @@ import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import ActionIcon from '@/components/buttons/ActionIcon';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 describe('ActionIcon', () => {
   it('calls onClick and stays enabled for a synchronous handler', async () => {

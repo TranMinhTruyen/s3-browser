@@ -15,10 +15,10 @@ import { createRef, RefObject } from 'react';
 import { toast } from 'sonner';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
-import ConfirmModal from '@/components/modals/ConfirmModal';
-import UploadLimitModal from '@/components/modals/UploadLimitModal';
+import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
+import UploadLimitModal from '@/components/modals/upload/UploadLimitModal';
 import ObjectListView, { ObjectListViewRef } from '@/pages/object/ObjectListView';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 // jsdom has no layout, so the real virtualizer would render no row: render every row instead.
 // `endIndex` is the last row the user "sees"; null means the end of the list.
@@ -66,9 +66,9 @@ vi.mock('@/common/utils/ipcUtils', async importOriginal => ({
   ...(await importOriginal<typeof import('@/common/utils/ipcUtils')>()),
   callIPC: vi.fn(),
 }));
-vi.mock('@/components/modals/ConfirmModal', () => ({ default: { show: vi.fn() } }));
+vi.mock('@/components/modals/confirm/ConfirmModal', () => ({ default: { show: vi.fn() } }));
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }));
-vi.mock('@/components/modals/UploadLimitModal', () => ({ default: { show: vi.fn() } }));
+vi.mock('@/components/modals/upload/UploadLimitModal', () => ({ default: { show: vi.fn() } }));
 
 const TAB_ID = 'tab-1';
 const profile = { id: 'conn', name: 'my-profile' } as ConnectionProfileOutput;

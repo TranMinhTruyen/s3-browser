@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import type { ChangeEvent } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import SwitchInput from '@/components/inputs/SwitchInput';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 describe('SwitchInput', () => {
   it('reflects checked and fires onChange when toggled', async () => {

@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import TabBreadcrumb from '@/components/layouts/tab/components/TabBreadcrumb';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 const TAB = 't1';
 const setup = (prefix: string, bucket: string | undefined = 'bkt') => {

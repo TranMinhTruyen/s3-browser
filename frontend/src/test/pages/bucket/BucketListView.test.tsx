@@ -6,7 +6,7 @@ import { Bucket } from '@wails/S3Browser/models/bucket';
 import { createRef, RefObject } from 'react';
 import { callIPC } from '@/common/utils/ipcUtils';
 import BucketListView, { BucketListViewRef } from '@/pages/bucket/BucketListView';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 // jsdom has no layout, so render every row; `endIndex` is the last row the user "sees" (null = end of list).
 const virtual = vi.hoisted(() => ({ endIndex: null as number | null }));

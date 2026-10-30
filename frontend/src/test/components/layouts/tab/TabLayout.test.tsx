@@ -4,7 +4,7 @@ import { memo } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import TabLayout from '@/components/layouts/tab/TabLayout';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 const detailRenders = vi.hoisted(() => {
   const state = { count: 0, bump: () => void (state.count += 1) };

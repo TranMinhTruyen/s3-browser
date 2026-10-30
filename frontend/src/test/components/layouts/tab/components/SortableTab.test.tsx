@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SortableTab from '@/components/layouts/tab/components/SortableTab';
 import { motionState } from '@/test/_helpers/mockMotion';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 const sortable = vi.hoisted(() => ({
   isDragging: false,

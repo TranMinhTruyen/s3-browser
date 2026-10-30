@@ -2,11 +2,11 @@ import { useEffect, useLayoutEffect } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { useTabPersistence } from '@/common/hooks/useTabPersistence';
 import { useMasterDataStore } from '@/common/stores/masterDataStore';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { normalizeTabProfilesFromDisk } from '@/common/utils/tabPersistence';
 import MainLayout from '@/components/layouts/MainLayout';
-import { useTabPersistence } from '@/components/layouts/tab/useTabPersistence';
 import RouterItems from '@/components/router/RouterItem';
 import i18n from '@/locales/i18n';
 
