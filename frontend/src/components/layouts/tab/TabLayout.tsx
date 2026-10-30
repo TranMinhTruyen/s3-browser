@@ -138,7 +138,8 @@ function TabLayout() {
       h="100%"
       style={{ display: 'flex', flexDirection: 'column' }}
     >
-      <Tabs.List style={{ flexWrap: 'nowrap', alignItems: 'center' }}>
+      {/* Transparent border var hides the outline variant's list line: the panel below has its own full border. */}
+      <Tabs.List style={{ flexWrap: 'nowrap', alignItems: 'center', '--tab-border-color': 'transparent' }}>
         <TabScroller ref={scrollerRef}>
           <DndContext
             sensors={sensors}
@@ -180,12 +181,7 @@ function TabLayout() {
       {tabIds.map(key => (
         <Tabs.Panel key={key} value={key} style={{ flex: 1, minHeight: 0 }}>
           {visited.has(key) && (
-            <Paper
-              withBorder
-              h="100%"
-              p="4px"
-              style={{ overflow: 'hidden', borderTop: 'none', borderTopLeftRadius: 0, borderTopRightRadius: 0 }}
-            >
+            <Paper withBorder radius="md" h="100%" p="4px" style={{ overflow: 'hidden' }}>
               <TabDetail tabId={key} />
             </Paper>
           )}
