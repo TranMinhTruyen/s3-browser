@@ -1,4 +1,4 @@
-# Plan sprint-12: Nhiều phương thức xác thực cho AWS S3 và MinIO
+# Plan sprint-11: Nhiều phương thức xác thực cho AWS S3 và MinIO
 
 ## 1. Tóm tắt yêu cầu
 
@@ -199,16 +199,16 @@ Mỗi giai đoạn: test cho mọi file production đã đổi, C1 ≥ 95% và L
 
 | Branch | Giai đoạn | Yêu cầu | Task | File chính dự kiến |
 |---|---|---|---|---|
-| `SP-12/auth_core` | 1 | R1, R2 (trừ anonymous), R4 | B1, B2, B3, F1–F4 | `schemas/000002_auth_methods.sql`, `db/migration.go`, `db/init_db.go`, `queries/profile/*.sql`, `models/profile/*`, `models/alias.go`, `cnst/auth.go`, `modules/profile/module.go`, `modules/bucket/{module,submodule_cfg_mng,submodule_cfg_credentials,submodule_connection_mng,submodule_aws_profiles}.go`, `handlers/bucket_handler.go`, `go.mod`; FE `modals/connect/**`, `inputs/combobox/AwsProfileCombobox.tsx`, `inputs/TagsInput.tsx`, `navbar/components/{ConnectionProfiles,ConnectionProfileItem}.tsx`, `tab/components/TabDetail.tsx`, `common/utils/authUtils.ts`, locale |
-| `SP-12/auth_minio_anonymous` | 2 | R2 anonymous, R3 (STS, LDAP, anonymous), RR1 | B4, B5, B6, F5–F7 | `bucket/{submodule_cfg_credentials,submodule_bucket_mng,submodule_search_mng,submodule_uploader_mng,submodule_downloader_mng,events}.go`, `global/submodule_conn_container.go`, `models/bucket/list_bucket_output.go`; FE `modals/connect/fields/*`, `MfaCodeModal.tsx`, `useCredentialExpiring.ts`, `App.tsx`, `pages/bucket/**` |
-| `SP-12/auth_minio_oidc_cert` | 3 | R3 (OIDC, mTLS) | B7, B8, F8, F9 | `bucket/{submodule_oidc_login,submodule_cfg_credentials,submodule_cfg_mng}.go`, `handlers/bucket_handler.go`, `models/bucket/oidc_*`; FE `fields/{AuthOidcFields,AuthCertFields}.tsx`, locale |
+| `SP-11/auth_core` | 1 | R1, R2 (trừ anonymous), R4 | B1, B2, B3, F1–F4 | `schemas/000002_auth_methods.sql`, `db/migration.go`, `db/init_db.go`, `queries/profile/*.sql`, `models/profile/*`, `models/alias.go`, `cnst/auth.go`, `modules/profile/module.go`, `modules/bucket/{module,submodule_cfg_mng,submodule_cfg_credentials,submodule_connection_mng,submodule_aws_profiles}.go`, `handlers/bucket_handler.go`, `go.mod`; FE `modals/connect/**`, `inputs/combobox/AwsProfileCombobox.tsx`, `inputs/TagsInput.tsx`, `navbar/components/{ConnectionProfiles,ConnectionProfileItem}.tsx`, `tab/components/TabDetail.tsx`, `common/utils/authUtils.ts`, locale |
+| `SP-11/auth_minio_anonymous` | 2 | R2 anonymous, R3 (STS, LDAP, anonymous), RR1 | B4, B5, B6, F5–F7 | `bucket/{submodule_cfg_credentials,submodule_bucket_mng,submodule_search_mng,submodule_uploader_mng,submodule_downloader_mng,events}.go`, `global/submodule_conn_container.go`, `models/bucket/list_bucket_output.go`; FE `modals/connect/fields/*`, `MfaCodeModal.tsx`, `useCredentialExpiring.ts`, `App.tsx`, `pages/bucket/**` |
+| `SP-11/auth_minio_oidc_cert` | 3 | R3 (OIDC, mTLS) | B7, B8, F8, F9 | `bucket/{submodule_oidc_login,submodule_cfg_credentials,submodule_cfg_mng}.go`, `handlers/bucket_handler.go`, `models/bucket/oidc_*`; FE `fields/{AuthOidcFields,AuthCertFields}.tsx`, locale |
 
 ## 6. Thứ tự thực hiện
 
 1. Q-P1..Q-P5 đã có câu trả lời, master sẵn sàng: bắt đầu từ GĐ1.
-2. `SP-12/auth_core`: B1 → B2 → B3 → `wails3-bindings` → F1 → F2 → F3 → F4 → react-tester → verifier → code-reviewer (≤ 3 vòng) → commit local → báo cáo → người dùng duyệt push/PR → **người dùng merge**.
-3. `SP-12/auth_minio_anonymous`: tách từ `origin/master` mới, B4 → B5 → B6 → bindings → F5 → F6 → F7 → test → verify → review → commit → PR → merge.
-4. `SP-12/auth_minio_oidc_cert`: B7 → B8 → bindings → F8 → F9 → test → verify → review → commit → PR.
+2. `SP-11/auth_core`: B1 → B2 → B3 → `wails3-bindings` → F1 → F2 → F3 → F4 → react-tester → verifier → code-reviewer (≤ 3 vòng) → commit local → báo cáo → người dùng duyệt push/PR → **người dùng merge**.
+3. `SP-11/auth_minio_anonymous`: tách từ `origin/master` mới, B4 → B5 → B6 → bindings → F5 → F6 → F7 → test → verify → review → commit → PR → merge.
+4. `SP-11/auth_minio_oidc_cert`: B7 → B8 → bindings → F8 → F9 → test → verify → review → commit → PR.
 5. Không chạy 2 agent viết code song song.
 
 ## 7. Rủi ro

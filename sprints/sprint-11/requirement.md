@@ -1,4 +1,4 @@
-# Sprint 12: Hỗ trợ nhiều phương thức xác thực khi kết nối AWS S3 và MinIO
+# Sprint 11: Hỗ trợ nhiều phương thức xác thực khi kết nối AWS S3 và MinIO
 
 > **Trạng thái:** ĐÃ CHỐT (Truyen, 2026-10-29), tất cả Q1–Q8 và Q-P2–Q-P5 (2026-10-30) đã có câu trả lời (cuối file).
 > Phân tích dựa trên `master` @ `1cb43eb`; plan lập trên `master` @ `01bf864e`.
@@ -212,13 +212,13 @@ Assume Role, SSO, và MinIO tích hợp STS/LDAP/OIDC/chứng chỉ, cũng như 
   `source_profile`), modal hiện cảnh báo app sẽ chạy lệnh ngoài đó. Lệnh chỉ chạy khi người dùng bấm Connect/Test.
 - **RR7 – Probe kết nối ẩn danh:** `HeadBucket` song song (errgroup có SetLimit) mọi bucket đã nhập; bucket lỗi được
   đánh dấu riêng trong danh sách; kết nối thành công nếu ít nhất 1 bucket OK, tất cả lỗi thì kết nối thất bại.
-- **RR8 – Quy mô sprint:** giữ 1 sprint-12, chia 3 giai đoạn, giai đoạn sau chỉ bắt đầu khi giai đoạn trước qua review:
+- **RR8 – Quy mô sprint:** giữ 1 sprint-11, chia 3 giai đoạn, giai đoạn sau chỉ bắt đầu khi giai đoạn trước qua review:
   1. Lõi: migration (`auth_type`, `auth_config`, `auth_secret`, backup), model, `buildCredentials`, Select phương thức,
      `static` + Session Token (cả 2 provider), AWS `sharedProfile` / `sso` / `assumeRole` (+MFA) / `defaultChain`.
   2. MinIO `minioAssumeRole`, `minioLdap`; `anonymous` (cả 2 provider); làm mới credential tự động.
   3. MinIO `minioOidc` (callback server, PKCE) và `minioCert` (mTLS).
 - **Rủi ro thấp còn lại:** tăng kích thước binary (chấp nhận); Region/Endpoint trống thì lấy từ CLI profile /
-  endpoint mặc định AWS; xung đột với sprint-10 đã xử lý bằng việc đặt ở sprint-12.
+  endpoint mặc định AWS; xung đột với sprint-10 đã xử lý bằng việc đặt ở sprint-11.
 
 ## Các quyết định đã chốt
 
@@ -229,7 +229,7 @@ Assume Role, SSO, và MinIO tích hợp STS/LDAP/OIDC/chứng chỉ, cũng như 
    nhập trình duyệt cho AWS.
 4. **Q4 – MFA cho Assume Role.** **Đã chốt:** có, MFA tuỳ chọn. Profile có MFA serial sẽ hỏi mã MFA mỗi lần kết nối/
    làm mới credential và không auto-connect được.
-5. **Q5 – Sprint.** **Đã chốt:** sprint-12 (sau refactor sprint-10 và phát hành beta.2 ở sprint-11).
+5. **Q5 – Sprint.** **Đã chốt:** sprint-11 (sau refactor sprint-10).
 6. **Q6 – UI chọn phương thức.** **Đã chốt:** Select (dropdown).
 7. **Q7 – Ẩn danh.** **Đã chốt:** người dùng nhập tay danh sách bucket, lưu trong profile, kiểm tra bằng `HeadBucket`.
 8. **Q8 – MinIO OIDC.** **Đã chốt:** người dùng nhập Client ID + Issuer URL; hỗ trợ IdP bất kỳ theo chuẩn OIDC
