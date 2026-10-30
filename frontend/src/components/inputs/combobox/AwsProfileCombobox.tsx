@@ -73,7 +73,7 @@ function AwsProfileCombobox(props: AwsProfileComboboxProps) {
         emptyText={t('awsProfileCombobox.empty')}
       />
       {hasCredentialProcess ? (
-        <Text size="xs" c="orange">
+        <Text size="xs" c="var(--mantine-color-orange-light-color)">
           {t('awsProfileCombobox.credentialProcessWarning')}
         </Text>
       ) : null}
