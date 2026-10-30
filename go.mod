@@ -270,7 +270,7 @@ require (
 	github.com/nishanths/exhaustive v0.15.0 // indirect
 	github.com/nishanths/predeclared v0.3.0 // indirect
 	github.com/nunnatsa/ginkgolinter v0.24.0 // indirect
-	github.com/pandatix/go-abnf v0.5.1 // indirect
+	github.com/pandatix/go-abnf v0.5.3 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/pganalyze/pg_query_go/v6 v6.2.2 // indirect
 	github.com/philhofer/fwd v1.2.1 // indirect
@@ -283,7 +283,7 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20260916203055-22a1a467d9f0 // indirect
 	github.com/prometheus/client_golang v1.24.1 // indirect
 	github.com/prometheus/client_model v0.6.3 // indirect
-	github.com/prometheus/common v0.73.0 // indirect
+	github.com/prometheus/common v0.73.1 // indirect
 	github.com/prometheus/procfs v0.23.0 // indirect
 	github.com/prometheus/prom2json v1.5.0 // indirect
 	github.com/prometheus/prometheus v0.315.1 // indirect

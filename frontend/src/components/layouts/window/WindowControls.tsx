@@ -47,19 +47,19 @@ function WindowControls() {
   return (
     <Group gap="xs" wrap="nowrap">
       <Tooltip label={t('window.minimise')}>
-        <ActionIcon aria-label={t('window.minimise')} color="gray" onClick={onClickMinimise}>
+        <ActionIcon aria-label={t('window.minimise')} color="yellow" onClick={onClickMinimise}>
           <Minus size={16} />
         </ActionIcon>
       </Tooltip>
 
       <Tooltip label={maximiseLabel}>
-        <ActionIcon aria-label={maximiseLabel} color="gray" onClick={onClickMaximise}>
+        <ActionIcon aria-label={maximiseLabel} color="green" onClick={onClickMaximise}>
           {isMaximised ? <Copy size={14} /> : <Square size={14} />}
         </ActionIcon>
       </Tooltip>
 
       <Tooltip label={t('window.close')}>
-        <ActionIcon aria-label={t('window.close')} color="gray" className={classes.closeButton} onClick={onClickClose}>
+        <ActionIcon aria-label={t('window.close')} color="red" className={classes.closeButton} onClick={onClickClose}>
           <X size={16} />
         </ActionIcon>
       </Tooltip>

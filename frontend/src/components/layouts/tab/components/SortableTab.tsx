@@ -75,6 +75,7 @@ function SortableTab({ tabId, closable, sortable, onClickClose, onMoveTab }: Sor
       >
         <Tabs.Tab
           value={tabId}
+          className={classes.tab}
           p="8px"
           h="38px"
           miw="200px"

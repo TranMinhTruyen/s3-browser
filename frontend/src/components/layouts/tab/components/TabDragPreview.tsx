@@ -19,9 +19,10 @@ function TabDragPreview({ tabId, closable }: TabDragPreviewProps) {
       w="200px"
       style={{
         cursor: 'grabbing',
-        background: 'var(--mantine-color-body)',
-        border: '1px solid var(--mantine-color-default-border)',
-        borderRadius: 'var(--mantine-radius-default) var(--mantine-radius-default) 0 0',
+        // Same look as the active tab (SortableTab.module.css): primary "light" variant.
+        background: 'var(--mantine-primary-color-light)',
+        color: 'var(--mantine-primary-color-light-color)',
+        borderRadius: 'var(--mantine-radius-md)',
       }}
     >
       <div style={{ minWidth: 0, flex: 1 }}>

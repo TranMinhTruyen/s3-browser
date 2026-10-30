@@ -86,11 +86,14 @@ function ConnectionProfileItem({
               backgroundColor: profile.color ?? 'var(--mantine-color-body)',
             }}
           >
-            <Box>
-              <Text c="inherit" truncate="end">
+            {/* miw=0 lets the flex item shrink below its content width so truncate can apply */}
+            <Box flex={1} miw={0}>
+              <Text c="inherit" truncate="end" title={profile.name}>
                 {profile.name}
               </Text>
-              <Text c="dimmed">{profile.provider}</Text>
+              <Text c="dimmed" truncate="end">
+                {profile.provider}
+              </Text>
             </Box>
           </Card.Section>
         </Card>

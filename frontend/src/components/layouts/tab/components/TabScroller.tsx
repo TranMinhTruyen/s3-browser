@@ -32,15 +32,23 @@ function TabScroller({ ref, children }: TabScrollerProps) {
   const reducedMotion = useReducedMotion();
   const [state, setState] = useState<ScrollState>({ overflow: false, atStart: true, atEnd: true });
 
-  // Recompute from the DOM; only set state when a value changed.
+  // Smooth scroll animator (refs only, no state): one rAF loop runs only while scrollLeft is approaching targetRef.
+  const targetRef = useRef(0);
+  const animRef = useRef(0);
+  const lastTimeRef = useRef(0);
+  // Float position: the browser may round scrollLeft to integers, which would swallow sub-pixel steps.
+  const posRef = useRef(0);
+  // Target is the far end: re-clamp it every frame, since arrows showing/hiding resize the viewport mid-scroll.
+  const toEndRef = useRef(false);
+
+  // Recompute from the DOM; only set state when a value changed. While animating, judge by the target so the
+  // arrows react as soon as a scroll heads to (or leaves) an edge instead of waiting for the slow easing tail.
   const measure = useCallback(() => {
     const el = viewportRef.current;
     if (!el) return;
-    const next: ScrollState = {
-      overflow: el.scrollWidth - el.clientWidth > EPS,
-      atStart: el.scrollLeft <= EPS,
-      atEnd: el.scrollLeft + el.clientWidth >= el.scrollWidth - EPS,
-    };
+    const max = el.scrollWidth - el.clientWidth;
+    const pos = animRef.current ? targetRef.current : el.scrollLeft;
+    const next: ScrollState = { overflow: max > EPS, atStart: pos <= EPS, atEnd: pos >= max - EPS };
     setState(prev =>
       prev.overflow === next.overflow && prev.atStart === next.atStart && prev.atEnd === next.atEnd ? prev : next
     );
@@ -79,16 +87,10 @@ function TabScroller({ ref, children }: TabScrollerProps) {
     return Array.from(el.firstElementChild?.children ?? [], c => c.getBoundingClientRect().left - base);
   }, []);
 
-  // Smooth scroll animator (refs only, no state): one rAF loop runs only while scrollLeft is approaching targetRef.
-  const targetRef = useRef(0);
-  const animRef = useRef(0);
-  const lastTimeRef = useRef(0);
-  // Float position: the browser may round scrollLeft to integers, which would swallow sub-pixel steps.
-  const posRef = useRef(0);
-
   const step = useCallback(function tick(now: number) {
     const el = viewportRef.current;
     if (!el) return;
+    if (toEndRef.current) targetRef.current = el.scrollWidth - el.clientWidth;
     const diff = targetRef.current - posRef.current;
     if (Math.abs(diff) < STOP_DISTANCE) {
       el.scrollLeft = targetRef.current;
@@ -107,16 +109,22 @@ function TabScroller({ ref, children }: TabScrollerProps) {
     (left: number) => {
       const el = viewportRef.current;
       if (!el) return;
-      targetRef.current = Math.min(Math.max(0, left), el.scrollWidth - el.clientWidth);
+      const max = el.scrollWidth - el.clientWidth;
+      targetRef.current = Math.min(Math.max(0, left), max);
+      toEndRef.current = left >= max - EPS;
       if (reducedMotion) {
         el.scrollLeft = targetRef.current;
-      } else if (!animRef.current) {
+        return;
+      }
+      if (!animRef.current) {
         posRef.current = el.scrollLeft;
         lastTimeRef.current = performance.now();
         animRef.current = requestAnimationFrame(step);
       }
+      // Update the arrows right away from the new target.
+      measure();
     },
-    [reducedMotion, step]
+    [reducedMotion, step, measure]
   );
 
   useEffect(() => () => cancelAnimationFrame(animRef.current), []);
