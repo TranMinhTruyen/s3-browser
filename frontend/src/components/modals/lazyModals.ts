@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import type { ConnectModalProps } from '@/components/modals/connectSchema';
+import type { ConnectModalProps } from '@/components/modals/connect/connectSchema';
 import i18n from '@/locales/i18n';
 
 /** A chunk that loads faster than this shows no feedback, so fast loads do not flash a toast. */
@@ -38,18 +38,18 @@ async function loadModal<M>(load: () => Promise<M>): Promise<M | undefined> {
  * When the chunk fails to load, `show` resolves undefined: callers that await a result must treat it as a cancel.
  */
 export const showConnectModal = async (props: ConnectModalProps) =>
-  (await loadModal(() => import('@/components/modals/ConnectModal')))?.default.show(props);
+  (await loadModal(() => import('@/components/modals/connect/ConnectModal')))?.default.show(props);
 
 export const showHistoryModal = async () =>
-  (await loadModal(() => import('@/components/modals/HistoryModal')))?.default.show();
+  (await loadModal(() => import('@/components/modals/history/HistoryModal')))?.default.show();
 
 export const showSettingModal = async () =>
-  (await loadModal(() => import('@/components/modals/SettingModal')))?.default.show();
+  (await loadModal(() => import('@/components/modals/setting/SettingModal')))?.default.show();
 
 export const showUploadPickerModal = async (
-  props: Parameters<typeof import('@/components/modals/UploadPickerModal')['default']['show']>[0]
-) => (await loadModal(() => import('@/components/modals/UploadPickerModal')))?.default.show(props);
+  props: Parameters<typeof import('@/components/modals/upload/UploadPickerModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/components/modals/upload/UploadPickerModal')))?.default.show(props);
 
 export const showUploadLimitModal = async (
-  props: Parameters<typeof import('@/components/modals/UploadLimitModal')['default']['show']>[0]
-) => (await loadModal(() => import('@/components/modals/UploadLimitModal')))?.default.show(props);
+  props: Parameters<typeof import('@/components/modals/upload/UploadLimitModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/components/modals/upload/UploadLimitModal')))?.default.show(props);

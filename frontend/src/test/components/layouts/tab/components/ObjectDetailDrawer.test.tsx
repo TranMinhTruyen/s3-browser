@@ -4,7 +4,7 @@ import { ObjectDetailOutput, ObjectItem } from '@wails/S3Browser/models/bucket';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ObjectDetailDrawer from '@/components/layouts/tab/components/ObjectDetailDrawer';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({ GetObjectDetail: vi.fn() }));
 vi.mock('@/common/utils/ipcUtils', async importOriginal => ({

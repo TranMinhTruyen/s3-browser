@@ -4,7 +4,7 @@ import { GetListBucket, SearchBucket } from '@wails/S3Browser/internal/handlers/
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { callIPC } from '@/common/utils/ipcUtils';
 import BucketPicker from '@/components/inputs/combobox/BucketPicker';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
 vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({

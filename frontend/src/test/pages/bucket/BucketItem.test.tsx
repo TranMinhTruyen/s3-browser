@@ -2,7 +2,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Bucket } from '@wails/S3Browser/models/bucket';
 import BucketItem from '@/pages/bucket/BucketItem';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 const bucket = new Bucket({ name: 'my-bucket', creationDate: '2026-01-02T03:04:05' });
 

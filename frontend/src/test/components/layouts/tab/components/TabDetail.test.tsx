@@ -10,7 +10,7 @@ import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import TabDetail from '@/components/layouts/tab/components/TabDetail';
 import { showConnectModal, showUploadPickerModal } from '@/components/modals/lazyModals';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 type BucketStubProps = {
   keyword?: string;

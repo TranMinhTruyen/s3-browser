@@ -1,5 +1,5 @@
 import { type ElementProps, Button as MButton, type ButtonProps as MButtonProps } from '@mantine/core';
-import { useAutoLoading } from '@/components/buttons/useAutoLoading';
+import { useAutoLoading } from '@/common/hooks/useAutoLoading';
 
 interface ButtonProps extends MButtonProps, ElementProps<'button', keyof MButtonProps> {}
 

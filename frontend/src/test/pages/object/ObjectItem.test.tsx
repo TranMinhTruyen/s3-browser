@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import ObjectItem from '@/pages/object/ObjectItem';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 const TAB_ID = 'tab-1';
 

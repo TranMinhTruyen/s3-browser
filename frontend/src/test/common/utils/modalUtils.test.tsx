@@ -3,7 +3,7 @@ import { act, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useModalStackStore } from '@/common/stores/modalStackStore';
 import { createMantineModal, type WithMantineModal } from '@/common/utils/modalUtils';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 type BodyProps = WithMantineModal<{ label: string }, string>;
 const captured = new Map<string, BodyProps['mantine']>();

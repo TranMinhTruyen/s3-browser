@@ -9,9 +9,9 @@ import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ConnectionProfiles from '@/components/layouts/navbar/components/ConnectionProfiles';
-import ConfirmModal from '@/components/modals/ConfirmModal';
+import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import { showConnectModal } from '@/components/modals/lazyModals';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 // jsdom has no layout, so render every row except the keys listed in `hidden` (scrolled out of the range).
 const virtual = vi.hoisted(() => ({
@@ -54,7 +54,7 @@ vi.mock('@wails/S3Browser/internal/handlers/profilehandler', () => ({
   GetAllConnectionProfile: vi.fn(),
 }));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
-vi.mock('@/components/modals/ConfirmModal', () => ({ default: { show: vi.fn() } }));
+vi.mock('@/components/modals/confirm/ConfirmModal', () => ({ default: { show: vi.fn() } }));
 vi.mock('@/components/modals/lazyModals', () => ({ showConnectModal: vi.fn(), showHistoryModal: vi.fn() }));
 
 const callIPCMock = vi.mocked(callIPC);
