@@ -237,6 +237,30 @@ describe('ConnectModal authentication methods', () => {
       expect(await screen.findByText('Endpoint is required')).toBeInTheDocument();
       expect(callIPCMock).not.toHaveBeenCalledWith(ConnectS3, expect.anything());
     });
+
+    it('clears the errors of the previous provider when the provider changes', async () => {
+      const user = await open();
+      await user.click(screen.getByText('MinIO'));
+      await waitFor(() => expect(checkbox('Path style')).toBeChecked());
+      await user.click(button('Connect'));
+      expect(await screen.findByText('Endpoint is required')).toBeInTheDocument();
+
+      await user.click(screen.getByText('AWS'));
+
+      await waitFor(() => expect(screen.queryByText('Endpoint is required')).not.toBeInTheDocument());
+    });
+  });
+
+  describe('layout', () => {
+    it('keeps the header and footer outside the scrolling body', async () => {
+      await open();
+
+      const body = field('Authentication method').closest<HTMLElement>('[style*="overflow"]');
+      expect(body).toHaveStyle({ overflow: 'auto' });
+      expect(body?.style.height).toContain('100dvh');
+      expect(body).not.toContainElement(screen.getByRole('button', { name: 'Close' }));
+      expect(body).not.toContainElement(button('Connect'));
+    });
   });
 
   describe('region', () => {
@@ -421,6 +445,17 @@ describe('ConnectModal authentication methods', () => {
   });
 
   describe('changing the method', () => {
+    it('clears the errors of the previous method', async () => {
+      const user = await open();
+      await chooseAuth(user, 'AWS CLI profile');
+      await user.click(button('Connect'));
+      expect(await screen.findByText('AWS CLI profile is required')).toBeInTheDocument();
+
+      await chooseAuth(user, 'Default chain');
+
+      await waitFor(() => expect(screen.queryByText('AWS CLI profile is required')).not.toBeInTheDocument());
+    });
+
     it('resets the method fields and the MFA code', async () => {
       const user = await open();
       await chooseAuth(user, 'Assume role');

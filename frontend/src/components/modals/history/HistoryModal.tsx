@@ -11,11 +11,10 @@ import { createMantineModal } from '@/common/utils/modalUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
+import { MODAL_CHROME_HEIGHT } from '@/components/modals/modalLayout';
 
 const PAGE_SIZE = 10;
 
-// Header (8px*2 padding + 28px close button) + 2 dividers (1px) + footer (8px*2 padding + 36px button) = 98px, rounded up.
-const MODAL_CHROME_HEIGHT = '104px';
 // Fixed body height on tall screens; shrinks on short ones so Modal.Content never exceeds its max-height.
 const BODY_HEIGHT = `min(650px, calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT}))`;
 

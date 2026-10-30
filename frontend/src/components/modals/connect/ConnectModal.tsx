@@ -37,6 +37,7 @@ import AuthAssumeRoleFields from '@/components/modals/connect/fields/AuthAssumeR
 import AuthAwsProfileFields from '@/components/modals/connect/fields/AuthAwsProfileFields';
 import AuthStaticFields from '@/components/modals/connect/fields/AuthStaticFields';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
+import { MODAL_CHROME_HEIGHT } from '@/components/modals/modalLayout';
 
 /** Provider options of the segmented control; static, so built once. */
 const PROVIDER_OPTIONS = [
@@ -51,6 +52,10 @@ const PROVIDER_OPTIONS = [
     </Center>
   ),
 }));
+
+// Body height on tall screens, sized for the Access key method in create/edit mode (with the hint); longer methods
+// scroll. Shrinks on short screens so the modal stays in the viewport.
+const BODY_HEIGHT = `min(750px, calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT}))`;
 
 /**
  * Modal to connect, test a connection, or create/edit a connection profile depending on `mode`:
@@ -99,6 +104,7 @@ export default createMantineModal<ConnectModalProps, false>(
 
     form.watch('provider', ({ value }) => {
       if (!value) return;
+      form.clearErrors(); // errors from the previous provider no longer apply
       form.setFieldValue('pathStyle', value === 'minio');
       if (!isAuthTypeValid(value, form.getValues().authType)) {
         form.setFieldValue('authType', DEFAULT_AUTH_TYPE);
@@ -108,6 +114,7 @@ export default createMantineModal<ConnectModalProps, false>(
     // A different method does not share the old method's fields (e.g. a non-SSO profile must not reach `sso`).
     form.watch('authType', () => {
       const { authConfig } = getDefaultConnectionInfo('');
+      form.clearErrors(); // errors from the previous method no longer apply
       form.setFieldValue('authConfig', authConfig);
       form.setFieldValue('mfaCode', '');
     });
@@ -235,7 +242,7 @@ export default createMantineModal<ConnectModalProps, false>(
     );
 
     return (
-      <Modal.Root {...mantine.props} centered size="lg">
+      <Modal.Root {...mantine.props} centered size="xl">
         <Modal.Overlay />
         <form onSubmit={onSubmitForm}>
           <Modal.Content>
@@ -261,7 +268,7 @@ export default createMantineModal<ConnectModalProps, false>(
 
             <Divider />
 
-            <Modal.Body p="16px">
+            <Modal.Body p="16px" style={{ overflow: 'auto', height: BODY_HEIGHT }}>
               <Stack gap="sm">
                 <SegmentedControl
                   data={PROVIDER_OPTIONS}
