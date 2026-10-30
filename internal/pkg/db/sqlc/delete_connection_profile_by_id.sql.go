@@ -14,7 +14,7 @@ DELETE
 FROM
     connection_profiles 
 WHERE
-    id = ? RETURNING id, name, color, provider, endpoint, region, access_key, secret_key, path_style, auto_connect, created_at, updated_at, version
+    id = ? RETURNING id, name, color, provider, endpoint, region, access_key, secret_key, path_style, auto_connect, created_at, updated_at, version, auth_type, auth_config, auth_secret
 `
 
 func (q *Queries) DeleteConnectionProfileById(ctx context.Context, id string) error {

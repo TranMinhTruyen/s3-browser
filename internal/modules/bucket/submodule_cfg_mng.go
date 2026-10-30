@@ -4,6 +4,7 @@ import (
 	"S3Browser/internal/modules/global"
 	"S3Browser/internal/pkg/cnst"
 	"S3Browser/models"
+	"cmp"
 	"context"
 	"errors"
 	"log/slog"
@@ -14,11 +15,9 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/smithy-go"
 	"github.com/minio/madmin-go/v4"
-	miniocredentials "github.com/minio/minio-go/v7/pkg/credentials"
 )
 
 // submoduleCfgMng builds S3 clients from a profile and probes them. It has no state besides the logger.
@@ -37,18 +36,30 @@ func newSubmoduleCfgMng(
 
 // buildClient creates the S3 client, presigner and (for MinIO) admin client of input. Each connection
 // gets its own http.Transport so Disconnect can close its idle connections without touching others.
-func (m *submoduleCfgMng) buildClient(input models.ConnectionProfileInput) *global.S3Conn {
+// The credentials come from buildCredentials, so a credentials failure is returned before any client exists.
+func (m *submoduleCfgMng) buildClient(
+	ctx context.Context,
+	input models.ConnectionProfileInput,
+) (*global.S3Conn, error) {
+	creds, err := buildCredentials(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
 	client, transport := newHTTPClient()
 
 	cfg := aws.Config{
-		Credentials:      credentials.NewStaticCredentialsProvider(input.AccessKey, input.SecretKey, ""),
-		Region:           input.Region,
+		Credentials:      creds.AWS,
+		Region:           cmp.Or(input.Region, creds.Region, defaultS3Region),
 		HTTPClient:       client,
 		RetryMaxAttempts: 3,
 	}
 
 	s3Client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.BaseEndpoint = aws.String(input.Endpoint)
+		// An empty endpoint means AWS itself: leave the SDK to resolve it from the region.
+		if input.Endpoint != "" {
+			o.BaseEndpoint = aws.String(input.Endpoint)
+		}
 		o.UsePathStyle = input.PathStyle
 	})
 
@@ -62,7 +73,7 @@ func (m *submoduleCfgMng) buildClient(input models.ConnectionProfileInput) *glob
 		Transport:   transport,
 	}
 
-	if input.Provider == "minio" {
+	if input.Provider == cnst.ProviderMinio && creds.Minio != nil {
 		// madmin wants a bare host, and the scheme decides whether TLS is used.
 		// An endpoint without a scheme (e.g. "localhost:9000") would not parse a host, so default to https.
 		endpoint := input.Endpoint
@@ -75,11 +86,11 @@ func (m *submoduleCfgMng) buildClient(input models.ConnectionProfileInput) *glob
 		}
 		if err != nil {
 			m.logger.Error("parse minio endpoint failed", slog.Any("error", err.Error()))
-			return conn
+			return conn, nil
 		}
 
 		admin, err := madmin.NewWithOptions(u.Host, &madmin.Options{
-			Creds:     miniocredentials.NewStaticV4(input.AccessKey, input.SecretKey, ""),
+			Creds:     creds.Minio,
 			Secure:    u.Scheme == "https",
 			Transport: transport,
 		})
@@ -90,7 +101,7 @@ func (m *submoduleCfgMng) buildClient(input models.ConnectionProfileInput) *glob
 		}
 	}
 
-	return conn
+	return conn, nil
 }
 
 // probe checks the connection with ListBuckets and maps the error to a connect message.
@@ -100,7 +111,7 @@ func (m *submoduleCfgMng) probe(ctx context.Context, c *global.S3Conn) (models.O
 	output := models.NewOutput[models.ConnectOutput]()
 
 	if _, err := c.Client.ListBuckets(ctx, &s3.ListBucketsInput{}); err != nil {
-		mappedErr := describeConnectStatus(err, &output)
+		mappedErr := describeConnectStatus(err, c.ProfileName, &output)
 		if mappedErr != nil {
 			c.Transport.CloseIdleConnections()
 			m.logger.Error("connect to S3 failed", slog.Any("error", mappedErr.Error()))
@@ -112,8 +123,8 @@ func (m *submoduleCfgMng) probe(ctx context.Context, c *global.S3Conn) (models.O
 }
 
 // describeConnectStatus fills output with the message for err and returns the error that makes the
-// connect fail, or nil when the connection is usable (limited access).
-func describeConnectStatus(err error, output *models.Output[models.ConnectOutput]) error {
+// connect fail, or nil when the connection is usable (limited access). name is the profile name.
+func describeConnectStatus(err error, name string, output *models.Output[models.ConnectOutput]) error {
 	if errors.Is(err, context.DeadlineExceeded) {
 		output.MessageList = []models.Message{
 			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E003, err.Error()),
@@ -121,9 +132,22 @@ func describeConnectStatus(err error, output *models.Output[models.ConnectOutput
 		return err
 	}
 
+	var credErr *credError
+	if errors.As(err, &credErr) {
+		output.MessageList = []models.Message{
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, credErr.code, credErr.Error(), credErr.params),
+		}
+		return err
+	}
+
 	errStr := UnwrapAwsError(err)
 
 	switch errStr {
+	case "ExpiredToken", "ExpiredTokenException", "RequestExpired":
+		output.MessageList = []models.Message{
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E030, errStr, map[string]any{"name": name}),
+		}
+		return err
 	case "InvalidAccessKeyId", "SignatureDoesNotMatch", "InvalidClientTokenId":
 		output.MessageList = []models.Message{
 			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E001, errStr),

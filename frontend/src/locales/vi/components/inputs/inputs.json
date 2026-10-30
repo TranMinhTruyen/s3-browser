@@ -1,4 +1,10 @@
 {
+  "awsProfileCombobox": {
+    "label": "AWS CLI profile",
+    "searchPlaceholder": "Tìm profile",
+    "empty": "Không tìm thấy profile nào. Hãy kiểm tra tệp ~/.aws/config.",
+    "credentialProcessWarning": "Profile này sẽ chạy lệnh credential_process khi kết nối."
+  },
   "regionCombobox": {
     "label": "Khu vực",
     "placeholder": "Chọn khu vực",

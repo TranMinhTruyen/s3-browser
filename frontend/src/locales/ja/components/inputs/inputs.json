@@ -1,4 +1,10 @@
 {
+  "awsProfileCombobox": {
+    "label": "AWS CLI プロファイル",
+    "searchPlaceholder": "プロファイルを検索",
+    "empty": "プロファイルが見つかりません。~/.aws/config を確認してください。",
+    "credentialProcessWarning": "このプロファイルは接続時に credential_process のコマンドを実行します。"
+  },
   "regionCombobox": {
     "label": "リージョン",
     "placeholder": "リージョンを選択",

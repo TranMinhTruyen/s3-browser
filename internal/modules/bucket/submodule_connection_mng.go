@@ -52,7 +52,14 @@ func (m *submoduleConnMng) probe(
 	ctx, cancel := context.WithTimeout(m.app.Context(), connectTimeout)
 	defer cancel()
 
-	c := m.submoduleCfgMng.buildClient(input)
+	c, err := m.submoduleCfgMng.buildClient(ctx, input)
+	if err != nil {
+		status := models.NewOutput[models.ConnectOutput]()
+		_ = describeConnectStatus(err, input.Name, &status) // fills the message; err already fails the connect
+		m.logger.Error("build credentials failed", "authType", input.AuthType, "error", err.Error())
+		return nil, status, err
+	}
+
 	status, err := m.submoduleCfgMng.probe(ctx, c)
 	return c, status, err
 }
@@ -125,23 +132,14 @@ func (m *submoduleConnMng) replaceConn(id string, c *global.S3Conn) {
 // profileConnectAction connects with a saved profile and keeps the connection (S3S002).
 func (m *submoduleConnMng) profileConnectAction(connectionId string) models.Output[models.ConnectOutput] {
 	output := models.NewOutput[models.ConnectOutput]()
-	profile := m.profile.GetConnectionProfileById(connectionId)
+	// The saved secrets are decrypted here only; the frontend never sees them.
+	profile := m.profile.GetConnectInput(connectionId)
 
 	if !profile.Result {
 		return output.ThrowError(profile.MessageList...)
 	}
 
-	connectInput := models.ConnectionProfileInput{
-		Name:      profile.Body.Name,
-		Endpoint:  profile.Body.Endpoint,
-		AccessKey: profile.Body.AccessKey,
-		SecretKey: profile.Body.SecretKey,
-		Region:    profile.Body.Region,
-		PathStyle: profile.Body.PathStyle,
-		Provider:  profile.Body.Provider,
-	}
-
-	c, status, err := m.probe(connectInput)
+	c, status, err := m.probe(profile.Body)
 
 	if err != nil {
 		output.Body.IsConnected = false

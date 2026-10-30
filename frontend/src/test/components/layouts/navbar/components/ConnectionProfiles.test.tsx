@@ -68,7 +68,8 @@ const profile = (id: string, extra: Partial<ConnectionProfileOutput> = {}) =>
     name: `${id}-name`,
     provider: 'aws',
     color: '#d0ebff',
-    secretKey: 'SK',
+    accessKey: 'AK',
+    savedSecrets: ['secretKey'],
     isConnected: false,
     ...extra,
   });
@@ -250,7 +251,7 @@ describe('ConnectionProfiles', () => {
     });
 
     it('asks for the secret key instead when an auto connect profile has none saved', async () => {
-      const noSecret = profile('p', { autoConnect: true, secretKey: '' });
+      const noSecret = profile('p', { autoConnect: true, savedSecrets: [] });
       renderProfiles({ p: noSecret });
       await flush();
 
@@ -355,7 +356,7 @@ describe('ConnectionProfiles', () => {
     });
 
     it('opens the connect modal for a profile without a saved secret key once auto connect ran', async () => {
-      const noSecret = profile('a', { secretKey: '' });
+      const noSecret = profile('a', { savedSecrets: [] });
       renderProfiles({ a: noSecret });
       await flush(); // the auto connect pass runs on the first non-empty list
 
@@ -363,6 +364,42 @@ describe('ConnectionProfiles', () => {
 
       expect(connectModalMock).toHaveBeenCalledWith({ mode: 'manualconnect', connectionProfile: { ...noSecret } });
       expect(callIPCMock).not.toHaveBeenCalled();
+    });
+
+    it('opens the connect modal for an assume role profile with an MFA device', async () => {
+      const mfa = profile('a', { authType: 'assumeRole', authConfig: { mfaSerial: 'arn:mfa' } as never });
+      renderProfiles({ a: mfa });
+      await flush();
+
+      fireEvent.doubleClick(card('a-name'));
+
+      expect(connectModalMock).toHaveBeenCalledWith({ mode: 'manualconnect', connectionProfile: { ...mfa } });
+      expect(callIPCMock).not.toHaveBeenCalled();
+    });
+
+    it('connects directly a profile that needs no secret, such as an AWS CLI profile', async () => {
+      ipcResult.set(ConnectS3ByProfile, { isConnected: true });
+      renderProfiles({ a: profile('a', { authType: 'sharedProfile', accessKey: '', savedSecrets: [] }) });
+      await flush();
+
+      fireEvent.doubleClick(card('a-name'));
+
+      await waitFor(() => expect(profiles().a?.isConnected).toBe(true));
+      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['a']);
+      expect(connectModalMock).not.toHaveBeenCalled();
+    });
+
+    it('does not auto connect an assume role profile with an MFA device but asks for the code', async () => {
+      const mfa = profile('a', {
+        autoConnect: true,
+        authType: 'assumeRole',
+        authConfig: { mfaSerial: 'arn:mfa' } as never,
+      });
+      renderProfiles({ a: mfa });
+      await flush();
+
+      expect(callIPCMock).not.toHaveBeenCalled();
+      expect(connectModalMock).toHaveBeenCalledWith({ mode: 'manualconnect', connectionProfile: { ...mfa } });
     });
   });
 
@@ -450,7 +487,9 @@ describe('ConnectionProfiles', () => {
       await waitFor(() => expect(profiles().a).toBeUndefined());
       expect(confirmMock).toHaveBeenCalledTimes(1);
       expect(confirmMock).toHaveBeenCalledWith({ type: 'warning', confirmCode: 'C000002' });
-      expect(callIPCMock).toHaveBeenCalledWith(DeleteProfileById, [{ ...off }]);
+      expect(callIPCMock).toHaveBeenCalledWith(DeleteProfileById, [
+        { id: 'a', name: 'a-name', version: off.version, authConfig: off.authConfig, authSecret: {} },
+      ]);
       expect(clearProfile).toHaveBeenCalledWith('a');
       expect(profiles().b).toBeDefined();
     });

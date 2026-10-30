@@ -67,7 +67,14 @@ vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
 
 const TAB = 't1';
 const profile = (patch: Partial<ConnectionProfileOutput> = {}) =>
-  ({ id: 'p1', name: 'Prof', accessKey: 'ak', isConnected: false, ...patch }) as ConnectionProfileOutput;
+  ({
+    id: 'p1',
+    name: 'Prof',
+    accessKey: 'ak',
+    savedSecrets: ['secretKey'],
+    isConnected: false,
+    ...patch,
+  }) as ConnectionProfileOutput;
 const tabState = (patch: Record<string, unknown> = {}) => ({
   currentView: 'bucketList' as const,
   prefix: '',
@@ -150,6 +157,34 @@ describe('TabDetail', () => {
         connectionProfile: profile({ accessKey: '' }),
       });
       expect(callIPC).not.toHaveBeenCalled();
+    });
+
+    it('opens the connect modal when the secret key is not saved', async () => {
+      setProfile({ savedSecrets: [] });
+      const user = setup();
+      await user.click(btn('Connect'));
+      expect(showConnectModal).toHaveBeenCalledExactlyOnceWith({
+        mode: 'manualconnect',
+        connectionProfile: profile({ savedSecrets: [] }),
+      });
+      expect(callIPC).not.toHaveBeenCalled();
+    });
+
+    it('opens the connect modal for an assume role profile with an MFA device', async () => {
+      setProfile({ authType: 'assumeRole', authConfig: { mfaSerial: 'arn:mfa' } as never });
+      const user = setup();
+      await user.click(btn('Connect'));
+      expect(showConnectModal).toHaveBeenCalledTimes(1);
+      expect(callIPC).not.toHaveBeenCalled();
+    });
+
+    it('connects directly a profile that needs no secret', async () => {
+      vi.mocked(callIPC).mockResolvedValue({ isConnected: true } as never);
+      setProfile({ authType: 'defaultChain', accessKey: '', savedSecrets: [] });
+      const user = setup();
+      await user.click(btn('Connect'));
+      expect(callIPC).toHaveBeenCalledExactlyOnceWith(ConnectS3ByProfile, ['p1']);
+      expect(showConnectModal).not.toHaveBeenCalled();
     });
 
     it('connects through the backend and marks the profile as connected', async () => {

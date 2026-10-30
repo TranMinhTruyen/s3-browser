@@ -11,5 +11,8 @@ INTO connection_profiles(
     , secret_key
     , path_style
     , auto_connect
+    , auth_type
+    , auth_config
+    , auth_secret
 ) 
-VALUES (? , ? , ? , ? , ? , ? , ? , ? , ? , ? ) RETURNING *;
+VALUES (? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ? ) RETURNING *;

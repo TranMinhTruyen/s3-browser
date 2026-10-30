@@ -5,16 +5,90 @@
       "name": "Tên hồ sơ",
       "color": "Màu hồ sơ",
       "endpoint": "Endpoint",
+      "authType": "Phương thức xác thực",
       "accessKey": "Access key",
       "secretKey": "Secret key",
+      "sessionToken": "Session token (tùy chọn)",
+      "configFile": "Tệp cấu hình AWS (tùy chọn)",
+      "credentialsFile": "Tệp credentials AWS (tùy chọn)",
+      "sourceType": "Thông tin xác thực dùng để assume role",
+      "roleArn": "Role ARN",
+      "externalId": "External ID (tùy chọn)",
+      "sessionName": "Tên phiên (tùy chọn)",
+      "durationSeconds": "Thời hạn (giây)",
+      "mfaSerial": "Serial thiết bị MFA (tùy chọn)",
+      "mfaCode": "Mã MFA",
       "pathStyle": "Path style",
-      "savePassword": "Lưu secret key",
+      "savePassword": "Lưu bí mật",
       "autoConnect": "Tự động kết nối"
+    },
+    "placeholder": {
+      "saved": "Đã lưu, để trống để giữ nguyên",
+      "configFile": "Mặc định: ~/.aws/config",
+      "credentialsFile": "Mặc định: ~/.aws/credentials",
+      "roleArn": "arn:aws:iam::123456789012:role/RoleName",
+      "sessionName": "Mặc định: s3browser-<user>",
+      "mfaSerial": "arn:aws:iam::123456789012:mfa/user"
+    },
+    "sourceType": {
+      "static": "Access key",
+      "profile": "AWS CLI profile"
+    },
+    "hint": {
+      "testNeedsSecrets": "Lưu hồ sơ không cần bí mật, nhưng Kiểm tra kết nối thì cần: bí mật đã lưu không được trả về nên hãy nhập lại.",
+      "mfaCode": "Dùng một lần, không được lưu",
+      "profilePlaceholder": "<profile>",
+      "ssoLogin": "Hãy đăng nhập trước bằng lệnh: aws sso login --profile {{profile}}"
+    },
+    "tooltip": {
+      "autoConnectLocked": "Phương thức xác thực này cần nhập thông tin mỗi lần kết nối nên không thể tự động kết nối."
     },
     "button": {
       "testConnection": "Kiểm tra kết nối",
       "createProfile": "Tạo hồ sơ",
       "editProfile": "Cập nhật hồ sơ"
+    }
+  },
+  "authType": {
+    "static": {
+      "label": "Access key",
+      "description": "Access key và secret key, kèm session token tùy chọn."
+    },
+    "sharedProfile": {
+      "label": "AWS CLI profile",
+      "description": "Dùng một profile trong các tệp cấu hình AWS CLI (~/.aws)."
+    },
+    "assumeRole": {
+      "label": "Assume role",
+      "description": "Assume một IAM role qua STS, có thể bảo vệ bằng MFA."
+    },
+    "sso": {
+      "label": "AWS SSO",
+      "description": "Dùng profile đã đăng nhập bằng AWS CLI (aws sso login)."
+    },
+    "defaultChain": {
+      "label": "Default chain",
+      "description": "Dùng thông tin xác thực có sẵn trong môi trường: biến môi trường, tệp dùng chung hoặc instance role."
+    },
+    "anonymous": {
+      "label": "Ẩn danh",
+      "description": "Truy cập bucket công khai mà không cần thông tin xác thực."
+    },
+    "minioAssumeRole": {
+      "label": "MinIO STS",
+      "description": "Lấy thông tin xác thực tạm thời từ MinIO STS."
+    },
+    "minioLdap": {
+      "label": "LDAP",
+      "description": "Đăng nhập bằng tài khoản LDAP."
+    },
+    "minioOidc": {
+      "label": "OIDC",
+      "description": "Đăng nhập bằng nhà cung cấp OpenID Connect."
+    },
+    "minioCert": {
+      "label": "Chứng chỉ client",
+      "description": "Đăng nhập bằng chứng chỉ TLS của client."
     }
   }
 }

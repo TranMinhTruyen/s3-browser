@@ -1,29 +1,41 @@
-import { Center, Divider, Group, Modal, Stack, Title } from '@mantine/core';
+import { Center, Divider, Group, Modal, Stack, Text, Title, Tooltip } from '@mantine/core';
 import { schemaResolver, useForm } from '@mantine/form';
 import { ConnectS3 } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { CreateProfile, UpdateProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
-import { ConnectionProfileInput } from '@wails/S3Browser/models';
-import { SyntheticEvent, useCallback, useRef, useState } from 'react';
+import { SyntheticEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import awsLogo from '@/assets/images/aws.svg';
 import minioLogo from '@/assets/images/minio.svg';
 import { useProfileStore } from '@/common/stores/profileStore';
+import { canAutoConnect, getAuthType, getRequiredSecrets } from '@/common/utils/authUtils';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal } from '@/common/utils/modalUtils';
-import { createUUID, isNullOrEmpty } from '@/common/utils/stringUtils';
+import { createUUID } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import RegionCombobox from '@/components/inputs/combobox/RegionCombobox';
 import FieldInput from '@/components/inputs/FieldInput';
 import SegmentedControl from '@/components/inputs/SegmentedControl';
+import SelectInput from '@/components/inputs/SelectInput';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
+import {
+  DEFAULT_AUTH_TYPE,
+  getAuthMethods,
+  isAuthTypeValid,
+  isRegionOptional,
+} from '@/components/modals/connect/authMethods';
 import {
   type ConnectionInfo,
   type ConnectModalProps,
   connectSchema,
   getDefaultConnectionInfo,
   profileSchema,
+  toConnectionInput,
+  toFormValues,
 } from '@/components/modals/connect/connectSchema';
+import AuthAssumeRoleFields from '@/components/modals/connect/fields/AuthAssumeRoleFields';
+import AuthAwsProfileFields from '@/components/modals/connect/fields/AuthAwsProfileFields';
+import AuthStaticFields from '@/components/modals/connect/fields/AuthStaticFields';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 
 /** Provider options of the segmented control; static, so built once. */
@@ -43,8 +55,8 @@ const PROVIDER_OPTIONS = [
 /**
  * Modal to connect, test a connection, or create/edit a connection profile depending on `mode`:
  * - `connect`: connect with typed credentials (nothing saved unless "save password" is ticked);
- * - `manualconnect`: connect a saved profile whose secret key is not stored;
- * - `createProfile` / `editProfile`: save a profile; the secret key is optional.
+ * - `manualconnect`: connect a saved profile that needs input it does not store (secret key, MFA code);
+ * - `createProfile` / `editProfile`: save a profile; secrets are optional (an empty one keeps the saved value).
  * Resolves `false` when dismissed. Load it through `showConnectModal` (lazy chunk).
  */
 export default createMantineModal<ConnectModalProps, false>(
@@ -55,14 +67,16 @@ export default createMantineModal<ConnectModalProps, false>(
 
     const actionRef = useRef<'connect' | 'profile'>('connect');
     const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
+    // The profile as last saved: its id, version and which secrets are stored.
+    const [profile, setProfile] = useState(connectionProfile);
 
     // useForm only reads initialValues on mount; compute them once instead of on every keystroke.
     const [initialValues] = useState(() => {
       const defaultValues = getDefaultConnectionInfo(`Connection No.${createUUID()}`);
 
-      return mode === 'connect' || mode === 'createProfile'
-        ? defaultValues
-        : { ...defaultValues, ...connectionProfile, savePassword: !!connectionProfile?.secretKey };
+      return connectionProfile && (mode === 'manualconnect' || mode === 'editProfile')
+        ? toFormValues(defaultValues, connectionProfile)
+        : defaultValues;
     });
 
     const form = useForm<ConnectionInfo>({
@@ -78,27 +92,65 @@ export default createMantineModal<ConnectModalProps, false>(
 
     const savePassword = form.useWatchValue('savePassword');
     const provider = form.useWatchValue('provider');
+    const authType = form.useWatchValue('authType');
     const secretKey = form.useWatchValue('secretKey');
-
-    form.watch('savePassword', ({ value }) => {
-      if (!value) {
-        form.setFieldValue('autoConnect', false);
-      }
-    });
+    const sourceType = form.useWatchValue('authConfig.sourceType');
+    const mfaSerial = form.useWatchValue('authConfig.mfaSerial');
 
     form.watch('provider', ({ value }) => {
-      if (value) {
-        form.setFieldValue('pathStyle', value === 'minio');
+      if (!value) return;
+      form.setFieldValue('pathStyle', value === 'minio');
+      if (!isAuthTypeValid(value, form.getValues().authType)) {
+        form.setFieldValue('authType', DEFAULT_AUTH_TYPE);
       }
     });
+
+    // A different method does not share the old method's fields (e.g. a non-SSO profile must not reach `sso`).
+    form.watch('authType', () => {
+      const { authConfig } = getDefaultConnectionInfo('');
+      form.setFieldValue('authConfig', authConfig);
+      form.setFieldValue('mfaCode', '');
+    });
+
+    const secretRequired = mode === 'connect' || mode === 'manualconnect';
+    // Saved secrets only mean something for the saved method; another method starts without secrets.
+    const savedSecrets = useMemo(
+      () =>
+        mode === 'editProfile' && profile && authType === getAuthType(profile) ? (profile.savedSecrets ?? []) : [],
+      [mode, profile, authType]
+    );
+
+    const authOptions = useMemo(
+      () => getAuthMethods(provider).map(type => ({ value: type, label: t(`authType.${type}.label`) })),
+      [provider, t]
+    );
+
+    // Auto connect needs stored secrets and a method that connects without input (no MFA code).
+    const authState = useMemo(
+      () => ({ authType, authConfig: { sourceType, mfaSerial } }),
+      [authType, sourceType, mfaSerial]
+    );
+    const autoConnectLocked = !canAutoConnect(authState);
+    const secretsReady = getRequiredSecrets(authState).every(
+      name => (name === 'secretKey' && !!secretKey) || savedSecrets.includes(name)
+    );
+    const autoConnectDisabled = !savePassword || autoConnectLocked || !secretsReady;
+
+    useEffect(() => {
+      if (autoConnectDisabled && form.getValues().autoConnect) form.setFieldValue('autoConnect', false);
+    }, [autoConnectDisabled, form]);
+
+    // Clearing the region gives null; the form keeps an empty string.
+    const onChangeRegion = useCallback(
+      (value: string | null) => form.getInputProps('region').onChange(value ?? ''),
+      [form]
+    );
+
+    const authFieldsProps = { form, savedSecrets, secretRequired };
 
     const onSubmitConnect = useCallback(
       async (value: ConnectionInfo, isTestConnection: boolean) => {
-        const input: ConnectionProfileInput = {
-          ...value,
-          id: connectionProfile?.id ?? '',
-          version: connectionProfile?.version ?? 1,
-        };
+        const input = toConnectionInput(value, connectionProfile?.id ?? '', connectionProfile?.version ?? 1);
         const isExistingProfile = mode === 'manualconnect';
 
         const output = await callIPC(ConnectS3, [input, isTestConnection, isExistingProfile]);
@@ -132,29 +184,22 @@ export default createMantineModal<ConnectModalProps, false>(
           type: 'info',
           confirmCode: 'C000001',
         });
-        if (confirmModal && connectionProfile) {
-          const input: ConnectionProfileInput = {
-            ...value,
-            id: connectionProfile.id ?? '',
-            version: connectionProfile.version ?? 1,
-          };
+        if (confirmModal && profile) {
+          const input = toConnectionInput(value, profile.id ?? '', profile.version ?? 1, false);
           const output = await callIPC(UpdateProfileById, [input]);
           if (output?.id) {
-            form.setValues({ ...output });
+            setProfile(output);
+            form.setValues(toFormValues(getDefaultConnectionInfo(output.name ?? ''), output));
             updateConnectionProfiles(output.id, { ...output });
           }
         }
       },
-      [connectionProfile, form, updateConnectionProfiles]
+      [profile, form, updateConnectionProfiles]
     );
 
     const onSubmitCreateProfile = useCallback(
       async (value: ConnectionInfo) => {
-        const input: ConnectionProfileInput = {
-          ...value,
-          id: createUUID(),
-          version: 1,
-        };
+        const input = toConnectionInput(value, createUUID(), 1, false);
         const output = await callIPC(CreateProfile, [input], {
           showMessage: true,
         });
@@ -244,35 +289,38 @@ export default createMantineModal<ConnectModalProps, false>(
                   type="text"
                   label={t('form.label.endpoint')}
                   placeholder={t('form.label.endpoint')}
-                  withAsterisk
+                  withAsterisk={provider === 'minio'}
                   key={form.key('endpoint')}
                   {...form.getInputProps('endpoint')}
                 />
 
                 <RegionCombobox
-                  withAsterisk
+                  withAsterisk={!isRegionOptional(provider, authType)}
                   defaultValue={null}
                   key={form.key('region')}
                   {...form.getInputProps('region')}
+                  onChange={onChangeRegion}
                 />
 
-                <FieldInput
-                  type="text"
-                  label={t('form.label.accessKey')}
-                  placeholder={t('form.label.accessKey')}
-                  withAsterisk
-                  key={form.key('accessKey')}
-                  {...form.getInputProps('accessKey')}
+                <SelectInput
+                  label={t('form.label.authType')}
+                  description={t(`authType.${authType}.description`)}
+                  data={authOptions}
+                  allowDeselect={false}
+                  key={form.key('authType')}
+                  {...form.getInputProps('authType')}
                 />
 
-                <FieldInput
-                  type="password"
-                  label={t('form.label.secretKey')}
-                  placeholder={t('form.label.secretKey')}
-                  withAsterisk={mode === 'connect' || mode === 'manualconnect'}
-                  key={form.key('secretKey')}
-                  {...form.getInputProps('secretKey')}
-                />
+                {authType === 'static' && <AuthStaticFields {...authFieldsProps} />}
+                {authType === 'sharedProfile' && <AuthAwsProfileFields form={form} />}
+                {authType === 'sso' && <AuthAwsProfileFields form={form} ssoOnly />}
+                {authType === 'assumeRole' && <AuthAssumeRoleFields {...authFieldsProps} />}
+
+                {secretRequired ? null : (
+                  <Text size="xs" c="dimmed">
+                    {t('form.hint.testNeedsSecrets')}
+                  </Text>
+                )}
 
                 <Group justify="space-between">
                   <CheckBoxInput
@@ -288,12 +336,16 @@ export default createMantineModal<ConnectModalProps, false>(
                     {...form.getInputProps('savePassword', { type: 'checkbox' })}
                   />
 
-                  <CheckBoxInput
-                    label={t('form.label.autoConnect')}
-                    key={form.key('autoConnect')}
-                    disabled={!savePassword || isNullOrEmpty(secretKey)}
-                    {...form.getInputProps('autoConnect', { type: 'checkbox' })}
-                  />
+                  <Tooltip label={t('form.tooltip.autoConnectLocked')} disabled={!autoConnectLocked}>
+                    <div>
+                      <CheckBoxInput
+                        label={t('form.label.autoConnect')}
+                        key={form.key('autoConnect')}
+                        disabled={autoConnectDisabled}
+                        {...form.getInputProps('autoConnect', { type: 'checkbox' })}
+                      />
+                    </div>
+                  </Tooltip>
                 </Group>
               </Stack>
             </Modal.Body>
