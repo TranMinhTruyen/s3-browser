@@ -4,6 +4,11 @@ import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 
+/**
+ * Saving and restoring of the open tabs (tabs.json) and cleanup of tabs whose profile was deleted.
+ * Every call is silent: failures never toast, they only disable saving where overwriting would lose data.
+ */
+
 let restoreFailed = false;
 
 /** True when the saved layout could not be read; saving is then disabled so tabs.json is never overwritten. */
@@ -36,7 +41,10 @@ export function normalizeTabProfiles(profileIds: string[]): void {
   });
 }
 
-/** Loads the profiles, then clears the deleted ones from the tabs. If loading fails, the tabs are left as they are. */
+/**
+ * Loads the profiles into the profile store (a load error is toasted), then clears the deleted ones from the tabs.
+ * If loading fails the tabs are left as they are. Never rejects.
+ */
 export async function normalizeTabProfilesFromDisk(): Promise<void> {
   const { loadConnectionProfiles } = useProfileStore.getState();
   if (await loadConnectionProfiles()) {

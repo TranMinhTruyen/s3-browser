@@ -39,7 +39,10 @@ vi.mock('@tanstack/react-virtual', () => ({
   },
 }));
 vi.mock('@wailsio/runtime', async importOriginal => {
+  // The real runtime prints a "Browser Environment Detected" warning when it is loaded outside the desktop app.
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
   const actual = await importOriginal<typeof import('@wailsio/runtime')>();
+  warn.mockRestore();
   return { ...actual, Events: { ...actual.Events, On: vi.fn() } };
 });
 vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
@@ -81,8 +84,8 @@ const clearProfile = vi.fn();
 let handlers: Record<string, (e: { data: unknown }) => void>;
 const unsubscribe = vi.fn();
 
-function renderProfiles(initial: Record<string, ConnectionProfileOutput | undefined>) {
-  useProfileStore.setState({ connectionProfiles: initial, loadConnectionProfiles });
+function renderProfiles(initial: Record<string, ConnectionProfileOutput | undefined>, loaded = false) {
+  useProfileStore.setState({ connectionProfiles: initial, loaded, loadConnectionProfiles });
   return renderWithProviders(<ConnectionProfiles />);
 }
 
@@ -110,18 +113,33 @@ describe('ConnectionProfiles', () => {
   });
 
   describe('rendering', () => {
-    it('loads the profiles on mount, lists them and clears the store on unmount', async () => {
+    it('lists the profiles without loading them and keeps the store on unmount (App owns the load)', async () => {
       const { unmount } = renderProfiles({ a: profile('a'), skipped: undefined, b: profile('b', { name: 'Bee' }) });
 
-      expect(loadConnectionProfiles).toHaveBeenCalledTimes(1);
+      expect(loadConnectionProfiles).not.toHaveBeenCalled();
       expect(screen.getByText('a-name')).toBeInTheDocument();
       expect(screen.getByText('Bee')).toBeInTheDocument();
       expect(screen.getAllByText('aws')).toHaveLength(2);
 
       unmount();
 
-      expect(profiles()).toEqual({});
+      expect(Object.keys(profiles())).toEqual(['a', 'skipped', 'b']);
+      expect(loadConnectionProfiles).not.toHaveBeenCalled();
       expect(unsubscribe).toHaveBeenCalled();
+    });
+
+    it('shows the empty state only when the profiles are loaded and the list is empty', () => {
+      const empty = 'No connection profiles yet. Use the buttons above to create one.';
+      const { unmount } = renderProfiles({}, false);
+      expect(screen.queryByText(empty)).not.toBeInTheDocument();
+      unmount();
+
+      const loadedEmpty = renderProfiles({}, true);
+      expect(screen.getByText(empty)).toBeInTheDocument();
+      loadedEmpty.unmount();
+
+      renderProfiles({ a: profile('a') }, true);
+      expect(screen.queryByText(empty)).not.toBeInTheDocument();
     });
 
     it('shows a connected profile with a green status and a disconnected one with a red status', () => {
@@ -281,9 +299,9 @@ describe('ConnectionProfiles', () => {
 
       fireEvent.doubleClick(card('a-name'));
 
-      await waitFor(() => expect(profiles().a?.isConnected).toBe(true));
+      await waitFor(() => expect(card('a-name').querySelector('.lucide-cable')).toBeInTheDocument());
+      expect(profiles().a?.isConnected).toBe(true);
       expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['a']);
-      expect(card('a-name').querySelector('.lucide-cable')).toBeInTheDocument();
     });
 
     it('connects from the context menu', async () => {
@@ -480,7 +498,7 @@ describe('ConnectionProfiles', () => {
 
       await clickMenuItem(user, 'a-name', 'Delete');
 
-      await waitFor(() => expect(loadConnectionProfiles).toHaveBeenCalledTimes(2)); // mount + after the failure
+      await waitFor(() => expect(loadConnectionProfiles).toHaveBeenCalledTimes(1)); // only after the failure
       expect(profiles().a).toBeDefined();
       expect(clearProfile).not.toHaveBeenCalled();
       expect(resetViewByProfile).not.toHaveBeenCalled();
@@ -488,8 +506,8 @@ describe('ConnectionProfiles', () => {
 
     it('resets the views when the failed deletion left the profile disconnected', async () => {
       confirmMock.mockResolvedValue(true);
-      // The first call is the one on mount; the second is the reload after the failed deletion.
-      loadConnectionProfiles.mockResolvedValueOnce(undefined).mockImplementationOnce(async () => {
+      // The reload after the failed deletion.
+      loadConnectionProfiles.mockImplementationOnce(async () => {
         useProfileStore.getState().updateConnectionProfiles('a', profile('a', { isConnected: false }));
       });
       const user = userEvent.setup();
@@ -507,7 +525,7 @@ describe('ConnectionProfiles', () => {
 
       await clickMenuItem(user, 'a-name', 'Delete');
 
-      await waitFor(() => expect(loadConnectionProfiles).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(loadConnectionProfiles).toHaveBeenCalledTimes(1));
       expect(resetViewByProfile).not.toHaveBeenCalled();
     });
 

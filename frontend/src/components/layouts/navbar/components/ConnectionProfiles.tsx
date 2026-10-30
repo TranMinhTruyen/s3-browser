@@ -1,8 +1,11 @@
+import { Text } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ConnectS3ByProfile, Disconnect } from '@wails/S3Browser/internal/handlers/buckethandler';
+import { Disconnect } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { DeleteProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
 import { Events } from '@wailsio/runtime';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useConnectProfile } from '@/common/hooks/useConnectProfile';
 import { ConnectionProfile, useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
@@ -14,10 +17,12 @@ import { showConnectModal } from '@/components/modals/lazyModals';
 const ESTIMATED_ITEM_HEIGHT = 64;
 
 function ConnectionProfiles() {
+  const { t } = useTranslation('connectionProfiles');
   const [connectingKeys, setConnectingKeys] = useState<Set<string>>(new Set());
   const [openedMenuKey, setOpenedMenuKey] = useState<string | null>(null);
 
   const connectionProfiles = useProfileStore(s => s.connectionProfiles);
+  const loaded = useProfileStore(s => s.loaded);
   const autoConnectDoneRef = useRef(false);
   const connectingRef = useRef(new Set<string>());
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -26,17 +31,9 @@ function ConnectionProfiles() {
   const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
   const deleteConnectionProfiles = useProfileStore(s => s.deleteConnectionProfiles);
   const getConnectionProfileById = useProfileStore(s => s.getConnectionProfileById);
-  const reset = useProfileStore(s => s.reset);
+  const connectProfile = useConnectProfile();
   const resetViewByProfile = useTabListStore(s => s.resetViewByProfile);
   const clearProfile = useTabListStore(s => s.clearProfile);
-
-  useEffect(() => {
-    loadConnectionProfiles();
-
-    return () => {
-      reset();
-    };
-  }, [loadConnectionProfiles, reset]);
 
   useEffect(() => {
     // Events.On returns the unsubscribe function.
@@ -72,15 +69,12 @@ function ConnectionProfiles() {
       }
       setConnecting(key, true);
       try {
-        const output = await callIPC(ConnectS3ByProfile, [key]);
-        if (output?.isConnected) {
-          updateConnectionProfiles(key, { ...value, isConnected: true });
-        }
+        await connectProfile(key, value);
       } finally {
         setConnecting(key, false);
       }
     },
-    [getConnectionProfileById, onClickOpenConnectModal, updateConnectionProfiles, setConnecting]
+    [getConnectionProfileById, onClickOpenConnectModal, connectProfile, setConnecting]
   );
 
   const onClickDisconnect = useCallback(
@@ -196,6 +190,11 @@ function ConnectionProfiles() {
 
   return (
     <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px' }}>
+      {loaded && entries.length === 0 ? (
+        <Text c="dimmed" ta="center" p="md">
+          {t('profile.empty')}
+        </Text>
+      ) : null}
       <div style={{ position: 'relative', height: virtualizer.getTotalSize() }}>
         {virtualItems.map(row => {
           const [key, profile] = entries[row.index];

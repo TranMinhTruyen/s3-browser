@@ -16,5 +16,6 @@
     "restore": "Khôi phục",
     "close": "Đóng"
   },
-  "modalLoadError": "Không mở được hộp thoại. Vui lòng thử lại."
+  "modalLoadError": "Không mở được hộp thoại. Vui lòng thử lại.",
+  "modalLoading": "Đang mở hộp thoại..."
 }

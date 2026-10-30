@@ -1,70 +1,202 @@
-import { toast } from 'sonner';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import ConnectModal from '@/components/modals/ConnectModal';
-import HistoryModal from '@/components/modals/HistoryModal';
-import { showConnectModal, showHistoryModal, showSettingModal } from '@/components/modals/lazyModals';
-import SettingModal from '@/components/modals/SettingModal';
-import i18n from '@/locales/i18n';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@/components/modals/ConnectModal', () => ({ default: { show: vi.fn() } }));
-vi.mock('@/components/modals/HistoryModal', () => ({ default: { show: vi.fn() } }));
-vi.mock('@/components/modals/SettingModal', () => ({ default: { show: vi.fn() } }));
-vi.mock('sonner', () => ({ toast: { error: vi.fn() } }));
+type ModalKey = 'connect' | 'history' | 'setting' | 'uploadPicker' | 'uploadLimit';
+type LazyModals = typeof import('@/components/modals/lazyModals');
+
+// The chunk factories wait for `gate` and throw when `fail` is set, which makes the dynamic `import()` reject.
+const h = vi.hoisted(() => ({
+  gate: Promise.resolve() as Promise<void>,
+  fail: false,
+  show: {} as Record<string, ReturnType<typeof vi.fn>>,
+  toast: { error: vi.fn(), loading: vi.fn(), dismiss: vi.fn() },
+}));
+for (const key of ['connect', 'history', 'setting', 'uploadPicker', 'uploadLimit']) h.show[key] = vi.fn();
+
+const chunk = (key: ModalKey) => async () => {
+  await h.gate;
+  if (h.fail) throw new Error('chunk failed');
+  return { default: { show: h.show[key] } };
+};
+vi.mock('sonner', () => ({ toast: h.toast }));
+
+const CHUNKS: [string, ModalKey][] = [
+  ['ConnectModal', 'connect'],
+  ['HistoryModal', 'history'],
+  ['SettingModal', 'setting'],
+  ['UploadPickerModal', 'uploadPicker'],
+  ['UploadLimitModal', 'uploadLimit'],
+];
+
+const PROPS = { picker: { tabId: 't' } as never, limit: { groups: [] } as never };
+const wrappers: [ModalKey, (m: LazyModals) => Promise<unknown>][] = [
+  ['connect', m => m.showConnectModal({ mode: 'editProfile' })],
+  ['history', m => m.showHistoryModal()],
+  ['setting', m => m.showSettingModal()],
+  ['uploadPicker', m => m.showUploadPickerModal(PROPS.picker)],
+  ['uploadLimit', m => m.showUploadLimitModal(PROPS.limit)],
+];
+
+// A fresh module registry per test, so a chunk that failed (or loaded) once is not cached for the next test.
+async function loadModule() {
+  vi.resetModules();
+  vi.doUnmock('@/common/utils/modalUtils');
+  for (const [file, key] of CHUNKS) vi.doMock(`@/components/modals/${file}`, () => chunk(key)());
+  const lazy = await import('@/components/modals/lazyModals');
+  const i18n = (await import('@/locales/i18n')).default;
+  return { lazy, i18n };
+}
 
 describe('lazyModals', () => {
+  beforeEach(() => {
+    h.gate = Promise.resolve();
+    h.fail = false;
+    h.toast.loading.mockReturnValue('loading-id');
+  });
+
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
-  it('shows the connect modal with the given props once the chunk is loaded', async () => {
-    const props = { mode: 'editProfile' as const };
-    await showConnectModal(props);
+  describe.each(wrappers)('%s', (key, open) => {
+    it('shows the modal once the chunk is loaded', async () => {
+      h.show[key].mockResolvedValue('result');
+      const { lazy } = await loadModule();
 
-    expect(ConnectModal.show).toHaveBeenCalledWith(props);
-    expect(toast.error).not.toHaveBeenCalled();
-  });
+      await expect(open(lazy)).resolves.toBe('result');
 
-  it('shows the history modal once the chunk is loaded', async () => {
-    await showHistoryModal();
-
-    expect(HistoryModal.show).toHaveBeenCalledTimes(1);
-    expect(toast.error).not.toHaveBeenCalled();
-  });
-
-  it('shows the setting modal once the chunk is loaded', async () => {
-    await showSettingModal();
-
-    expect(SettingModal.show).toHaveBeenCalledTimes(1);
-    expect(toast.error).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    ['connect', () => showConnectModal({ mode: 'editProfile' as const }), ConnectModal],
-    ['history', () => showHistoryModal(), HistoryModal],
-    ['setting', () => showSettingModal(), SettingModal],
-  ])('reports a failed %s modal load without rejecting', async (_name, open, modal) => {
-    const error = new Error('chunk failed');
-    vi.mocked(modal.show).mockImplementationOnce(() => {
-      throw error;
+      expect(h.show[key]).toHaveBeenCalledTimes(1);
+      expect(h.toast.error).not.toHaveBeenCalled();
     });
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    await expect(open()).resolves.toBeUndefined();
+    it('toasts the failure reason and resolves undefined when the chunk fails to load', async () => {
+      h.fail = true;
+      const { lazy, i18n } = await loadModule();
 
-    expect(consoleError).toHaveBeenCalledWith('Failed to load modal chunk', error);
-    const message = i18n.t('common:modalLoadError');
-    expect(message).not.toBe('modalLoadError');
-    expect(toast.error).toHaveBeenCalledWith(message);
+      await expect(open(lazy)).resolves.toBeUndefined();
+
+      expect(h.show[key]).not.toHaveBeenCalled();
+      const message = i18n.t('common:modalLoadError');
+      expect(message).not.toBe('modalLoadError');
+      // vitest reports a failing mock factory as an Error, whose message is the description.
+      expect(h.toast.error).toHaveBeenCalledExactlyOnceWith(message, {
+        description: expect.stringContaining('error when mocking a module'),
+      });
+    });
+
+    it('propagates an error thrown by show() without reporting a chunk error', async () => {
+      const error = new Error('show failed');
+      h.show[key].mockRejectedValue(error);
+      const { lazy } = await loadModule();
+
+      await expect(open(lazy)).rejects.toBe(error);
+
+      expect(h.toast.error).not.toHaveBeenCalled();
+    });
   });
 
-  it('reports a rejected show() promise for the connect modal', async () => {
-    vi.mocked(ConnectModal.show).mockRejectedValueOnce(new Error('boom'));
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+  it('describes a failure that is not an Error with its string form', async () => {
+    // vitest wraps what a mock factory throws in an Error, so the raw string is thrown while the real
+    // ConnectModal chunk is evaluated instead.
+    const { i18n } = await loadModule();
+    vi.resetModules();
+    vi.doUnmock('@/components/modals/ConnectModal');
+    vi.doMock('@/common/utils/modalUtils', () => ({
+      createMantineModal: () => {
+        throw 'plain failure';
+      },
+    }));
+    const failing = await import('@/components/modals/lazyModals');
 
-    await expect(showConnectModal({ mode: 'editProfile' as const })).resolves.toBeUndefined();
+    await expect(failing.showConnectModal({ mode: 'connect' })).resolves.toBeUndefined();
 
-    expect(consoleError).toHaveBeenCalledTimes(1);
-    expect(toast.error).toHaveBeenCalledWith(i18n.t('common:modalLoadError'));
+    expect(h.toast.error).toHaveBeenCalledExactlyOnceWith(i18n.t('common:modalLoadError'), {
+      description: 'plain failure',
+    });
+  });
+
+  it('passes the props through to show()', async () => {
+    const { lazy } = await loadModule();
+
+    await lazy.showConnectModal({ mode: 'manualconnect' });
+    await lazy.showUploadPickerModal(PROPS.picker);
+    await lazy.showUploadLimitModal(PROPS.limit);
+
+    expect(h.show.connect).toHaveBeenCalledWith({ mode: 'manualconnect' });
+    expect(h.show.uploadPicker).toHaveBeenCalledWith(PROPS.picker);
+    expect(h.show.uploadLimit).toHaveBeenCalledWith(PROPS.limit);
+  });
+
+  describe('loading toast', () => {
+    const slowGate = () => {
+      let release!: () => void;
+      let rejectGate!: (e: unknown) => void;
+      h.gate = new Promise<void>((resolve, reject) => {
+        release = resolve;
+        rejectGate = reject;
+      });
+      return { release, rejectGate };
+    };
+
+    it('does not show a loading toast when the chunk loads before 300ms', async () => {
+      vi.useFakeTimers();
+      const { lazy } = await loadModule();
+
+      const done = lazy.showHistoryModal();
+      await vi.advanceTimersByTimeAsync(299);
+      await done;
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(h.toast.loading).not.toHaveBeenCalled();
+      expect(h.toast.dismiss).not.toHaveBeenCalled();
+    });
+
+    it('shows a loading toast after 300ms and dismisses it when the chunk is loaded', async () => {
+      vi.useFakeTimers();
+      const { release } = slowGate();
+      const { lazy, i18n } = await loadModule();
+
+      const done = lazy.showSettingModal();
+      await vi.advanceTimersByTimeAsync(299);
+      expect(h.toast.loading).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(h.toast.loading).toHaveBeenCalledExactlyOnceWith(i18n.t('common:modalLoading'));
+      expect(i18n.t('common:modalLoading')).not.toBe('modalLoading');
+      expect(h.toast.dismiss).not.toHaveBeenCalled();
+
+      release();
+      await done;
+
+      expect(h.show.setting).toHaveBeenCalledTimes(1);
+      expect(h.toast.dismiss).toHaveBeenCalledExactlyOnceWith('loading-id');
+    });
+
+    it('dismisses the loading toast when the slow chunk fails', async () => {
+      vi.useFakeTimers();
+      const { rejectGate } = slowGate();
+      const { lazy } = await loadModule();
+
+      const done = lazy.showConnectModal({ mode: 'connect' });
+      await vi.advanceTimersByTimeAsync(300);
+      expect(h.toast.loading).toHaveBeenCalledTimes(1);
+
+      rejectGate(new Error('late failure'));
+      await expect(done).resolves.toBeUndefined();
+
+      expect(h.toast.dismiss).toHaveBeenCalledExactlyOnceWith('loading-id');
+      expect(h.toast.error).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not dismiss anything when a fast chunk fails', async () => {
+      vi.useFakeTimers();
+      h.fail = true;
+      const { lazy } = await loadModule();
+
+      await expect(lazy.showHistoryModal()).resolves.toBeUndefined();
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(h.toast.loading).not.toHaveBeenCalled();
+      expect(h.toast.dismiss).not.toHaveBeenCalled();
+    });
   });
 });

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { formatStringJson } from '@/common/utils/stringUtils';
 import { ensureUploadIdle, runUpload } from '@/common/utils/uploadUtils';
-import UploadLimitModal from '@/components/modals/UploadLimitModal';
+import { showUploadLimitModal } from '@/components/modals/lazyModals';
 import i18n from '@/locales/i18n';
 
 type UseFilesDroppedUploadParams = {
@@ -62,7 +62,8 @@ export function useFilesDroppedUpload(params: UseFilesDroppedUploadParams) {
 
       // A group over a limit needs the user to choose which files to upload.
       if (groups.some(group => group.overMaxFiles || group.overLargeCount)) {
-        const chosen = await UploadLimitModal.show({
+        // undefined: the modal chunk failed to load (already toasted) or the user cancelled; do not upload.
+        const chosen = await showUploadLimitModal({
           groups,
           maxFilesPerFolder,
           largeFileSize,
