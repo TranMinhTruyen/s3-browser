@@ -101,6 +101,10 @@ func (m *submoduleObjMng) listObject(
 			return output
 		}
 
+		if isCredentialsExpired(err) {
+			return output.ThrowError(expiredMessage(input.ProfileName, err))
+		}
+
 		return output.ThrowError(
 			models.NewParamsMessage(
 				cnst.MessageTypeError,

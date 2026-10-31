@@ -3,7 +3,7 @@ import { useDebouncedValue, useElementSize } from '@mantine/hooks';
 import { GetListBucket, SearchBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Bucket } from '@wails/S3Browser/models/bucket';
 import { CheckIcon } from 'lucide-react';
-import { ChangeEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
+import { ChangeEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { callIPC } from '@/common/utils/ipcUtils';
 import Button from '@/components/buttons/Button';
@@ -38,6 +38,8 @@ function BucketPicker(props: BucketPickerProps) {
   const [keyword, setKeyword] = useState('');
   const [debouncedKeyword] = useDebouncedValue(keyword.trim(), SEARCH_DEBOUNCE_MS);
   const [buckets, setBuckets] = useState<Bucket[]>([]);
+  // A bucket without a name cannot be picked (and has no React key), so it is not listed.
+  const namedBuckets = useMemo(() => buckets.filter(bucket => bucket.name), [buckets]);
   const [nextCursor, setNextCursor] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const requestCtrl = useRef<AbortController>(null);
@@ -149,15 +151,15 @@ function BucketPicker(props: BucketPickerProps) {
       <Combobox.Dropdown miw={targetWidth}>
         <Combobox.Search value={keyword} onChange={onChangeKeyword} placeholder={t('searchPlaceholder')} />
         <Combobox.Options mah={250} style={{ overflowY: 'auto' }}>
-          {buckets.map(bucket => (
-            <Combobox.Option key={bucket.name} value={bucket.name ?? ''} active={bucket.name === value}>
+          {namedBuckets.map(bucket => (
+            <Combobox.Option key={bucket.name} value={bucket.name as string} active={bucket.name === value}>
               <Group gap="xs" wrap="nowrap">
                 {bucket.name === value && <CheckIcon size={12} />}
                 <Text truncate="end">{bucket.name}</Text>
               </Group>
             </Combobox.Option>
           ))}
-          {!isLoading && buckets.length === 0 && <Combobox.Empty>{t('empty')}</Combobox.Empty>}
+          {!isLoading && namedBuckets.length === 0 && <Combobox.Empty>{t('empty')}</Combobox.Empty>}
           {isLoading && (
             <Group justify="center" p="xs">
               <Loader size="sm" />

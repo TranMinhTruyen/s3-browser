@@ -5,6 +5,7 @@ import { Outlet } from 'react-router-dom';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App';
+import { useCredentialExpiring } from '@/common/hooks/useCredentialExpiring';
 import { useMasterDataStore } from '@/common/stores/masterDataStore';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
@@ -22,6 +23,7 @@ vi.mock('@/components/layouts/MainLayout', () => ({
     </div>
   ),
 }));
+vi.mock('@/common/hooks/useCredentialExpiring', () => ({ useCredentialExpiring: vi.fn() }));
 vi.mock('@/components/router/RouterItem', () => ({ default: h.routes }));
 vi.mock('sonner', () => ({ Toaster: () => <div>toaster</div>, toast: { error: vi.fn(), warning: vi.fn() } }));
 vi.mock('@wails/S3Browser/internal/handlers/profilehandler', () => ({ GetAllConnectionProfile: vi.fn() }));
@@ -73,6 +75,15 @@ describe('App', () => {
 
       expect(await screen.findByText('other page')).toBeInTheDocument();
       expect(screen.queryByText('root page')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('credential expiring', () => {
+    it('registers the credential expiring listener for the whole app', () => {
+      const { rerender } = render(<App />);
+      rerender(<App />);
+
+      expect(useCredentialExpiring).toHaveBeenCalled();
     });
   });
 

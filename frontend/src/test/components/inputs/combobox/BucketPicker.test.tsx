@@ -124,13 +124,23 @@ describe('BucketPicker', () => {
     expect(callIPC).not.toHaveBeenCalled();
   });
 
-  it('renders a bucket without a name as an empty option', async () => {
-    answerWith({ bucketList: [{}], nextCursor: '' });
+  it('does not render buckets without a name and shows the empty message when none has one', async () => {
+    answerWith({ bucketList: [{}, { name: '' }], nextCursor: '' });
     const { user } = setup();
     await user.click(trigger());
+
+    expect(await screen.findByText('No buckets found')).toBeInTheDocument();
+    expect(screen.queryAllByRole('option', { hidden: true })).toHaveLength(0);
+  });
+
+  it('renders only the buckets that have a name from a mixed list', async () => {
+    answerWith({ bucketList: [{}, { name: 'a' }, { name: '' }, { name: 'b' }], nextCursor: '' });
+    const { user } = setup();
+    await user.click(trigger());
+
     const options = await screen.findAllByRole('option', { hidden: true });
-    expect(options).toHaveLength(1);
-    expect(options[0]).toHaveTextContent('');
+    expect(options.map(o => o.textContent)).toEqual(['a', 'b']);
+    expect(screen.queryByText('No buckets found')).not.toBeInTheDocument();
   });
 
   it('shows a loader while loading and hides the load more button', async () => {

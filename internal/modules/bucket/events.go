@@ -10,6 +10,9 @@ import (
 const (
 	// Emitted after a new connection profile is saved; payload is the created profile
 	EventConnectSaveProfile = "bucket:connect-save-profile"
+	// Emitted shortly before credentials that can't be renewed automatically expire; payload is
+	// CredentialExpiringOutput
+	EventCredentialExpiring = "bucket:credential-expiring"
 	// Emitted while a file downloads (throttled); payload is DownloadProgressOutput
 	EventDownloadObjectProgress = "downloader:download-progress"
 	// Emitted when a history record is created or updated; payload is DownloadHistoryItem
@@ -30,6 +33,7 @@ const (
 // emit the TypeScript payload type for Events.On / Events.Emit on the frontend.
 func init() {
 	application.RegisterEvent[models.ConnectionProfileOutput](EventConnectSaveProfile)
+	application.RegisterEvent[models.CredentialExpiringOutput](EventCredentialExpiring)
 	application.RegisterEvent[models.DownloadProgressOutput](EventDownloadObjectProgress)
 	application.RegisterEvent[models.DownloadHistoryItem](EventLoadDownloadHistory)
 	application.RegisterEvent[models.UploadProgressOutput](EventUploadObjectProgress)

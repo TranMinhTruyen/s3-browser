@@ -46,13 +46,21 @@ function MainLayout() {
 
           <Group gap="xs" wrap="nowrap" ml="auto" style={{ '--wails-draggable': 'no-drag' }}>
             <Tooltip label={tSetting('title')}>
-              <ActionIcon aria-label={tSetting('title')} color="gray" onClick={onClickSetting}>
+              <ActionIcon
+                aria-label={tSetting('title')}
+                color="var(--mantine-color-gray-light-color)"
+                onClick={onClickSetting}
+              >
                 <Settings />
               </ActionIcon>
             </Tooltip>
 
             <Tooltip label={t('title')}>
-              <ActionIcon aria-label={t('title')} color="gray" onClick={onClickHistory}>
+              <ActionIcon
+                aria-label={t('title')}
+                color="var(--mantine-color-gray-light-color)"
+                onClick={onClickHistory}
+              >
                 <RotateCcwClock />
               </ActionIcon>
             </Tooltip>

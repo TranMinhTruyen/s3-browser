@@ -158,7 +158,7 @@ function TabActionBar(props: TabActionBarProps) {
                   <ActionIcon
                     onClick={onClickDeleteSelected}
                     aria-label={tObject('tooltip.deleteSelected')}
-                    color="red"
+                    color="var(--mantine-color-red-light-color)"
                   >
                     <Trash />
                   </ActionIcon>

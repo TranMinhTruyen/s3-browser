@@ -58,7 +58,7 @@ function UploaderItem(props: UploaderItemProps) {
             }
             thickness={6}
             roundCaps
-            sections={[{ value: percent, color: 'blue' }]}
+            sections={[{ value: percent, color: 'var(--mantine-color-blue-filled)' }]}
           />
         </Center>
       </Card.Section>
@@ -69,7 +69,7 @@ function UploaderItem(props: UploaderItemProps) {
         </Text>
         {finalizing ? (
           <Group gap="xs">
-            <Text c="blue">{t('label.finalizingLbl')}</Text>
+            <Text c="var(--mantine-color-blue-filled)">{t('label.finalizingLbl')}</Text>
             <Text size="xs" c="dimmed">
               {formatFileSize(item.total)}
             </Text>
@@ -104,7 +104,11 @@ function UploaderItem(props: UploaderItemProps) {
         }}
       >
         <Center w="48px" h="100%">
-          <ActionIcon color="red" onClick={onClickCancelUpload} aria-label={t('action.cancel')}>
+          <ActionIcon
+            color="var(--mantine-color-red-light-color)"
+            onClick={onClickCancelUpload}
+            aria-label={t('action.cancel')}
+          >
             <X />
           </ActionIcon>
         </Center>

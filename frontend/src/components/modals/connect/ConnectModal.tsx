@@ -6,6 +6,7 @@ import { SyntheticEvent, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useTranslation } from 'react-i18next';
 import awsLogo from '@/assets/images/aws.svg';
 import minioLogo from '@/assets/images/minio.svg';
+import { useUnmountSignal } from '@/common/hooks/useUnmountSignal';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { canAutoConnect, getAuthType, getRequiredSecrets } from '@/common/utils/authUtils';
 import { callIPC } from '@/common/utils/ipcUtils';
@@ -28,13 +29,17 @@ import {
   type ConnectionInfo,
   type ConnectModalProps,
   connectSchema,
+  getDefaultAuthConfig,
   getDefaultConnectionInfo,
   profileSchema,
   toConnectionInput,
   toFormValues,
 } from '@/components/modals/connect/connectSchema';
+import AuthAnonymousFields from '@/components/modals/connect/fields/AuthAnonymousFields';
 import AuthAssumeRoleFields from '@/components/modals/connect/fields/AuthAssumeRoleFields';
 import AuthAwsProfileFields from '@/components/modals/connect/fields/AuthAwsProfileFields';
+import AuthLdapFields from '@/components/modals/connect/fields/AuthLdapFields';
+import AuthMinioStsFields from '@/components/modals/connect/fields/AuthMinioStsFields';
 import AuthStaticFields from '@/components/modals/connect/fields/AuthStaticFields';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 import { MODAL_CHROME_HEIGHT } from '@/components/modals/modalLayout';
@@ -71,6 +76,8 @@ export default createMantineModal<ConnectModalProps, false>(
     const { t } = useTranslation('connectModal');
 
     const actionRef = useRef<'connect' | 'profile'>('connect');
+    // Closing the modal cancels a connect/test that is still running.
+    const getSignal = useUnmountSignal();
     const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
     // The profile as last saved: its id, version and which secrets are stored.
     const [profile, setProfile] = useState(connectionProfile);
@@ -99,6 +106,7 @@ export default createMantineModal<ConnectModalProps, false>(
     const provider = form.useWatchValue('provider');
     const authType = form.useWatchValue('authType');
     const secretKey = form.useWatchValue('secretKey');
+    const ldapPassword = form.useWatchValue('authSecret.ldapPassword');
     const sourceType = form.useWatchValue('authConfig.sourceType');
     const mfaSerial = form.useWatchValue('authConfig.mfaSerial');
 
@@ -112,10 +120,9 @@ export default createMantineModal<ConnectModalProps, false>(
     });
 
     // A different method does not share the old method's fields (e.g. a non-SSO profile must not reach `sso`).
-    form.watch('authType', () => {
-      const { authConfig } = getDefaultConnectionInfo('');
+    form.watch('authType', ({ value }) => {
       form.clearErrors(); // errors from the previous method no longer apply
-      form.setFieldValue('authConfig', authConfig);
+      form.setFieldValue('authConfig', getDefaultAuthConfig(value));
       form.setFieldValue('mfaCode', '');
     });
 
@@ -138,10 +145,11 @@ export default createMantineModal<ConnectModalProps, false>(
       [authType, sourceType, mfaSerial]
     );
     const autoConnectLocked = !canAutoConnect(authState);
-    const secretsReady = getRequiredSecrets(authState).every(
-      name => (name === 'secretKey' && !!secretKey) || savedSecrets.includes(name)
-    );
-    const autoConnectDisabled = !savePassword || autoConnectLocked || !secretsReady;
+    const typedSecrets: Record<string, string> = { secretKey, ldapPassword };
+    const requiredSecrets = getRequiredSecrets(authState);
+    const secretsReady = requiredSecrets.every(name => !!typedSecrets[name] || savedSecrets.includes(name));
+    // Saving secrets only matters for methods that have some; the others (anonymous, SSO...) auto connect without.
+    const autoConnectDisabled = (requiredSecrets.length > 0 && !savePassword) || autoConnectLocked || !secretsReady;
 
     useEffect(() => {
       if (autoConnectDisabled && form.getValues().autoConnect) form.setFieldValue('autoConnect', false);
@@ -160,7 +168,7 @@ export default createMantineModal<ConnectModalProps, false>(
         const input = toConnectionInput(value, connectionProfile?.id ?? '', connectionProfile?.version ?? 1);
         const isExistingProfile = mode === 'manualconnect';
 
-        const output = await callIPC(ConnectS3, [input, isTestConnection, isExistingProfile]);
+        const output = await callIPC(ConnectS3, [input, isTestConnection, isExistingProfile], { signal: getSignal() });
 
         if (output && output.isConnected && !isTestConnection) {
           if (isExistingProfile && connectionProfile?.id) {
@@ -172,7 +180,7 @@ export default createMantineModal<ConnectModalProps, false>(
           mantine.handler.hide();
         }
       },
-      [connectionProfile, mode, mantine.handler, updateConnectionProfiles]
+      [connectionProfile, mode, mantine.handler, updateConnectionProfiles, getSignal]
     );
 
     const onSubmitConnectProfile = useCallback(
@@ -322,6 +330,9 @@ export default createMantineModal<ConnectModalProps, false>(
                 {authType === 'sharedProfile' && <AuthAwsProfileFields form={form} />}
                 {authType === 'sso' && <AuthAwsProfileFields form={form} ssoOnly />}
                 {authType === 'assumeRole' && <AuthAssumeRoleFields {...authFieldsProps} />}
+                {authType === 'anonymous' && <AuthAnonymousFields form={form} />}
+                {authType === 'minioAssumeRole' && <AuthMinioStsFields {...authFieldsProps} />}
+                {authType === 'minioLdap' && <AuthLdapFields {...authFieldsProps} />}
 
                 {secretRequired ? null : (
                   <Text size="xs" c="dimmed">

@@ -179,10 +179,10 @@ export default createMantineModal<{}, boolean>(props => {
             {t('button.cancel')}
           </Button>
           <Group gap="xs" wrap="nowrap">
-            <Button color="gray" onClick={onClickReset} disabled={saving}>
+            <Button color="var(--mantine-color-gray-light-color)" onClick={onClickReset} disabled={saving}>
               {t('button.reset')}
             </Button>
-            <Button color="teal" onClick={onClickApply} disabled={saving}>
+            <Button color="var(--mantine-color-teal-light-color)" onClick={onClickApply} disabled={saving}>
               {t('button.apply')}
             </Button>
             <Button onClick={onClickSave} loading={saving}>

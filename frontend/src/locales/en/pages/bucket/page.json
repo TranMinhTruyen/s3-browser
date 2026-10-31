@@ -1,7 +1,8 @@
 {
   "empty": "No buckets yet",
   "tooltip": {
-    "bucketList": "bucket list"
+    "bucketList": "bucket list",
+    "inaccessible": "This bucket cannot be accessed anonymously."
   },
   "label": {
     "createDate": "Create date:"

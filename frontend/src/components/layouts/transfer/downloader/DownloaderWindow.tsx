@@ -84,7 +84,7 @@ function DownloaderWindow() {
               <Text>{t('title')}</Text>
               <Group gap="xs">
                 <ActionIcon
-                  color="red"
+                  color="var(--mantine-color-red-light-color)"
                   size="md"
                   onClick={onClickCancelAll}
                   title={t('action.cancelAll')}

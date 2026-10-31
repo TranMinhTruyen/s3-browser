@@ -183,7 +183,7 @@ describe('TabDetail', () => {
       setProfile({ authType: 'defaultChain', accessKey: '', savedSecrets: [] });
       const user = setup();
       await user.click(btn('Connect'));
-      expect(callIPC).toHaveBeenCalledExactlyOnceWith(ConnectS3ByProfile, ['p1']);
+      expect(callIPC).toHaveBeenCalledExactlyOnceWith(ConnectS3ByProfile, ['p1'], { signal: expect.any(AbortSignal) });
       expect(showConnectModal).not.toHaveBeenCalled();
     });
 
@@ -191,7 +191,7 @@ describe('TabDetail', () => {
       vi.mocked(callIPC).mockResolvedValue({ isConnected: true } as never);
       const user = setup();
       await user.click(btn('Connect'));
-      expect(callIPC).toHaveBeenCalledExactlyOnceWith(ConnectS3ByProfile, ['p1']);
+      expect(callIPC).toHaveBeenCalledExactlyOnceWith(ConnectS3ByProfile, ['p1'], { signal: expect.any(AbortSignal) });
       await waitFor(() => expect(useProfileStore.getState().connectionProfiles.p1?.isConnected).toBe(true));
       expect(btn('Connect')).toBeDisabled();
     });
@@ -492,7 +492,7 @@ describe('TabDetail', () => {
         expect(tab().selectionItem).toEqual(['k']);
         // Applied keyword, then cleared: selection is cleared.
         await user.type(searchBox(), 'foo{Enter}');
-        useTabListStore.getState().addSelectItem(TAB, ['k2']);
+        act(() => useTabListStore.getState().addSelectItem(TAB, ['k2']));
         expect(tab().selectionItem).toEqual(['k2']);
         await user.click(btn('Clear search'));
         expect(tab().selectionItem).toEqual([]);
@@ -503,7 +503,7 @@ describe('TabDetail', () => {
         const user = setup();
         await user.type(searchBox(), 'foo{Enter}');
         expect(h.objectRefresh).not.toHaveBeenCalled();
-        useTabListStore.getState().addSelectItem(TAB, ['k']);
+        act(() => useTabListStore.getState().addSelectItem(TAB, ['k']));
         await user.click(btn('Search'));
         expect(h.objectRefresh).toHaveBeenCalledTimes(1);
         expect(screen.getByText('keyword=[foo]')).toBeInTheDocument();
@@ -557,10 +557,12 @@ describe('TabDetail', () => {
         objectTab();
         const user = setup();
         await user.type(searchBox(), 'foo{Enter}');
-        useProfileStore.setState({
-          connectionProfiles: { p1: profile({ isConnected: true }), p2: profile({ id: 'p2', isConnected: true }) },
+        act(() => {
+          useProfileStore.setState({
+            connectionProfiles: { p1: profile({ isConnected: true }), p2: profile({ id: 'p2', isConnected: true }) },
+          });
+          useTabListStore.getState().updateTab(TAB, { profileId: 'p2' });
         });
-        act(() => useTabListStore.getState().updateTab(TAB, { profileId: 'p2' }));
         await waitFor(() => expect(screen.getByText('keyword=[]')).toBeInTheDocument());
         expect(searchBox()).toHaveValue('');
       });

@@ -179,14 +179,15 @@ describe('UploadLimitModal', () => {
     expect(Array.from(footer.querySelectorAll('button')).map(b => b.textContent)).toEqual(['Cancel', 'Upload (2)']);
   });
 
-  it('resolves an empty list on Cancel and null when the modal is closed', async () => {
+  it('resolves an empty list on Cancel', async () => {
     const result = open([photos()]);
     await flush();
     expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     await expect(result).resolves.toEqual([]);
+  });
 
-    useModalStackStore.getState().reset();
+  it('resolves null when the modal is closed', async () => {
     const dismissed = open([photos()]);
     await flush();
     await userEvent.keyboard('{Escape}');

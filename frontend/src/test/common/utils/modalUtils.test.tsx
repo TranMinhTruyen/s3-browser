@@ -56,7 +56,7 @@ describe('createMantineModal', () => {
     });
     await flush();
 
-    act(() => captured.get('a')?.props.onClose());
+    await act(async () => captured.get('a')?.props.onClose());
     await expect(result).resolves.toBeNull();
     await flush();
     expect(useModalStackStore.getState().stack).toEqual([]);
@@ -74,8 +74,9 @@ describe('createMantineModal', () => {
     });
     await flush();
 
-    act(() => captured.get('c')?.props.onClose());
+    await act(async () => captured.get('c')?.props.onClose());
     await expect(result).resolves.toBe('cancelled');
+    await flush();
   });
 
   it('only the topmost modal can be closed and stacked modals get a higher z-index', async () => {

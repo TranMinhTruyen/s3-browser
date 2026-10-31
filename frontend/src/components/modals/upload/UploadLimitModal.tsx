@@ -217,7 +217,7 @@ export default createMantineModal<UploadLimitModalProps, DroppedFile[]>(props =>
           <Stack gap="8px">
             <Text>{t('description')}</Text>
             {capped && (
-              <Text c="orange" size="sm">
+              <Text c="var(--mantine-color-orange-filled)" size="sm">
                 {t('cappedWarning')}
               </Text>
             )}

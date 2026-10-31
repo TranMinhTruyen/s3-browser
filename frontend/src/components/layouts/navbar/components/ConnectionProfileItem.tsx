@@ -74,7 +74,13 @@ function ConnectionProfileItem({
                 : 'var(--mantine-color-red-light)',
             }}
           >
-            {connecting ? <Loader color="blue" size="sm" /> : profile.isConnected ? <Cable /> : <Unplug />}
+            {connecting ? (
+              <Loader color="var(--mantine-color-blue-filled)" size="sm" />
+            ) : profile.isConnected ? (
+              <Cable />
+            ) : (
+              <Unplug />
+            )}
           </Card.Section>
           <Card.Section
             px="xs"
@@ -112,7 +118,11 @@ function ConnectionProfileItem({
           </Menu.Item>
         )}
         {profile.isConnected && (
-          <Menu.Item leftSection={<Unplug size="16px" />} color="red" onClick={onClickDisconnect}>
+          <Menu.Item
+            leftSection={<Unplug size="16px" />}
+            color="var(--mantine-color-red-6)"
+            onClick={onClickDisconnect}
+          >
             {t('contextMenu.disconnect')}
           </Menu.Item>
         )}
@@ -122,7 +132,7 @@ function ConnectionProfileItem({
           </Menu.Item>
         )}
         <Menu.Divider />
-        <Menu.Item leftSection={<Trash size="16px" />} color="red" onClick={onClickDelete}>
+        <Menu.Item leftSection={<Trash size="16px" />} color="var(--mantine-color-red-6)" onClick={onClickDelete}>
           {t('contextMenu.delete')}
         </Menu.Item>
       </Menu.Dropdown>

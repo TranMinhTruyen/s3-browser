@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ObjectDetailOutput, ObjectItem } from '@wails/S3Browser/models/bucket';
 import { useTabListStore } from '@/common/stores/tabListStore';
@@ -180,9 +180,13 @@ describe('ObjectDetailDrawer', () => {
     const value = copyButton.parentElement!.textContent;
     await user.click(copyButton);
 
+    // Wait for it right after the click and unmount at once: the tooltip transition keeps updating on its own
+    // timers, and any await between the click and the unmount would let an update land outside act.
+    expect(await screen.findByText('Copied')).toBeInTheDocument();
+    cleanup();
+
     expect(value).toBeTruthy();
     expect(await navigator.clipboard.readText()).toBe(value);
-    expect(await screen.findByText('Copied')).toBeInTheDocument();
   });
 
   it('shows "-" for a metadata entry with an empty value', async () => {

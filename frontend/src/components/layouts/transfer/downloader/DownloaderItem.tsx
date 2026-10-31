@@ -49,7 +49,7 @@ function DownloaderItem(props: DownloaderItemProps) {
             }
             thickness={6}
             roundCaps
-            sections={[{ value: percent, color: 'blue' }]}
+            sections={[{ value: percent, color: 'var(--mantine-color-blue-filled)' }]}
           />
         </Center>
       </Card.Section>
@@ -86,7 +86,11 @@ function DownloaderItem(props: DownloaderItemProps) {
         }}
       >
         <Center w="48px" h="100%">
-          <ActionIcon color="red" onClick={onClickCancelDownload} aria-label={t('action.cancel')}>
+          <ActionIcon
+            color="var(--mantine-color-red-light-color)"
+            onClick={onClickCancelDownload}
+            aria-label={t('action.cancel')}
+          >
             <X />
           </ActionIcon>
         </Center>

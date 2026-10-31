@@ -40,9 +40,9 @@ func (h appHost) Emit(name string, data ...any) { h.app.Event.Emit(name, data...
 type submoduleUploaderMng struct {
 	logger *slog.Logger
 	host   uploadHost
-	// getClient returns the S3 client of a connection and marks a transfer running on it
-	// until release is called; ok is false if it isn't connected.
-	getClient func(connID string) (client s3Uploader, release func(), ok bool)
+	// getClient returns the S3 client and the connection (for its credential expiry; may be nil) and marks a
+	// transfer running on it until release is called; ok is false if it isn't connected.
+	getClient func(connID string) (client s3Uploader, conn *global.S3Conn, release func(), ok bool)
 	// jobs maps upload ID -> uploaderJob for the files in flight; a sync.Map because the
 	// cancel handlers read it while uploadOne goroutines add and remove entries.
 	jobs sync.Map
@@ -61,17 +61,17 @@ type submoduleUploaderMng struct {
 func newSubmoduleUploaderMng(
 	app *application.App,
 	logger *slog.Logger,
-	global *global.Module,
+	globalModule *global.Module,
 ) *submoduleUploaderMng {
 	return &submoduleUploaderMng{
 		logger: logger.With("submodules", "uploader_mng"),
 		host:   appHost{app: app},
-		getClient: func(connID string) (s3Uploader, func(), bool) {
-			conn, release, ok := global.AcquireConn(connID)
+		getClient: func(connID string) (s3Uploader, *global.S3Conn, func(), bool) {
+			conn, release, ok := globalModule.AcquireConn(connID)
 			if !ok {
-				return nil, nil, false
+				return nil, nil, nil, false
 			}
-			return conn.Client, release, true
+			return conn.Client, conn, release, true
 		},
 		pickPaths: func() ([]string, error) {
 			dialog := app.Dialog.OpenFile().CanChooseFiles(true).CanChooseDirectories(false)
@@ -160,12 +160,15 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 
 	// Counts this call as a running transfer, so the profile can't be deleted meanwhile.
 	// All uploads finish inside this call (g.Wait below), so the release goes here.
-	client, releaseConn, ok := m.getClient(input.ConnectionId)
+	client, conn, releaseConn, ok := m.getClient(input.ConnectionId)
 	if !ok {
 		m.logger.Error("get connection profile failed")
 		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 	defer releaseConn()
+
+	// Credentials that can't be renewed and run out soon may end the transfer midway: warn, but go on.
+	output.AddMessage(transferExpiryWarning(conn, input.ProfileName)...)
 
 	// One context for the whole call, so cancelAllUploads also stops the key check
 	// below and the files that haven't started yet. It is not a Wails call context: this
@@ -241,6 +244,9 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 					"name": name,
 				}),
 			)
+		case isCredentialsExpired(r.err):
+			m.logger.Error(fmt.Sprintf("upload file %s: credentials expired", r.path))
+			output.AddMessage(expiredMessage(input.ProfileName, r.err))
 		default:
 			m.logger.Error(fmt.Sprintf("upload file %s error", r.path), slog.Any("detail", r.err.Error()))
 			output.AddMessage(

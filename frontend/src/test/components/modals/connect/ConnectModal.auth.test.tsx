@@ -93,6 +93,8 @@ const authOptions = () => {
     .map(o => o.textContent);
 };
 
+const connectCalls = () => callIPCMock.mock.calls.filter(c => c[0] === ConnectS3);
+
 const lastConnectInput = () => {
   const call = callIPCMock.mock.calls.find(c => c[0] === ConnectS3)!;
   return call[1] as unknown as [Record<string, unknown>, boolean, boolean];
@@ -112,14 +114,21 @@ describe('ConnectModal authentication methods', () => {
   });
 
   describe('fields of each method', () => {
-    it('offers the five AWS methods and describes the selected one', async () => {
+    it('offers the six AWS methods and describes the selected one', async () => {
       const user = await open();
       expect(screen.getByText('Access key and secret key, with an optional session token.')).toBeInTheDocument();
 
       await user.click(field('Authentication method'));
 
       await screen.findAllByRole('option', { hidden: true });
-      expect(authOptions()).toEqual(['Access key', 'AWS CLI profile', 'Assume role', 'AWS SSO', 'Default chain']);
+      expect(authOptions()).toEqual([
+        'Access key',
+        'AWS CLI profile',
+        'Assume role',
+        'AWS SSO',
+        'Default chain',
+        'Anonymous',
+      ]);
     });
 
     it('static shows the keys and the session token', async () => {
@@ -224,7 +233,7 @@ describe('ConnectModal authentication methods', () => {
       expect(field('Authentication method')).toHaveValue('Access key');
       await user.click(field('Authentication method'));
       await screen.findAllByRole('option', { hidden: true });
-      expect(authOptions()).toEqual(['Access key']);
+      expect(authOptions()).toEqual(['Access key', 'Anonymous', 'MinIO STS', 'LDAP']);
     });
 
     it('requires the endpoint for MinIO', async () => {
@@ -235,7 +244,7 @@ describe('ConnectModal authentication methods', () => {
       await user.click(button('Connect'));
 
       expect(await screen.findByText('Endpoint is required')).toBeInTheDocument();
-      expect(callIPCMock).not.toHaveBeenCalledWith(ConnectS3, expect.anything());
+      expect(connectCalls()).toHaveLength(0);
     });
 
     it('clears the errors of the previous provider when the provider changes', async () => {
@@ -282,7 +291,9 @@ describe('ConnectModal authentication methods', () => {
 
       await user.click(button('Connect'));
 
-      await waitFor(() => expect(callIPCMock).toHaveBeenCalledWith(ConnectS3, expect.anything()));
+      await waitFor(() =>
+        expect(callIPCMock).toHaveBeenCalledWith(ConnectS3, expect.anything(), { signal: expect.any(AbortSignal) })
+      );
       expect(screen.queryByText('Region is required')).not.toBeInTheDocument();
     });
   });
@@ -296,7 +307,9 @@ describe('ConnectModal authentication methods', () => {
 
       await user.click(button('Connect'));
 
-      await waitFor(() => expect(callIPCMock).toHaveBeenCalledWith(ConnectS3, expect.anything()));
+      await waitFor(() =>
+        expect(callIPCMock).toHaveBeenCalledWith(ConnectS3, expect.anything(), { signal: expect.any(AbortSignal) })
+      );
       expect(lastConnectInput()[0]).toMatchObject({
         authType: 'sharedProfile',
         authConfig: { profileName: 'dev', configFile: '/home/me/config' },
@@ -322,7 +335,9 @@ describe('ConnectModal authentication methods', () => {
 
       await user.click(button('Connect'));
 
-      await waitFor(() => expect(callIPCMock).toHaveBeenCalledWith(ConnectS3, expect.anything()));
+      await waitFor(() =>
+        expect(callIPCMock).toHaveBeenCalledWith(ConnectS3, expect.anything(), { signal: expect.any(AbortSignal) })
+      );
       expect(lastConnectInput()[0]).toMatchObject({ authType: 'defaultChain', authConfig: {}, accessKey: '' });
     });
 
@@ -335,7 +350,9 @@ describe('ConnectModal authentication methods', () => {
 
       await user.click(button('Connect'));
 
-      await waitFor(() => expect(callIPCMock).toHaveBeenCalledWith(ConnectS3, expect.anything()));
+      await waitFor(() =>
+        expect(callIPCMock).toHaveBeenCalledWith(ConnectS3, expect.anything(), { signal: expect.any(AbortSignal) })
+      );
       expect(lastConnectInput()[0]).toMatchObject({ authType: 'static', authSecret: { sessionToken: 'tok' } });
     });
 
@@ -355,7 +372,7 @@ describe('ConnectModal authentication methods', () => {
       // One pass shows every error, so the user does not have to press Connect twice.
       expect(screen.getByText('Duration (seconds) is required')).toBeInTheDocument();
       expect(screen.getByText('MFA code is required')).toBeInTheDocument();
-      expect(callIPCMock).not.toHaveBeenCalledWith(ConnectS3, expect.anything());
+      expect(connectCalls()).toHaveLength(0);
 
       type(/Role ARN/, ROLE_ARN);
       await user.clear(field(/Duration/));
@@ -363,7 +380,9 @@ describe('ConnectModal authentication methods', () => {
       type(/MFA code/, '123456');
       await user.click(button('Connect'));
 
-      await waitFor(() => expect(callIPCMock).toHaveBeenCalledWith(ConnectS3, expect.anything()));
+      await waitFor(() =>
+        expect(callIPCMock).toHaveBeenCalledWith(ConnectS3, expect.anything(), { signal: expect.any(AbortSignal) })
+      );
       expect(lastConnectInput()[0]).toMatchObject({
         authType: 'assumeRole',
         accessKey: 'AK',
@@ -401,7 +420,9 @@ describe('ConnectModal authentication methods', () => {
       await chooseProfile(user, 'dev');
       await user.click(button('Connect'));
 
-      await waitFor(() => expect(callIPCMock).toHaveBeenCalledWith(ConnectS3, expect.anything()));
+      await waitFor(() =>
+        expect(callIPCMock).toHaveBeenCalledWith(ConnectS3, expect.anything(), { signal: expect.any(AbortSignal) })
+      );
       expect(lastConnectInput()[0]).toMatchObject({
         accessKey: '',
         secretKey: '',
@@ -588,9 +609,62 @@ describe('ConnectModal authentication methods', () => {
   describe('auto connect', () => {
     const auto = () => checkbox('Auto connect');
 
-    it('is enabled for an AWS CLI profile as soon as secrets are saved, since it needs none', async () => {
+    it.each(['AWS CLI profile', 'AWS SSO', 'Default chain', 'Anonymous'])(
+      'is enabled for %s without ticking Save secrets, since it stores no secret',
+      async method => {
+        const user = await open();
+        await chooseAuth(user, method);
+
+        expect(checkbox('Save secrets')).not.toBeChecked();
+        await waitFor(() => expect(auto()).toBeEnabled());
+      }
+    );
+
+    it('is enabled for an assume role from an AWS CLI profile without MFA, without ticking Save secrets', async () => {
       const user = await open();
-      await chooseAuth(user, 'AWS CLI profile');
+      await chooseAuth(user, 'Assume role');
+      await user.click(screen.getByRole('radio', { name: 'AWS CLI profile' }));
+
+      await waitFor(() => expect(auto()).toBeEnabled());
+    });
+
+    it('stays locked for an assume role from an AWS CLI profile with MFA, even with Save secrets', async () => {
+      const user = await open();
+      await chooseAuth(user, 'Assume role');
+      await user.click(screen.getByRole('radio', { name: 'AWS CLI profile' }));
+      await user.click(checkbox('Save secrets'));
+      type(/MFA device serial/, 'arn:aws:iam::123456789012:mfa/me');
+
+      await waitFor(() => expect(auto()).toBeDisabled());
+    });
+
+    it('needs Save secrets for the access key method, then also the secret key', async () => {
+      const user = await open();
+      type(/Secret key/, 'SK');
+      expect(auto()).toBeDisabled();
+
+      await user.click(checkbox('Save secrets'));
+
+      await waitFor(() => expect(auto()).toBeEnabled());
+    });
+
+    it('needs Save secrets for an assume role with access keys', async () => {
+      const user = await open();
+      await chooseAuth(user, 'Assume role');
+      type(/Secret key/, 'SK');
+      expect(auto()).toBeDisabled();
+
+      await user.click(checkbox('Save secrets'));
+
+      await waitFor(() => expect(auto()).toBeEnabled());
+    });
+
+    it.each(['MinIO STS', 'LDAP'])('needs Save secrets for MinIO %s', async method => {
+      const user = await open();
+      await user.click(screen.getByText('MinIO'));
+      await waitFor(() => expect(checkbox('Path style')).toBeChecked());
+      await chooseAuth(user, method);
+      type(method === 'LDAP' ? /LDAP password/ : /Secret key/, 'secret');
       expect(auto()).toBeDisabled();
 
       await user.click(checkbox('Save secrets'));
@@ -643,6 +717,262 @@ describe('ConnectModal authentication methods', () => {
       await user.click(checkbox('Save secrets'));
 
       await waitFor(() => expect(auto()).toBeEnabled());
+    });
+  });
+});
+
+describe('ConnectModal anonymous, MinIO STS and LDAP', () => {
+  const POLICY = '{"Version":"2012-10-17"}';
+
+  beforeEach(() => {
+    useModalStackStore.getState().reset();
+    useProfileStore.setState({ connectionProfiles: {} });
+    useMasterDataStore.setState({
+      regionData: { '01': [{ name: 'Tokyo', value1: 'ap-northeast-1', sortOrder: 1 } as never] },
+    });
+    mockBackend();
+  });
+
+  /** Switches to MinIO with an endpoint and region, then to the given method. */
+  async function setupMinio(user: User, method: string) {
+    await user.click(screen.getByText('MinIO'));
+    await waitFor(() => expect(checkbox('Path style')).toBeChecked());
+    type(/Endpoint/, 'http://minio:9000');
+    await chooseRegion(user);
+    await chooseAuth(user, method);
+  }
+
+  const connected = () =>
+    waitFor(() =>
+      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3, expect.anything(), { signal: expect.any(AbortSignal) })
+    );
+
+  describe('anonymous', () => {
+    it('shows only the bucket list, without any credential field', async () => {
+      const user = await open();
+
+      await chooseAuth(user, 'Anonymous');
+
+      expect(screen.getByText('Access public buckets without credentials.')).toBeInTheDocument();
+      expect(field(/Buckets/)).toBeInTheDocument();
+      expect(queryField(/Access key/)).not.toBeInTheDocument();
+      expect(queryField(/Secret key/)).not.toBeInTheDocument();
+    });
+
+    it('requires at least one bucket', async () => {
+      const user = await open();
+      await chooseAuth(user, 'Anonymous');
+      await chooseRegion(user);
+
+      await user.click(button('Connect'));
+
+      expect(await screen.findByText('Buckets is required')).toBeInTheDocument();
+      expect(connectCalls()).toHaveLength(0);
+    });
+
+    it('sends the typed buckets once each, with no keys', async () => {
+      const user = await open();
+      await chooseAuth(user, 'Anonymous');
+      await chooseRegion(user);
+      await user.type(field(/Buckets/), 'one,two three{Enter}one{Enter}');
+
+      await user.click(button('Connect'));
+
+      await connected();
+      expect(lastConnectInput()[0]).toMatchObject({
+        authType: 'anonymous',
+        authConfig: { buckets: ['one', 'two', 'three'] },
+        accessKey: '',
+        secretKey: '',
+        authSecret: {},
+      });
+    });
+
+    it('forgets the buckets when the method changes', async () => {
+      const user = await open();
+      await chooseAuth(user, 'Anonymous');
+      await user.type(field(/Buckets/), 'one{Enter}');
+      expect(screen.getByText('one')).toBeInTheDocument();
+
+      await chooseAuth(user, 'Access key');
+      await chooseAuth(user, 'Anonymous');
+
+      expect(screen.queryByText('one')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('minioAssumeRole', () => {
+    it('shows the keys, an optional duration and the policy, but no session token', async () => {
+      const user = await open();
+      await setupMinio(user, 'MinIO STS');
+
+      expect(field(/Access key/)).toBeInTheDocument();
+      expect(field(/Secret key/)).toBeInTheDocument();
+      expect(queryField(/Session token/)).not.toBeInTheDocument();
+      expect(field(/Duration/)).toHaveValue('');
+      expect(screen.getByLabelText(/Inline policy/)).toBeInTheDocument();
+    });
+
+    it('rejects a policy that is not JSON', async () => {
+      const user = await open();
+      await setupMinio(user, 'MinIO STS');
+      type(/Access key/, 'AK');
+      type(/Secret key/, 'SK');
+      fireEvent.change(screen.getByLabelText(/Inline policy/), { target: { value: '{nope' } });
+
+      await user.click(button('Connect'));
+
+      expect(await screen.findByText('Inline policy (JSON, optional) is not valid')).toBeInTheDocument();
+      expect(connectCalls()).toHaveLength(0);
+    });
+
+    it('sends the policy and omits the empty duration', async () => {
+      const user = await open();
+      await setupMinio(user, 'MinIO STS');
+      type(/Access key/, 'AK');
+      type(/Secret key/, 'SK');
+      fireEvent.change(screen.getByLabelText(/Inline policy/), { target: { value: POLICY } });
+
+      await user.click(button('Connect'));
+
+      await connected();
+      const [input, isTest, isExisting] = lastConnectInput();
+      expect(input).toMatchObject({
+        authType: 'minioAssumeRole',
+        accessKey: 'AK',
+        secretKey: 'SK',
+        authConfig: { policy: POLICY },
+        authSecret: {},
+      });
+      expect(input.authConfig).not.toHaveProperty('durationSeconds');
+      expect([isTest, isExisting]).toEqual([false, false]);
+    });
+  });
+
+  describe('minioLdap', () => {
+    it('shows the user, the password and an optional duration, without keys', async () => {
+      const user = await open();
+      await setupMinio(user, 'LDAP');
+
+      expect(field(/LDAP username/)).toBeInTheDocument();
+      expect(field(/LDAP password/)).toHaveAttribute('type', 'password');
+      expect(field(/Duration/)).toHaveValue('');
+      expect(queryField(/Access key/)).not.toBeInTheDocument();
+    });
+
+    it('requires the user and the password to connect', async () => {
+      const user = await open();
+      await setupMinio(user, 'LDAP');
+
+      await user.click(button('Connect'));
+
+      expect(await screen.findByText('LDAP username is required')).toBeInTheDocument();
+      expect(screen.getByText('LDAP password is required')).toBeInTheDocument();
+      expect(connectCalls()).toHaveLength(0);
+    });
+
+    it('sends the user, the password and a typed duration', async () => {
+      const user = await open();
+      await setupMinio(user, 'LDAP');
+      type(/LDAP username/, ' bob ');
+      type(/LDAP password/, 'pw');
+      await user.type(field(/Duration/), '1800');
+
+      await user.click(button('Connect'));
+
+      await connected();
+      expect(lastConnectInput()[0]).toMatchObject({
+        authType: 'minioLdap',
+        accessKey: '',
+        secretKey: '',
+        authConfig: { ldapUsername: 'bob', durationSeconds: 1800 },
+        authSecret: { ldapPassword: 'pw' },
+      });
+    });
+
+    it('does not need the password to save a profile', async () => {
+      const user = await open({ mode: 'createProfile' });
+      callIPCMock.mockResolvedValue({ id: 'new-1' } as never);
+      await setupMinio(user, 'LDAP');
+      type(/LDAP username/, 'bob');
+
+      await user.click(button('Create profile'));
+
+      await waitFor(() => expect(callIPCMock).toHaveBeenCalledTimes(1));
+      expect(callIPCMock.mock.calls[0][1]).toEqual([
+        expect.objectContaining({ authType: 'minioLdap', authSecret: { ldapPassword: '' } }),
+      ]);
+    });
+
+    it('marks the saved password when editing and keeps it on an empty field', async () => {
+      await open({
+        mode: 'editProfile',
+        connectionProfile: profile({
+          provider: 'minio',
+          endpoint: 'http://minio:9000',
+          accessKey: '',
+          authType: 'minioLdap',
+          authConfig: { ldapUsername: 'bob' } as never,
+          savedSecrets: ['ldapPassword'],
+        }),
+      });
+
+      expect(field(/LDAP username/)).toHaveValue('bob');
+      expect(field(/LDAP password/)).toHaveAttribute('placeholder', SAVED);
+      expect(field(/LDAP password/)).toHaveValue('');
+    });
+
+    it('can auto connect only once the password is typed or saved', async () => {
+      const user = await open();
+      await setupMinio(user, 'LDAP');
+      await user.click(checkbox('Save secrets'));
+      expect(checkbox('Auto connect')).toBeDisabled();
+
+      type(/LDAP password/, 'pw');
+
+      await waitFor(() => expect(checkbox('Auto connect')).toBeEnabled());
+    });
+
+    it('keeps auto connect when the password is already saved', async () => {
+      await open({
+        mode: 'editProfile',
+        connectionProfile: profile({
+          provider: 'minio',
+          accessKey: '',
+          authType: 'minioLdap',
+          autoConnect: true,
+          savedSecrets: ['ldapPassword'],
+        }),
+      });
+
+      expect(checkbox('Auto connect')).toBeChecked();
+      expect(checkbox('Auto connect')).toBeEnabled();
+    });
+  });
+
+  describe('lifetime', () => {
+    it('cancels a connect that is still running when the modal is unmounted', async () => {
+      let signal: AbortSignal | undefined;
+      callIPCMock.mockImplementation((async (_binding: unknown, _args: unknown, options?: { signal?: AbortSignal }) => {
+        signal = options?.signal;
+        return new Promise(() => {});
+      }) as never);
+      const { unmount } = renderWithProviders(<div />);
+      act(() => {
+        ConnectModal.show();
+      });
+      await flush();
+      const user = userEvent.setup();
+      await chooseAuth(user, 'Default chain');
+      await chooseRegion(user);
+
+      await user.click(button('Connect'));
+      await waitFor(() => expect(signal).toBeInstanceOf(AbortSignal));
+      expect(signal?.aborted).toBe(false);
+
+      unmount();
+
+      expect(signal?.aborted).toBe(true);
     });
   });
 });

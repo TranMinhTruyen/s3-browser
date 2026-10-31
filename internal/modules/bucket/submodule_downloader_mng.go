@@ -89,6 +89,9 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 	}
 	defer releaseConn()
 
+	// Credentials that can't be renewed and run out soon may end the transfer midway: warn, but go on.
+	output.AddMessage(transferExpiryWarning(s3Conn, input.ProfileName)...)
+
 	if len(input.Objects) == 0 {
 		return output
 	}
@@ -179,6 +182,9 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 					"object": r.key,
 				}),
 			)
+		case isCredentialsExpired(r.err):
+			m.logger.Error(fmt.Sprintf("Download object: %s: credentials expired", r.key))
+			output.AddMessage(expiredMessage(input.ProfileName, r.err))
 		default:
 			m.logger.Error(fmt.Sprintf("Download object: %s error", r.key))
 			output.AddMessage(

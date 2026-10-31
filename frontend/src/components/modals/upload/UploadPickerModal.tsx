@@ -285,7 +285,7 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
                   {t('selectFiles')}
                 </Button>
                 <Button
-                  color="red"
+                  color="var(--mantine-color-red-light-color)"
                   leftSection={<Trash2 size="16px" />}
                   onClick={onClickRemoveSelected}
                   disabled={isPicking || selected.size === 0}

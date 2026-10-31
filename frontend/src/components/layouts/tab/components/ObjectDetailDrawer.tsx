@@ -158,7 +158,7 @@ function ObjectDetailDrawer(props: ObjectDetailDrawerProps) {
 
           {state.status === 'error' ? (
             <Stack gap="xs" align="flex-start">
-              <Text c="red">{t('status.loadError')}</Text>
+              <Text c="var(--mantine-color-red-filled)">{t('status.loadError')}</Text>
               <Button onClick={onClickRetry}>{t('status.retry')}</Button>
             </Stack>
           ) : null}

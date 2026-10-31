@@ -58,12 +58,22 @@ export const GroupRow = memo(function GroupRow(props: GroupRowProps) {
         {group.name || rootLabel}
       </Text>
       {largeText && (
-        <Text size="sm" c={largeOver ? 'red' : 'dimmed'} fw={largeOver ? 600 : undefined} style={{ flexShrink: 0 }}>
+        <Text
+          size="sm"
+          c={largeOver ? 'var(--mantine-color-red-filled)' : 'dimmed'}
+          fw={largeOver ? 600 : undefined}
+          style={{ flexShrink: 0 }}
+        >
           {largeText}
         </Text>
       )}
       {countText && (
-        <Text size="sm" c={countOver ? 'red' : 'dimmed'} fw={countOver ? 600 : undefined} style={{ flexShrink: 0 }}>
+        <Text
+          size="sm"
+          c={countOver ? 'var(--mantine-color-red-filled)' : 'dimmed'}
+          fw={countOver ? 600 : undefined}
+          style={{ flexShrink: 0 }}
+        >
           {countText}
         </Text>
       )}
@@ -110,7 +120,7 @@ export const FileRow = memo(function FileRow(props: FileRowProps) {
         styles={{ root: { flex: 1, minWidth: 0 }, body: { minWidth: 0 }, labelWrapper: { minWidth: 0 } }}
       />
       {file.isLarge && (
-        <Badge color="orange" variant="light" style={{ flexShrink: 0 }}>
+        <Badge color="var(--mantine-color-orange-light-color)" variant="light" style={{ flexShrink: 0 }}>
           {largeLabel}
         </Badge>
       )}
@@ -118,7 +128,13 @@ export const FileRow = memo(function FileRow(props: FileRowProps) {
         {formatFileSize(file.size)}
       </Text>
       {onRemoveFile && (
-        <ActionIcon size="sm" color="red" onClick={onClickRemove} aria-label={removeLabel} title={removeLabel}>
+        <ActionIcon
+          size="sm"
+          color="var(--mantine-color-red-light-color)"
+          onClick={onClickRemove}
+          aria-label={removeLabel}
+          title={removeLabel}
+        >
           <Trash2 size="14px" />
         </ActionIcon>
       )}

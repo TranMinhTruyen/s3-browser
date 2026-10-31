@@ -295,6 +295,12 @@ func (m *submoduleSearchMng) searchBucket(
 		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 
+	if s3Conn.AuthType == cnst.AuthAnonymous {
+		buckets := anonymousBuckets(s3Conn, keyword)
+		output.Body.BucketList = buckets[:min(len(buckets), searchMaxResults)]
+		return output
+	}
+
 	body := models.SearchBucketOutput{BucketList: make([]models.Bucket, 0, searchMaxResults)}
 
 	for range searchMaxPages {

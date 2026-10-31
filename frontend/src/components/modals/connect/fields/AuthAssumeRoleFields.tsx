@@ -5,6 +5,7 @@ import AwsProfileCombobox from '@/components/inputs/combobox/AwsProfileCombobox'
 import FieldInput from '@/components/inputs/FieldInput';
 import SegmentedControl from '@/components/inputs/SegmentedControl';
 import type { AuthFieldsProps } from '@/components/modals/connect/connectSchema';
+import AuthDurationField from '@/components/modals/connect/fields/AuthDurationField';
 import AuthStaticFields from '@/components/modals/connect/fields/AuthStaticFields';
 
 /** Role to assume, the credentials that assume it (access key or AWS CLI profile) and the optional MFA device. */
@@ -68,16 +69,7 @@ function AuthAssumeRoleFields(props: AuthFieldsProps) {
         {...form.getInputProps('authConfig.sessionName')}
       />
 
-      <FieldInput
-        type="number"
-        label={t('form.label.durationSeconds')}
-        withAsterisk
-        min={900}
-        max={43200}
-        allowDecimal={false}
-        key={form.key('authConfig.durationSeconds')}
-        {...form.getInputProps('authConfig.durationSeconds')}
-      />
+      <AuthDurationField form={form} required />
 
       <FieldInput
         type="text"
