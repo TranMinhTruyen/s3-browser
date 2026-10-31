@@ -3,6 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { DroppedFile, DroppedGroup } from '@wails/S3Browser/models/bucket';
 import { Folder, Trash2 } from 'lucide-react';
 import { ChangeEvent, CSSProperties, memo, ReactNode, useCallback, useMemo, useRef } from 'react';
+import { tintedColor } from '@/common/theme/tintedColor';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
@@ -130,7 +131,7 @@ export const FileRow = memo(function FileRow(props: FileRowProps) {
       {onRemoveFile && (
         <ActionIcon
           size="sm"
-          color="var(--mantine-color-red-light-color)"
+          {...tintedColor('red', 'ai')}
           onClick={onClickRemove}
           aria-label={removeLabel}
           title={removeLabel}

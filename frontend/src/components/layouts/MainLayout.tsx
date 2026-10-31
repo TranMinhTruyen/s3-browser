@@ -4,6 +4,7 @@ import { RotateCcwClock, Settings } from 'lucide-react';
 import { type MouseEvent, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet } from 'react-router-dom';
+import { tintedColor } from '@/common/theme/tintedColor';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import LeftNavbar from '@/components/layouts/navbar/LeftNavbar';
 import DownloaderWindow from '@/components/layouts/transfer/downloader/DownloaderWindow';
@@ -46,21 +47,13 @@ function MainLayout() {
 
           <Group gap="xs" wrap="nowrap" ml="auto" style={{ '--wails-draggable': 'no-drag' }}>
             <Tooltip label={tSetting('title')}>
-              <ActionIcon
-                aria-label={tSetting('title')}
-                color="var(--mantine-color-gray-light-color)"
-                onClick={onClickSetting}
-              >
+              <ActionIcon aria-label={tSetting('title')} {...tintedColor('gray', 'ai')} onClick={onClickSetting}>
                 <Settings />
               </ActionIcon>
             </Tooltip>
 
             <Tooltip label={t('title')}>
-              <ActionIcon
-                aria-label={t('title')}
-                color="var(--mantine-color-gray-light-color)"
-                onClick={onClickHistory}
-              >
+              <ActionIcon aria-label={t('title')} {...tintedColor('gray', 'ai')} onClick={onClickHistory}>
                 <RotateCcwClock />
               </ActionIcon>
             </Tooltip>

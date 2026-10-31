@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDownloaderStore } from '@/common/stores/downloaderStore';
+import { tintedColor } from '@/common/theme/tintedColor';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
@@ -86,11 +87,7 @@ function DownloaderItem(props: DownloaderItemProps) {
         }}
       >
         <Center w="48px" h="100%">
-          <ActionIcon
-            color="var(--mantine-color-red-light-color)"
-            onClick={onClickCancelDownload}
-            aria-label={t('action.cancel')}
-          >
+          <ActionIcon {...tintedColor('red', 'ai')} onClick={onClickCancelDownload} aria-label={t('action.cancel')}>
             <X />
           </ActionIcon>
         </Center>

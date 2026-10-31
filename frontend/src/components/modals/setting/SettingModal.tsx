@@ -14,6 +14,7 @@ import {
   type ThemeKey,
 } from '@/common/cnst/settingConst';
 import { useSettingStore } from '@/common/stores/settingStore';
+import { tintedColor } from '@/common/theme/tintedColor';
 import { createMantineModal } from '@/common/utils/modalUtils';
 import Button from '@/components/buttons/Button';
 import SelectInput from '@/components/inputs/SelectInput';
@@ -179,10 +180,10 @@ export default createMantineModal<{}, boolean>(props => {
             {t('button.cancel')}
           </Button>
           <Group gap="xs" wrap="nowrap">
-            <Button color="var(--mantine-color-gray-light-color)" onClick={onClickReset} disabled={saving}>
+            <Button {...tintedColor('gray', 'button')} onClick={onClickReset} disabled={saving}>
               {t('button.reset')}
             </Button>
-            <Button color="var(--mantine-color-teal-light-color)" onClick={onClickApply} disabled={saving}>
+            <Button {...tintedColor('teal', 'button')} onClick={onClickApply} disabled={saving}>
               {t('button.apply')}
             </Button>
             <Button onClick={onClickSave} loading={saving}>

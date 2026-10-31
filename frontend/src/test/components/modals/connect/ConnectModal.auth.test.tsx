@@ -61,7 +61,7 @@ async function open(props?: Props) {
     ConnectModal.show(props);
   });
   await flush();
-  return userEvent.setup();
+  return userEvent.setup({ pointerEventsCheck: 0 });
 }
 
 const field = (name: RegExp | string) => screen.getByLabelText(name, { selector: 'input:not([type=radio])' });

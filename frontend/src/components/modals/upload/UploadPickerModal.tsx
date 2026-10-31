@@ -6,6 +6,7 @@ import { FileDown, Trash2, Upload } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { tintedColor } from '@/common/theme/tintedColor';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import { formatStringJson } from '@/common/utils/stringUtils';
@@ -285,7 +286,7 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
                   {t('selectFiles')}
                 </Button>
                 <Button
-                  color="var(--mantine-color-red-light-color)"
+                  {...tintedColor('red', 'button')}
                   leftSection={<Trash2 size="16px" />}
                   onClick={onClickRemoveSelected}
                   disabled={isPicking || selected.size === 0}

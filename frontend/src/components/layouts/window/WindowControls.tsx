@@ -3,6 +3,7 @@ import { Events, Window } from '@wailsio/runtime';
 import { Copy, Minus, Square, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { tintedColor } from '@/common/theme/tintedColor';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import classes from '@/components/layouts/window/WindowControls.module.css';
 
@@ -47,17 +48,13 @@ function WindowControls() {
   return (
     <Group gap="xs" wrap="nowrap">
       <Tooltip label={t('window.minimise')}>
-        <ActionIcon
-          aria-label={t('window.minimise')}
-          color="var(--mantine-color-yellow-light-color)"
-          onClick={onClickMinimise}
-        >
+        <ActionIcon aria-label={t('window.minimise')} {...tintedColor('yellow', 'ai')} onClick={onClickMinimise}>
           <Minus size={16} />
         </ActionIcon>
       </Tooltip>
 
       <Tooltip label={maximiseLabel}>
-        <ActionIcon aria-label={maximiseLabel} color="var(--mantine-color-green-light-color)" onClick={onClickMaximise}>
+        <ActionIcon aria-label={maximiseLabel} {...tintedColor('green', 'ai')} onClick={onClickMaximise}>
           {isMaximised ? <Copy size={14} /> : <Square size={14} />}
         </ActionIcon>
       </Tooltip>
@@ -65,7 +62,7 @@ function WindowControls() {
       <Tooltip label={t('window.close')}>
         <ActionIcon
           aria-label={t('window.close')}
-          color="var(--mantine-color-red-light-color)"
+          {...tintedColor('red', 'ai')}
           className={classes.closeButton}
           onClick={onClickClose}
         >

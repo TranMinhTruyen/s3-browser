@@ -59,11 +59,12 @@ const PROVIDER_OPTIONS = [
 }));
 
 // Max body height on tall screens, sized for the Access key method; longer methods scroll. Each shrinks on short
-// screens so the modal stays in the viewport. Create/edit show the hint under the fields (2 lines of xs text, about
-// 2 * 16.8px + 12px Stack gap = 46px); connect modes do not, so they are 750 - 46 = 704, rounded down to 700.
+// screens so the modal stays in the viewport. Create/edit show the hint under the fields (2 lines of xs text plus the
+// Stack gap, measured at about 43px); connect modes do not. Measured content: 747px in create, so 747 - 43 = 704 in
+// connect, plus a few px of slack = 710.
 const bodyHeight = (px: number) => `min(${px}px, calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT}))`;
 const BODY_HEIGHT_WITH_HINT = bodyHeight(750);
-const BODY_HEIGHT_NO_HINT = bodyHeight(700);
+const BODY_HEIGHT_NO_HINT = bodyHeight(710);
 
 /**
  * Modal to connect, test a connection, or create/edit a connection profile depending on `mode`:
