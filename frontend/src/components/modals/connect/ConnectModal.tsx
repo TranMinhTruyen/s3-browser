@@ -58,9 +58,12 @@ const PROVIDER_OPTIONS = [
   ),
 }));
 
-// Body height on tall screens, sized for the Access key method in create/edit mode (with the hint); longer methods
-// scroll. Shrinks on short screens so the modal stays in the viewport.
-const BODY_HEIGHT = `min(750px, calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT}))`;
+// Max body height on tall screens, sized for the Access key method; longer methods scroll. Each shrinks on short
+// screens so the modal stays in the viewport. Create/edit show the hint under the fields (2 lines of xs text, about
+// 2 * 16.8px + 12px Stack gap = 46px); connect modes do not, so they are 750 - 46 = 704, rounded down to 700.
+const bodyHeight = (px: number) => `min(${px}px, calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT}))`;
+const BODY_HEIGHT_WITH_HINT = bodyHeight(750);
+const BODY_HEIGHT_NO_HINT = bodyHeight(700);
 
 /**
  * Modal to connect, test a connection, or create/edit a connection profile depending on `mode`:
@@ -276,7 +279,10 @@ export default createMantineModal<ConnectModalProps, false>(
 
             <Divider />
 
-            <Modal.Body p="16px" style={{ overflow: 'auto', height: BODY_HEIGHT }}>
+            <Modal.Body
+              p="16px"
+              style={{ overflow: 'auto', height: secretRequired ? BODY_HEIGHT_NO_HINT : BODY_HEIGHT_WITH_HINT }}
+            >
               <Stack gap="sm">
                 <SegmentedControl
                   data={PROVIDER_OPTIONS}
