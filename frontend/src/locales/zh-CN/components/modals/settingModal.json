@@ -17,6 +17,10 @@
       "system-ui": "系统界面",
       "segoe-ui": "Segoe UI",
       "arial": "Arial",
+      "roboto": "Roboto",
+      "be-vietnam-pro": "Be Vietnam Pro",
+      "verdana": "Verdana",
+      "meiryo-ui": "Meiryo UI",
       "monospace": "等宽",
       "jetbrains-mono": "JetBrains Mono"
     }

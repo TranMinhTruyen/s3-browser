@@ -9,11 +9,11 @@
 
 ### 追加
 
-- 設定ダイアログ（ダウンロード履歴ボタンの左）: テーマ（ライト / ダーク / システムに合わせる）、フォント（Nunito、System UI、Segoe UI、Arial、Monospace、JetBrains Mono）、言語、Windows 起動時の自動起動（Windows のインストール版のみ）。
+- 設定ダイアログ（ダウンロード履歴ボタンの左）: テーマ（ライト / ダーク / システムに合わせる）、フォント（Nunito、System UI、Segoe UI、Arial、Roboto、Be Vietnam Pro、Verdana、Meiryo UI、Monospace、JetBrains Mono）、言語、Windows 起動時の自動起動（Windows のインストール版のみ）。
 - 設定は `data.db` と同じ場所の `settings.json` に保存され、UI 表示前に読み込まれます。言語も記憶されるようになりました。
 - 変更はすぐにプレビューされます。**適用** はアプリを閉じるまで保持、**保存** はファイルに書き込み、**デフォルトに戻す** はフォームを初期値に戻します。
 - ダークテーマ。
-- JetBrains Mono フォントを同梱。
+- JetBrains Mono、Roboto、Be Vietnam Pro フォントを同梱。
 
 ### 変更
 

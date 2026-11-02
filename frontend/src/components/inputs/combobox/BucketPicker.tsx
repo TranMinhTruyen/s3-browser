@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { callIPC } from '@/common/utils/ipcUtils';
 import Button from '@/components/buttons/Button';
 import ComboboxClearButton from '@/components/inputs/combobox/ComboboxClearButton';
+import ComboboxOptions from '@/components/inputs/combobox/ComboboxOptions';
 
 // Buckets fetched per page.
 const BUCKET_PAGE_SIZE = 20;
@@ -150,7 +151,7 @@ function BucketPicker(props: BucketPickerProps) {
 
       <Combobox.Dropdown miw={targetWidth}>
         <Combobox.Search value={keyword} onChange={onChangeKeyword} placeholder={t('searchPlaceholder')} />
-        <Combobox.Options mah={250} style={{ overflowY: 'auto' }}>
+        <ComboboxOptions>
           {namedBuckets.map(bucket => (
             <Combobox.Option key={bucket.name} value={bucket.name as string} active={bucket.name === value}>
               <Group gap="xs" wrap="nowrap">
@@ -172,7 +173,7 @@ function BucketPicker(props: BucketPickerProps) {
               </Button>
             </Group>
           )}
-        </Combobox.Options>
+        </ComboboxOptions>
       </Combobox.Dropdown>
     </Combobox>
   );

@@ -26,6 +26,11 @@ const FONT_STACKS = {
   'system-ui': 'system-ui, -apple-system',
   'segoe-ui': '"Segoe UI"',
   arial: 'Arial',
+  roboto: '"Roboto", Arial',
+  'be-vietnam-pro': '"Be Vietnam Pro", "Segoe UI"',
+  verdana: 'Verdana, Geneva',
+  // Windows-only Japanese UI font; Meiryo (older Windows) and the regular CJK fallback cover other systems.
+  'meiryo-ui': '"Meiryo UI", Meiryo',
   monospace: 'ui-monospace, "Cascadia Mono", Consolas, monospace',
   'jetbrains-mono': '"JetBrains Mono", ui-monospace, Consolas, monospace',
 } as const;

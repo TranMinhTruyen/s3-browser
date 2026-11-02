@@ -180,7 +180,7 @@ Xóa một **thư mục** sẽ xóa thư mục **và toàn bộ nội dung bên 
 Bấm nút **Cài đặt** (biểu tượng bánh răng) ở góc trên bên phải, bên trái nút lịch sử tải xuống.
 
 - **Giao diện**: Sáng, Tối hoặc Theo hệ thống.
-- **Phông chữ**: Nunito, System UI, Segoe UI, Arial, Monospace hoặc JetBrains Mono.
+- **Phông chữ**: Nunito, System UI, Segoe UI, Arial, Roboto, Be Vietnam Pro, Verdana, Meiryo UI, Monospace hoặc JetBrains Mono.
 - **Ngôn ngữ**: English, Tiếng Việt hoặc 日本語. Toàn bộ giao diện, kể cả thông báo, đổi theo.
 - **Khởi động cùng Windows**: mở S3Browser khi đăng nhập Windows. Chỉ hiện ở bản cài đặt trên Windows (không có ở bản portable).
 
