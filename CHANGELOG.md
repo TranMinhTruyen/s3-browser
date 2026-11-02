@@ -9,11 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- Settings dialog (button left of Download history): theme (light / dark / follow system), font (Nunito, System UI, Segoe UI, Arial, Monospace, JetBrains Mono), language and launch on Windows startup (installed Windows build only).
+- Settings dialog (button left of Download history): theme (light / dark / follow system), font (Nunito, System UI, Segoe UI, Arial, Roboto, Be Vietnam Pro, Verdana, Meiryo UI, Monospace, JetBrains Mono), language and launch on Windows startup (installed Windows build only).
 - Settings are saved in `settings.json` next to `data.db` and loaded before the UI appears, so the language is now remembered.
 - Changes are previewed immediately. **Apply** keeps them until the app closes, **Save** writes them to the file, **Reset to default** restores the defaults in the form.
 - Dark theme.
-- Bundled JetBrains Mono font.
+- Bundled JetBrains Mono, Roboto and Be Vietnam Pro fonts.
 
 ### Changed
 

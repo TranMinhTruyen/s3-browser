@@ -16,6 +16,7 @@ import { useFieldError } from '@/common/hooks/useFieldError';
 import { useSelectCombobox } from '@/common/hooks/useSelectCombobox';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
 import ComboboxClearButton from '@/components/inputs/combobox/ComboboxClearButton';
+import ComboboxOptions from '@/components/inputs/combobox/ComboboxOptions';
 
 type ComboboxItem = { name: string; value: string };
 
@@ -137,12 +138,12 @@ function Combobox(props: ComboboxProps) {
 
       <MCombobox.Dropdown miw={targetWidth}>
         {hasSearch && <MCombobox.Search value={keyword} onChange={onChangeKeyword} placeholder={searchPlaceholder} />}
-        <MCombobox.Options mah={250} style={{ overflowY: 'auto' }}>
+        <ComboboxOptions>
           {filteredData.map(item => (
             <ComboboxOption key={item.value} item={item} active={item.value === current} />
           ))}
           {filteredData.length === 0 && emptyText && <MCombobox.Empty>{emptyText}</MCombobox.Empty>}
-        </MCombobox.Options>
+        </ComboboxOptions>
       </MCombobox.Dropdown>
     </MCombobox>
   );

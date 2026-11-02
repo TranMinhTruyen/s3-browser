@@ -180,7 +180,7 @@ Windows では 2 通りの方法があります。
 右上のダウンロード履歴ボタンの左にある **設定** ボタン（歯車アイコン）をクリックします。
 
 - **テーマ**: ライト、ダーク、システムに合わせる。
-- **フォント**: Nunito、System UI、Segoe UI、Arial、Monospace、JetBrains Mono。
+- **フォント**: Nunito、System UI、Segoe UI、Arial、Roboto、Be Vietnam Pro、Verdana、Meiryo UI、Monospace、JetBrains Mono。
 - **言語**: English、Tiếng Việt、日本語。メッセージを含む画面全体が切り替わります。
 - **Windows 起動時に自動起動**: Windows にサインインしたときに S3Browser を起動します。Windows のインストール版でのみ表示されます（ポータブル版にはありません）。
 

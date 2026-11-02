@@ -9,11 +9,11 @@ Mọi thay đổi đáng chú ý của dự án được ghi trong file này.
 
 ### Thêm mới
 
-- Hộp thoại Cài đặt (nút bên trái nút Lịch sử tải xuống): giao diện (sáng / tối / theo hệ thống), phông chữ (Nunito, System UI, Segoe UI, Arial, Monospace, JetBrains Mono), ngôn ngữ và khởi động cùng Windows (chỉ bản cài đặt trên Windows).
+- Hộp thoại Cài đặt (nút bên trái nút Lịch sử tải xuống): giao diện (sáng / tối / theo hệ thống), phông chữ (Nunito, System UI, Segoe UI, Arial, Roboto, Be Vietnam Pro, Verdana, Meiryo UI, Monospace, JetBrains Mono), ngôn ngữ và khởi động cùng Windows (chỉ bản cài đặt trên Windows).
 - Cài đặt được lưu trong `settings.json` cạnh `data.db` và nạp trước khi hiện giao diện, nên ngôn ngữ giờ đã được ghi nhớ.
 - Thay đổi được xem trước ngay. **Áp dụng** giữ thay đổi đến khi đóng app, **Lưu** ghi vào file, **Đặt lại mặc định** đưa form về mặc định.
 - Giao diện tối.
-- Đóng gói sẵn phông JetBrains Mono.
+- Đóng gói sẵn phông JetBrains Mono, Roboto và Be Vietnam Pro.
 
 ### Thay đổi
 

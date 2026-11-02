@@ -10,8 +10,11 @@ import (
 
 // Accepted values; the frontend uses the same keys.
 var (
-	themes    = []string{"light", "dark", "auto"}
-	fonts     = []string{"nunito", "system-ui", "segoe-ui", "arial", "monospace", "jetbrains-mono"}
+	themes = []string{"light", "dark", "auto"}
+	fonts  = []string{
+		"nunito", "system-ui", "segoe-ui", "arial", "roboto", "be-vietnam-pro", "verdana", "meiryo-ui",
+		"monospace", "jetbrains-mono",
+	}
 	languages = []string{"en", "vi", "ja", "zh-CN", "zh-TW", "ru", "de"}
 )
 
