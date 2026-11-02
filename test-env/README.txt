@@ -1,9 +1,9 @@
-S3Browser - Sprint 11: dựng môi trường test bằng Docker Compose
-================================================================
+S3Browser - môi trường test dùng chung (dựng ở sprint-11), dựng bằng Docker Compose
+=====================================================================================
 
 Thư mục này dựng sẵn MinIO + LDAP, Floci (AWS giả lập), Keycloak và MinIO bật TLS (OIDC, mTLS) để test
 các phương thức đăng nhập.
-Danh sách profile cần tạo trong app và kết quả mong đợi: ../test-profiles.txt.
+Danh sách profile cần tạo trong app và kết quả mong đợi: test-profiles.txt.
 
 Yêu cầu: Docker Desktop (hoặc Docker Engine + compose plugin). Không cần cài AWS CLI hay mc.
 
@@ -142,7 +142,7 @@ Chạy trong thư mục này, theo đúng thứ tự.
   Callback port = 48765 (redirect http://127.0.0.1:48765/callback đã khai báo trong realm). Keycloak chạy
   http vì app không áp CA cho IdP. Claim "policy" luôn là readwrite (hardcoded claim mapper).
 
-  Profile cần tạo và kết quả mong đợi: ../test-profiles.txt PHẦN C.
+  Profile cần tạo và kết quả mong đợi: test-profiles.txt PHẦN C.
 
   Đã kiểm khi viết: Keycloak lên, MinIO nạp được identity_openid, và app kết nối mTLS thành công với
   client.crt + client.key / client-enc.key + CA. Luồng OIDC đầy đủ (cần trình duyệt) chưa được kiểm.

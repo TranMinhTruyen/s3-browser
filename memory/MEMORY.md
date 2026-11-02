@@ -10,7 +10,8 @@
 - Sprint gần nhất: sprint-11 (nhiều phương thức xác thực, AWS + MinIO).
   - GĐ1 `SP-11/auth_core` (PR #21) và GĐ2 `SP-11/auth_minio_anonymous` (PR #23): đã merge.
   - GĐ3 `SP-11/auth_minio_oidc_cert` (R3 OIDC, mTLS, CA file, dọn Low GĐ2): đã commit local, chưa push.
-- Việc tiếp theo: người dùng test tay theo `sprints/sprint-11/plan.md` mục 10 (test-env Keycloak + MinIO TLS), rồi push với `git push -u origin SP-11/auth_minio_oidc_cert` (upstream đang trỏ origin/master) và tạo PR. Sau đó cập nhật docs ARCHITECTURE và user guide.
+- 2026-11-02 người dùng chấp nhận test tay GĐ3 (bug phát sinh sửa ở sprint sau).
+- Việc tiếp theo: push với `git push -u origin SP-11/auth_minio_oidc_cert` (upstream đang trỏ origin/master) và tạo PR. Sau đó cập nhật docs ARCHITECTURE và user guide.
 
 ## 2. Quyết định
 
@@ -29,6 +30,7 @@
 - 2026-11-02 [sprint-11] File CA tuỳ chọn cho mọi authType MinIO, chỉ áp transport MinIO; IdP dùng CA của OS.
 - 2026-11-02 [sprint-11] STS/LDAP MinIO giữ tự gia hạn (secret trong RAM), Close() không xoá cứng credential — tránh hỏng transfer đang chạy khi ReplaceConn.
 - 2026-11-02 [sprint-11] madmin đọc credential qua provider từ SwapCreds — Reauth có hiệu lực ngay.
+- 2026-11-02 [quy trình] Môi trường test (`test-env/` ở gốc App/S3Browser, gồm `test-profiles.txt`) dùng chung cho mọi sprint — chuyển ra khỏi `sprints/sprint-11/` để sprint sau dùng lại tài khoản test.
 - 2026-11-02 [sprint-11] Badge/Button variant light truyền màu gốc `var(--mantine-color-<c>-6)`; `-light-color` chỉ cho chữ/viền.
 
 ## 3. Lỗi và bẫy đã gặp

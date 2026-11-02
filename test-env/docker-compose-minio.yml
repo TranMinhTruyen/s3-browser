@@ -1,7 +1,7 @@
 # MinIO + OpenLDAP for testing the MinIO auth methods of S3Browser (Access key, Anonymous, MinIO STS, LDAP).
 # Run in this folder:   docker compose -f docker-compose-minio.yml -p s3b-minio-test up -d
 # Remove everything:    docker compose -f docker-compose-minio.yml -p s3b-minio-test down -v
-# Accounts and expected results: ../test-profiles.txt (PHẦN A).
+# Accounts and expected results: test-profiles.txt (PHẦN A).
 
 services:
   minio:

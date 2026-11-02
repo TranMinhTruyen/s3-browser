@@ -273,3 +273,8 @@
 - ConnectModal.tsx dòng 220 chưa phủ (trên ngưỡng).
 - Chưa xác minh: MinIO nhận id_token + access_token (O1), huỷ dialog trên macOS/Linux, SystemCertPool Windows, hết hạn minioCert.
 - Chưa cập nhật docs/ARCHITECTURE*.md, user guide.
+
+### Sau GĐ3
+- Sửa thêm: huỷ dialog chọn file không còn báo lỗi (Windows), nhãn secret chuyển sang `ipcMessage`, tăng tương phản dòng phụ của profile, nâng Wails v3.1.0.
+- Người dùng chấp nhận test tay GĐ3; bug phát sinh sửa ở sprint sau.
+- `test-env/` và `test-profiles.txt` chuyển từ thư mục sprint này ra `test-env/` ở gốc `App/S3Browser` để dùng chung; đường dẫn `sprints/sprint-11/test-env/...` trong `plan.md` và report này là vị trí cũ.

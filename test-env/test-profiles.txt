@@ -1,5 +1,5 @@
-S3Browser - Sprint 11: profile test thủ công cho các phương thức đăng nhập
-=========================================================================
+S3Browser - profile test thủ công dùng chung cho các phương thức đăng nhập (dựng ở sprint-11)
+==============================================================================================
 
 Tài liệu test thủ công, KHÔNG phải requirement. Mọi tài khoản bên dưới chỉ dùng cho
 MinIO/LDAP/Floci chạy local bằng Docker, không dùng cho môi trường thật.
@@ -9,8 +9,8 @@ MinIO/LDAP/Floci chạy local bằng Docker, không dùng cho môi trường th�
   PHẦN B (mục 8-13): provider AWS, giả lập bằng Floci - Access key, AWS CLI profile,
                     Assume role, AWS SSO, Default chain, Anonymous.
 
-  CÁCH NHANH để dựng môi trường trên máy test: dùng Docker Compose trong thư mục test-env/
-  (xem test-env/README.txt). Mục 5 và mục 11 bên dưới là cách dựng thủ công từng bước.
+  CÁCH NHANH để dựng môi trường trên máy test: dùng Docker Compose trong thư mục này
+  (xem README.txt). Mục 5 và mục 11 bên dưới là cách dựng thủ công từng bước.
 
 
 ######################################################################################
@@ -425,13 +425,13 @@ PHẦN C - MinIO TLS, OIDC (Keycloak) và Certificate (mTLS)
 14. Môi trường
 --------------
 
-  Dựng theo test-env/README.txt mục 7 (gen-certs.sh, Keycloak, rồi MinIO TLS).
+  Dựng theo README.txt mục 7 (gen-certs.sh, Keycloak, rồi MinIO TLS).
 
   Thành phần       Container            Địa chỉ trên máy
   ---------------  -------------------  ---------------------------------------------
   MinIO TLS        s3b-test-minio-tls   https://localhost:10020  <- Endpoint nhập vào app
   Keycloak         s3b-test-keycloak    http://localhost:8180    (Admin: admin / KeycloakAdmin#2026)
-  CA                                    test-env/certs/ca.pem    <- "CA certificate file"
+  CA                                    certs/ca.pem    <- "CA certificate file"
 
   Bucket có sẵn: s3b-tls (file docs/readme.txt). MinIO root: admin / MinioRoot#2026.
   Redirect URI của app (đã khai báo trong realm): http://127.0.0.1:48765/callback
@@ -441,7 +441,7 @@ PHẦN C - MinIO TLS, OIDC (Keycloak) và Certificate (mTLS)
 -------------------------------------------------
 
 Mọi profile: Provider = MinIO, Endpoint = https://localhost:10020, Path style bật.
-Đường dẫn file bên dưới tính từ test-env/certs/ (khi chọn file trong app, chọn file thật trong thư mục đó).
+Đường dẫn file bên dưới tính từ certs/ (khi chọn file trong app, chọn file thật trong thư mục đó).
 
   #    Method       Thông tin nhập                                          Kết quả mong đợi
   ---  -----------  ------------------------------------------------------  ----------------------------------------
@@ -474,4 +474,4 @@ Mọi profile: Provider = MinIO, Endpoint = https://localhost:10020, Path style 
 16. Dọn dẹp
 -----------
 
-  Xem test-env/README.txt mục 8.
+  Xem README.txt mục 8.
