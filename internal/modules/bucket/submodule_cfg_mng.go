@@ -6,6 +6,7 @@ import (
 	"S3Browser/models"
 	"cmp"
 	"context"
+	"crypto/tls"
 	"errors"
 	"log/slog"
 	"net"
@@ -21,17 +22,20 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// submoduleCfgMng builds S3 clients from a profile and probes them. It has no state besides the logger.
+// submoduleCfgMng builds S3 clients from a profile and probes them.
 type submoduleCfgMng struct {
 	logger *slog.Logger
+	oidc   *submoduleOidcMng
 }
 
-// newSubmoduleCfgMng builds the client builder; it only needs a logger.
+// newSubmoduleCfgMng builds the client builder; oidc supplies the sign-in sessions of minioOidc profiles.
 func newSubmoduleCfgMng(
 	logger *slog.Logger,
+	oidc *submoduleOidcMng,
 ) *submoduleCfgMng {
 	return &submoduleCfgMng{
 		logger: logger.With("submodules", "cfg_mng"),
+		oidc:   oidc,
 	}
 }
 
@@ -46,9 +50,17 @@ func (m *submoduleCfgMng) buildClient(
 	ctx context.Context,
 	input models.ConnectionProfileInput,
 ) (*global.S3Conn, error) {
-	client, transport := newHTTPClient()
+	// The extra CA only applies to MinIO connections.
+	caFile := ""
+	if input.Provider == cnst.ProviderMinio {
+		caFile = input.AuthConfig.CaFile
+	}
+	client, transport, err := newHTTPClient(caFile)
+	if err != nil {
+		return nil, err
+	}
 
-	creds, err := buildCredentials(ctx, input, client)
+	creds, err := buildCredentials(ctx, input, client, m.oidc)
 	if err != nil {
 		transport.CloseIdleConnections()
 		return nil, err
@@ -70,9 +82,7 @@ func (m *submoduleCfgMng) buildClient(
 
 	if creds.Anonymous {
 		conn.CredInfo = global.CredInfo{Refreshable: true}
-		for _, name := range input.AuthConfig.BucketNames() {
-			conn.AnonymousBuckets = append(conn.AnonymousBuckets, global.AnonymousBucket{Name: name})
-		}
+		conn.SetAnonymousBuckets(input.AuthConfig.BucketNames())
 	} else {
 		conn.Creds = global.NewSwapCreds(creds.AWS)
 		expiry := conn.Creds.Expiry
@@ -92,7 +102,7 @@ func (m *submoduleCfgMng) buildClient(
 	})
 	conn.Presign = s3.NewPresignClient(conn.Client)
 
-	if input.Provider == cnst.ProviderMinio && creds.Minio != nil {
+	if input.Provider == cnst.ProviderMinio && conn.Creds != nil {
 		// madmin wants a bare host, and the scheme decides whether TLS is used.
 		u, err := url.Parse(normalizeEndpoint(input.Endpoint))
 		if err == nil && u.Host == "" {
@@ -105,7 +115,7 @@ func (m *submoduleCfgMng) buildClient(
 
 		// A refused admin client must not break the connection: S3 works without it.
 		admin, err := madmin.NewWithOptions(u.Host, &madmin.Options{
-			Creds:     creds.Minio,
+			Creds:     newAdminCreds(conn.Creds),
 			Secure:    u.Scheme == "https",
 			Transport: transport,
 		})
@@ -151,7 +161,38 @@ func (m *submoduleCfgMng) probe(ctx context.Context, c *global.S3Conn) (models.O
 	return output, nil
 }
 
-// probeAnonymous runs HeadBucket on every entered bucket and records which ones are accessible. One accessible
+// isS3Answer reports whether err is an answer of the S3 server (AccessDenied, NoSuchBucket, 403, 404...) rather
+// than a network failure or timeout.
+func isS3Answer(err error) bool {
+	var apiErr smithy.APIError
+	return errors.As(err, &apiErr)
+}
+
+// checkAnonymousBuckets runs HeadBucket on every bucket of an anonymous connection, in parallel, and returns the
+// error of each (nil when accessible), in the order of c.AnonymousBuckets(). The Accessible flags are updated
+// only when the server answered; on a network failure the previous flag is kept.
+func checkAnonymousBuckets(ctx context.Context, c *global.S3Conn) []error {
+	buckets := c.AnonymousBuckets()
+	errs := make([]error, len(buckets))
+	var g errgroup.Group
+	g.SetLimit(anonymousProbeConcurrency)
+	for i, b := range buckets {
+		g.Go(func() error {
+			_, errs[i] = c.Client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(b.Name)})
+			return nil
+		})
+	}
+	_ = g.Wait()
+
+	for i, err := range errs {
+		if err == nil || isS3Answer(err) {
+			c.SetAnonymousAccessible(i, err == nil)
+		}
+	}
+	return errs
+}
+
+// probeAnonymous checks every entered bucket (checkAnonymousBuckets). One accessible
 // bucket is enough to connect; each failed one is reported with S3W009. All failing is S3E044, unless the
 // failures are not S3 answers (network, timeout), which are reported as a connect error.
 func (m *submoduleCfgMng) probeAnonymous(
@@ -160,32 +201,21 @@ func (m *submoduleCfgMng) probeAnonymous(
 ) (models.Output[models.ConnectOutput], error) {
 	output := models.NewOutput[models.ConnectOutput]()
 
-	errs := make([]error, len(c.AnonymousBuckets))
-	var g errgroup.Group
-	g.SetLimit(anonymousProbeConcurrency)
-	for i, b := range c.AnonymousBuckets {
-		g.Go(func() error {
-			_, errs[i] = c.Client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(b.Name)})
-			return nil
-		})
-	}
-	_ = g.Wait()
+	buckets, errs := c.AnonymousBuckets(), checkAnonymousBuckets(ctx, c)
 
-	var apiErr smithy.APIError
 	accessible, networkErr := 0, error(nil)
 	for i, err := range errs {
-		c.AnonymousBuckets[i].Accessible = err == nil
 		switch {
 		case err == nil:
 			accessible++
-		case !errors.As(err, &apiErr):
+		case !isS3Answer(err):
 			networkErr = err
 		}
 		if err != nil {
 			output.AddMessage(
 				models.NewParamsMessage(
 					cnst.MessageTypeWarn, cnst.Bucket, S3W009, UnwrapAwsError(err),
-					map[string]any{"bucket": c.AnonymousBuckets[i].Name},
+					map[string]any{"bucket": buckets[i].Name},
 				),
 			)
 		}
@@ -306,7 +336,18 @@ func UnwrapAwsError(err error) string {
 // newHTTPClient returns an HTTP client with a dedicated transport tuned for many parallel
 // transfers: large idle pool, 64 KiB buffers, no HTTP/2 (S3-compatible servers often lack it).
 // The transport is returned too so the caller can close its idle connections.
-func newHTTPClient() (*http.Client, *http.Transport) {
+// A non-empty caFile adds its certificates to the system CA pool (S3E049 if it can't be loaded). TLSClientConfig is
+// always set: minio-go's certificate STS call writes into it.
+func newHTTPClient(caFile string) (*http.Client, *http.Transport, error) {
+	tlsConfig := &tls.Config{}
+	if caFile != "" {
+		pool, err := loadCaPool(caFile)
+		if err != nil {
+			return nil, nil, err
+		}
+		tlsConfig.RootCAs = pool
+	}
+
 	dialer := &net.Dialer{
 		Timeout:   5 * time.Second,
 		KeepAlive: 30 * time.Second,
@@ -322,7 +363,8 @@ func newHTTPClient() (*http.Client, *http.Transport) {
 		ReadBufferSize:        64 * 1024,
 		ForceAttemptHTTP2:     false,
 		ResponseHeaderTimeout: 30 * time.Second,
+		TLSClientConfig:       tlsConfig,
 	}
 
-	return &http.Client{Transport: tr}, tr
+	return &http.Client{Transport: tr}, tr, nil
 }

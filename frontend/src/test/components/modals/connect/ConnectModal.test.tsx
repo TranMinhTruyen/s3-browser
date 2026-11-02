@@ -122,6 +122,7 @@ describe('ConnectModal', () => {
           authConfig: {},
           authSecret: { sessionToken: '' },
           mfaCode: '',
+          oidcSessionId: '',
           id: '',
           version: 1,
         },

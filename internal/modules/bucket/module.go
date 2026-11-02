@@ -152,6 +152,21 @@ var (
 	// LDAP username or password is incorrect.
 	S3E038 = "S3E038"
 
+	// OIDC login was canceled or timed out.
+	S3E039 = "S3E039"
+
+	// Callback port {port} is in use, choose another port.
+	S3E040 = "S3E040"
+
+	// OIDC login failed: {detail}.
+	S3E041 = "S3E041"
+
+	// Certificate or key file {path} not found, please choose it again.
+	S3E042 = "S3E042"
+
+	// Certificate or key is invalid or does not match.
+	S3E043 = "S3E043"
+
 	// None of the entered buckets can be accessed anonymously.
 	S3E044 = "S3E044"
 
@@ -159,8 +174,17 @@ var (
 	S3E045 = "S3E045"
 
 	// {secret} is required to renew the credentials of profile {name} (it is not saved).
-	// Param secret is a stable key: mfaCode, secretKey or ldapPassword.
+	// Param secret is a stable key: mfaCode, secretKey, ldapPassword, oidcSession or keyPassword.
 	S3E046 = "S3E046"
+
+	// OIDC sign-in session was not found or has expired, sign in again.
+	S3E047 = "S3E047"
+
+	// The private key {path} is password protected, enter its password.
+	S3E048 = "S3E048"
+
+	// CA certificate file {path} not found or has no valid certificate.
+	S3E049 = "S3E049"
 
 	// ---- Warning ----
 
@@ -210,6 +234,8 @@ type Module struct {
 	submoduleAwsProfilesMng     *submoduleAwsProfilesMng
 	submoduleDownloaderMng      *submoduleDownloaderMng
 	submoduleUploaderMng        *submoduleUploaderMng
+	submoduleOidcMng            *submoduleOidcMng
+	submoduleAuthFilesMng       *submoduleAuthFilesMng
 }
 
 // NewModule creates the bucket module and its submodules.
@@ -220,7 +246,8 @@ func NewModule(
 	db *sql.DB,
 	profileModule *profile.Module,
 ) *Module {
-	submoduleCfgMng := newSubmoduleCfgMng(logger)
+	submoduleOidcMng := newSubmoduleOidcMng(app, logger)
+	submoduleCfgMng := newSubmoduleCfgMng(logger, submoduleOidcMng)
 	submoduleDownloadHistoryMng := newSubmoduleDownloadHistoryMng(app, logger, db)
 	submoduleConnMng := newSubmoduleConnMng(app, logger, global, profileModule, submoduleCfgMng)
 	submoduleBucketMng := newSubmoduleBucketMng(app, logger, global)
@@ -229,6 +256,7 @@ func NewModule(
 	submoduleAwsProfilesMng := newSubmoduleAwsProfilesMng(logger)
 	submoduleDownloaderMng := newSubmoduleDownloaderMng(app, logger, global, submoduleDownloadHistoryMng)
 	submoduleUploaderMng := newSubmoduleUploaderMng(app, logger, global)
+	submoduleAuthFilesMng := newSubmoduleAuthFilesMng(app, logger)
 
 	return &Module{
 		logger:  logger.With("modules", "bucket"),
@@ -244,6 +272,8 @@ func NewModule(
 		submoduleAwsProfilesMng:     submoduleAwsProfilesMng,
 		submoduleDownloaderMng:      submoduleDownloaderMng,
 		submoduleUploaderMng:        submoduleUploaderMng,
+		submoduleOidcMng:            submoduleOidcMng,
+		submoduleAuthFilesMng:       submoduleAuthFilesMng,
 	}
 }
 
@@ -293,6 +323,21 @@ func (m *Module) ReauthConnection(
 	return m.submoduleConnMng.reauthAction(ctx, connectionId, input)
 }
 
+// LoginMinioOidc signs the user in with the OpenID Connect settings in cfg: it opens the system browser, waits for
+// the redirect on 127.0.0.1:cfg.CallbackPort (48765 when 0) and returns the id of a session that holds the tokens in
+// memory. Pass that id as OidcSessionId to Connect, TestConnection or ReauthConnection. A session lasts until the
+// id_token expires or 10 minutes, and is dropped when a connect used it. Fails with S3E039 (timeout), S3E040
+// (port in use) or S3E041; canceling ctx aborts the sign-in without a message.
+func (m *Module) LoginMinioOidc(ctx context.Context, cfg models.AuthConfig) models.Output[models.OidcLoginOutput] {
+	return m.submoduleOidcMng.login(ctx, cfg)
+}
+
+// ChooseAuthFile opens the native dialog to choose a certificate (kind "cert"), private key ("key") or CA
+// certificate ("ca") file and returns its path. The body is empty if the user cancels.
+func (m *Module) ChooseAuthFile(kind string) models.Output[string] {
+	return m.submoduleAuthFilesMng.chooseAuthFile(kind)
+}
+
 // ListAwsProfiles returns the profiles of the AWS CLI config and credentials files (empty paths mean the standard
 // files). It only parses the files, so it never runs a credential_process. Missing files give an empty list;
 // an unreadable file gives S3E045.
@@ -311,6 +356,7 @@ func (m *Module) Disconnect(connectionId string) models.Output[bool] {
 // closes their idle HTTP connections. Intended to be called on application
 // shutdown to release network resources.
 func (m *Module) DisconnectAll() {
+	m.submoduleOidcMng.clear()
 	for _, conn := range m.global.RemoveAllConn() {
 		conn.Close()
 	}

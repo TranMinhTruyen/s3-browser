@@ -87,6 +87,12 @@ Skill nằm trong `.claude/skills/<name>/SKILL.md` (bị chặn ghi, chỉ ngư�
 - Logger: `slog`, `logger.With("component"|"submodules", name)`, attribute dạng key-value.
 - Concurrency dùng `errgroup` với `SetLimit`. Secret mã hoá qua `utils.KeyManager`.
 
+### Xác thực và kết nối
+
+- Phiên đăng nhập OIDC chỉ nằm trong RAM ở backend; frontend chỉ giữ `sessionId`, không bao giờ lưu token.
+- URL lấy từ IdP (issuer, endpoint discovery) phải qua `utils.IsSecureUrl`: chỉ `https`, hoặc `http` với host loopback.
+- `newHTTPClient` luôn đặt `TLSClientConfig` (ít nhất `&tls.Config{}`), vì minio-go ghi thẳng vào đó khi dùng mTLS.
+
 ### Database
 
 - SQLite (modernc) + goose migration trong `internal/pkg/db/schemas/NNNNNN_name.sql`.
@@ -128,7 +134,7 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 - **Mọi hàm** khai báo trong component phải bọc `useCallback`.
 - Danh sách lớn phải virtualize.
 - Component Mantine được bọc lại trong `components/buttons|inputs|modals`.
-- Màu: dùng biến theme `var(--mantine-color-*)` và `light-dark(<light>, <dark>)` để hỗ trợ cả light/dark theme; không hard-code hex/rgb/tên màu (ngoại lệ: màu lưu như dữ liệu, ví dụ màu profile do user chọn).
+- Màu: dùng biến theme `var(--mantine-color-*)` và `light-dark(<light>, <dark>)` để hỗ trợ cả light/dark theme; không hard-code hex/rgb/tên màu (ngoại lệ: màu lưu như dữ liệu, ví dụ màu profile do user chọn; prop `color="red"` của nút Huỷ trong footer modal). Component variant `light` (Badge, Button...) truyền màu gốc `var(--mantine-color-<c>-6)`; biến `-light-color` chỉ dùng cho chữ/viền.
 - **Console sạch**: code không được sinh warning hay error trong console của React (thiếu `key`, setState sau unmount, controlled/uncontrolled, DOM lồng sai, prop không hợp lệ truyền xuống DOM, i18next thiếu key, cảnh báo của Mantine...). Không để `console.log`/`console.warn`/`console.error` trong code production; lỗi cần báo cho người dùng thì đi qua `callIPC`/toast, cần ghi log thì đi qua backend.
 - Modal: footer đặt nút Huỷ (`color="red"`) bên **trái**, các nút hành động (Reset, Apply, Save, OK, Upload, ...) bên **phải**, dùng `<Group p="8px" justify="space-between" wrap="nowrap">` để không nhảy layout khi đổi ngôn ngữ/font. Phần thân modal có form/nội dung chính thì bọc trong `<Paper withBorder>` giống `UploadPickerModal`.
 
@@ -156,7 +162,7 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 
 ### Frontend
 
-- vitest + Testing Library (agent kiểm tra nếu thiếu có thể hỏi người dùng để cài đặt các lib cần thiết không được phép tự ý cài đặt lib). File `Xxx.test.tsx` / `xxx.test.ts` đặt trong `frontend/src/test/` theo đúng cây thư mục của `frontend/src` (ví dụ `src/pages/bucket/BucketPage.tsx` → `src/test/pages/bucket/BucketPage.test.tsx`), import code qua alias `@/...`. Helper dùng chung (`renderWithProviders`, mock binding) trong `frontend/src/test/_helpers/`.
+- vitest + Testing Library (agent kiểm tra nếu thiếu có thể hỏi người dùng để cài đặt các lib cần thiết không được phép tự ý cài đặt lib). File `Xxx.test.tsx` / `xxx.test.ts` đặt trong `frontend/src/test/` theo đúng cây thư mục của `frontend/src` (ví dụ `src/pages/bucket/BucketPage.tsx` → `src/test/pages/bucket/BucketPage.test.tsx`), import code qua alias `@/...`. Helper dùng chung (`renderWithProviders`, mock binding) trong `frontend/src/test/_helpers/`. `@wailsio/runtime` đã được mock toàn cục trong `frontend/src/test/setup.ts`, test chỉ override khi cần.
 - Import `describe/it/expect/vi` từ `'vitest'`. Mock `@wails/...`, `callIPC` và `@wailsio/runtime` bằng `vi.mock`. Truy vấn DOM theo role/label/text. Không snapshot thay cho assert, không timer thật.
 - Đo coverage (chạy trong `frontend/`; Windows dùng `node_modules/.bin/vitest.exe`, không dùng `npx vitest`):
   `node_modules/.bin/vitest run --coverage.enabled --coverage.provider=v8 --coverage.reporter=text --coverage.include=<file> --coverage.thresholds.branches=95 --coverage.thresholds.lines=95 --coverage.thresholds.perFile`

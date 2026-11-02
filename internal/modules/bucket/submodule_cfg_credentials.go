@@ -47,8 +47,6 @@ const (
 type credSet struct {
 	// AWS signs the S3 requests.
 	AWS aws.CredentialsProvider
-	// Minio signs the madmin requests; nil when the method has no MinIO equivalent.
-	Minio *miniocredentials.Credentials
 	// Region comes from the CLI profile when the profile has none.
 	Region string
 	// Refreshable is false when the credentials can't be renewed without the user (see global.CredInfo).
@@ -78,11 +76,12 @@ var errMFACodeRequired = errors.New("MFA code is required")
 
 // buildCredentials resolves the credentials of input.AuthType and retrieves them once, so a wrong profile,
 // an expired SSO session or a rejected role fails here with a specific message instead of at the first request.
-// httpClient is the one of the connection, used for the MinIO STS calls.
+// httpClient is the one of the connection, used for the MinIO STS calls; oidc holds the sign-in sessions.
 func buildCredentials(
 	ctx context.Context,
 	input models.ConnectionProfileInput,
 	httpClient *http.Client,
+	oidc *submoduleOidcMng,
 ) (credSet, error) {
 	switch input.AuthType {
 	case "", cnst.AuthStatic:
@@ -97,6 +96,10 @@ func buildCredentials(
 		return anonymousCredentials(input)
 	case cnst.AuthMinioAssumeRole, cnst.AuthMinioLdap:
 		return minioSTSCredentials(ctx, input, httpClient)
+	case cnst.AuthMinioOidc:
+		return minioOidcCredentials(ctx, input, httpClient, oidc)
+	case cnst.AuthMinioCert:
+		return minioCertCredentials(ctx, input, httpClient)
 	default:
 		return credSet{}, fmt.Errorf("authentication method %q is not supported yet", input.AuthType)
 	}
@@ -106,8 +109,7 @@ func buildCredentials(
 func staticCredentials(input models.ConnectionProfileInput) credSet {
 	token := input.AuthSecret.SessionToken
 	return credSet{
-		AWS:   credentials.NewStaticCredentialsProvider(input.AccessKey, input.SecretKey, token),
-		Minio: miniocredentials.NewStaticV4(input.AccessKey, input.SecretKey, token),
+		AWS: credentials.NewStaticCredentialsProvider(input.AccessKey, input.SecretKey, token),
 		// A session token may expire, but not at a time we know, so there is nothing to warn about.
 		Refreshable: true,
 	}
@@ -306,13 +308,87 @@ func minioSTSCredentials(
 		return credSet{}, err
 	}
 
+	return minioCredSet(ctx, input, minio, httpClient, endpoint, credExpiryWindow, true)
+}
+
+// minioCredSet wraps the MinIO credentials for the AWS SDK and fetches them once to surface STS errors.
+// expiryWindow is how long before expiry they are renewed; refreshable tells whether the renewal needs no user.
+// minio keeps the secrets it was built with (password, key) so it can renew the credentials by itself. It is only
+// referenced by the returned provider, which SwapCreds drops on Reauth, and never logged.
+func minioCredSet(
+	ctx context.Context,
+	input models.ConnectionProfileInput,
+	minio *miniocredentials.Credentials,
+	httpClient *http.Client,
+	endpoint string,
+	expiryWindow time.Duration,
+	refreshable bool,
+) (credSet, error) {
 	provider := aws.NewCredentialsCache(
 		&minioProvider{creds: minio, client: httpClient, endpoint: endpoint},
-		func(o *aws.CredentialsCacheOptions) { o.ExpiryWindow = credExpiryWindow },
+		func(o *aws.CredentialsCacheOptions) { o.ExpiryWindow = expiryWindow },
 	)
-	set, err := retrieveCredSet(ctx, input, provider, "", true)
-	set.Minio = minio
-	return set, err
+	return retrieveCredSet(ctx, input, provider, "", refreshable)
+}
+
+// minioOidcCredentials exchanges the tokens of a OIDC sign-in for MinIO credentials (AssumeRoleWithWebIdentity).
+// The tokens are handed out once: they are single use and may be stale at the next renewal, which then needs a new
+// sign-in (S3E030) instead of MinIO renewing it by itself.
+func minioOidcCredentials(
+	ctx context.Context,
+	input models.ConnectionProfileInput,
+	httpClient *http.Client,
+	oidc *submoduleOidcMng,
+) (credSet, error) {
+	session, ok := oidc.session(input.OidcSessionId)
+	if !ok {
+		return credSet{}, &credError{code: S3E047, err: errors.New("OIDC session not found or expired")}
+	}
+
+	var used atomic.Bool
+	idToken, accessToken := session.idToken, session.accessToken
+	tokens := func() (*miniocredentials.WebIdentityToken, error) {
+		if used.Swap(true) {
+			return nil, errOidcLoginRequired
+		}
+		token := &miniocredentials.WebIdentityToken{Token: idToken, AccessToken: accessToken}
+		idToken, accessToken = "", "" // not kept after the single use
+		return token, nil
+	}
+	endpoint := normalizeEndpoint(input.Endpoint)
+	minio, err := miniocredentials.NewSTSWebIdentity(endpoint, tokens, func(i *miniocredentials.STSWebIdentity) {
+		i.RoleARN = input.AuthConfig.RoleArn
+	})
+	if err != nil {
+		return credSet{}, err
+	}
+	// No early renewal: it would need a new sign-in, so the credentials are used until they expire.
+	return minioCredSet(ctx, input, minio, httpClient, endpoint, 0, false)
+}
+
+// minioCertCredentials asks MinIO STS for credentials with a TLS client certificate (AssumeRoleWithCertificate).
+// MinIO needs https for it; the certificate is presented through the transport of httpClient.
+func minioCertCredentials(
+	ctx context.Context,
+	input models.ConnectionProfileInput,
+	httpClient *http.Client,
+) (credSet, error) {
+	endpoint := normalizeEndpoint(input.Endpoint)
+	if !strings.HasPrefix(strings.ToLower(endpoint), "https://") {
+		err := errors.New("certificate authentication needs an https endpoint")
+		return credSet{}, &credError{module: cnst.Profile, code: profile.PFE009, err: err}
+	}
+
+	cfg := input.AuthConfig
+	cert, err := loadClientCertificate(cfg.CertFile, cfg.KeyFile, input.AuthSecret.KeyPassword)
+	if err != nil {
+		return credSet{}, err
+	}
+	minio, err := miniocredentials.NewSTSCertificateIdentity(endpoint, cert)
+	if err != nil {
+		return credSet{}, err
+	}
+	return minioCredSet(ctx, input, minio, httpClient, endpoint, credExpiryWindow, true)
 }
 
 // minioProvider adapts MinIO credentials to the AWS SDK, so the S3 client and madmin share one STS session.

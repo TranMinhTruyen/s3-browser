@@ -2,6 +2,15 @@
   "common": {
     "CME001": "Error while call IPC"
   },
+  "params": {
+    "secret": {
+      "mfaCode": "MFA code",
+      "secretKey": "Secret key",
+      "ldapPassword": "LDAP password",
+      "keyPassword": "Private key password",
+      "oidcSession": "Sign-in"
+    }
+  },
   "bucket": {
     "S3S001": "Test connection profile {name} to S3 success.",
     "S3S002": "Profile: {name} is connected.",
@@ -54,8 +63,16 @@
     "S3W007": "The drop holds more than {max} files, the files after the first {max} are ignored.",
     "S3E037": "MinIO STS request failed.",
     "S3E038": "LDAP username or password is incorrect.",
+    "S3E039": "OIDC login was canceled or timed out.",
+    "S3E040": "Callback port {port} is in use, choose another port.",
+    "S3E041": "OIDC login failed: {detail}.",
+    "S3E042": "Certificate or key file {path} not found, please choose it again.",
+    "S3E043": "Certificate or key is invalid or does not match. A password protected key must be PKCS#8 (convert it with: openssl pkcs8 -topk8).",
     "S3E044": "None of the entered buckets can be accessed anonymously.",
     "S3E046": "{secret} is required to renew the credentials of profile {name} (it is not saved).",
+    "S3E047": "OIDC sign-in session was not found or has expired, sign in again.",
+    "S3E048": "The private key {path} is password protected, enter its password.",
+    "S3E049": "CA certificate file {path} not found or has no valid certificate.",
     "S3W008": "Credentials of profile {name} expire in {minutes} minute(s) and cannot be renewed automatically.",
     "S3W009": "Bucket {bucket} cannot be accessed anonymously.",
     "S3W010": "Credentials of profile {name} expire soon, enter a new MFA code to keep the connection."

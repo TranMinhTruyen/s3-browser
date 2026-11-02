@@ -8,3 +8,16 @@
 .card:hover {
   border-color: light-dark(var(--mantine-color-black), var(--mantine-color-dark-2));
 }
+
+/* Secondary line follows the card's contrast color (set on Card via `c`), slightly muted */
+.provider {
+  opacity: 0.8;
+}
+
+/* Outline badge: Mantine sets --badge-* inline, so set the properties directly (higher specificity) */
+.card .badge {
+  color: inherit;
+  background: transparent;
+  border: 1px solid currentColor;
+  opacity: 0.8;
+}

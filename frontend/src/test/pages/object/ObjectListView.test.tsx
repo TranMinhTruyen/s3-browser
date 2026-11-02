@@ -50,10 +50,6 @@ vi.mock('@tanstack/react-virtual', () => ({
     range: count === 0 ? null : { startIndex: 0, endIndex: virtual.endIndex ?? count - 1 },
   }),
 }));
-vi.mock('@wailsio/runtime', async importOriginal => {
-  const actual = await importOriginal<typeof import('@wailsio/runtime')>();
-  return { ...actual, Events: { ...actual.Events, On: vi.fn(() => vi.fn()) } };
-});
 vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
   GetListObject: vi.fn(),
   SearchObject: vi.fn(),

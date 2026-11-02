@@ -50,6 +50,11 @@ func (m *submoduleBucketMng) listBucket(
 	}
 
 	if s3Conn.AuthType == cnst.AuthAnonymous {
+		// Check again so a bucket whose policy changed since connecting gets the right flag.
+		checkAnonymousBuckets(ctx, s3Conn)
+		if isCallCanceled(ctx) {
+			return output.ThrowError()
+		}
 		output.Body.BucketList = anonymousBuckets(s3Conn, "")
 		return output
 	}
@@ -98,10 +103,11 @@ func (m *submoduleBucketMng) listBucket(
 
 // anonymousBuckets returns the buckets the user entered for an anonymous connection (the API can't list them),
 // keeping those whose name contains lowerKeyword (already lower-cased; empty keeps all). Buckets that failed
-// the check at connect time are flagged Inaccessible.
+// the latest check are flagged Inaccessible.
 func anonymousBuckets(c *global.S3Conn, lowerKeyword string) []models.Bucket {
-	buckets := make([]models.Bucket, 0, len(c.AnonymousBuckets))
-	for _, b := range c.AnonymousBuckets {
+	all := c.AnonymousBuckets()
+	buckets := make([]models.Bucket, 0, len(all))
+	for _, b := range all {
 		if containsFold(b.Name, lowerKeyword) {
 			buckets = append(buckets, models.Bucket{Name: b.Name, Inaccessible: !b.Accessible})
 		}

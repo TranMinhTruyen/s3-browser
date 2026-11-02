@@ -121,9 +121,10 @@ func backupBeforeMigrate(ctx context.Context, sqlDB *sql.DB, version int64) (str
 	return backupPath, nil
 }
 
-// pruneBackups deletes the oldest <dbPath>.bak-<timestamp> files, keeping the newest keep. Only names this
-// app writes are matched, so other files (e.g. an old <dbPath>.bak) are never touched. A failure is only logged:
-// leftover backups are harmless.
+// pruneBackups deletes the oldest <dbPath>.bak-<timestamp> files, keeping the newest keep. "Oldest" is by file
+// modification time, not by name, because older versions named backups in local time and newer ones in UTC. Only
+// names this app writes are matched, so other files (e.g. an old <dbPath>.bak) are never touched. A failure is only
+// logged: leftover backups are harmless.
 func pruneBackups(dbPath string, keep int) {
 	dir, prefix := filepath.Dir(dbPath), filepath.Base(dbPath)+".bak-"
 	entries, err := os.ReadDir(dir)
@@ -132,21 +133,36 @@ func pruneBackups(dbPath string, keep int) {
 		return
 	}
 
-	var names []string
-	for _, e := range entries {
-		if suffix, ok := strings.CutPrefix(e.Name(), prefix); ok && backupSuffixPattern.MatchString(suffix) {
-			names = append(names, e.Name())
-		}
+	type backup struct {
+		name    string
+		modTime time.Time
 	}
-	if len(names) <= keep {
+	var backups []backup
+	for _, e := range entries {
+		suffix, ok := strings.CutPrefix(e.Name(), prefix)
+		if !ok || !backupSuffixPattern.MatchString(suffix) {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			slog.Warn("stat old backup failed", "backup", e.Name(), "error", err)
+			continue
+		}
+		backups = append(backups, backup{e.Name(), info.ModTime()})
+	}
+	if len(backups) <= keep {
 		return
 	}
 
-	// The timestamp has a fixed width, so the name order is the time order.
-	sort.Strings(names)
-	for _, name := range names[:len(names)-keep] {
-		if err := os.Remove(filepath.Join(dir, name)); err != nil {
-			slog.Warn("remove old backup failed", "backup", name, "error", err)
+	sort.Slice(backups, func(i, j int) bool {
+		if !backups[i].modTime.Equal(backups[j].modTime) {
+			return backups[i].modTime.Before(backups[j].modTime)
+		}
+		return backups[i].name < backups[j].name
+	})
+	for _, b := range backups[:len(backups)-keep] {
+		if err := os.Remove(filepath.Join(dir, b.name)); err != nil {
+			slog.Warn("remove old backup failed", "backup", b.name, "error", err)
 		}
 	}
 }

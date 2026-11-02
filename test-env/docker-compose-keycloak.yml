@@ -1,0 +1,30 @@
+# Keycloak for testing the OIDC auth method of S3Browser (MinIO).
+# Run in this folder:   docker compose -f docker-compose-keycloak.yml -p s3b-keycloak-test up -d
+# Remove everything:    docker compose -f docker-compose-keycloak.yml -p s3b-keycloak-test down -v
+# Start this stack BEFORE docker-compose-minio-tls.yml: that one joins the network created here.
+# Realm, client and user: keycloak/s3browser-realm.json. Accounts: README.txt.
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: s3b-test-keycloak
+    command: start-dev --import-realm
+    ports:
+      - "${KEYCLOAK_PORT:-8180}:8080"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: "KeycloakAdmin#2026"
+      # http on localhost only. The issuer in the tokens is always this URL (the one typed in S3Browser),
+      # while MinIO reaches Keycloak inside the Docker network by its container name.
+      KC_HOSTNAME: "http://localhost:${KEYCLOAK_PORT:-8180}"
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+    volumes:
+      - ./keycloak/s3browser-realm.json:/opt/keycloak/data/import/s3browser-realm.json:ro
+    networks:
+      - s3b-oidc-net
+    restart: unless-stopped
+
+networks:
+  s3b-oidc-net:
+    name: s3b-oidc-net

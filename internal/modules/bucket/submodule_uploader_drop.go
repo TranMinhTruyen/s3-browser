@@ -2,6 +2,7 @@ package bucket
 
 import (
 	"S3Browser/internal/pkg/cnst"
+	"S3Browser/internal/pkg/utils"
 	"S3Browser/models"
 	"context"
 	"log/slog"
@@ -81,6 +82,10 @@ func (m *submoduleUploaderMng) pickFiles(ctx context.Context) models.Output[mode
 		return output
 	}
 	paths, err := m.pickPaths()
+	if utils.IsDialogCancelled(err) {
+		m.logger.Debug("pick files cancelled")
+		return output
+	}
 	if err != nil {
 		m.logger.Error("pick files error", slog.Any("detail", err.Error()))
 		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E029, err.Error()))

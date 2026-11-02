@@ -46,9 +46,9 @@ func notConnectedMessage(profileName string) models.Message {
 }
 
 // isCredentialsExpired reports whether err means the credentials ran out: the server rejected an expired token, or
-// an MFA session had to be renewed with a code the app no longer has.
+// an MFA or OIDC session had to be renewed with a code or sign-in the app no longer has.
 func isCredentialsExpired(err error) bool {
-	if errors.Is(err, errMFACodeRequired) {
+	if errors.Is(err, errMFACodeRequired) || errors.Is(err, errOidcLoginRequired) {
 		return true
 	}
 	switch UnwrapAwsError(err) {

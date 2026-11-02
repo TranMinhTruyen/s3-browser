@@ -38,13 +38,6 @@ vi.mock('@tanstack/react-virtual', () => ({
     };
   },
 }));
-vi.mock('@wailsio/runtime', async importOriginal => {
-  // The real runtime prints a "Browser Environment Detected" warning when it is loaded outside the desktop app.
-  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-  const actual = await importOriginal<typeof import('@wailsio/runtime')>();
-  warn.mockRestore();
-  return { ...actual, Events: { ...actual.Events, On: vi.fn() } };
-});
 vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
   ConnectS3ByProfile: vi.fn(),
   Disconnect: vi.fn(),

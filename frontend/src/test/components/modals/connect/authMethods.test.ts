@@ -16,7 +16,7 @@ describe('authMethods', () => {
 
   it.each([
     ['aws', ['static', 'sharedProfile', 'assumeRole', 'sso', 'defaultChain', 'anonymous']],
-    ['minio', ['static', 'anonymous', 'minioAssumeRole', 'minioLdap']],
+    ['minio', ['static', 'anonymous', 'minioAssumeRole', 'minioLdap', 'minioOidc', 'minioCert']],
     ['other', []],
   ])('offers the enabled methods of %s', (provider, expected) => {
     expect(getAuthMethods(provider)).toEqual(expected);
@@ -31,11 +31,22 @@ describe('authMethods', () => {
     ['aws', 'minioLdap', false],
     ['minio', 'anonymous', true],
     ['minio', 'minioLdap', true],
-    ['minio', 'minioOidc', false],
-    ['minio', 'minioCert', false],
+    ['minio', 'minioOidc', true],
+    ['minio', 'minioCert', true],
+    ['aws', 'minioOidc', false],
+    ['aws', 'minioCert', false],
     ['aws', 'unknown', false],
   ])('isAuthTypeValid(%s, %s) is %s', (provider, authType, expected) => {
     expect(isAuthTypeValid(provider, authType)).toBe(expected);
+  });
+
+  it.each([
+    ['static', true],
+    ['minioLdap', true],
+    ['minioOidc', false],
+    ['minioCert', true],
+  ])('autoConnect of %s is %s', (authType, expected) => {
+    expect(AUTH_METHODS[authType as AuthType].autoConnect).toBe(expected);
   });
 
   it.each([

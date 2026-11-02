@@ -96,6 +96,14 @@ describe('FileRow', () => {
     expect(screen.getByText('Large')).toBeInTheDocument();
   });
 
+  it('draws the large badge light in the theme orange', () => {
+    renderRow({ file: file({ isLarge: true }) });
+
+    const badge = screen.getByText('Large').closest('[data-variant]') as HTMLElement;
+    expect(badge).toHaveAttribute('data-variant', 'light');
+    expect(badge.style.getPropertyValue('--badge-color')).toBe('var(--mantine-color-orange-6)');
+  });
+
   it('reports the checkbox change with the file path', () => {
     renderRow({ checked: false });
 
