@@ -28,6 +28,8 @@ type (
 	DroppedFile = bucket.DroppedFile
 	// DroppedGroup re-exports bucket.DroppedGroup.
 	DroppedGroup = bucket.DroppedGroup
+	// CredentialExpiringOutput re-exports bucket.CredentialExpiringOutput.
+	CredentialExpiringOutput = bucket.CredentialExpiringOutput
 	// ConnectOutput re-exports bucket.ConnectOutput.
 	ConnectOutput = bucket.ConnectOutput
 	// ListBucketInput re-exports bucket.ListBucketInput.

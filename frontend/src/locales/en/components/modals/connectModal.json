@@ -20,7 +20,12 @@
       "mfaCode": "MFA code",
       "pathStyle": "Path style",
       "savePassword": "Save secrets",
-      "autoConnect": "Auto connect"
+      "autoConnect": "Auto connect",
+      "ldapUsername": "LDAP username",
+      "ldapPassword": "LDAP password",
+      "policy": "Inline policy (JSON, optional)",
+      "buckets": "Buckets",
+      "durationOptional": "Duration (seconds, optional)"
     },
     "placeholder": {
       "saved": "Saved, leave empty to keep",
@@ -28,7 +33,10 @@
       "credentialsFile": "Default: ~/.aws/credentials",
       "roleArn": "arn:aws:iam::123456789012:role/RoleName",
       "sessionName": "Default: s3browser-<user>",
-      "mfaSerial": "arn:aws:iam::123456789012:mfa/user"
+      "mfaSerial": "arn:aws:iam::123456789012:mfa/user",
+      "durationDefault": "Default: set by the server",
+      "policy": "{\"Version\": \"2012-10-17\", \"Statement\": []}",
+      "buckets": "Type a bucket name and press Enter"
     },
     "sourceType": {
       "static": "Access key",
@@ -38,7 +46,8 @@
       "testNeedsSecrets": "Saving does not need secrets, but Test connection does: saved secrets are never returned, so enter them again.",
       "mfaCode": "Used once, never saved",
       "profilePlaceholder": "<profile>",
-      "ssoLogin": "Sign in first with: aws sso login --profile {{profile}}"
+      "ssoLogin": "Sign in first with: aws sso login --profile {{profile}}",
+      "anonymousBuckets": "Anonymous access cannot list buckets: enter the names of the public buckets to open."
     },
     "tooltip": {
       "autoConnectLocked": "This authentication method needs input on every connect, so it cannot auto connect."

@@ -27,19 +27,32 @@ func NewBucketHandler(app *application.App, logger *slog.Logger, bucket *bucket.
 
 // ConnectS3 tests the connection when isTestConn is set, otherwise connects and keeps it open.
 func (h *BucketHandler) ConnectS3(
+	ctx context.Context,
 	input models.ConnectionProfileInput,
 	isTestConn bool,
 	isExistingProfile bool,
 ) models.Output[models.ConnectOutput] {
 	if isTestConn {
-		return h.bucket.TestConnection(input)
+		return h.bucket.TestConnection(ctx, input)
 	}
-	return h.bucket.Connect(input, isExistingProfile)
+	return h.bucket.Connect(ctx, input, isExistingProfile)
 }
 
 // ConnectS3ByProfile connects using a saved profile.
-func (h *BucketHandler) ConnectS3ByProfile(connectionId string) models.Output[models.ConnectOutput] {
-	return h.bucket.ConnectByProfile(connectionId)
+func (h *BucketHandler) ConnectS3ByProfile(
+	ctx context.Context,
+	connectionId string,
+) models.Output[models.ConnectOutput] {
+	return h.bucket.ConnectByProfile(ctx, connectionId)
+}
+
+// ReauthConnection renews the credentials of a live connection (new MFA code) without dropping it.
+func (h *BucketHandler) ReauthConnection(
+	ctx context.Context,
+	connectionId string,
+	input models.ConnectionProfileInput,
+) models.Output[models.ConnectOutput] {
+	return h.bucket.ReauthConnection(ctx, connectionId, input)
 }
 
 // ListAwsProfiles lists the profiles of the AWS CLI config files; empty paths mean the standard files.

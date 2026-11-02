@@ -1,7 +1,11 @@
 import { useForm } from '@mantine/form';
 import { screen } from '@testing-library/react';
 import { type ReactNode, useEffect } from 'react';
-import { type ConnectionInfo, getDefaultConnectionInfo } from '@/components/modals/connect/connectSchema';
+import {
+  type ConnectionInfo,
+  getDefaultAuthConfig,
+  getDefaultConnectionInfo,
+} from '@/components/modals/connect/connectSchema';
 
 export type Patch = Partial<Omit<ConnectionInfo, 'authConfig'>> & {
   authConfig?: Partial<ConnectionInfo['authConfig']>;
@@ -9,7 +13,8 @@ export type Patch = Partial<Omit<ConnectionInfo, 'authConfig'>> & {
 
 export const values = (patch: Patch = {}): ConnectionInfo => {
   const base = getDefaultConnectionInfo('p');
-  return { ...base, ...patch, authConfig: { ...base.authConfig, ...patch.authConfig } } as ConnectionInfo;
+  const authConfig = patch.authType ? getDefaultAuthConfig(patch.authType) : base.authConfig;
+  return { ...base, ...patch, authConfig: { ...authConfig, ...patch.authConfig } } as ConnectionInfo;
 };
 
 export const input = (name: RegExp | string) => screen.getByLabelText(name, { selector: 'input:not([type=radio])' });

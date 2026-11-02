@@ -51,7 +51,14 @@
     "S3W004": "Upload file {name} is canceled.",
     "S3W005": "Another upload is running, please wait until it finishes.",
     "S3W006": "Skipped {count} item(s) that cannot be uploaded (unreadable, symbolic link or not a regular file).",
-    "S3W007": "The drop holds more than {max} files, the files after the first {max} are ignored."
+    "S3W007": "The drop holds more than {max} files, the files after the first {max} are ignored.",
+    "S3E037": "MinIO STS request failed.",
+    "S3E038": "LDAP username or password is incorrect.",
+    "S3E044": "None of the entered buckets can be accessed anonymously.",
+    "S3E046": "{secret} is required to renew the credentials of profile {name} (it is not saved).",
+    "S3W008": "Credentials of profile {name} expire in {minutes} minute(s) and cannot be renewed automatically.",
+    "S3W009": "Bucket {bucket} cannot be accessed anonymously.",
+    "S3W010": "Credentials of profile {name} expire soon, enter a new MFA code to keep the connection."
   },
   "master": {
     "MTE001": "Error while loading master data."

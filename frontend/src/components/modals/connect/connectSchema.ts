@@ -11,6 +11,9 @@ const MAX_DURATION_SECONDS = 43200;
 const DURATION_ERROR = `V000003:${MIN_DURATION_SECONDS},${MAX_DURATION_SECONDS}`;
 const ROLE_ARN_REGEX = /^arn:aws[\w-]*:iam::\d{12}:role\/\S+$/;
 
+/** Methods with a session duration: required for `assumeRole`, optional for the MinIO ones. */
+const DURATION_TYPES: AuthType[] = ['assumeRole', 'minioAssumeRole', 'minioLdap'];
+
 const text = z.string().trim();
 const required = text.nonempty('V000001');
 
@@ -25,6 +28,9 @@ const authConfigSchema = z.object({
   // A NumberInput gives '' (or a partial string) while the user is typing.
   durationSeconds: z.union([z.number(), z.string()]),
   mfaSerial: text,
+  policy: text,
+  ldapUsername: text,
+  buckets: z.array(z.string()),
 });
 
 /** Fields every method shares; a method adds its own rules on top. */
@@ -41,8 +47,18 @@ const common = z.object({
   autoConnect: z.boolean(),
   mfaCode: text,
   authConfig: authConfigSchema,
-  authSecret: z.object({ sessionToken: text }),
+  // Passwords are not trimmed: leading/trailing spaces may be part of them.
+  authSecret: z.object({ sessionToken: text, ldapPassword: z.string() }),
 });
+
+const isJson = (value: string) => {
+  try {
+    JSON.parse(value);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 const formSchema = common.extend({ authType: z.enum(AUTH_TYPES) });
 
@@ -67,26 +83,43 @@ export const buildConnectSchema = (requireSecret: boolean) => {
         roleArn: text.nonempty('V000001').regex(ROLE_ARN_REGEX, 'V000004'),
       }).extend({ authType: z.literal('assumeRole') }),
       common.extend({ authType: z.literal('defaultChain') }),
+      common.extend({ authType: z.literal('anonymous') }),
+      common.extend({ authType: z.literal('minioAssumeRole'), accessKey: required, secretKey: secret }),
+      withConfig({ ldapUsername: required }).extend({ authType: z.literal('minioLdap') }),
     ])
     .superRefine((values, ctx) => {
-      const addRequired = (path: (string | number)[]) => ctx.addIssue({ code: 'custom', message: 'V000001', path });
+      const addIssue = (message: string, path: (string | number)[]) => ctx.addIssue({ code: 'custom', message, path });
+      const addRequired = (path: (string | number)[]) => addIssue('V000001', path);
+      const { authType, authConfig } = values;
 
       if (values.provider === 'minio' && !values.endpoint) addRequired(['endpoint']);
-      if (!values.region && !isRegionOptional(values.provider, values.authType)) addRequired(['region']);
-      if (values.authType !== 'assumeRole') return;
+      if (!values.region && !isRegionOptional(values.provider, authType)) addRequired(['region']);
 
-      if (values.authConfig.sourceType === 'profile') {
-        if (!values.authConfig.profileName) addRequired(['authConfig', 'profileName']);
-      } else {
-        if (!values.accessKey) addRequired(['accessKey']);
-        if (requireSecret && !values.secretKey) addRequired(['secretKey']);
+      if (authType === 'anonymous' && authConfig.buckets.length === 0) addRequired(['authConfig', 'buckets']);
+      if (authType === 'minioLdap' && requireSecret && !values.authSecret.ldapPassword) {
+        addRequired(['authSecret', 'ldapPassword']);
       }
-      const duration = values.authConfig.durationSeconds;
-      if (duration === '') addRequired(['authConfig', 'durationSeconds']);
-      else if (typeof duration !== 'number' || duration < MIN_DURATION_SECONDS || duration > MAX_DURATION_SECONDS) {
-        ctx.addIssue({ code: 'custom', message: DURATION_ERROR, path: ['authConfig', 'durationSeconds'] });
+      if (authType === 'minioAssumeRole' && authConfig.policy && !isJson(authConfig.policy)) {
+        addIssue('V000004', ['authConfig', 'policy']);
       }
-      if (requireSecret && values.authConfig.mfaSerial && !values.mfaCode) addRequired(['mfaCode']);
+      if (authType === 'assumeRole') {
+        if (authConfig.sourceType === 'profile') {
+          if (!authConfig.profileName) addRequired(['authConfig', 'profileName']);
+        } else {
+          if (!values.accessKey) addRequired(['accessKey']);
+          if (requireSecret && !values.secretKey) addRequired(['secretKey']);
+        }
+        if (requireSecret && authConfig.mfaSerial && !values.mfaCode) addRequired(['mfaCode']);
+      }
+
+      // The AWS role session needs a duration; the MinIO methods leave it empty for the server default.
+      if (!DURATION_TYPES.includes(authType)) return;
+      const duration = authConfig.durationSeconds;
+      if (duration === '') {
+        if (authType === 'assumeRole') addRequired(['authConfig', 'durationSeconds']);
+      } else if (typeof duration !== 'number' || duration < MIN_DURATION_SECONDS || duration > MAX_DURATION_SECONDS) {
+        addIssue(DURATION_ERROR, ['authConfig', 'durationSeconds']);
+      }
     });
 };
 
@@ -111,6 +144,22 @@ export type AuthFieldsProps = {
   secretRequired: boolean;
 };
 
+/** Empty `authConfig` of a method; the MinIO methods leave the duration empty (server default). */
+export const getDefaultAuthConfig = (authType: AuthType): ConnectionInfo['authConfig'] => ({
+  profileName: '',
+  configFile: '',
+  credentialsFile: '',
+  sourceType: 'static',
+  roleArn: '',
+  externalId: '',
+  sessionName: '',
+  durationSeconds: authType === 'assumeRole' ? DEFAULT_DURATION_SECONDS : '',
+  mfaSerial: '',
+  policy: '',
+  ldapUsername: '',
+  buckets: [],
+});
+
 /** Builds the empty form values, with the given default profile name. */
 export const getDefaultConnectionInfo = (name: string): ConnectionInfo => ({
   name,
@@ -125,18 +174,8 @@ export const getDefaultConnectionInfo = (name: string): ConnectionInfo => ({
   autoConnect: false,
   mfaCode: '',
   authType: 'static',
-  authConfig: {
-    profileName: '',
-    configFile: '',
-    credentialsFile: '',
-    sourceType: 'static',
-    roleArn: '',
-    externalId: '',
-    sessionName: '',
-    durationSeconds: DEFAULT_DURATION_SECONDS,
-    mfaSerial: '',
-  },
-  authSecret: { sessionToken: '' },
+  authConfig: getDefaultAuthConfig('static'),
+  authSecret: { sessionToken: '', ldapPassword: '' },
 });
 
 /** Form values of a saved profile; secrets stay empty (the backend never returns them). */
@@ -144,6 +183,8 @@ export const toFormValues = (defaults: ConnectionInfo, profile: ConnectionProfil
   const savedConfig = Object.fromEntries(
     Object.entries(profile.authConfig ?? {}).filter(([, value]) => value !== undefined && value !== null)
   );
+
+  const authType = getAuthType(profile);
 
   return {
     ...defaults,
@@ -156,8 +197,8 @@ export const toFormValues = (defaults: ConnectionInfo, profile: ConnectionProfil
     pathStyle: profile.pathStyle,
     autoConnect: profile.autoConnect,
     savePassword: !!profile.savedSecrets?.length,
-    authType: getAuthType(profile),
-    authConfig: { ...defaults.authConfig, ...savedConfig },
+    authType,
+    authConfig: { ...getDefaultAuthConfig(authType), ...savedConfig },
   };
 };
 
@@ -166,9 +207,23 @@ const CONFIG_KEYS: Partial<Record<AuthType, (keyof ConnectionInfo['authConfig'])
   sharedProfile: ['profileName', 'configFile', 'credentialsFile'],
   sso: ['profileName', 'configFile'],
   assumeRole: ['sourceType', 'roleArn', 'externalId', 'sessionName', 'durationSeconds', 'mfaSerial'],
+  minioAssumeRole: ['durationSeconds', 'policy'],
+  minioLdap: ['ldapUsername', 'durationSeconds'],
+  anonymous: ['buckets'],
 };
 
-const cleanValue = (value: unknown) => (typeof value === 'string' ? value.trim() : value);
+/** Trims strings; a list (buckets) is trimmed and de-duplicated without empty items. */
+const cleanValue = (value: unknown) => {
+  if (Array.isArray(value)) return [...new Set(value.map(item => String(item).trim()).filter(Boolean))];
+  return typeof value === 'string' ? value.trim() : value;
+};
+
+/** Secrets of the method besides the secret key; an empty one means "keep the saved value" to the backend. */
+const toAuthSecret = ({ authType, authSecret }: ConnectionInfo): ConnectionProfileInput['authSecret'] => {
+  if (authType === 'static') return { sessionToken: authSecret.sessionToken.trim() };
+  if (authType === 'minioLdap') return { ldapPassword: authSecret.ldapPassword };
+  return {};
+};
 
 /** Converts the form values to the backend input, keeping only the fields of the selected method. */
 export const toConnectionInput = (
@@ -201,7 +256,7 @@ export const toConnectionInput = (
     autoConnect: values.autoConnect,
     authType,
     authConfig: config,
-    authSecret: authType === 'static' ? { sessionToken: values.authSecret.sessionToken.trim() } : {},
+    authSecret: toAuthSecret(values),
     mfaCode: withMfaCode && needsMfa({ authType, authConfig }) ? values.mfaCode : '',
   };
 };

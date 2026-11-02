@@ -146,8 +146,21 @@ var (
 	// credential_process of profile {profile} failed.
 	S3E036 = "S3E036"
 
+	// MinIO STS request failed.
+	S3E037 = "S3E037"
+
+	// LDAP username or password is incorrect.
+	S3E038 = "S3E038"
+
+	// None of the entered buckets can be accessed anonymously.
+	S3E044 = "S3E044"
+
 	// Read AWS config files error.
 	S3E045 = "S3E045"
+
+	// {secret} is required to renew the credentials of profile {name} (it is not saved).
+	// Param secret is a stable key: mfaCode, secretKey or ldapPassword.
+	S3E046 = "S3E046"
 
 	// ---- Warning ----
 
@@ -170,6 +183,16 @@ var (
 	// Used by the frontend only.
 	// The drop holds more than {max} files, the files after the first {max} are ignored.
 	S3W007 = "S3W007"
+
+	// Credentials of profile {name} expire in {minutes} minute(s) and cannot be renewed automatically.
+	S3W008 = "S3W008"
+
+	// Bucket {bucket} cannot be accessed anonymously.
+	S3W009 = "S3W009"
+
+	// Used by the frontend only.
+	// Credentials of profile {name} expire soon, enter a new MFA code to keep the connection.
+	S3W010 = "S3W010"
 )
 
 // Module is the public API of the bucket module.
@@ -230,22 +253,44 @@ func NewModule(
 // If false, input is a new connection: a profile is created from it, and if that fails
 // the connection is dropped.
 // On success, the connection is kept for subsequent bucket/object operations.
-func (m *Module) Connect(input models.ConnectionProfileInput, isExistingProfile bool,
+// ctx is the call context: canceling it aborts the connect without a message.
+func (m *Module) Connect(
+	ctx context.Context,
+	input models.ConnectionProfileInput,
+	isExistingProfile bool,
 ) models.Output[models.ConnectOutput] {
-	return m.submoduleConnMng.connectAction(input, isExistingProfile)
+	return m.submoduleConnMng.connectAction(ctx, input, isExistingProfile)
 }
 
 // TestConnection checks whether the given credentials and endpoint are valid
 // without keeping the connection open. Useful for validating a profile
-// before saving it.
-func (m *Module) TestConnection(input models.ConnectionProfileInput) models.Output[models.ConnectOutput] {
-	return m.submoduleConnMng.testAction(input)
+// before saving it. ctx is the call context: canceling it aborts the test without a message.
+func (m *Module) TestConnection(
+	ctx context.Context,
+	input models.ConnectionProfileInput,
+) models.Output[models.ConnectOutput] {
+	return m.submoduleConnMng.testAction(ctx, input)
 }
 
 // ConnectByProfile connects using a saved profile identified by connectionId,
-// loading its connection settings from the profile module.
-func (m *Module) ConnectByProfile(connectionId string) models.Output[models.ConnectOutput] {
-	return m.submoduleConnMng.profileConnectAction(connectionId)
+// loading its connection settings from the profile module. ctx is the call context: canceling it aborts the
+// connect without a message.
+func (m *Module) ConnectByProfile(ctx context.Context, connectionId string) models.Output[models.ConnectOutput] {
+	return m.submoduleConnMng.profileConnectAction(ctx, connectionId)
+}
+
+// ReauthConnection renews the credentials of the live connection connectionId without dropping it: running
+// transfers continue. The settings and saved secrets come from the saved profile (every connection has one), and
+// no secret is kept in memory. input must carry what the profile does not save: mfaCode (assumeRole with MFA),
+// secretKey (assumeRole with key source, minioAssumeRole) and authSecret.ldapPassword (minioLdap). A missing one
+// fails with S3E046 (params name, secret). sso needs nothing: run aws sso login first. Anonymous: nothing to renew.
+// ctx is the call context.
+func (m *Module) ReauthConnection(
+	ctx context.Context,
+	connectionId string,
+	input models.ConnectionProfileInput,
+) models.Output[models.ConnectOutput] {
+	return m.submoduleConnMng.reauthAction(ctx, connectionId, input)
 }
 
 // ListAwsProfiles returns the profiles of the AWS CLI config and credentials files (empty paths mean the standard
@@ -267,7 +312,7 @@ func (m *Module) Disconnect(connectionId string) models.Output[bool] {
 // shutdown to release network resources.
 func (m *Module) DisconnectAll() {
 	for _, conn := range m.global.RemoveAllConn() {
-		conn.Transport.CloseIdleConnections()
+		conn.Close()
 	}
 }
 

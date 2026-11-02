@@ -129,7 +129,11 @@ function ObjectItem(props: ObjectItemProps) {
         isDeleting={isDeleting}
         moreActionsLabel={t('tooltip.moreActions')}
         menuItems={
-          <Menu.Item leftSection={<Trash size="16px" />} color="red" onClick={onClickDeleteFolderButton}>
+          <Menu.Item
+            leftSection={<Trash size="16px" />}
+            color="var(--mantine-color-red-6)"
+            onClick={onClickDeleteFolderButton}
+          >
             {t('action.delete')}
           </Menu.Item>
         }
@@ -152,7 +156,11 @@ function ObjectItem(props: ObjectItemProps) {
           <Menu.Item leftSection={<Download size="16px" />} onClick={onClickDownloadButton}>
             {t('action.download')}
           </Menu.Item>
-          <Menu.Item leftSection={<Trash size="16px" />} color="red" onClick={onClickDeleteButton}>
+          <Menu.Item
+            leftSection={<Trash size="16px" />}
+            color="var(--mantine-color-red-6)"
+            onClick={onClickDeleteButton}
+          >
             {t('action.delete')}
           </Menu.Item>
         </>

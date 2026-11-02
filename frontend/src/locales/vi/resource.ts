@@ -9,6 +9,7 @@ import downloaderWindow from '@/locales/vi/components/layouts/transfer/downloade
 import uploaderWindow from '@/locales/vi/components/layouts/transfer/uploaderWindow.json';
 import confirmModal from '@/locales/vi/components/modals/confirmModal.json';
 import connectModal from '@/locales/vi/components/modals/connectModal.json';
+import credentialExpiring from '@/locales/vi/components/modals/credentialExpiring.json';
 import historyModal from '@/locales/vi/components/modals/historyModal.json';
 import settingModal from '@/locales/vi/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/vi/components/modals/uploadLimitModal.json';
@@ -23,6 +24,7 @@ const vietnameseResource: ResourceLanguage = {
   ipcMessage: ipcMessage,
   validateMessage: validateMessage,
   connectModal: connectModal,
+  credentialExpiring: credentialExpiring,
   confirmModal: confirmModal,
   historyModal: historyModal,
   settingModal: settingModal,

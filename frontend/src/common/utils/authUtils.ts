@@ -17,9 +17,17 @@ export const needsMfa = (profile: AuthSubject): boolean =>
 
 /** Secrets that must be present to connect (typed now or already saved). */
 export const getRequiredSecrets = (profile: AuthSubject): string[] => {
-  const authType = getAuthType(profile);
-  const usesKeys = authType === 'static' || (authType === 'assumeRole' && profile.authConfig?.sourceType !== 'profile');
-  return usesKeys ? ['secretKey'] : [];
+  switch (getAuthType(profile)) {
+    case 'static':
+    case 'minioAssumeRole':
+      return ['secretKey'];
+    case 'assumeRole':
+      return profile.authConfig?.sourceType === 'profile' ? [] : ['secretKey'];
+    case 'minioLdap':
+      return ['ldapPassword'];
+    default:
+      return [];
+  }
 };
 
 /** Whether the profile may auto-connect on startup. */
@@ -31,6 +39,8 @@ export const needsManualInput = (profile: AuthSubject & { accessKey?: string; sa
   const required = getRequiredSecrets(profile);
   const saved = profile.savedSecrets ?? [];
   return (
-    needsMfa(profile) || required.some(name => !saved.includes(name)) || (required.length > 0 && !profile.accessKey)
+    needsMfa(profile) ||
+    required.some(name => !saved.includes(name)) ||
+    (required.includes('secretKey') && !profile.accessKey)
   );
 };

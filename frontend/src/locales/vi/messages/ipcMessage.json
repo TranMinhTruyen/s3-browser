@@ -51,7 +51,14 @@
     "S3W004": "Đã hủy tải lên {name}.",
     "S3W005": "Đang có tiến trình tải lên khác, vui lòng chờ hoàn tất.",
     "S3W006": "Đã bỏ qua {count} mục không thể tải lên (không đọc được, liên kết tượng trưng hoặc không phải file thường).",
-    "S3W007": "Có hơn {max} file được thả vào, các file sau {max} file đầu tiên bị bỏ qua."
+    "S3W007": "Có hơn {max} file được thả vào, các file sau {max} file đầu tiên bị bỏ qua.",
+    "S3E037": "Yêu cầu MinIO STS thất bại.",
+    "S3E038": "Tên đăng nhập hoặc mật khẩu LDAP không đúng.",
+    "S3E044": "Không bucket nào đã nhập có thể truy cập ẩn danh.",
+    "S3E046": "Cần {secret} để gia hạn thông tin xác thực của hồ sơ {name} (chưa được lưu).",
+    "S3W008": "Thông tin xác thực của hồ sơ {name} sẽ hết hạn sau {minutes} phút và không thể tự động gia hạn.",
+    "S3W009": "Không thể truy cập bucket {bucket} bằng chế độ ẩn danh.",
+    "S3W010": "Thông tin xác thực của hồ sơ {name} sắp hết hạn, hãy nhập mã MFA mới để giữ kết nối."
   },
   "master": {
     "MTE001": "Lỗi khi tải dữ liệu master"

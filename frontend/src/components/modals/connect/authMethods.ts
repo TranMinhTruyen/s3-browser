@@ -43,9 +43,9 @@ export const AUTH_METHODS: Record<AuthType, AuthMethod> = {
   assumeRole: method(['aws'], true),
   sso: method(['aws'], true, true, true),
   defaultChain: method(['aws'], true, true, true),
-  anonymous: method(['aws', 'minio'], false),
-  minioAssumeRole: method(['minio'], false),
-  minioLdap: method(['minio'], false),
+  anonymous: method(['aws', 'minio'], true),
+  minioAssumeRole: method(['minio'], true),
+  minioLdap: method(['minio'], true),
   minioOidc: method(['minio'], false, false),
   minioCert: method(['minio'], false),
 };
