@@ -1,0 +1,14 @@
+{
+  "title": "Загрузка",
+  "label": {
+    "objectLbl": "Объект",
+    "uploadedLbl": "Загружено",
+    "remainingLbl": "Осталось",
+    "finalizingLbl": "Завершение…"
+  },
+  "action": {
+    "cancelAll": "Отменить все",
+    "cancel": "Отмена",
+    "close": "Закрыть"
+  }
+}

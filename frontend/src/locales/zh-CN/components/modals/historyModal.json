@@ -1,0 +1,10 @@
+{
+  "title": "下载历史",
+  "label": {
+    "emptyLbl": "空",
+    "sizeLbl": "大小",
+    "downloadAtLbl": "下载时间",
+    "statusLbl": "状态",
+    "destPathLbl": "目标路径"
+  }
+}

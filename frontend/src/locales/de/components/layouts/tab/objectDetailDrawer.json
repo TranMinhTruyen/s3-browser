@@ -1,0 +1,25 @@
+{
+  "title": "Objektdetails",
+  "label": {
+    "name": "Name",
+    "key": "Schlüssel",
+    "size": "Größe",
+    "lastModified": "Zuletzt geändert",
+    "etag": "ETag",
+    "contentType": "Inhaltstyp",
+    "storageClass": "Speicherklasse",
+    "metadata": "Metadaten"
+  },
+  "unit": {
+    "bytes": "{{size}} Bytes"
+  },
+  "tooltip": {
+    "close": "Schließen",
+    "copy": "Kopieren",
+    "copied": "Kopiert"
+  },
+  "status": {
+    "loadError": "Details konnten nicht geladen werden",
+    "retry": "Erneut versuchen"
+  }
+}

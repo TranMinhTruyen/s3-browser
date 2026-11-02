@@ -1,0 +1,18 @@
+{
+  "awsProfileCombobox": {
+    "label": "AWS-CLI-Profil",
+    "searchPlaceholder": "Profil suchen",
+    "empty": "Keine Profile gefunden. Prüfen Sie die Datei ~/.aws/config.",
+    "credentialProcessWarning": "Dieses Profil führt beim Verbinden seinen Befehl credential_process aus."
+  },
+  "regionCombobox": {
+    "label": "Region",
+    "placeholder": "Region auswählen",
+    "availabilityZones": {
+      "01": "Asien-Pazifik",
+      "02": "Nordamerika",
+      "03": "Europa",
+      "04": "Südamerika"
+    }
+  }
+}

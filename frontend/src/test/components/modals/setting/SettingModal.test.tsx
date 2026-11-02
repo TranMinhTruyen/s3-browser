@@ -56,6 +56,38 @@ describe('SettingModal', () => {
     expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('Tiếng Việt');
   });
 
+  it('lists the native names of the new languages and selects them', async () => {
+    const user = userEvent.setup();
+    open();
+    await flush();
+
+    await user.click(screen.getByRole('combobox', { name: 'Language' }));
+    for (const name of ['简体中文', '繁體中文', 'Русский', 'Deutsch']) {
+      expect(await screen.findByRole('option', { name, hidden: true })).toBeInTheDocument();
+    }
+    await user.click(screen.getByRole('option', { name: '繁體中文', hidden: true }));
+
+    expect(state().draft.language).toBe('zh-TW');
+    expect(screen.getByRole('combobox', { name: 'Language' })).toHaveValue('繁體中文');
+  });
+
+  it.each([
+    ['zh-CN', 'Microsoft YaHei UI'],
+    ['zh-TW', 'Microsoft JhengHei UI'],
+    ['ja', 'Yu Gothic UI'],
+  ] as const)('previews the font options with the %s fallback (%s)', async (language, fallback) => {
+    const user = userEvent.setup();
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, language } });
+    open();
+    await flush();
+
+    await user.click(screen.getByRole('combobox', { name: 'Font' }));
+    const label = await screen.findByText('Arial', { selector: 'span[style]' });
+
+    expect(label.style.fontFamily).toContain(fallback);
+    expect(label.style.fontFamily).toContain('Arial');
+  });
+
   it('hides the launch on startup switch when autostart is not supported', async () => {
     open();
     await flush();

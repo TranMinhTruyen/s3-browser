@@ -1,0 +1,10 @@
+{
+  "title": "Download-Verlauf",
+  "label": {
+    "emptyLbl": "LEER",
+    "sizeLbl": "Größe",
+    "downloadAtLbl": "Heruntergeladen am",
+    "statusLbl": "Status",
+    "destPathLbl": "Zielpfad"
+  }
+}

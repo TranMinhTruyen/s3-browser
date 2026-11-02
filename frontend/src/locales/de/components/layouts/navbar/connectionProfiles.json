@@ -1,0 +1,16 @@
+{
+  "contextMenu": {
+    "connect": "Verbinden",
+    "disconnect": "Trennen",
+    "edit": "Bearbeiten",
+    "delete": "Löschen"
+  },
+  "tooltip": {
+    "connect": "Verbinden",
+    "createProfile": "Verbindungsprofil erstellen",
+    "refresh": "Liste der Verbindungsprofile neu laden"
+  },
+  "profile": {
+    "empty": "Noch keine Verbindungsprofile. Erstellen Sie eines mit den Schaltflächen oben."
+  }
+}

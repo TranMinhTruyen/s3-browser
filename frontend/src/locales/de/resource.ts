@@ -1,0 +1,47 @@
+import { ResourceLanguage } from 'i18next';
+import common from '@/locales/de/common.json';
+import bucketPicker from '@/locales/de/components/inputs/bucketPicker.json';
+import inputs from '@/locales/de/components/inputs/inputs.json';
+import connectionProfiles from '@/locales/de/components/layouts/navbar/connectionProfiles.json';
+import objectDetailDrawer from '@/locales/de/components/layouts/tab/objectDetailDrawer.json';
+import tabLayout from '@/locales/de/components/layouts/tab/tabLayout.json';
+import downloaderWindow from '@/locales/de/components/layouts/transfer/downloaderWindow.json';
+import uploaderWindow from '@/locales/de/components/layouts/transfer/uploaderWindow.json';
+import confirmModal from '@/locales/de/components/modals/confirmModal.json';
+import connectModal from '@/locales/de/components/modals/connectModal.json';
+import credentialExpiring from '@/locales/de/components/modals/credentialExpiring.json';
+import historyModal from '@/locales/de/components/modals/historyModal.json';
+import settingModal from '@/locales/de/components/modals/settingModal.json';
+import uploadLimitModal from '@/locales/de/components/modals/uploadLimitModal.json';
+import uploadPickerModal from '@/locales/de/components/modals/uploadPickerModal.json';
+import ipcMessage from '@/locales/de/messages/ipcMessage.json';
+import validateMessage from '@/locales/de/messages/validateMessage.json';
+import bucketPage from '@/locales/de/pages/bucket/page.json';
+import objectPage from '@/locales/de/pages/object/page.json';
+
+const germanResource: ResourceLanguage = {
+  common: common,
+  ipcMessage: ipcMessage,
+  validateMessage: validateMessage,
+  connectModal: connectModal,
+  credentialExpiring: credentialExpiring,
+  confirmModal: confirmModal,
+  historyModal: historyModal,
+  settingModal: settingModal,
+  uploadLimitModal: uploadLimitModal,
+  uploadPickerModal: uploadPickerModal,
+  bucketPicker: bucketPicker,
+  connectionProfiles: connectionProfiles,
+  bucket: {
+    page: bucketPage,
+  },
+  object: {
+    page: objectPage,
+  },
+  inputs: inputs,
+  downloaderWindow: downloaderWindow,
+  objectDetailDrawer: objectDetailDrawer,
+  tabLayout: tabLayout,
+  uploaderWindow: uploaderWindow,
+};
+export default germanResource;

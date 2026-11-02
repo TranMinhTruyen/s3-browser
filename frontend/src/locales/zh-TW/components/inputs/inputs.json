@@ -1,0 +1,18 @@
+{
+  "awsProfileCombobox": {
+    "label": "AWS CLI 設定檔",
+    "searchPlaceholder": "搜尋設定檔",
+    "empty": "找不到設定檔。請檢查 ~/.aws/config 檔案。",
+    "credentialProcessWarning": "連線時，此設定檔會執行其 credential_process 命令。"
+  },
+  "regionCombobox": {
+    "label": "區域",
+    "placeholder": "選取區域",
+    "availabilityZones": {
+      "01": "亞太地區",
+      "02": "北美洲",
+      "03": "歐洲",
+      "04": "南美洲"
+    }
+  }
+}

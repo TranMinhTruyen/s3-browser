@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_SETTINGS, FONT_FAMILIES } from '@/common/cnst/settingConst';
+import { DEFAULT_SETTINGS, getFontFamily } from '@/common/cnst/settingConst';
 import { applySettings, normalizeSettings, settingColorSchemeManager } from '@/common/utils/settingUtils';
 import i18n from '@/locales/i18n';
 
@@ -11,6 +11,10 @@ describe('normalizeSettings', () => {
   it('keeps valid values', () => {
     const raw = { theme: 'dark', font: 'jetbrains-mono', language: 'ja', launchOnStartup: true };
     expect(normalizeSettings(raw)).toEqual(raw);
+  });
+
+  it.each(['zh-CN', 'zh-TW', 'ru', 'de'])('accepts the language %s', language => {
+    expect(normalizeSettings({ language }).language).toBe(language);
   });
 
   it('replaces unknown values with the defaults', () => {
@@ -63,8 +67,27 @@ describe('applySettings', () => {
 
     expect(settingColorSchemeManager.get('light')).toBe('dark');
     const style = document.documentElement.style;
-    expect(style.getPropertyValue('--mantine-font-family')).toBe(FONT_FAMILIES.arial);
-    expect(style.getPropertyValue('--mantine-font-family-headings')).toBe(FONT_FAMILIES.arial);
+    expect(style.getPropertyValue('--mantine-font-family')).toBe(getFontFamily('arial', 'en'));
+    expect(style.getPropertyValue('--mantine-font-family-headings')).toBe(getFontFamily('arial', 'en'));
+  });
+
+  it.each([
+    ['zh-CN', 'Microsoft YaHei UI', 'Yu Gothic UI'],
+    ['zh-TW', 'Microsoft JhengHei UI', 'Yu Gothic UI'],
+    ['ja', 'Yu Gothic UI', 'Microsoft YaHei UI'],
+    ['en', 'Yu Gothic UI', 'Microsoft JhengHei UI'],
+  ] as const)('language %s uses %s and not %s in the font family', (language, included, excluded) => {
+    applySettings({ ...DEFAULT_SETTINGS, language });
+
+    const family = document.documentElement.style.getPropertyValue('--mantine-font-family');
+    expect(family).toBe(getFontFamily('nunito', language));
+    expect(family).toContain(included);
+    expect(family).not.toContain(excluded);
+  });
+
+  it.each(['en', 'zh-CN', 'zh-TW', 'ru', 'de'] as const)('sets <html lang> to %s', language => {
+    applySettings({ ...DEFAULT_SETTINGS, language });
+    expect(document.documentElement.lang).toBe(language);
   });
 
   it('changes the language only when it differs from the current one', () => {
@@ -109,5 +132,27 @@ describe('applySettings color scheme attribute', () => {
     expect(window.matchMedia).not.toHaveBeenCalled();
     applySettings({ ...DEFAULT_SETTINGS, theme: 'auto' });
     expect(window.matchMedia).toHaveBeenCalledWith('(prefers-color-scheme: dark)');
+  });
+});
+
+describe('getFontFamily', () => {
+  it.each([
+    ['zh-CN', ['"Microsoft YaHei UI"', '"PingFang SC"', '"Noto Sans CJK SC"']],
+    ['zh-TW', ['"Microsoft JhengHei UI"', '"PingFang TC"', '"Noto Sans CJK TC"']],
+    ['ja', ['"Yu Gothic UI"', '"Hiragino Sans"', '"Noto Sans CJK JP"']],
+    ['en', ['"Yu Gothic UI"', '"Noto Sans CJK JP"']],
+    ['vi', ['"Yu Gothic UI"']],
+    ['ru', ['"Yu Gothic UI"']],
+    ['de', ['"Yu Gothic UI"']],
+  ] as const)('language %s ends with its CJK fallback', (language, fonts) => {
+    const family = getFontFamily('arial', language);
+    expect(family.startsWith('Arial, ')).toBe(true);
+    expect(family.endsWith('sans-serif')).toBe(true);
+    for (const font of fonts) expect(family).toContain(font);
+  });
+
+  it('keeps the font stack of each font before the fallback', () => {
+    expect(getFontFamily('monospace', 'en')).toMatch(/^ui-monospace, "Cascadia Mono", Consolas, monospace, /);
+    expect(getFontFamily('segoe-ui', 'zh-CN')).toMatch(/^"Segoe UI", "Microsoft YaHei UI"/);
   });
 });

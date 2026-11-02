@@ -1,0 +1,23 @@
+{
+  "title": {
+    "defaultTabName": "Neues Profil"
+  },
+  "tooltip": {
+    "closeTab": "Tab schließen",
+    "dragTab": "Zum Umsortieren ziehen (Strg+Umschalt+←/→)",
+    "connect": "Verbinden",
+    "refresh": "{target} neu laden",
+    "addTab": "Tab hinzufügen",
+    "scrollLeft": "Nach links scrollen",
+    "scrollRight": "Nach rechts scrollen",
+    "search": "Suchen",
+    "clearSearch": "Suche leeren",
+    "upload": "Dateien hochladen"
+  },
+  "search": {
+    "placeholderProfile": "Profil suchen",
+    "emptyProfile": "Keine Profile gefunden",
+    "placeholderObject": "Nach Schlüssel suchen",
+    "placeholderBucket": "Nach Name suchen"
+  }
+}

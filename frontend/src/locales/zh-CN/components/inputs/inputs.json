@@ -1,0 +1,18 @@
+{
+  "awsProfileCombobox": {
+    "label": "AWS CLI 配置文件",
+    "searchPlaceholder": "搜索配置文件",
+    "empty": "未找到配置文件。请检查 ~/.aws/config 文件。",
+    "credentialProcessWarning": "连接时，此配置文件将运行其 credential_process 命令。"
+  },
+  "regionCombobox": {
+    "label": "区域",
+    "placeholder": "选择区域",
+    "availabilityZones": {
+      "01": "亚太地区",
+      "02": "北美洲",
+      "03": "欧洲",
+      "04": "南美洲"
+    }
+  }
+}

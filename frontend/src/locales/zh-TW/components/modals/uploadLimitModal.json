@@ -1,0 +1,12 @@
+{
+  "title": "選擇要上傳的檔案",
+  "description": "部分資料夾超出上傳限制。請選擇要上傳的檔案；未超出限制的資料夾將完整上傳。",
+  "cappedWarning": "資料夾掃描已提前停止，因此清單可能不完整。",
+  "rootFolder": "（直接拖放的檔案）",
+  "overMaxSection": "檔案數超過 {max} 的資料夾",
+  "overLargeSection": "大型檔案（超過 {size}）數量達 {count} 個或更多的資料夾",
+  "selectedCount": "{selected}/{max} 個檔案",
+  "selectedLarge": "{selected}/{max} 個大型檔案",
+  "large": "大型",
+  "upload": "上傳"
+}

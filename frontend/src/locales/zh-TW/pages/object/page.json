@@ -1,0 +1,20 @@
+{
+  "emptyFolder": "此資料夾是空的",
+  "tooltip": {
+    "objectList": "物件清單",
+    "backToParent": "返回上層資料夾",
+    "backToBucket": "返回儲存貯體",
+    "clearSelected": "取消選取",
+    "downloadSelected": "下載所選項目",
+    "deleteSelected": "刪除所選項目",
+    "moreActions": "更多動作"
+  },
+  "action": {
+    "download": "下載",
+    "delete": "刪除"
+  },
+  "search": {
+    "empty": "沒有符合的物件",
+    "loadMore": "搜尋更多"
+  }
+}

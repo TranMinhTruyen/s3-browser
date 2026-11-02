@@ -1,0 +1,34 @@
+{
+  "title": "Einstellungen",
+  "label": {
+    "theme": "Design",
+    "font": "Schriftart",
+    "language": "Sprache",
+    "launchOnStartup": "Beim Windows-Start starten"
+  },
+  "option": {
+    "theme": {
+      "light": "Hell",
+      "dark": "Dunkel",
+      "auto": "Systemvorgabe"
+    },
+    "font": {
+      "nunito": "Nunito",
+      "system-ui": "System-UI",
+      "segoe-ui": "Segoe UI",
+      "arial": "Arial",
+      "monospace": "Monospace",
+      "jetbrains-mono": "JetBrains Mono"
+    }
+  },
+  "button": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "apply": "Übernehmen",
+    "reset": "Zurücksetzen"
+  },
+  "message": {
+    "saved": "Einstellungen gespeichert.",
+    "applied": "Einstellungen gelten, bis die App geschlossen wird."
+  }
+}

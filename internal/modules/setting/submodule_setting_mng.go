@@ -12,7 +12,7 @@ import (
 var (
 	themes    = []string{"light", "dark", "auto"}
 	fonts     = []string{"nunito", "system-ui", "segoe-ui", "arial", "monospace", "jetbrains-mono"}
-	languages = []string{"en", "vi", "ja"}
+	languages = []string{"en", "vi", "ja", "zh-CN", "zh-TW", "ru", "de"}
 )
 
 // defaultSettings is what the app uses when nothing is saved, and the fallback for any unknown value.
