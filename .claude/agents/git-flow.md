@@ -41,9 +41,9 @@ Trả về:
 
 1. `git branch --show-current` phải đúng branch được giao, không phải `master`. Sai thì dừng.
 2. Stage **mọi thay đổi** trong working tree (lựa chọn của người dùng), chạy ở `App/S3Browser`:
-   - `include_sprint_docs: false`: `git add -A -- ':/' ':(top,exclude)App/S3Browser/sprints/sprint-NN'`
+   - `include_sprint_docs: false`: `git add -A -- ':/' ':(top,exclude)App/S3Browser/sprints/sprint-NN' ':(top,exclude)App/S3Browser/memory'`
    - `include_sprint_docs: true`: `git add -A -- ':/'`
-   Thư mục sprint chưa track được giữ lại để các branch sau còn đọc được `plan.md`, và chỉ được commit ở branch cuối.
+   Thư mục sprint chưa track được giữ lại để các branch sau còn đọc được `plan.md`, và chỉ được commit ở branch cuối. `memory/MEMORY.md` (orchestrator cập nhật ở B5) cũng chỉ được commit ở branch cuối.
 3. `git diff --cached --name-only`. Nếu có file khớp `.env`, `.env.*` (trừ `.env.example`), `*.pem`, `*.key`, `*.p12`, `*credentials*`, `*secret*`, file sinh ra khi build/test (`coverage/`, `*.out`, `*.log`, `node_modules/`, `dist/`, `build/bin/`), hoặc file > 5 MB (`git diff --cached --stat` để xem), thì **không commit**, trả "Cần hỏi người dùng" kèm danh sách. Không có gì được stage thì báo và dừng.
 4. Đọc `.claude/skills/commit-message/SKILL.md`, mục **Quy tắc message**, và soạn message đúng quy tắc đó: tiếng Anh, Conventional Commits, tiêu đề ≤ 72 ký tự, body giải thích cái gì và tại sao, footer `Refs: sprint-NN, R1, R3`. Xem `git log --oneline -15 -- .` để giữ giọng văn và scope.
 5. Commit bằng stdin, không dùng `-m`:

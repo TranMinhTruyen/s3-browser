@@ -4,6 +4,10 @@ File này được Claude Code tự động load cho session chính và mọi su
 
 > Mở `claude` trong thư mục `App/S3Browser` (hoặc thư mục con) thì file này, các agent và skill mới được load, vì git root của repo là `kanban-board/`.
 
+Bộ nhớ giữa các session (trạng thái sprint, quyết định, lỗi đã gặp) được import từ file dưới đây, quy tắc ở mục **8. Memory**:
+
+@memory/MEMORY.md
+
 ## 1. Tổng quan
 
 - App desktop viết bằng **Wails v3** (Go backend + React TS frontend) để duyệt và thao tác bucket/object trên **AWS S3** và **MinIO**.
@@ -33,7 +37,7 @@ File này được Claude Code tự động load cho session chính và mọi su
 | B3   | Hỏi người dùng có triển khai không; chưa được đồng ý thì dừng                                                                                                                                                                                                                 | `orchestrator`                                                                          |
 | B3.5 | Tách branch `SP-NN/<slug>` từ `origin/master` cho từng yêu cầu (mỗi yêu cầu một branch, trừ khi plan gộp)                                                                                                                                                                     | `git-flow`                                                                              |
 | B4   | Làm **lần lượt từng branch**. Trong mỗi branch, **tuần tự**: Go → skill `wails3-bindings` (`go tool wails3 generate bindings -clean=true -ts`) → Frontend → FE test → verify → review. Lặp lại **tối đa 3 vòng**; quá 3 vòng thì dừng và hỏi người dùng. Đạt thì commit local | `go-backend`, `react-frontend`, `react-tester`, `verifier`, `code-reviewer`, `git-flow` |
-| B5   | Báo cáo: số dòng thêm/xoá, file sửa, file mới, phần chưa làm được                                                                                                                                                                                                             | `orchestrator`                                                                          |
+| B5   | Báo cáo: số dòng thêm/xoá, file sửa, file mới, phần chưa làm được; cập nhật `memory/MEMORY.md`                                                                                                                                                                                | `orchestrator`                                                                          |
 | B6   | Hỏi người dùng một lần; đồng ý thì push các branch và tạo PR vào `master` bằng `gh` CLI (người dùng tự merge)                                                                                                                                                                 | `orchestrator`, `git-flow`                                                              |
 - Yêu cầu lấy từ thư mục `sprints/sprint-NN/` (xem `sprints/README.md`), tạo bằng skill `/new-sprint <tên>`.
 - Làm theo sprint: chạy `claude --agent orchestrator`. Orchestrator **không** phải agent mặc định.
@@ -158,3 +162,11 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
   `node_modules/.bin/vitest run --coverage.enabled --coverage.provider=v8 --coverage.reporter=text --coverage.include=<file> --coverage.thresholds.branches=95 --coverage.thresholds.lines=95 --coverage.thresholds.perFile`
 - Ngưỡng FE: **Branches (C1) ≥ 95%** và **Lines ≥ 95%** cho từng file.
 - **Console sạch khi chạy test**: output của `vitest run` không được có warning/error từ React hoặc thư viện (`Warning: ...`, `act(...)`, `console.error`, `console.warn`, `stderr |`). Test cố ý đi vào nhánh có ghi lỗi thì phải `vi.spyOn(console, 'error').mockImplementation(() => {})` và assert spy đã được gọi đúng, không để lọt ra output.
+
+## 8. Memory
+
+- File `memory/MEMORY.md` lưu những gì session sau cần biết mà không suy ra được từ code: trạng thái sprint đang dở, quyết định đã chốt kèm lý do, lỗi và bẫy đã gặp. File được import ở đầu `CLAUDE.md` nên mọi session và subagent đều tự đọc.
+- **Chỉ `orchestrator` ghi**, ở B5 của mỗi sprint (và khi sprint dừng giữa chừng), commit cùng branch cuối. Agent khác và session thường chỉ đọc; thấy điều cần nhớ thì ghi vào kết quả trả về để orchestrator đưa vào memory.
+- Tối đa **250 dòng**. Vượt thì gộp các mục cũ nhất của mục 2 và 3 thành dòng ngắn ở mục 4 "Tóm tắt cũ" cho tới khi còn khoảng 220 dòng. Quyết định bị thay thế thì xoá dòng cũ, ghi dòng mới.
+- Không ghi secret, access key, endpoint thật hay đường dẫn máy cá nhân. Không chép lại nội dung đã có trong `CLAUDE.md` hay `report.md`.
+- Memory có thể lỗi thời: khi mâu thuẫn với code hoặc `CLAUDE.md` thì tin code và `CLAUDE.md`, rồi báo để sửa memory.

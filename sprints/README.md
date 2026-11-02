@@ -26,3 +26,4 @@ sprints/
 - Planner đọc mọi file `.md` trong thư mục sprint, trừ `plan.md` và `report.md`.
 - Có thể sửa `requirement.md` rồi yêu cầu orchestrator lập lại plan.
 - Không đặt file cấu hình hay secret (access key, endpoint thật) trong thư mục sprint.
+- Cuối mỗi sprint, orchestrator cập nhật `memory/MEMORY.md` (trạng thái, quyết định, lỗi đã gặp) để session sau tự nhớ. Nên merge PR của sprint trước rồi mới chạy sprint mới, nếu không memory của sprint trước chưa có trên `origin/master`.
