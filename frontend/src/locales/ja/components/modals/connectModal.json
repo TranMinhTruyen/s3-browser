@@ -20,7 +20,12 @@
       "mfaCode": "MFA コード",
       "pathStyle": "パススタイル",
       "savePassword": "シークレットを保存",
-      "autoConnect": "自動接続"
+      "autoConnect": "自動接続",
+      "ldapUsername": "LDAP ユーザー名",
+      "ldapPassword": "LDAP パスワード",
+      "policy": "インラインポリシー（JSON、任意）",
+      "buckets": "バケット",
+      "durationOptional": "有効期間（秒、任意）"
     },
     "placeholder": {
       "saved": "保存済み (変更しない場合は空欄)",
@@ -28,7 +33,10 @@
       "credentialsFile": "既定: ~/.aws/credentials",
       "roleArn": "arn:aws:iam::123456789012:role/RoleName",
       "sessionName": "既定: s3browser-<user>",
-      "mfaSerial": "arn:aws:iam::123456789012:mfa/user"
+      "mfaSerial": "arn:aws:iam::123456789012:mfa/user",
+      "durationDefault": "既定値: サーバーが決定",
+      "policy": "{\"Version\": \"2012-10-17\", \"Statement\": []}",
+      "buckets": "バケット名を入力して Enter キーを押してください"
     },
     "sourceType": {
       "static": "アクセスキー",
@@ -38,7 +46,8 @@
       "testNeedsSecrets": "保存にシークレットは不要ですが、接続テストには必要です。保存済みのシークレットは返されないため、再入力してください。",
       "mfaCode": "一度だけ使用し、保存されません",
       "profilePlaceholder": "<profile>",
-      "ssoLogin": "先に次のコマンドでサインインしてください: aws sso login --profile {{profile}}"
+      "ssoLogin": "先に次のコマンドでサインインしてください: aws sso login --profile {{profile}}",
+      "anonymousBuckets": "匿名アクセスではバケット一覧を取得できません。開きたい公開バケットの名前を入力してください。"
     },
     "tooltip": {
       "autoConnectLocked": "この認証方式は接続のたびに入力が必要なため、自動接続できません。"

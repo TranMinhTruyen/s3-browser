@@ -53,3 +53,7 @@ export const showUploadPickerModal = async (
 export const showUploadLimitModal = async (
   props: Parameters<typeof import('@/components/modals/upload/UploadLimitModal')['default']['show']>[0]
 ) => (await loadModal(() => import('@/components/modals/upload/UploadLimitModal')))?.default.show(props);
+
+export const showMfaCodeModal = async (
+  props: Parameters<typeof import('@/components/modals/connect/MfaCodeModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/components/modals/connect/MfaCodeModal')))?.default.show(props);

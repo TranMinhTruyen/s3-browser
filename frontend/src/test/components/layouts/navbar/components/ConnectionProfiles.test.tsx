@@ -227,7 +227,7 @@ describe('ConnectionProfiles', () => {
       await flush();
 
       expect(callIPCMock).toHaveBeenCalledTimes(1);
-      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['auto']);
+      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['auto'], { signal: expect.any(AbortSignal) });
       expect(profiles().auto?.isConnected).toBe(true);
 
       // A later change of the list does not auto connect again.
@@ -247,7 +247,7 @@ describe('ConnectionProfiles', () => {
       act(() => useProfileStore.setState({ connectionProfiles: { late: profile('late', { autoConnect: true }) } }));
       await flush();
 
-      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['late']);
+      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['late'], { signal: expect.any(AbortSignal) });
     });
 
     it('asks for the secret key instead when an auto connect profile has none saved', async () => {
@@ -268,7 +268,7 @@ describe('ConnectionProfiles', () => {
       act(() => handlers['bucket:connect-save-profile']({ data: profile('a', { autoConnect: true }) }));
       await flush();
 
-      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['a']);
+      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['a'], { signal: expect.any(AbortSignal) });
     });
   });
 
@@ -302,7 +302,7 @@ describe('ConnectionProfiles', () => {
 
       await waitFor(() => expect(card('a-name').querySelector('.lucide-cable')).toBeInTheDocument());
       expect(profiles().a?.isConnected).toBe(true);
-      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['a']);
+      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['a'], { signal: expect.any(AbortSignal) });
     });
 
     it('connects from the context menu', async () => {
@@ -385,7 +385,7 @@ describe('ConnectionProfiles', () => {
       fireEvent.doubleClick(card('a-name'));
 
       await waitFor(() => expect(profiles().a?.isConnected).toBe(true));
-      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['a']);
+      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['a'], { signal: expect.any(AbortSignal) });
       expect(connectModalMock).not.toHaveBeenCalled();
     });
 

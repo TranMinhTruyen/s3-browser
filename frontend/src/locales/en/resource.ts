@@ -9,6 +9,7 @@ import downloaderWindow from '@/locales/en/components/layouts/transfer/downloade
 import uploaderWindow from '@/locales/en/components/layouts/transfer/uploaderWindow.json';
 import confirmModal from '@/locales/en/components/modals/confirmModal.json';
 import connectModal from '@/locales/en/components/modals/connectModal.json';
+import credentialExpiring from '@/locales/en/components/modals/credentialExpiring.json';
 import historyModal from '@/locales/en/components/modals/historyModal.json';
 import settingModal from '@/locales/en/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/en/components/modals/uploadLimitModal.json';
@@ -23,6 +24,7 @@ const englishResource: ResourceLanguage = {
   ipcMessage: ipcMessage,
   validateMessage: validateMessage,
   connectModal: connectModal,
+  credentialExpiring: credentialExpiring,
   confirmModal: confirmModal,
   historyModal: historyModal,
   settingModal: settingModal,

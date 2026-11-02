@@ -243,7 +243,7 @@ func (m *Module) DeleteProfileById(input models.ConnectionProfileInput) models.O
 	}
 	if removed {
 		// Closed here, after the container's lock is released: closing does network I/O.
-		conn.Transport.CloseIdleConnections()
+		conn.Close()
 	}
 
 	if err := m.q.DeleteConnectionProfileById(m.app.Context(), input.Id); err != nil {

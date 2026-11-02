@@ -23,7 +23,7 @@ describe('useConnectProfile', () => {
 
     await expect(result.current('p1', profile)).resolves.toBe(true);
 
-    expect(callIPC).toHaveBeenCalledExactlyOnceWith(ConnectS3ByProfile, ['p1']);
+    expect(callIPC).toHaveBeenCalledExactlyOnceWith(ConnectS3ByProfile, ['p1'], { signal: expect.any(AbortSignal) });
     expect(stored()).toEqual({ ...profile, isConnected: true });
   });
 
@@ -36,6 +36,23 @@ describe('useConnectProfile', () => {
 
     await expect(result.current('p1', profile)).resolves.toBe(false);
 
+    expect(stored()?.isConnected).toBe(false);
+  });
+
+  it('cancels the call when the caller unmounts and resolves false without touching the profile', async () => {
+    let signal: AbortSignal | undefined;
+    vi.mocked(callIPC).mockImplementation(async (_binding, _args, options) => {
+      signal = options?.signal;
+      return new Promise(resolve => options?.signal?.addEventListener('abort', () => resolve(null as never)));
+    });
+    const { result, unmount } = renderHook(() => useConnectProfile());
+
+    const pending = result.current('p1', profile);
+    expect(signal?.aborted).toBe(false);
+    unmount();
+
+    await expect(pending).resolves.toBe(false);
+    expect(signal?.aborted).toBe(true);
     expect(stored()?.isConnected).toBe(false);
   });
 

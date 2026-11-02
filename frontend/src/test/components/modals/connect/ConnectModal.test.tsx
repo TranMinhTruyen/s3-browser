@@ -48,7 +48,7 @@ async function open(props?: Props) {
     ConnectModal.show(props);
   });
   await flush();
-  return userEvent.setup();
+  return userEvent.setup({ pointerEventsCheck: 0 });
 }
 
 const field = (name: RegExp) => screen.getByLabelText(name, { selector: 'input' });

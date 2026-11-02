@@ -3,6 +3,7 @@ import { ArrowLeft, BroomSparkles, Download, PlugZap, RefreshCw, Trash, Upload }
 import { memo, RefObject, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTabListStore } from '@/common/stores/tabListStore';
+import { tintedColor } from '@/common/theme/tintedColor';
 import { formatStringJson } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import Combobox from '@/components/inputs/combobox/Combobox';
@@ -158,7 +159,7 @@ function TabActionBar(props: TabActionBarProps) {
                   <ActionIcon
                     onClick={onClickDeleteSelected}
                     aria-label={tObject('tooltip.deleteSelected')}
-                    color="red"
+                    {...tintedColor('red', 'ai')}
                   >
                     <Trash />
                   </ActionIcon>

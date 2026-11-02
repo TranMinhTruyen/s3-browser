@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { useCredentialExpiring } from '@/common/hooks/useCredentialExpiring';
 import { useTabPersistence } from '@/common/hooks/useTabPersistence';
 import { useMasterDataStore } from '@/common/stores/masterDataStore';
 import { useProfileStore } from '@/common/stores/profileStore';
@@ -16,6 +17,7 @@ function App() {
   const resetProfiles = useProfileStore(s => s.reset);
 
   useTabPersistence();
+  useCredentialExpiring();
 
   useLayoutEffect(() => {
     loadAll();

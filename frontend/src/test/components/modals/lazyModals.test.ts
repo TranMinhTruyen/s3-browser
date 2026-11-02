@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-type ModalKey = 'connect' | 'history' | 'setting' | 'uploadPicker' | 'uploadLimit';
+type ModalKey = 'connect' | 'mfaCode' | 'history' | 'setting' | 'uploadPicker' | 'uploadLimit';
 type LazyModals = typeof import('@/components/modals/lazyModals');
 
 // The chunk factories wait for `gate` and throw when `fail` is set, which makes the dynamic `import()` reject.
@@ -10,7 +10,7 @@ const h = vi.hoisted(() => ({
   show: {} as Record<string, ReturnType<typeof vi.fn>>,
   toast: { error: vi.fn(), loading: vi.fn(), dismiss: vi.fn() },
 }));
-for (const key of ['connect', 'history', 'setting', 'uploadPicker', 'uploadLimit']) h.show[key] = vi.fn();
+for (const key of ['connect', 'mfaCode', 'history', 'setting', 'uploadPicker', 'uploadLimit']) h.show[key] = vi.fn();
 
 const chunk = (key: ModalKey) => async () => {
   await h.gate;
@@ -21,6 +21,7 @@ vi.mock('sonner', () => ({ toast: h.toast }));
 
 const CHUNKS: [string, ModalKey][] = [
   ['connect/ConnectModal', 'connect'],
+  ['connect/MfaCodeModal', 'mfaCode'],
   ['history/HistoryModal', 'history'],
   ['setting/SettingModal', 'setting'],
   ['upload/UploadPickerModal', 'uploadPicker'],
@@ -30,16 +31,29 @@ const CHUNKS: [string, ModalKey][] = [
 const PROPS = { picker: { tabId: 't' } as never, limit: { groups: [] } as never };
 const wrappers: [ModalKey, (m: LazyModals) => Promise<unknown>][] = [
   ['connect', m => m.showConnectModal({ mode: 'editProfile' })],
+  ['mfaCode', m => m.showMfaCodeModal({ connectionId: 'c', profileName: 'n' })],
   ['history', m => m.showHistoryModal()],
   ['setting', m => m.showSettingModal()],
   ['uploadPicker', m => m.showUploadPickerModal(PROPS.picker)],
   ['uploadLimit', m => m.showUploadLimitModal(PROPS.limit)],
 ];
 
+// What MfaCodeModal imports besides modalUtils; stubbed by the string-failure test.
+const HEAVY_CHUNK_DEPS = [
+  '@mantine/core',
+  '@mantine/form',
+  '@wails/S3Browser/internal/handlers/buckethandler',
+  '@/common/stores/profileStore',
+  '@/common/utils/ipcUtils',
+  '@/components/buttons/Button',
+  '@/components/inputs/FieldInput',
+];
+
 // A fresh module registry per test, so a chunk that failed (or loaded) once is not cached for the next test.
 async function loadModule() {
   vi.resetModules();
   vi.doUnmock('@/common/utils/modalUtils');
+  for (const id of HEAVY_CHUNK_DEPS) vi.doUnmock(id);
   for (const [file, key] of CHUNKS) vi.doMock(`@/components/modals/${file}`, () => chunk(key)());
   const lazy = await import('@/components/modals/lazyModals');
   const i18n = (await import('@/locales/i18n')).default;
@@ -96,11 +110,13 @@ describe('lazyModals', () => {
   });
 
   it('describes a failure that is not an Error with its string form', async () => {
-    // vitest wraps what a mock factory throws in an Error, so the raw string is thrown while the real
-    // ConnectModal chunk is evaluated instead.
+    // vitest wraps what a mock factory throws in an Error, so the raw string is thrown by evaluating a real chunk
+    // (the MfaCodeModal one: its only top-level work is createMantineModal). Its heavy imports are stubbed, so no
+    // Mantine/app tree is loaded and the test stays fast on a cold, loaded run.
     const { i18n } = await loadModule();
     vi.resetModules();
-    vi.doUnmock('@/components/modals/connect/ConnectModal');
+    vi.doUnmock('@/components/modals/connect/MfaCodeModal');
+    for (const id of HEAVY_CHUNK_DEPS) vi.doMock(id, () => ({}));
     vi.doMock('@/common/utils/modalUtils', () => ({
       createMantineModal: () => {
         throw 'plain failure';
@@ -108,7 +124,7 @@ describe('lazyModals', () => {
     }));
     const failing = await import('@/components/modals/lazyModals');
 
-    await expect(failing.showConnectModal({ mode: 'connect' })).resolves.toBeUndefined();
+    await expect(failing.showMfaCodeModal({ connectionId: 'c', profileName: 'n' })).resolves.toBeUndefined();
 
     expect(h.toast.error).toHaveBeenCalledExactlyOnceWith(i18n.t('common:modalLoadError'), {
       description: 'plain failure',
@@ -125,6 +141,14 @@ describe('lazyModals', () => {
     expect(h.show.connect).toHaveBeenCalledWith({ mode: 'manualconnect' });
     expect(h.show.uploadPicker).toHaveBeenCalledWith(PROPS.picker);
     expect(h.show.uploadLimit).toHaveBeenCalledWith(PROPS.limit);
+  });
+
+  it('passes the connection to the MFA code modal', async () => {
+    const { lazy } = await loadModule();
+
+    await lazy.showMfaCodeModal({ connectionId: 'c1', profileName: 'one' });
+
+    expect(h.show.mfaCode).toHaveBeenCalledWith({ connectionId: 'c1', profileName: 'one' });
   });
 
   describe('loading toast', () => {

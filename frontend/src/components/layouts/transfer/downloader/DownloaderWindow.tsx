@@ -7,6 +7,7 @@ import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/shallow';
 import { selectDownloadingIds, useDownloaderStore } from '@/common/stores/downloaderStore';
+import { tintedColor } from '@/common/theme/tintedColor';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import DownloaderItem from '@/components/layouts/transfer/downloader/DownloaderItem';
@@ -84,7 +85,7 @@ function DownloaderWindow() {
               <Text>{t('title')}</Text>
               <Group gap="xs">
                 <ActionIcon
-                  color="red"
+                  {...tintedColor('red', 'ai')}
                   size="md"
                   onClick={onClickCancelAll}
                   title={t('action.cancelAll')}

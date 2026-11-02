@@ -9,6 +9,7 @@ import downloaderWindow from '@/locales/ja/components/layouts/transfer/downloade
 import uploaderWindow from '@/locales/ja/components/layouts/transfer/uploaderWindow.json';
 import confirmModal from '@/locales/ja/components/modals/confirmModal.json';
 import connectModal from '@/locales/ja/components/modals/connectModal.json';
+import credentialExpiring from '@/locales/ja/components/modals/credentialExpiring.json';
 import historyModal from '@/locales/ja/components/modals/historyModal.json';
 import settingModal from '@/locales/ja/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/ja/components/modals/uploadLimitModal.json';
@@ -23,6 +24,7 @@ const japaneseResource: ResourceLanguage = {
   ipcMessage: ipcMessage,
   validateMessage: validateMessage,
   connectModal: connectModal,
+  credentialExpiring: credentialExpiring,
   confirmModal: confirmModal,
   historyModal: historyModal,
   settingModal: settingModal,

@@ -1,5 +1,7 @@
 package profile
 
+import "strings"
+
 // AuthConfig is the non-secret, per-method part of a profile, stored as JSON in connection_profiles.auth_config.
 // One flat struct serves every authType, so the generated TS binding stays simple; unused fields stay empty.
 type AuthConfig struct {
@@ -21,4 +23,19 @@ type AuthConfig struct {
 	CertFile        string   `json:"certFile,omitempty"`        // minioCert: path only, never the content
 	KeyFile         string   `json:"keyFile,omitempty"`         // minioCert: path only, never the content
 	Buckets         []string `json:"buckets,omitempty"`         // anonymous
+}
+
+// BucketNames returns the anonymous bucket names without blanks and duplicates, in the entered order.
+func (c AuthConfig) BucketNames() []string {
+	names := make([]string, 0, len(c.Buckets))
+	seen := make(map[string]struct{}, len(c.Buckets))
+	for _, b := range c.Buckets {
+		b = strings.TrimSpace(b)
+		if _, dup := seen[b]; b == "" || dup {
+			continue
+		}
+		seen[b] = struct{}{}
+		names = append(names, b)
+	}
+	return names
 }

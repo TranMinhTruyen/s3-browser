@@ -98,11 +98,27 @@ export async function callIPC<A extends unknown[], T>(
   }
 }
 
+/** Technical secret names the backend puts in the `secret` param (S3E046), with the label that shows them. */
+const SECRET_LABELS: Record<string, string> = {
+  mfaCode: 'connectModal:form.label.mfaCode',
+  secretKey: 'connectModal:form.label.secretKey',
+  ldapPassword: 'connectModal:form.label.ldapPassword',
+};
+
+/** Replaces a technical `secret` param with its translated label; other params are untouched. */
+function translateParams(params: Record<string, any> | null | undefined) {
+  const label = SECRET_LABELS[params?.secret];
+  return label ? { ...params, secret: i18n.t(label) } : params;
+}
+
 function showMessages<T>(output: Output<T>): void {
   [...(output.messageList ?? [])]
     .sort((a, b) => (a.order ?? '').localeCompare(b.order ?? ''))
     .forEach(item => {
-      const message = formatStringJson(i18n.t(`ipcMessage:${item.moduleName}.${item.messageCode}`), item?.params);
+      const message = formatStringJson(
+        i18n.t(`ipcMessage:${item.moduleName}.${item.messageCode}`),
+        translateParams(item?.params)
+      );
       const description = !isNullOrEmpty(item.errorDetail) ? item.errorDetail : '';
       switch (item.messageType) {
         case 'E':

@@ -84,6 +84,14 @@ func (m *submoduleAuthMng) prepare(
 		return authColumns{}, &msg
 	}
 
+	if input.AuthType == cnst.AuthAnonymous {
+		// An anonymous client can't list buckets, so the ones to browse must be entered.
+		input.AuthConfig.Buckets = input.AuthConfig.BucketNames()
+		if len(input.AuthConfig.Buckets) == 0 {
+			return authColumns{}, errMessage(PFE009, errors.New("anonymous access needs at least one bucket"))
+		}
+	}
+
 	config, err := json.Marshal(input.AuthConfig)
 	if err != nil {
 		return authColumns{}, errMessage(PFE009, err)

@@ -8,6 +8,11 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/pressly/goose/v3"
@@ -16,7 +21,20 @@ import (
 //go:embed all:schemas/*.sql
 var schemasFS embed.FS
 
+const (
+	// backupTimeLayout is the suffix of <db>.bak-<suffix> (UTC, so DST changes keep the order): fixed width, so names
+	// sort by time. Stage 1 wrote local time; the two only differ by the offset, so old names still sort first.
+	backupTimeLayout = "20060102-150405.000"
+
+	// backupsToKeep is how many <db>.bak-* files stay after a new backup.
+	backupsToKeep = 3
+)
+
 var (
+	// backupSuffixPattern matches the suffix of the backups of this app (the second-only layout of
+	// sprint 11 stage 1 too).
+	backupSuffixPattern = regexp.MustCompile(`^\d{8}-\d{6}(\.\d{3})?$`)
+
 	// ErrBackupFailed means the backup before migrating failed: the database was not touched.
 	ErrBackupFailed = errors.New("backup before migration failed")
 
@@ -93,10 +111,42 @@ func backupBeforeMigrate(ctx context.Context, sqlDB *sql.DB, version int64) (str
 		return "", fmt.Errorf("locate db file for backup: %w", err)
 	}
 
-	backupPath := dbPath + ".bak-" + time.Now().Format("20060102-150405")
+	// Milliseconds keep two backups made in the same second from clashing (VACUUM INTO fails on an existing file).
+	backupPath := dbPath + ".bak-" + time.Now().UTC().Format(backupTimeLayout)
 	if _, err := sqlDB.ExecContext(ctx, "VACUUM INTO ?", backupPath); err != nil {
 		return "", fmt.Errorf("backup db before migrate: %w", err)
 	}
 	slog.Info("database backed up before migrate", "backup", backupPath)
+	pruneBackups(dbPath, backupsToKeep)
 	return backupPath, nil
+}
+
+// pruneBackups deletes the oldest <dbPath>.bak-<timestamp> files, keeping the newest keep. Only names this
+// app writes are matched, so other files (e.g. an old <dbPath>.bak) are never touched. A failure is only logged:
+// leftover backups are harmless.
+func pruneBackups(dbPath string, keep int) {
+	dir, prefix := filepath.Dir(dbPath), filepath.Base(dbPath)+".bak-"
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		slog.Warn("list old backups failed", "error", err)
+		return
+	}
+
+	var names []string
+	for _, e := range entries {
+		if suffix, ok := strings.CutPrefix(e.Name(), prefix); ok && backupSuffixPattern.MatchString(suffix) {
+			names = append(names, e.Name())
+		}
+	}
+	if len(names) <= keep {
+		return
+	}
+
+	// The timestamp has a fixed width, so the name order is the time order.
+	sort.Strings(names)
+	for _, name := range names[:len(names)-keep] {
+		if err := os.Remove(filepath.Join(dir, name)); err != nil {
+			slog.Warn("remove old backup failed", "backup", name, "error", err)
+		}
+	}
 }
