@@ -121,7 +121,7 @@ export const FileRow = memo(function FileRow(props: FileRowProps) {
         styles={{ root: { flex: 1, minWidth: 0 }, body: { minWidth: 0 }, labelWrapper: { minWidth: 0 } }}
       />
       {file.isLarge && (
-        <Badge color="var(--mantine-color-orange-light-color)" variant="light" style={{ flexShrink: 0 }}>
+        <Badge color="var(--mantine-color-orange-6)" variant="light" style={{ flexShrink: 0 }}>
           {largeLabel}
         </Badge>
       )}

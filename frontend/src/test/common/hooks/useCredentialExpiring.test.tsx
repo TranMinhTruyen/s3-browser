@@ -1,18 +1,26 @@
 import { renderHook } from '@testing-library/react';
-import { ReauthConnection } from '@wails/S3Browser/internal/handlers/buckethandler';
+import { LoginMinioOidc, ReauthConnection } from '@wails/S3Browser/internal/handlers/buckethandler';
 import type { CredentialExpiringOutput } from '@wails/S3Browser/models';
 import { Events } from '@wailsio/runtime';
 import { toast } from 'sonner';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { onCredentialExpiring, reauthConnection, useCredentialExpiring } from '@/common/hooks/useCredentialExpiring';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  onCredentialExpiring,
+  reauthConnection,
+  reloginOidc,
+  useCredentialExpiring,
+} from '@/common/hooks/useCredentialExpiring';
+import { useProfileStore } from '@/common/stores/profileStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { showMfaCodeModal } from '@/components/modals/lazyModals';
 import i18n from '@/locales/i18n';
 
-vi.mock('@wailsio/runtime', () => ({ Events: { On: vi.fn() } }));
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
-vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({ ReauthConnection: vi.fn() }));
+vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
+  LoginMinioOidc: vi.fn(),
+  ReauthConnection: vi.fn(),
+}));
 vi.mock('@/components/modals/lazyModals', () => ({ showMfaCodeModal: vi.fn() }));
 
 const event = (patch: Partial<CredentialExpiringOutput> = {}) =>
@@ -42,6 +50,115 @@ describe('reauthConnection', () => {
     await expect(reauthConnection('c1')).resolves.toEqual({ isConnected: true });
 
     expect(callIPC).toHaveBeenCalledExactlyOnceWith(ReauthConnection, ['c1', { authConfig: {}, authSecret: {} }]);
+  });
+});
+
+describe('reloginOidc', () => {
+  const authConfig = { clientId: 'cid', issuerUrl: 'https://idp' };
+
+  beforeEach(() => {
+    useProfileStore.setState({ connectionProfiles: { c1: { id: 'c1', authConfig } as never } });
+  });
+
+  it('does nothing for a profile that is not loaded', async () => {
+    await reloginOidc('unknown');
+
+    expect(callIPC).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['null', null],
+    ['a login without session', { sessionId: '' }],
+  ])('does not renew when the sign-in returns %s', async (_n, login) => {
+    vi.mocked(callIPC).mockResolvedValue(login as never);
+
+    await reloginOidc('c1');
+
+    expect(callIPC).toHaveBeenCalledExactlyOnceWith(LoginMinioOidc, [authConfig]);
+  });
+
+  it('renews the credentials with the new sign-in', async () => {
+    vi.mocked(callIPC)
+      .mockResolvedValueOnce({ sessionId: 's1' } as never)
+      .mockResolvedValueOnce(null as never);
+
+    await reloginOidc('c1');
+
+    expect(callIPC).toHaveBeenCalledTimes(2);
+    expect(callIPC).toHaveBeenNthCalledWith(1, LoginMinioOidc, [authConfig]);
+    expect(callIPC).toHaveBeenNthCalledWith(2, ReauthConnection, [
+      'c1',
+      { oidcSessionId: 's1', authConfig: {}, authSecret: {} },
+    ]);
+  });
+
+  describe('while a sign-in runs', () => {
+    // Every started sign-in is finished in afterEach, so the module-level set never leaks into another test.
+    const pending: Array<(login: unknown) => void> = [];
+    const hold = () =>
+      vi.mocked(callIPC).mockImplementationOnce(
+        (() =>
+          new Promise(resolve => {
+            pending.push(resolve);
+          })) as never
+      );
+
+    afterEach(async () => {
+      for (const settle of pending.splice(0)) settle(null);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    it('ignores a second click on the same connection and signs in again once the first is over', async () => {
+      hold();
+      const first = reloginOidc('c1');
+      await reloginOidc('c1');
+
+      expect(callIPC).toHaveBeenCalledExactlyOnceWith(LoginMinioOidc, [authConfig]);
+
+      pending[0](null);
+      await first;
+      vi.mocked(callIPC).mockResolvedValueOnce(null as never);
+      await reloginOidc('c1');
+
+      expect(callIPC).toHaveBeenCalledTimes(2);
+    });
+
+    it('can sign in again after the previous one threw', async () => {
+      vi.mocked(callIPC).mockRejectedValueOnce(new Error('boom'));
+      await expect(reloginOidc('c1')).rejects.toThrow('boom');
+      vi.mocked(callIPC).mockResolvedValueOnce(null as never);
+
+      await reloginOidc('c1');
+
+      expect(callIPC).toHaveBeenCalledTimes(2);
+    });
+
+    it('can sign in again after the renewal finished', async () => {
+      vi.mocked(callIPC)
+        .mockResolvedValueOnce({ sessionId: 's1' } as never)
+        .mockResolvedValueOnce(null as never);
+      await reloginOidc('c1');
+      vi.mocked(callIPC).mockResolvedValueOnce(null as never);
+
+      await reloginOidc('c1');
+
+      expect(callIPC).toHaveBeenCalledTimes(3);
+    });
+
+    it('keeps the connections independent', async () => {
+      useProfileStore.setState({
+        connectionProfiles: { c1: { id: 'c1', authConfig } as never, c2: { id: 'c2', authConfig } as never },
+      });
+      hold();
+      void reloginOidc('c1');
+      hold();
+      void reloginOidc('c2');
+      await reloginOidc('c2');
+
+      expect(callIPC).toHaveBeenCalledTimes(2);
+      expect(callIPC).toHaveBeenCalledWith(LoginMinioOidc, [authConfig]);
+    });
   });
 });
 
@@ -87,7 +204,7 @@ describe('onCredentialExpiring', () => {
     expect(callIPC).toHaveBeenCalledExactlyOnceWith(ReauthConnection, ['c1', { authConfig: {}, authSecret: {} }]);
   });
 
-  it.each(['minioOidc', 'static', ''])('toasts the expiry time without an action for %j', authType => {
+  it.each(['static', 'minioLdap', ''])('toasts the expiry time without an action for %j', authType => {
     onCredentialExpiring(event({ authType }));
 
     const { title, options } = lastToast();
@@ -96,6 +213,32 @@ describe('onCredentialExpiring', () => {
     expect(options.description).toBe(i18n.t('credentialExpiring:other.description', { time: '31-10-2026 10:20:30' }));
     expect(options.action).toBeUndefined();
     expect(showMfaCodeModal).not.toHaveBeenCalled();
+  });
+});
+
+describe('onCredentialExpiring minioOidc', () => {
+  it('toasts the expiry time with a button to sign in again', () => {
+    onCredentialExpiring(event({ authType: 'minioOidc' }));
+
+    const { title, options } = lastToast();
+    expect(title).toBe(i18n.t('credentialExpiring:oidc.title', { name: 'Prod' }));
+    expect(options).toMatchObject({
+      id: 'credential-expiring-c1',
+      duration: Infinity,
+      description: i18n.t('credentialExpiring:oidc.description', { time: '31-10-2026 10:20:30' }),
+    });
+    expect(options.action?.label).toBe(i18n.t('credentialExpiring:oidc.relogin'));
+    expect(showMfaCodeModal).not.toHaveBeenCalled();
+  });
+
+  it('signs in again when the button is clicked', () => {
+    useProfileStore.setState({ connectionProfiles: { c1: { id: 'c1', authConfig: { clientId: 'x' } } as never } });
+    vi.mocked(callIPC).mockResolvedValue(null as never);
+    onCredentialExpiring(event({ authType: 'minioOidc' }));
+
+    lastToast().options.action?.onClick();
+
+    expect(callIPC).toHaveBeenCalledExactlyOnceWith(LoginMinioOidc, [{ clientId: 'x' }]);
   });
 });
 

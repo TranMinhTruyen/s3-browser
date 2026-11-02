@@ -99,10 +99,10 @@ function ConnectionProfileItem({
                 {profile.name}
               </Text>
               <Group gap="xs" wrap="nowrap">
-                <Text c="dimmed" truncate="end">
+                <Text c="inherit" truncate="end" className={classes.provider}>
                   {profile.provider}
                 </Text>
-                <Badge size="xs" variant="light" color="var(--mantine-color-gray-6)" style={{ flexShrink: 0 }}>
+                <Badge size="xs" variant="outline" className={classes.badge} style={{ flexShrink: 0 }}>
                   {t(`connectModal:authType.${getAuthType(profile)}.label`)}
                 </Badge>
               </Group>

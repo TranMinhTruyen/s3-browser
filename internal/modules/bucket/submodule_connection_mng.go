@@ -135,6 +135,7 @@ func (m *submoduleConnMng) connectAction(
 	}
 
 	m.replaceConn(connectionId, c)
+	m.submoduleCfgMng.oidc.remove(input.OidcSessionId)
 	status.Body.ConnectionId = connectionId
 	status.Body.IsConnected = true
 	status.AddMessage(
@@ -268,7 +269,7 @@ func (m *submoduleConnMng) reauthAction(
 		)
 	}
 
-	creds, err := buildCredentials(ctx, fresh, &http.Client{Transport: conn.Transport})
+	creds, err := buildCredentials(ctx, fresh, &http.Client{Transport: conn.Transport}, m.submoduleCfgMng.oidc)
 	if err != nil {
 		if isCallCanceled(ctx) {
 			return output.ThrowError()
@@ -279,6 +280,7 @@ func (m *submoduleConnMng) reauthAction(
 	}
 
 	conn.Creds.Store(creds.AWS)
+	m.submoduleCfgMng.oidc.remove(fresh.OidcSessionId)
 	// The new credentials are cached by buildCredentials: this only reads their expiry into conn.Creds.
 	_, _ = conn.Creds.Retrieve(ctx)
 	m.watchExpiry(connectionId, conn)
@@ -311,6 +313,14 @@ func missingSecret(in models.ConnectionProfileInput) string {
 	case cnst.AuthMinioLdap:
 		if in.AuthSecret.LdapPassword == "" {
 			return "ldapPassword"
+		}
+	case cnst.AuthMinioOidc:
+		if in.OidcSessionId == "" {
+			return "oidcSession"
+		}
+	case cnst.AuthMinioCert:
+		if in.AuthConfig.KeyEncrypted && in.AuthSecret.KeyPassword == "" {
+			return "keyPassword"
 		}
 	}
 	return ""

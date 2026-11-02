@@ -5,6 +5,7 @@ import {
   connectSchema,
   getDefaultAuthConfig,
   getDefaultConnectionInfo,
+  isSecureIssuerUrl,
   profileSchema,
   toConnectionInput,
   toFormValues,
@@ -64,6 +65,7 @@ describe('getDefaultConnectionInfo', () => {
       savePassword: false,
       autoConnect: false,
       mfaCode: '',
+      oidcSessionId: '',
       authType: 'static',
       authConfig: {
         profileName: '',
@@ -77,9 +79,17 @@ describe('getDefaultConnectionInfo', () => {
         mfaSerial: '',
         policy: '',
         ldapUsername: '',
+        clientId: '',
+        issuerUrl: '',
+        scope: '',
+        callbackPort: 48765,
+        certFile: '',
+        keyFile: '',
+        keyEncrypted: false,
+        caFile: '',
         buckets: [],
       },
-      authSecret: { sessionToken: '', ldapPassword: '' },
+      authSecret: { sessionToken: '', ldapPassword: '', keyPassword: '' },
     });
   });
 });
@@ -291,7 +301,7 @@ describe('toConnectionInput', () => {
     const values = make({
       endpoint: 'http://e',
       mfaCode: '123456',
-      authSecret: { sessionToken: ' tok ', ldapPassword: '' },
+      authSecret: { sessionToken: ' tok ', ldapPassword: '', keyPassword: '' },
       authConfig: { profileName: 'left-over', roleArn: 'left-over' },
     });
 
@@ -315,7 +325,7 @@ describe('toConnectionInput', () => {
   it('keeps only the sharedProfile config fields, trimmed and without empty ones, and no keys or token', () => {
     const values = make({
       authType: 'sharedProfile',
-      authSecret: { sessionToken: 'tok', ldapPassword: '' },
+      authSecret: { sessionToken: 'tok', ldapPassword: '', keyPassword: '' },
       authConfig: { profileName: ' dev ', configFile: ' c ', credentialsFile: '', roleArn: 'x' },
     });
 
@@ -342,7 +352,7 @@ describe('toConnectionInput', () => {
   it('keeps the role config and the keys of an assume role profile with access keys, without a session token', () => {
     const values = assumeRole(
       { externalId: ' ext ', sessionName: '', durationSeconds: 1800, mfaSerial: '', profileName: 'ignored' },
-      { authSecret: { sessionToken: 'tok', ldapPassword: '' }, mfaCode: '123456' }
+      { authSecret: { sessionToken: 'tok', ldapPassword: '', keyPassword: '' }, mfaCode: '123456' }
     );
 
     const input = toConnectionInput(values, 'id', 1);
@@ -448,8 +458,11 @@ describe('minioAssumeRole', () => {
 });
 
 describe('minioLdap', () => {
-  const noPassword = { sessionToken: '', ldapPassword: '' };
-  const ldap = (authConfig: Partial<AuthConfig> = {}, authSecret = { sessionToken: '', ldapPassword: 'pw' }) =>
+  const noPassword = { sessionToken: '', ldapPassword: '', keyPassword: '' };
+  const ldap = (
+    authConfig: Partial<AuthConfig> = {},
+    authSecret = { sessionToken: '', ldapPassword: 'pw', keyPassword: '' }
+  ) =>
     minio({
       authType: 'minioLdap',
       accessKey: '',
@@ -472,7 +485,7 @@ describe('minioLdap', () => {
   });
 
   it('keeps the spaces of the password', () => {
-    const parsed = connectSchema.parse(ldap({}, { sessionToken: '', ldapPassword: ' pw ' }));
+    const parsed = connectSchema.parse(ldap({}, { sessionToken: '', ldapPassword: ' pw ', keyPassword: '' }));
     expect(parsed.authSecret.ldapPassword).toBe(' pw ');
   });
 
@@ -527,7 +540,7 @@ describe('toConnectionInput for the new methods', () => {
   it('sends the trimmed and de-duplicated buckets of anonymous, with no keys or secrets', () => {
     const values = make({
       authType: 'anonymous',
-      authSecret: { sessionToken: 'tok', ldapPassword: 'pw' },
+      authSecret: { sessionToken: 'tok', ldapPassword: 'pw', keyPassword: '' },
       authConfig: { buckets: [' a ', 'b', 'a', '  ', 'b'], policy: 'left-over' },
     });
 
@@ -538,7 +551,10 @@ describe('toConnectionInput for the new methods', () => {
   });
 
   it('keeps the keys, the policy and the duration of minioAssumeRole, and drops an empty duration', () => {
-    const base = { authType: 'minioAssumeRole' as const, authSecret: { sessionToken: 't', ldapPassword: 'pw' } };
+    const base = {
+      authType: 'minioAssumeRole' as const,
+      authSecret: { sessionToken: 't', ldapPassword: 'pw', keyPassword: '' },
+    };
 
     const withDuration = toConnectionInput(
       minio({ ...base, authConfig: { policy: ' {} ', durationSeconds: 900 } }),
@@ -555,20 +571,233 @@ describe('toConnectionInput for the new methods', () => {
   it('sends the LDAP user, the untrimmed password and no keys for minioLdap', () => {
     const values = minio({
       authType: 'minioLdap',
-      authSecret: { sessionToken: 'tok', ldapPassword: ' pw ' },
+      authSecret: { sessionToken: 'tok', ldapPassword: ' pw ', keyPassword: '' },
       authConfig: { ldapUsername: ' bob ', durationSeconds: 1000, policy: 'left-over' },
     });
 
     const input = toConnectionInput(values, 'id', 1);
 
     expect(input.authConfig).toEqual({ ldapUsername: 'bob', durationSeconds: 1000 });
-    expect(input).toMatchObject({ accessKey: '', secretKey: '', authSecret: { ldapPassword: ' pw ' }, mfaCode: '' });
+    expect(input).toMatchObject({
+      accessKey: '',
+      secretKey: '',
+      authSecret: { ldapPassword: ' pw ' },
+      mfaCode: '',
+    });
   });
 
   it('sends the LDAP password only with minioLdap', () => {
     const others = (['static', 'minioAssumeRole', 'anonymous', 'sso'] as const).map(authType =>
-      toConnectionInput(make({ authType, authSecret: { sessionToken: '', ldapPassword: 'pw' } }), 'id', 1)
+      toConnectionInput(
+        make({ authType, authSecret: { sessionToken: '', ldapPassword: 'pw', keyPassword: '' } }),
+        'id',
+        1
+      )
     );
     for (const input of others) expect(input.authSecret).not.toHaveProperty('ldapPassword');
+  });
+});
+
+describe('minioOidc', () => {
+  const oidc = (authConfig: Partial<AuthConfig> = {}, rest: Patch = {}) =>
+    minio({
+      authType: 'minioOidc',
+      accessKey: '',
+      secretKey: '',
+      oidcSessionId: 'sess',
+      ...rest,
+      authConfig: { clientId: 'cid', issuerUrl: 'https://idp.example.com/realms/main', ...authConfig },
+    });
+
+  it('accepts the provider settings with a sign-in', () => {
+    expect(issues(connectSchema, oidc())).toEqual([]);
+  });
+
+  it('requires the client id and the issuer URL', () => {
+    expect(issues(profileSchema, oidc({ clientId: ' ', issuerUrl: '' }))).toEqual([
+      'authConfig.clientId=V000001',
+      'authConfig.issuerUrl=V000001',
+    ]);
+  });
+
+  it.each([
+    ['https://idp.example.com', []],
+    ['http://localhost:8080/realms/x', []],
+    ['HTTPS://IDP.example.com', []],
+    ['HTTPS://Idp.com/realm', []],
+    ['http://localhost', []],
+    ['http://LOCALHOST:8080/x', []],
+    ['http://127.0.0.1:9000', []],
+    ['http://127.5.5.5', []],
+    ['http://[::1]:8080', []],
+    ['http://example.com', ['authConfig.issuerUrl=V000004']],
+    ['http://192.168.1.1', ['authConfig.issuerUrl=V000004']],
+    ['http://localhost.evil.com', ['authConfig.issuerUrl=V000004']],
+    ['http://127.0.0.1.evil.com', ['authConfig.issuerUrl=V000004']],
+    ['ftp://idp.example.com', ['authConfig.issuerUrl=V000004']],
+    ['ftp://x.com', ['authConfig.issuerUrl=V000004']],
+    ['idp.example.com', ['authConfig.issuerUrl=V000004']],
+    ['abc', ['authConfig.issuerUrl=V000004']],
+    ['https://', ['authConfig.issuerUrl=V000004']],
+    ['https://a b', ['authConfig.issuerUrl=V000004']],
+    ['', ['authConfig.issuerUrl=V000001']],
+  ])('validates the issuer URL %j', (issuerUrl, expected) => {
+    expect(issues(connectSchema, oidc({ issuerUrl }))).toEqual(expected);
+  });
+
+  it.each([
+    ['https://idp.example.com', true],
+    ['http://[::1]:8080', true],
+    ['http://127.5.5.5', true],
+    ['http://example.com', false],
+    ['http://localhost.evil.com', false],
+    ['https://', false],
+    ['abc', false],
+    ['', false],
+  ])('isSecureIssuerUrl(%j) is %s', (value, expected) => {
+    expect(isSecureIssuerUrl(value)).toBe(expected);
+  });
+
+  it.each([
+    [1024, []],
+    [65535, []],
+    ['', []],
+    [1023, ['authConfig.callbackPort=V000003:1024,65535']],
+    [65536, ['authConfig.callbackPort=V000003:1024,65535']],
+    ['80a', ['authConfig.callbackPort=V000003:1024,65535']],
+  ])('validates the callback port %j', (callbackPort, expected) => {
+    expect(issues(connectSchema, oidc({ callbackPort: callbackPort as never }))).toEqual(expected);
+  });
+
+  it('requires the sign-in to connect or test, but not to save a profile', () => {
+    expect(issues(connectSchema, oidc({}, { oidcSessionId: '' }))).toEqual(['oidcSessionId=V000001']);
+    expect(issues(connectSchema, oidc({}, { oidcSessionId: '  ' }))).toEqual(['oidcSessionId=V000001']);
+    expect(issues(profileSchema, oidc({}, { oidcSessionId: '' }))).toEqual([]);
+  });
+
+  it('still requires the endpoint and the region on MinIO', () => {
+    expect(issues(connectSchema, oidc({}, { endpoint: '', region: '' }))).toEqual(
+      expect.arrayContaining(['endpoint=V000001', 'region=V000001'])
+    );
+  });
+});
+
+describe('minioCert', () => {
+  const secret = (keyPassword: string) => ({ sessionToken: '', ldapPassword: '', keyPassword });
+  const cert = (authConfig: Partial<AuthConfig> = {}, authSecret = secret('')) =>
+    minio({
+      authType: 'minioCert',
+      accessKey: '',
+      secretKey: '',
+      authSecret,
+      authConfig: { certFile: '/c.pem', keyFile: '/k.pem', ...authConfig },
+    });
+
+  it('accepts the two files without a key password', () => {
+    expect(issues(connectSchema, cert())).toEqual([]);
+  });
+
+  it('requires the certificate and the key files', () => {
+    expect(issues(profileSchema, cert({ certFile: ' ', keyFile: '' }))).toEqual([
+      'authConfig.certFile=V000001',
+      'authConfig.keyFile=V000001',
+    ]);
+  });
+
+  it('requires the key password only to connect, when the key has one', () => {
+    const encrypted = { keyEncrypted: true };
+    expect(issues(connectSchema, cert(encrypted))).toEqual(['authSecret.keyPassword=V000001']);
+    expect(issues(profileSchema, cert(encrypted))).toEqual([]);
+    expect(issues(connectSchema, cert(encrypted, secret('pw')))).toEqual([]);
+    expect(issues(connectSchema, cert({ keyEncrypted: false }))).toEqual([]);
+  });
+
+  it('keeps the spaces of the key password', () => {
+    const parsed = connectSchema.parse(cert({ keyEncrypted: true }, secret(' pw ')));
+    expect(parsed.authSecret.keyPassword).toBe(' pw ');
+  });
+});
+
+describe('toFormValues for oidc and cert', () => {
+  it('restores the saved settings and never a sign-in or a key password', () => {
+    const profile = {
+      authType: 'minioOidc',
+      provider: 'minio',
+      authConfig: { clientId: 'cid', issuerUrl: 'https://idp', callbackPort: 50000, caFile: '/ca.pem' },
+    } as unknown as ConnectionProfileOutput;
+
+    const values = toFormValues(getDefaultConnectionInfo('d'), profile);
+
+    expect(values.authConfig).toMatchObject({
+      clientId: 'cid',
+      issuerUrl: 'https://idp',
+      callbackPort: 50000,
+      caFile: '/ca.pem',
+    });
+    expect(values.oidcSessionId).toBe('');
+    expect(values.authSecret.keyPassword).toBe('');
+  });
+});
+
+describe('toConnectionInput for oidc and cert', () => {
+  const oidcValues = () =>
+    minio({
+      authType: 'minioOidc',
+      oidcSessionId: 'sess',
+      authConfig: {
+        clientId: ' cid ',
+        issuerUrl: ' https://idp ',
+        scope: '',
+        roleArn: 'arn:x',
+        callbackPort: 50000,
+        certFile: 'left-over',
+        policy: 'left-over',
+      },
+    });
+
+  it('sends the provider settings without empty ones, no keys, and the sign-in id', () => {
+    const input = toConnectionInput(oidcValues(), 'id', 1);
+
+    expect(input.authConfig).toEqual({
+      clientId: 'cid',
+      issuerUrl: 'https://idp',
+      roleArn: 'arn:x',
+      callbackPort: 50000,
+    });
+    expect(input).toMatchObject({ accessKey: '', secretKey: '', authSecret: {}, oidcSessionId: 'sess' });
+  });
+
+  it('does not send the sign-in id when saving a profile', () => {
+    expect(toConnectionInput(oidcValues(), 'id', 1, false).oidcSessionId).toBe('');
+  });
+
+  it('does not send a sign-in id for another method', () => {
+    const input = toConnectionInput(minio({ authType: 'minioLdap', oidcSessionId: 'sess' }), 'id', 1);
+    expect(input.oidcSessionId).toBe('');
+  });
+
+  it('sends the files and the key flag of minioCert with the key password', () => {
+    const values = minio({
+      authType: 'minioCert',
+      authSecret: { sessionToken: '', ldapPassword: '', keyPassword: ' kp ' },
+      authConfig: { certFile: ' /c.pem ', keyFile: '/k.pem', keyEncrypted: true, clientId: 'left-over' },
+    });
+
+    const input = toConnectionInput(values, 'id', 1);
+
+    expect(input.authConfig).toEqual({ certFile: '/c.pem', keyFile: '/k.pem', keyEncrypted: true });
+    expect(input).toMatchObject({ accessKey: '', secretKey: '', authSecret: { keyPassword: ' kp ' } });
+  });
+
+  it.each(['static', 'anonymous', 'minioAssumeRole', 'minioLdap', 'minioOidc', 'minioCert'] as const)(
+    'sends the CA file of a MinIO profile using %s',
+    authType => {
+      const input = toConnectionInput(minio({ authType, authConfig: { caFile: ' /ca.pem ' } }), 'id', 1);
+      expect(input.authConfig).toMatchObject({ caFile: '/ca.pem' });
+    }
+  );
+
+  it('never sends the CA file for AWS', () => {
+    expect(toConnectionInput(make({ authConfig: { caFile: '/ca.pem' } }), 'id', 1).authConfig).toEqual({});
   });
 });

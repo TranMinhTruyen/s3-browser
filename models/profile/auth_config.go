@@ -22,6 +22,8 @@ type AuthConfig struct {
 	CallbackPort    int      `json:"callbackPort,omitempty"`    // minioOidc
 	CertFile        string   `json:"certFile,omitempty"`        // minioCert: path only, never the content
 	KeyFile         string   `json:"keyFile,omitempty"`         // minioCert: path only, never the content
+	KeyEncrypted    bool     `json:"keyEncrypted,omitempty"`    // minioCert: the key is password protected
+	CaFile          string   `json:"caFile,omitempty"`          // minio, any authType: extra trusted CA, path only
 	Buckets         []string `json:"buckets,omitempty"`         // anonymous
 }
 

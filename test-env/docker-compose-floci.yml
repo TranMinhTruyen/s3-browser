@@ -2,7 +2,7 @@
 # Run in this folder:   docker compose -f docker-compose-floci.yml -p s3b-floci-test up -d
 # Remove everything:    docker compose -f docker-compose-floci.yml -p s3b-floci-test down -v
 # The init container writes the AWS CLI profiles to ./generated (copy them to ~/.aws).
-# Accounts and expected results: ../test-profiles.txt (PHẦN B).
+# Accounts and expected results: test-profiles.txt (PHẦN B).
 
 services:
   floci:

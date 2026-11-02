@@ -2,6 +2,7 @@ package global
 
 import (
 	"net/http"
+	"slices"
 	"sync"
 	"time"
 
@@ -22,7 +23,7 @@ type CredInfo struct {
 // AnonymousBucket is a bucket the user entered for an anonymous connection.
 type AnonymousBucket struct {
 	Name string
-	// Accessible is the result of the HeadBucket check made when connecting.
+	// Accessible is the result of the latest HeadBucket check that got an answer from the server.
 	Accessible bool
 }
 
@@ -46,12 +47,38 @@ type S3Conn struct {
 	Creds    *SwapCreds
 	CredInfo CredInfo
 
-	// AnonymousBuckets are the buckets of an anonymous connection (the API can't list them).
-	AnonymousBuckets []AnonymousBucket
+	// anonymousBuckets are the buckets of an anonymous connection (the API can't list them). The list is fixed
+	// after the connection is built; only the Accessible flags change, under anonymousMu.
+	anonymousMu      sync.RWMutex
+	anonymousBuckets []AnonymousBucket
 
 	expiryMu    sync.Mutex
 	expiryTimer *time.Timer
 	closed      bool
+}
+
+// SetAnonymousBuckets sets the buckets of an anonymous connection. Call it before the connection is shared.
+func (c *S3Conn) SetAnonymousBuckets(names []string) {
+	c.anonymousMu.Lock()
+	defer c.anonymousMu.Unlock()
+	c.anonymousBuckets = make([]AnonymousBucket, len(names))
+	for i, name := range names {
+		c.anonymousBuckets[i].Name = name
+	}
+}
+
+// AnonymousBuckets returns a copy of the buckets of an anonymous connection.
+func (c *S3Conn) AnonymousBuckets() []AnonymousBucket {
+	c.anonymousMu.RLock()
+	defer c.anonymousMu.RUnlock()
+	return slices.Clone(c.anonymousBuckets)
+}
+
+// SetAnonymousAccessible records the check result of the i-th bucket of AnonymousBuckets.
+func (c *S3Conn) SetAnonymousAccessible(i int, accessible bool) {
+	c.anonymousMu.Lock()
+	defer c.anonymousMu.Unlock()
+	c.anonymousBuckets[i].Accessible = accessible
 }
 
 // SetExpiryTimer keeps the timer that warns before the credentials expire, replacing (and stopping) the previous

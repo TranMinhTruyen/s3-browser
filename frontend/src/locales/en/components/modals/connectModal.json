@@ -25,7 +25,19 @@
       "ldapPassword": "LDAP password",
       "policy": "Inline policy (JSON, optional)",
       "buckets": "Buckets",
-      "durationOptional": "Duration (seconds, optional)"
+      "durationOptional": "Duration (seconds, optional)",
+      "roleArnOptional": "Role ARN (optional)",
+      "clientId": "Client ID",
+      "issuerUrl": "Issuer URL",
+      "scope": "Scope (optional)",
+      "callbackPort": "Callback port",
+      "redirectUri": "Redirect URI",
+      "certFile": "Client certificate file",
+      "keyFile": "Private key file",
+      "keyPassword": "Private key password",
+      "keyEncrypted": "The private key has a password",
+      "oidcSession": "Sign-in",
+      "caFile": "CA certificate file (optional)"
     },
     "placeholder": {
       "saved": "Saved, leave empty to keep",
@@ -36,7 +48,12 @@
       "mfaSerial": "arn:aws:iam::123456789012:mfa/user",
       "durationDefault": "Default: set by the server",
       "policy": "{\"Version\": \"2012-10-17\", \"Statement\": []}",
-      "buckets": "Type a bucket name and press Enter"
+      "buckets": "Type a bucket name and press Enter",
+      "issuerUrl": "https://idp.example.com/realms/main",
+      "scope": "Default: openid",
+      "certFile": "Choose the certificate (.pem, .crt)",
+      "keyFile": "Choose the private key (.pem, .key)",
+      "caFile": "Default: the operating system certificates"
     },
     "sourceType": {
       "static": "Access key",
@@ -47,7 +64,12 @@
       "mfaCode": "Used once, never saved",
       "profilePlaceholder": "<profile>",
       "ssoLogin": "Sign in first with: aws sso login --profile {{profile}}",
-      "anonymousBuckets": "Anonymous access cannot list buckets: enter the names of the public buckets to open."
+      "anonymousBuckets": "Anonymous access cannot list buckets: enter the names of the public buckets to open.",
+      "redirectUri": "Register this address as a redirect URI of the client in your identity provider.",
+      "oidcLogin": "Your browser opens to sign in. The sign-in is used once and never saved.",
+      "certTls": "The files are read on connect and their content is not saved. The endpoint must use https://.",
+      "keyNotStored": "A PKCS#8 key with a password is supported. The password is saved only if you tick Save secrets.",
+      "caFile": "Extra trusted CA for a MinIO server with a self-signed or internal certificate. Leave empty to use the operating system certificates."
     },
     "tooltip": {
       "autoConnectLocked": "This authentication method needs input on every connect, so it cannot auto connect."
@@ -55,7 +77,19 @@
     "button": {
       "testConnection": "Test connection",
       "createProfile": "Create profile",
-      "editProfile": "Update profile"
+      "editProfile": "Update profile",
+      "oidcLogin": "Sign in",
+      "oidcCancel": "Cancel sign-in",
+      "chooseFile": "Choose file...",
+      "clearFile": "Clear file",
+      "copy": "Copy",
+      "copied": "Copied"
+    },
+    "status": {
+      "oidcSignedIn": "Signed in, valid until {{time}}",
+      "oidcNotSignedIn": "Not signed in",
+      "oidcWaiting": "Waiting for the sign-in in your browser...",
+      "oidcExpired": "The sign-in has expired, sign in again"
     }
   },
   "authType": {

@@ -1,6 +1,11 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ConnectS3, ListAwsProfiles } from '@wails/S3Browser/internal/handlers/buckethandler';
+import {
+  ChooseAuthFile,
+  ConnectS3,
+  ListAwsProfiles,
+  LoginMinioOidc,
+} from '@wails/S3Browser/internal/handlers/buckethandler';
 import { UpdateProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
 import type { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -12,7 +17,12 @@ import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import ConnectModal from '@/components/modals/connect/ConnectModal';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({ ConnectS3: vi.fn(), ListAwsProfiles: vi.fn() }));
+vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
+  ChooseAuthFile: vi.fn(),
+  ConnectS3: vi.fn(),
+  ListAwsProfiles: vi.fn(),
+  LoginMinioOidc: vi.fn(),
+}));
 vi.mock('@wails/S3Browser/internal/handlers/profilehandler', () => ({
   CreateProfile: vi.fn(),
   UpdateProfileById: vi.fn(),
@@ -48,9 +58,13 @@ type User = ReturnType<typeof userEvent.setup>;
 
 /** Backend results by binding; the connect call succeeds. */
 function mockBackend(profiles: unknown[] = []) {
-  callIPCMock.mockImplementation((async (binding: unknown) => {
+  callIPCMock.mockImplementation((async (binding: unknown, args: unknown) => {
     if (binding === ListAwsProfiles) return profiles;
     if (binding === ConnectS3) return { isConnected: true };
+    if (binding === ChooseAuthFile) return `/${(args as string[])[0]}.pem`;
+    if (binding === LoginMinioOidc) {
+      return { sessionId: 'sess-1', expiresAt: new Date(Date.now() + 3_600_000).toISOString() };
+    }
     return null;
   }) as never);
 }
@@ -233,7 +247,7 @@ describe('ConnectModal authentication methods', () => {
       expect(field('Authentication method')).toHaveValue('Access key');
       await user.click(field('Authentication method'));
       await screen.findAllByRole('option', { hidden: true });
-      expect(authOptions()).toEqual(['Access key', 'Anonymous', 'MinIO STS', 'LDAP']);
+      expect(authOptions()).toEqual(['Access key', 'Anonymous', 'MinIO STS', 'LDAP', 'OIDC', 'Client certificate']);
     });
 
     it('requires the endpoint for MinIO', async () => {
@@ -973,6 +987,304 @@ describe('ConnectModal anonymous, MinIO STS and LDAP', () => {
       unmount();
 
       expect(signal?.aborted).toBe(true);
+    });
+  });
+});
+
+describe('ConnectModal OIDC, client certificate and CA file', () => {
+  beforeEach(() => {
+    useModalStackStore.getState().reset();
+    useProfileStore.setState({ connectionProfiles: {} });
+    useMasterDataStore.setState({
+      regionData: { '01': [{ name: 'Tokyo', value1: 'ap-northeast-1', sortOrder: 1 } as never] },
+    });
+    mockBackend();
+  });
+
+  /** Switches to MinIO with an endpoint and region, then to the given method. */
+  async function setupMinio(user: User, method: string) {
+    await user.click(screen.getByText('MinIO'));
+    await waitFor(() => expect(checkbox('Path style')).toBeChecked());
+    type(/Endpoint/, 'http://minio:9000');
+    await chooseRegion(user);
+    await chooseAuth(user, method);
+  }
+
+  const connected = () =>
+    waitFor(() =>
+      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3, expect.anything(), { signal: expect.any(AbortSignal) })
+    );
+
+  const fillOidc = () => {
+    type(/Client ID/, 'cid');
+    type(/Issuer URL/, 'https://idp.example.com');
+  };
+
+  describe('minioOidc', () => {
+    it('shows the provider settings and the sign-in, without keys', async () => {
+      const user = await open();
+      await setupMinio(user, 'OIDC');
+
+      expect(field(/Client ID/)).toBeInTheDocument();
+      expect(field(/Issuer URL/)).toBeInTheDocument();
+      expect(field(/Callback port/)).toHaveValue('48765');
+      expect(screen.getByText('Not signed in')).toBeInTheDocument();
+      expect(queryField(/Access key/)).not.toBeInTheDocument();
+    });
+
+    it('requires the settings and the sign-in to connect', async () => {
+      const user = await open();
+      await setupMinio(user, 'OIDC');
+
+      await user.click(button('Connect'));
+
+      expect(await screen.findByText('Client ID is required')).toBeInTheDocument();
+      expect(screen.getByText('Issuer URL is required')).toBeInTheDocument();
+      expect(screen.getByText('Sign-in is required')).toBeInTheDocument();
+      expect(connectCalls()).toHaveLength(0);
+    });
+
+    it('rejects an issuer that is not an http(s) URL', async () => {
+      const user = await open();
+      await setupMinio(user, 'OIDC');
+      fillOidc();
+      type(/Issuer URL/, 'idp.example.com');
+
+      await user.click(button('Connect'));
+
+      expect(await screen.findByText('Issuer URL is not valid')).toBeInTheDocument();
+    });
+
+    it('signs in, then connects with the session id', async () => {
+      const user = await open();
+      await setupMinio(user, 'OIDC');
+      fillOidc();
+
+      await user.click(button('Sign in'));
+      expect(await screen.findByText(/Signed in, valid until/)).toBeInTheDocument();
+      await user.click(button('Connect'));
+
+      await connected();
+      expect(lastConnectInput()[0]).toMatchObject({
+        authType: 'minioOidc',
+        accessKey: '',
+        secretKey: '',
+        oidcSessionId: 'sess-1',
+        authConfig: { clientId: 'cid', issuerUrl: 'https://idp.example.com', callbackPort: 48765 },
+      });
+    });
+
+    it('asks to sign in again after the method was left and chosen again', async () => {
+      const user = await open();
+      await setupMinio(user, 'OIDC');
+      fillOidc();
+      await user.click(button('Sign in'));
+      await screen.findByText(/Signed in, valid until/);
+
+      await chooseAuth(user, 'Client certificate');
+      await chooseAuth(user, 'OIDC');
+      fillOidc();
+      await user.click(button('Connect'));
+
+      expect(await screen.findByText('Sign-in is required')).toBeInTheDocument();
+      expect(screen.getByText('Not signed in')).toBeInTheDocument();
+      expect(connectCalls()).toHaveLength(0);
+    });
+
+    it('saves a profile without the sign-in and without sending a session id', async () => {
+      const user = await open({ mode: 'createProfile' });
+      callIPCMock.mockResolvedValue({ id: 'new-1' } as never);
+      await setupMinio(user, 'OIDC');
+      fillOidc();
+
+      await user.click(button('Create profile'));
+
+      await waitFor(() => expect(callIPCMock).toHaveBeenCalledTimes(1));
+      expect(callIPCMock.mock.calls[0][1]).toEqual([
+        expect.objectContaining({ authType: 'minioOidc', oidcSessionId: '' }),
+      ]);
+    });
+
+    it('cannot auto connect, with an explanation', async () => {
+      const user = await open();
+      await setupMinio(user, 'OIDC');
+      await user.click(checkbox('Save secrets'));
+
+      expect(checkbox('Auto connect')).toBeDisabled();
+      await user.hover(checkbox('Auto connect').closest('div')!);
+      expect(
+        await screen.findByText('This authentication method needs input on every connect, so it cannot auto connect.')
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe('minioCert', () => {
+    const chooseFiles = async (user: User) => {
+      const [cert, key] = screen.getAllByRole('button', { name: 'Choose file...' });
+      await user.click(cert);
+      await waitFor(() => expect(field(/Client certificate file/)).toHaveValue('/cert.pem'));
+      await user.click(key);
+      await waitFor(() => expect(field(/Private key file/)).toHaveValue('/key.pem'));
+    };
+
+    it('requires the certificate and the key files', async () => {
+      const user = await open();
+      await setupMinio(user, 'Client certificate');
+
+      await user.click(button('Connect'));
+
+      expect(await screen.findByText('Client certificate file is required')).toBeInTheDocument();
+      expect(screen.getByText('Private key file is required')).toBeInTheDocument();
+      expect(connectCalls()).toHaveLength(0);
+    });
+
+    it('connects with the chosen files and no key password', async () => {
+      const user = await open();
+      await setupMinio(user, 'Client certificate');
+      await chooseFiles(user);
+
+      await user.click(button('Connect'));
+
+      await connected();
+      expect(lastConnectInput()[0]).toMatchObject({
+        authType: 'minioCert',
+        accessKey: '',
+        secretKey: '',
+        authConfig: { certFile: '/cert.pem', keyFile: '/key.pem' },
+        authSecret: { keyPassword: '' },
+      });
+    });
+
+    it('asks for the key password when the key has one, and sends it', async () => {
+      const user = await open();
+      await setupMinio(user, 'Client certificate');
+      await chooseFiles(user);
+      await user.click(screen.getByRole('checkbox', { name: 'The private key has a password' }));
+
+      await user.click(button('Connect'));
+      expect(await screen.findByText('Private key password is required')).toBeInTheDocument();
+      expect(connectCalls()).toHaveLength(0);
+
+      type(/Private key password/, ' kp ');
+      await user.click(button('Connect'));
+
+      await connected();
+      expect(lastConnectInput()[0]).toMatchObject({
+        authConfig: { keyEncrypted: true },
+        authSecret: { keyPassword: ' kp ' },
+      });
+    });
+
+    it('does not need the key password to save a profile', async () => {
+      const user = await open({ mode: 'createProfile' });
+      await setupMinio(user, 'Client certificate');
+      await chooseFiles(user);
+      callIPCMock.mockResolvedValue({ id: 'new-1' } as never);
+      await user.click(screen.getByRole('checkbox', { name: 'The private key has a password' }));
+
+      await user.click(button('Create profile'));
+
+      await waitFor(() => expect(callIPCMock).toHaveBeenCalledTimes(3));
+      expect(callIPCMock.mock.calls[2][1]).toEqual([
+        expect.objectContaining({ authType: 'minioCert', authSecret: { keyPassword: '' } }),
+      ]);
+    });
+
+    it('forgets the typed key password when the method changes', async () => {
+      const user = await open();
+      await setupMinio(user, 'Client certificate');
+      await user.click(screen.getByRole('checkbox', { name: 'The private key has a password' }));
+      type(/Private key password/, 'kp');
+
+      await chooseAuth(user, 'LDAP');
+      await chooseAuth(user, 'Client certificate');
+      await user.click(screen.getByRole('checkbox', { name: 'The private key has a password' }));
+
+      expect(field(/Private key password/)).toHaveValue('');
+    });
+
+    it('marks the saved key password when editing', async () => {
+      await open({
+        mode: 'editProfile',
+        connectionProfile: profile({
+          provider: 'minio',
+          accessKey: '',
+          authType: 'minioCert',
+          authConfig: { certFile: '/c.pem', keyFile: '/k.pem', keyEncrypted: true } as never,
+          savedSecrets: ['keyPassword'],
+        }),
+      });
+
+      expect(field(/Client certificate file/)).toHaveValue('/c.pem');
+      expect(field(/Private key password/)).toHaveAttribute('placeholder', SAVED);
+    });
+
+    it('can auto connect with an unencrypted key, and needs the saved password otherwise', async () => {
+      const user = await open();
+      await setupMinio(user, 'Client certificate');
+      await user.click(checkbox('Save secrets'));
+      await waitFor(() => expect(checkbox('Auto connect')).toBeEnabled());
+
+      await user.click(screen.getByRole('checkbox', { name: 'The private key has a password' }));
+      await waitFor(() => expect(checkbox('Auto connect')).toBeDisabled());
+
+      type(/Private key password/, 'kp');
+      await waitFor(() => expect(checkbox('Auto connect')).toBeEnabled());
+    });
+  });
+
+  describe('CA file', () => {
+    it.each(['Access key', 'Anonymous', 'MinIO STS', 'LDAP', 'OIDC', 'Client certificate'])(
+      'is offered on MinIO with %s',
+      async method => {
+        const user = await open();
+        await setupMinio(user, method);
+
+        expect(field(/CA certificate file/)).toBeInTheDocument();
+      }
+    );
+
+    it('is hidden on AWS', async () => {
+      await open();
+
+      expect(queryField(/CA certificate file/)).not.toBeInTheDocument();
+    });
+
+    it('is sent with the connection and kept when the method changes', async () => {
+      const user = await open();
+      await setupMinio(user, 'Client certificate');
+      await user.click(screen.getAllByRole('button', { name: 'Choose file...' }).at(-1)!);
+      await waitFor(() => expect(field(/CA certificate file/)).toHaveValue('/ca.pem'));
+
+      await chooseAuth(user, 'Anonymous');
+      expect(field(/CA certificate file/)).toHaveValue('/ca.pem');
+      await user.type(field(/Buckets/), 'b1{enter}');
+      await user.click(button('Connect'));
+
+      await connected();
+      expect(lastConnectInput()[0]).toMatchObject({ authConfig: { caFile: '/ca.pem', buckets: ['b1'] } });
+    });
+
+    it('is emptied by the clear button', async () => {
+      const user = await open();
+      await setupMinio(user, 'LDAP');
+      await user.click(screen.getByRole('button', { name: 'Choose file...' }));
+      await waitFor(() => expect(field(/CA certificate file/)).toHaveValue('/ca.pem'));
+
+      await user.click(screen.getByRole('button', { name: 'Clear file' }));
+
+      await waitFor(() => expect(field(/CA certificate file/)).toHaveValue(''));
+    });
+
+    it('is not sent to AWS', async () => {
+      const user = await open();
+      await chooseAuth(user, 'Default chain');
+      await chooseRegion(user);
+
+      await user.click(button('Connect'));
+
+      await connected();
+      expect(lastConnectInput()[0].authConfig).not.toHaveProperty('caFile');
     });
   });
 });

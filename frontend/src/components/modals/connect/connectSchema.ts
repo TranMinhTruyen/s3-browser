@@ -10,6 +10,21 @@ const MIN_DURATION_SECONDS = 900;
 const MAX_DURATION_SECONDS = 43200;
 const DURATION_ERROR = `V000003:${MIN_DURATION_SECONDS},${MAX_DURATION_SECONDS}`;
 const ROLE_ARN_REGEX = /^arn:aws[\w-]*:iam::\d{12}:role\/\S+$/;
+const LOOPBACK_HOST_REGEX = /^(localhost|127(\.\d{1,3}){3}|\[::1\])$/i;
+
+/** Khớp backend `utils.IsSecureUrl`: https với host bất kỳ, http chỉ cho host loopback. */
+export const isSecureIssuerUrl = (value: string): boolean => {
+  try {
+    const { protocol, hostname } = new URL(value);
+    return protocol === 'https:' ? hostname !== '' : protocol === 'http:' && LOOPBACK_HOST_REGEX.test(hostname);
+  } catch {
+    return false;
+  }
+};
+export const DEFAULT_CALLBACK_PORT = 48765;
+const MIN_CALLBACK_PORT = 1024;
+const MAX_CALLBACK_PORT = 65535;
+const PORT_ERROR = `V000003:${MIN_CALLBACK_PORT},${MAX_CALLBACK_PORT}`;
 
 /** Methods with a session duration: required for `assumeRole`, optional for the MinIO ones. */
 const DURATION_TYPES: AuthType[] = ['assumeRole', 'minioAssumeRole', 'minioLdap'];
@@ -30,6 +45,15 @@ const authConfigSchema = z.object({
   mfaSerial: text,
   policy: text,
   ldapUsername: text,
+  clientId: text,
+  issuerUrl: text,
+  scope: text,
+  // A NumberInput gives '' (or a partial string) while the user is typing.
+  callbackPort: z.union([z.number(), z.string()]),
+  certFile: text,
+  keyFile: text,
+  keyEncrypted: z.boolean(),
+  caFile: text,
   buckets: z.array(z.string()),
 });
 
@@ -46,9 +70,11 @@ const common = z.object({
   savePassword: z.boolean(),
   autoConnect: z.boolean(),
   mfaCode: text,
+  // Id of the OIDC sign-in held by the backend; never saved with a profile.
+  oidcSessionId: text,
   authConfig: authConfigSchema,
   // Passwords are not trimmed: leading/trailing spaces may be part of them.
-  authSecret: z.object({ sessionToken: text, ldapPassword: z.string() }),
+  authSecret: z.object({ sessionToken: text, ldapPassword: z.string(), keyPassword: z.string() }),
 });
 
 const isJson = (value: string) => {
@@ -86,6 +112,11 @@ export const buildConnectSchema = (requireSecret: boolean) => {
       common.extend({ authType: z.literal('anonymous') }),
       common.extend({ authType: z.literal('minioAssumeRole'), accessKey: required, secretKey: secret }),
       withConfig({ ldapUsername: required }).extend({ authType: z.literal('minioLdap') }),
+      withConfig({
+        clientId: required,
+        issuerUrl: text.nonempty('V000001').refine(isSecureIssuerUrl, 'V000004'),
+      }).extend({ authType: z.literal('minioOidc') }),
+      withConfig({ certFile: required, keyFile: required }).extend({ authType: z.literal('minioCert') }),
     ])
     .superRefine((values, ctx) => {
       const addIssue = (message: string, path: (string | number)[]) => ctx.addIssue({ code: 'custom', message, path });
@@ -98,6 +129,16 @@ export const buildConnectSchema = (requireSecret: boolean) => {
       if (authType === 'anonymous' && authConfig.buckets.length === 0) addRequired(['authConfig', 'buckets']);
       if (authType === 'minioLdap' && requireSecret && !values.authSecret.ldapPassword) {
         addRequired(['authSecret', 'ldapPassword']);
+      }
+      if (authType === 'minioOidc') {
+        const port = authConfig.callbackPort;
+        if (port !== '' && (typeof port !== 'number' || port < MIN_CALLBACK_PORT || port > MAX_CALLBACK_PORT)) {
+          addIssue(PORT_ERROR, ['authConfig', 'callbackPort']);
+        }
+        if (requireSecret && !values.oidcSessionId) addRequired(['oidcSessionId']);
+      }
+      if (authType === 'minioCert' && requireSecret && authConfig.keyEncrypted && !values.authSecret.keyPassword) {
+        addRequired(['authSecret', 'keyPassword']);
       }
       if (authType === 'minioAssumeRole' && authConfig.policy && !isJson(authConfig.policy)) {
         addIssue('V000004', ['authConfig', 'policy']);
@@ -157,6 +198,14 @@ export const getDefaultAuthConfig = (authType: AuthType): ConnectionInfo['authCo
   mfaSerial: '',
   policy: '',
   ldapUsername: '',
+  clientId: '',
+  issuerUrl: '',
+  scope: '',
+  callbackPort: DEFAULT_CALLBACK_PORT,
+  certFile: '',
+  keyFile: '',
+  keyEncrypted: false,
+  caFile: '',
   buckets: [],
 });
 
@@ -173,9 +222,10 @@ export const getDefaultConnectionInfo = (name: string): ConnectionInfo => ({
   savePassword: false,
   autoConnect: false,
   mfaCode: '',
+  oidcSessionId: '',
   authType: 'static',
   authConfig: getDefaultAuthConfig('static'),
-  authSecret: { sessionToken: '', ldapPassword: '' },
+  authSecret: { sessionToken: '', ldapPassword: '', keyPassword: '' },
 });
 
 /** Form values of a saved profile; secrets stay empty (the backend never returns them). */
@@ -210,6 +260,8 @@ const CONFIG_KEYS: Partial<Record<AuthType, (keyof ConnectionInfo['authConfig'])
   minioAssumeRole: ['durationSeconds', 'policy'],
   minioLdap: ['ldapUsername', 'durationSeconds'],
   anonymous: ['buckets'],
+  minioOidc: ['clientId', 'issuerUrl', 'scope', 'roleArn', 'callbackPort'],
+  minioCert: ['certFile', 'keyFile', 'keyEncrypted'],
 };
 
 /** Trims strings; a list (buckets) is trimmed and de-duplicated without empty items. */
@@ -222,6 +274,7 @@ const cleanValue = (value: unknown) => {
 const toAuthSecret = ({ authType, authSecret }: ConnectionInfo): ConnectionProfileInput['authSecret'] => {
   if (authType === 'static') return { sessionToken: authSecret.sessionToken.trim() };
   if (authType === 'minioLdap') return { ldapPassword: authSecret.ldapPassword };
+  if (authType === 'minioCert') return { keyPassword: authSecret.keyPassword };
   return {};
 };
 
@@ -235,6 +288,8 @@ export const toConnectionInput = (
   const { authType, authConfig } = values;
   const keys = [...(CONFIG_KEYS[authType] ?? [])];
   if (authType === 'assumeRole' && authConfig.sourceType === 'profile') keys.push('profileName');
+  // The extra CA belongs to the MinIO connection whatever the method.
+  if (values.provider === 'minio') keys.push('caFile');
 
   const config = Object.fromEntries(
     keys.map(key => [key, cleanValue(authConfig[key])]).filter(([, value]) => value !== '' && value !== undefined)
@@ -258,5 +313,7 @@ export const toConnectionInput = (
     authConfig: config,
     authSecret: toAuthSecret(values),
     mfaCode: withMfaCode && needsMfa({ authType, authConfig }) ? values.mfaCode : '',
+    // Only a connect/test carries the sign-in (withMfaCode is false when saving a profile).
+    oidcSessionId: withMfaCode && authType === 'minioOidc' ? values.oidcSessionId : '',
   };
 };

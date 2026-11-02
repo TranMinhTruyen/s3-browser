@@ -7,7 +7,6 @@ import { ensureUploadIdle, runUpload } from '@/common/utils/uploadUtils';
 import { showUploadLimitModal } from '@/components/modals/lazyModals';
 import i18n from '@/locales/i18n';
 
-vi.mock('@wailsio/runtime', () => ({ Events: { On: vi.fn() } }));
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }));
 vi.mock('@/common/utils/uploadUtils', () => ({ ensureUploadIdle: vi.fn(), runUpload: vi.fn() }));
 vi.mock('@/components/modals/lazyModals', () => ({ showUploadLimitModal: vi.fn() }));
