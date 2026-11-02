@@ -1,0 +1,17 @@
+{
+  "title": "Загрузка файлов",
+  "target": "Загрузить в: {target}",
+  "selectFiles": "Выбрать файлы",
+  "dropHint": "или перетащите сюда файлы и папки",
+  "dropHere": "Перетащите файлы сюда",
+  "bucketRequired": "Выберите целевой бакет",
+  "emptyList": "Файлы ещё не добавлены",
+  "selectedCount": "Файлов: {selected}/{max}",
+  "selectedLarge": "Крупных файлов: {selected}/{max}",
+  "autoUnselected": "Некоторые файлы превышают лимиты загрузки, их отметки сняты",
+  "upload": "Загрузить",
+  "large": "Крупный",
+  "rootFolder": "(выбранные файлы)",
+  "remove": "Удалить файл",
+  "removeSelected": "Удалить выбранные"
+}

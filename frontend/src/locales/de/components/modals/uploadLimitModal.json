@@ -1,0 +1,12 @@
+{
+  "title": "Dateien zum Hochladen auswählen",
+  "description": "Einige Ordner überschreiten die Upload-Grenzen. Wählen Sie die hochzuladenden Dateien aus; Ordner innerhalb der Grenzen werden vollständig hochgeladen.",
+  "cappedWarning": "Der Ordnerscan wurde vorzeitig beendet, daher ist die Liste möglicherweise unvollständig.",
+  "rootFolder": "(direkt abgelegte Dateien)",
+  "overMaxSection": "Ordner mit mehr als {max} Dateien",
+  "overLargeSection": "Ordner mit {count} oder mehr großen Dateien (über {size})",
+  "selectedCount": "{selected}/{max} Dateien",
+  "selectedLarge": "{selected}/{max} große Dateien",
+  "large": "Groß",
+  "upload": "Hochladen"
+}

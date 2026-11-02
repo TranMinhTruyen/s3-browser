@@ -1,0 +1,21 @@
+/* The button shrinks with its container; a label that does not fit is cut with an ellipsis. */
+.root {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.inner {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Block instead of Mantine's flex: text-overflow has no effect on a flex container. Inner (flex) still centers it. */
+.label {
+  display: block;
+  height: auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

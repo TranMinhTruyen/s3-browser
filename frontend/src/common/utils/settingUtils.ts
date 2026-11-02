@@ -2,9 +2,9 @@ import type { MantineColorScheme, MantineColorSchemeManager } from '@mantine/cor
 import {
   type AppSettingValues,
   DEFAULT_SETTINGS,
-  FONT_FAMILIES,
   FONTS,
   type FontKey,
+  getFontFamily,
   LANGUAGES,
   type LanguageKey,
   THEMES,
@@ -61,10 +61,11 @@ export function applySettings(settings: AppSettingValues): void {
   setSchemeAttribute(settings.theme);
   onSchemeChange?.(settings.theme);
 
-  const family = FONT_FAMILIES[settings.font];
+  const family = getFontFamily(settings.font, settings.language);
   const style = document.documentElement.style;
   style.setProperty('--mantine-font-family', family);
   style.setProperty('--mantine-font-family-headings', family);
+  document.documentElement.lang = settings.language;
 
   if (i18n.language !== settings.language) {
     i18n.changeLanguage(settings.language);

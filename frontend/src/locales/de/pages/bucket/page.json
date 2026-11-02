@@ -1,0 +1,14 @@
+{
+  "empty": "Noch keine Buckets",
+  "tooltip": {
+    "bucketList": "Bucket-Liste",
+    "inaccessible": "Auf diesen Bucket kann nicht anonym zugegriffen werden."
+  },
+  "label": {
+    "createDate": "Erstellt am:"
+  },
+  "search": {
+    "empty": "Keine passenden Buckets",
+    "loadMore": "Weiter suchen"
+  }
+}

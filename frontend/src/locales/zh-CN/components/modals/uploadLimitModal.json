@@ -1,0 +1,12 @@
+{
+  "title": "选择要上传的文件",
+  "description": "部分文件夹超出上传限制。请选择要上传的文件；未超出限制的文件夹将完整上传。",
+  "cappedWarning": "文件夹扫描已提前停止，因此列表可能不完整。",
+  "rootFolder": "（直接拖入的文件）",
+  "overMaxSection": "文件数超过 {max} 的文件夹",
+  "overLargeSection": "大文件（超过 {size}）数量达到 {count} 或更多的文件夹",
+  "selectedCount": "{selected}/{max} 个文件",
+  "selectedLarge": "{selected}/{max} 个大文件",
+  "large": "大文件",
+  "upload": "上传"
+}

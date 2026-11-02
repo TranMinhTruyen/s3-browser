@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 import {
-  FONT_FAMILIES,
   FONTS,
   type FontKey,
+  getFontFamily,
   LANGUAGE_LABELS,
   LANGUAGES,
   type LanguageKey,
@@ -68,9 +68,9 @@ export default createMantineModal<{}, boolean>(props => {
   // Each font option is previewed in its own font.
   const renderFontOption = useCallback(
     ({ option }: { option: { value: string; label: string } }) => (
-      <span style={{ fontFamily: FONT_FAMILIES[option.value as FontKey] }}>{option.label}</span>
+      <span style={{ fontFamily: getFontFamily(option.value as FontKey, draft.language) }}>{option.label}</span>
     ),
-    []
+    [draft.language]
   );
 
   // Closing without saving undoes the preview (back to the last applied values).

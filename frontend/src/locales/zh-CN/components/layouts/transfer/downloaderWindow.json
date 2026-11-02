@@ -1,0 +1,13 @@
+{
+  "title": "正在下载",
+  "action": {
+    "cancelAll": "全部取消",
+    "cancel": "取消",
+    "close": "关闭"
+  },
+  "label": {
+    "objectLbl": "对象",
+    "downloadedLbl": "已下载",
+    "remainingLbl": "剩余"
+  }
+}

@@ -1,0 +1,137 @@
+{
+  "title": "连接配置文件",
+  "form": {
+    "label": {
+      "name": "配置文件名称",
+      "color": "配置文件颜色",
+      "endpoint": "终端节点",
+      "authType": "身份验证方式",
+      "accessKey": "访问密钥",
+      "secretKey": "秘密密钥",
+      "sessionToken": "会话令牌（可选）",
+      "configFile": "AWS 配置文件（可选）",
+      "credentialsFile": "AWS 凭证文件（可选）",
+      "sourceType": "用于担任角色的凭证",
+      "roleArn": "角色 ARN",
+      "externalId": "外部 ID（可选）",
+      "sessionName": "会话名称（可选）",
+      "durationSeconds": "持续时间（秒）",
+      "mfaSerial": "MFA 设备序列号（可选）",
+      "mfaCode": "MFA 代码",
+      "pathStyle": "Path style",
+      "savePassword": "保存密钥",
+      "autoConnect": "自动连接",
+      "ldapUsername": "LDAP 用户名",
+      "ldapPassword": "LDAP 密码",
+      "policy": "内联策略（JSON，可选）",
+      "buckets": "存储桶",
+      "durationOptional": "持续时间（秒，可选）",
+      "roleArnOptional": "角色 ARN（可选）",
+      "clientId": "客户端 ID",
+      "issuerUrl": "颁发者 URL",
+      "scope": "范围（可选）",
+      "callbackPort": "回调端口",
+      "redirectUri": "重定向 URI",
+      "certFile": "客户端证书文件",
+      "keyFile": "私钥文件",
+      "keyPassword": "私钥密码",
+      "keyEncrypted": "私钥设有密码",
+      "oidcSession": "登录",
+      "caFile": "CA 证书文件（可选）"
+    },
+    "placeholder": {
+      "saved": "已保存，留空则保持不变",
+      "configFile": "默认：~/.aws/config",
+      "credentialsFile": "默认：~/.aws/credentials",
+      "roleArn": "arn:aws:iam::123456789012:role/RoleName",
+      "sessionName": "默认：s3browser-<user>",
+      "mfaSerial": "arn:aws:iam::123456789012:mfa/user",
+      "durationDefault": "默认：由服务器设定",
+      "policy": "{\"Version\": \"2012-10-17\", \"Statement\": []}",
+      "buckets": "输入存储桶名称后按 Enter 键",
+      "issuerUrl": "https://idp.example.com/realms/main",
+      "scope": "默认：openid",
+      "certFile": "选择证书 (.pem, .crt)",
+      "keyFile": "选择私钥 (.pem, .key)",
+      "caFile": "默认：操作系统证书"
+    },
+    "sourceType": {
+      "static": "访问密钥",
+      "profile": "AWS CLI 配置文件"
+    },
+    "hint": {
+      "testNeedsSecrets": "保存不需要密钥，但测试连接需要：已保存的密钥不会被返回，请重新输入。",
+      "mfaCode": "仅使用一次，不会保存",
+      "profilePlaceholder": "<profile>",
+      "ssoLogin": "请先登录：aws sso login --profile {{profile}}",
+      "anonymousBuckets": "匿名访问无法列出存储桶：请输入要打开的公共存储桶的名称。",
+      "redirectUri": "请在您的身份提供商中，将此地址注册为客户端的重定向 URI。",
+      "oidcLogin": "将打开浏览器进行登录。登录信息仅使用一次，不会保存。",
+      "certTls": "这些文件在连接时读取，其内容不会被保存。终端节点必须使用 https://。",
+      "keyNotStored": "支持带密码的 PKCS#8 私钥。仅当勾选“保存密钥”时才会保存密码。",
+      "caFile": "为使用自签名或内部证书的 MinIO 服务器额外添加受信任的 CA。留空则使用操作系统证书。"
+    },
+    "tooltip": {
+      "autoConnectLocked": "此身份验证方式每次连接都需要输入信息，因此无法自动连接。"
+    },
+    "button": {
+      "testConnection": "测试连接",
+      "createProfile": "创建配置文件",
+      "editProfile": "更新配置文件",
+      "oidcLogin": "登录",
+      "oidcCancel": "取消登录",
+      "chooseFile": "选择文件...",
+      "clearFile": "清除文件",
+      "copy": "复制",
+      "copied": "已复制"
+    },
+    "status": {
+      "oidcSignedIn": "已登录，有效期至 {{time}}",
+      "oidcNotSignedIn": "未登录",
+      "oidcWaiting": "正在等待在浏览器中完成登录...",
+      "oidcExpired": "登录已过期，请重新登录"
+    }
+  },
+  "authType": {
+    "static": {
+      "label": "访问密钥",
+      "description": "访问密钥和秘密密钥，会话令牌为可选项。"
+    },
+    "sharedProfile": {
+      "label": "AWS CLI 配置文件",
+      "description": "使用 AWS CLI 配置文件 (~/.aws) 中的配置文件。"
+    },
+    "assumeRole": {
+      "label": "担任角色",
+      "description": "通过 STS 担任 IAM 角色，可选择使用 MFA 保护。"
+    },
+    "sso": {
+      "label": "AWS SSO",
+      "description": "使用已通过 AWS CLI 登录的配置文件 (aws sso login)。"
+    },
+    "defaultChain": {
+      "label": "默认凭证链",
+      "description": "使用环境中找到的凭证：环境变量、共享文件或实例角色。"
+    },
+    "anonymous": {
+      "label": "匿名",
+      "description": "无需凭证即可访问公共存储桶。"
+    },
+    "minioAssumeRole": {
+      "label": "MinIO STS",
+      "description": "从 MinIO STS 获取临时凭证。"
+    },
+    "minioLdap": {
+      "label": "LDAP",
+      "description": "使用 LDAP 用户登录。"
+    },
+    "minioOidc": {
+      "label": "OIDC",
+      "description": "使用 OpenID Connect 提供商登录。"
+    },
+    "minioCert": {
+      "label": "客户端证书",
+      "description": "使用 TLS 客户端证书登录。"
+    }
+  }
+}

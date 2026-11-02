@@ -1,0 +1,13 @@
+{
+  "title": "Download läuft",
+  "action": {
+    "cancelAll": "Alle abbrechen",
+    "cancel": "Abbrechen",
+    "close": "Schließen"
+  },
+  "label": {
+    "objectLbl": "Objekt",
+    "downloadedLbl": "Heruntergeladen",
+    "remainingLbl": "Verbleibend"
+  }
+}

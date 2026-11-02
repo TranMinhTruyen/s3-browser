@@ -1,0 +1,137 @@
+{
+  "title": "Verbindungsprofil",
+  "form": {
+    "label": {
+      "name": "Profilname",
+      "color": "Profilfarbe",
+      "endpoint": "Endpunkt",
+      "authType": "Authentifizierungsmethode",
+      "accessKey": "Zugriffsschlüssel",
+      "secretKey": "Geheimer Schlüssel",
+      "sessionToken": "Sitzungstoken (optional)",
+      "configFile": "AWS-Konfigurationsdatei (optional)",
+      "credentialsFile": "AWS-Anmeldedatendatei (optional)",
+      "sourceType": "Anmeldedaten zum Übernehmen der Rolle",
+      "roleArn": "Rollen-ARN",
+      "externalId": "Externe ID (optional)",
+      "sessionName": "Sitzungsname (optional)",
+      "durationSeconds": "Dauer (Sekunden)",
+      "mfaSerial": "Seriennummer des MFA-Geräts (optional)",
+      "mfaCode": "MFA-Code",
+      "pathStyle": "Path style",
+      "savePassword": "Geheimnisse speichern",
+      "autoConnect": "Automatisch verbinden",
+      "ldapUsername": "LDAP-Benutzername",
+      "ldapPassword": "LDAP-Passwort",
+      "policy": "Inline-Richtlinie (JSON, optional)",
+      "buckets": "Buckets",
+      "durationOptional": "Dauer (Sekunden, optional)",
+      "roleArnOptional": "Rollen-ARN (optional)",
+      "clientId": "Client-ID",
+      "issuerUrl": "Aussteller-URL",
+      "scope": "Scope (optional)",
+      "callbackPort": "Callback-Port",
+      "redirectUri": "Weiterleitungs-URI",
+      "certFile": "Client-Zertifikatsdatei",
+      "keyFile": "Datei des privaten Schlüssels",
+      "keyPassword": "Passwort des privaten Schlüssels",
+      "keyEncrypted": "Der private Schlüssel ist passwortgeschützt",
+      "oidcSession": "Anmeldung",
+      "caFile": "CA-Zertifikatsdatei (optional)"
+    },
+    "placeholder": {
+      "saved": "Gespeichert, leer lassen zum Beibehalten",
+      "configFile": "Standard: ~/.aws/config",
+      "credentialsFile": "Standard: ~/.aws/credentials",
+      "roleArn": "arn:aws:iam::123456789012:role/RoleName",
+      "sessionName": "Standard: s3browser-<user>",
+      "mfaSerial": "arn:aws:iam::123456789012:mfa/user",
+      "durationDefault": "Standard: vom Server festgelegt",
+      "policy": "{\"Version\": \"2012-10-17\", \"Statement\": []}",
+      "buckets": "Bucket-Namen eingeben und Enter drücken",
+      "issuerUrl": "https://idp.example.com/realms/main",
+      "scope": "Standard: openid",
+      "certFile": "Zertifikat auswählen (.pem, .crt)",
+      "keyFile": "Privaten Schlüssel auswählen (.pem, .key)",
+      "caFile": "Standard: Zertifikate des Betriebssystems"
+    },
+    "sourceType": {
+      "static": "Zugriffsschlüssel",
+      "profile": "AWS-CLI-Profil"
+    },
+    "hint": {
+      "testNeedsSecrets": "Zum Speichern sind keine Geheimnisse nötig, für „Verbindung testen“ aber schon: Gespeicherte Geheimnisse werden nie zurückgegeben, geben Sie sie erneut ein.",
+      "mfaCode": "Wird einmal verwendet und nie gespeichert",
+      "profilePlaceholder": "<profile>",
+      "ssoLogin": "Melden Sie sich zuerst an mit: aws sso login --profile {{profile}}",
+      "anonymousBuckets": "Mit anonymem Zugriff können keine Buckets aufgelistet werden: Geben Sie die Namen der öffentlichen Buckets ein, die geöffnet werden sollen.",
+      "redirectUri": "Registrieren Sie diese Adresse bei Ihrem Identitätsanbieter als Weiterleitungs-URI des Clients.",
+      "oidcLogin": "Zur Anmeldung wird Ihr Browser geöffnet. Die Anmeldung wird einmal verwendet und nie gespeichert.",
+      "certTls": "Die Dateien werden beim Verbinden gelesen, ihr Inhalt wird nicht gespeichert. Der Endpunkt muss https:// verwenden.",
+      "keyNotStored": "Ein PKCS#8-Schlüssel mit Passwort wird unterstützt. Das Passwort wird nur gespeichert, wenn „Geheimnisse speichern“ aktiviert ist.",
+      "caFile": "Zusätzliche vertrauenswürdige CA für einen MinIO-Server mit selbstsigniertem oder internem Zertifikat. Leer lassen, um die Zertifikate des Betriebssystems zu verwenden."
+    },
+    "tooltip": {
+      "autoConnectLocked": "Diese Authentifizierungsmethode erfordert bei jeder Verbindung eine Eingabe und kann daher nicht automatisch verbinden."
+    },
+    "button": {
+      "testConnection": "Verbindung testen",
+      "createProfile": "Profil erstellen",
+      "editProfile": "Profil aktualisieren",
+      "oidcLogin": "Anmelden",
+      "oidcCancel": "Anmeldung abbrechen",
+      "chooseFile": "Datei wählen...",
+      "clearFile": "Datei entfernen",
+      "copy": "Kopieren",
+      "copied": "Kopiert"
+    },
+    "status": {
+      "oidcSignedIn": "Angemeldet, gültig bis {{time}}",
+      "oidcNotSignedIn": "Nicht angemeldet",
+      "oidcWaiting": "Warten auf die Anmeldung im Browser...",
+      "oidcExpired": "Die Anmeldung ist abgelaufen, bitte erneut anmelden"
+    }
+  },
+  "authType": {
+    "static": {
+      "label": "Zugriffsschlüssel",
+      "description": "Zugriffsschlüssel und geheimer Schlüssel, optional mit Sitzungstoken."
+    },
+    "sharedProfile": {
+      "label": "AWS-CLI-Profil",
+      "description": "Ein Profil aus den AWS-CLI-Konfigurationsdateien (~/.aws) verwenden."
+    },
+    "assumeRole": {
+      "label": "Rolle übernehmen",
+      "description": "Eine IAM-Rolle über STS übernehmen, optional durch MFA geschützt."
+    },
+    "sso": {
+      "label": "AWS SSO",
+      "description": "Ein mit der AWS CLI angemeldetes Profil verwenden (aws sso login)."
+    },
+    "defaultChain": {
+      "label": "Standardkette",
+      "description": "Die in der Umgebung gefundenen Anmeldedaten verwenden: Umgebungsvariablen, gemeinsame Dateien oder die Instanzrolle."
+    },
+    "anonymous": {
+      "label": "Anonym",
+      "description": "Auf öffentliche Buckets ohne Anmeldedaten zugreifen."
+    },
+    "minioAssumeRole": {
+      "label": "MinIO STS",
+      "description": "Temporäre Anmeldedaten von MinIO STS abrufen."
+    },
+    "minioLdap": {
+      "label": "LDAP",
+      "description": "Mit einem LDAP-Benutzer anmelden."
+    },
+    "minioOidc": {
+      "label": "OIDC",
+      "description": "Mit einem OpenID-Connect-Anbieter anmelden."
+    },
+    "minioCert": {
+      "label": "Clientzertifikat",
+      "description": "Mit einem TLS-Clientzertifikat anmelden."
+    }
+  }
+}

@@ -71,7 +71,7 @@ Skill nằm trong `.claude/skills/<name>/SKILL.md` (bị chặn ghi, chỉ ngư�
 - Lỗi luôn trả về bằng `return output.ThrowError(msg)` (đặt `Result=false` và thêm message); không tự gán `Result=false` rồi `AddMessage`. Cảnh báo dùng `cnst.MessageTypeWarn`, không dùng `MessageTypeError`.
 - Message: `models.NewMessage` / `models.NewParamsMessage(cnst.MessageTypeX, cnst.<Module>, CODE, errorDetail, params)`.
 - Mã message khai báo dạng `var` ở đầu `module.go`, comment là nội dung message. Format `<PREFIX><S|E|W><NNN>` (ví dụ `S3S001`, `S3E006`, `PFE001`, `MTE001`).
-- Mỗi mã mới **phải có key** trong `frontend/src/locales/{en,vi,ja}/messages/ipcMessage.json`.
+- Mỗi mã mới **phải có key** trong `frontend/src/locales/{en,vi,ja,zh-CN,zh-TW,ru,de}/messages/ipcMessage.json`.
 
 ### Model
 
@@ -112,7 +112,7 @@ Tất cả tool Go được khai báo trong `tool (...)` của `go.mod` (wails3,
 
 ### Stack
 
-Mantine 9, zustand 5 + immer qua `createAppStore(creator, name)`, NiceModal qua `createMantineModal`, i18next (en/vi/ja), sonner (toast), `@tanstack/react-virtual`, lucide-react, zod, dayjs. Package manager: **bun**.
+Mantine 9, zustand 5 + immer qua `createAppStore(creator, name)`, NiceModal qua `createMantineModal`, i18next (en/vi/ja/zh-CN/zh-TW/ru/de), sonner (toast), `@tanstack/react-virtual`, lucide-react, zod, dayjs. Package manager: **bun**.
 
 Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 
@@ -134,6 +134,7 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 - **Mọi hàm** khai báo trong component phải bọc `useCallback`.
 - Danh sách lớn phải virtualize.
 - Component Mantine được bọc lại trong `components/buttons|inputs|modals`.
+- Button: luôn dùng wrapper `components/buttons/Button` (không import thẳng `Button` từ `@mantine/core`). Wrapper tự co theo container, cắt chữ bằng ellipsis và hiện tooltip khi chữ bị cắt; không bọc thêm `Tooltip` chứa đúng label của nút, không ép width cố định.
 - Màu: dùng biến theme `var(--mantine-color-*)` và `light-dark(<light>, <dark>)` để hỗ trợ cả light/dark theme; không hard-code hex/rgb/tên màu (ngoại lệ: màu lưu như dữ liệu, ví dụ màu profile do user chọn; prop `color="red"` của nút Huỷ trong footer modal). Component variant `light` (Badge, Button...) truyền màu gốc `var(--mantine-color-<c>-6)`; biến `-light-color` chỉ dùng cho chữ/viền.
 - **Console sạch**: code không được sinh warning hay error trong console của React (thiếu `key`, setState sau unmount, controlled/uncontrolled, DOM lồng sai, prop không hợp lệ truyền xuống DOM, i18next thiếu key, cảnh báo của Mantine...). Không để `console.log`/`console.warn`/`console.error` trong code production; lỗi cần báo cho người dùng thì đi qua `callIPC`/toast, cần ghi log thì đi qua backend.
 - Modal: footer đặt nút Huỷ (`color="red"`) bên **trái**, các nút hành động (Reset, Apply, Save, OK, Upload, ...) bên **phải**, dùng `<Group p="8px" justify="space-between" wrap="nowrap">` để không nhảy layout khi đổi ngôn ngữ/font. Phần thân modal có form/nội dung chính thì bọc trong `<Paper withBorder>` giống `UploadPickerModal`.
@@ -141,7 +142,10 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 ### i18n
 
 - Không hard-code chuỗi UI.
-- Namespace theo component/page trong `frontend/src/locales/<lang>/...`, đăng ký trong `resource.ts` của **cả 3 ngôn ngữ** (en, vi, ja).
+- Hỗ trợ **7 ngôn ngữ**: `en`, `vi`, `ja`, `zh-CN` (giản thể), `zh-TW` (phồn thể, từ vựng Đài Loan), `ru`, `de`. Danh sách ngôn ngữ nằm trong code (`LANGUAGES` ở `common/cnst/settingConst.ts` và `languages` ở `internal/modules/setting/submodule_setting_mng.go`), không đưa vào DB; ngôn ngữ đã chọn lưu trong `settings.json`.
+- Namespace theo component/page trong `frontend/src/locales/<lang>/...`, đăng ký trong `resource.ts` của **cả 7 ngôn ngữ**. Mọi file JSON phải có đúng tập key và placeholder `{{x}}`/`{x}` như bản `en`.
+- Thuật ngữ dịch theo AWS console đã bản địa hoá (ví dụ zh-TW: credentials/certificate → 憑證; ru: endpoint → «конечная точка»). "Path style" giữ nguyên tiếng Anh (trừ `ja`).
+- Thêm ngôn ngữ mới: thêm mã vào cả 2 danh sách trên, tạo thư mục locale + `resource.ts`, đăng ký trong `locales/i18n.ts`; ngôn ngữ CJK cần fallback font riêng trong `getFontFamily`.
 
 ### Lệnh (chạy trong `frontend/`)
 
