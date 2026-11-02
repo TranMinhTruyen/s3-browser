@@ -2,6 +2,15 @@
   "common": {
     "CME001": "Error while call IPC"
   },
+  "params": {
+    "secret": {
+      "mfaCode": "MFA code",
+      "secretKey": "Secret key",
+      "ldapPassword": "LDAP password",
+      "keyPassword": "Private key password",
+      "oidcSession": "Sign-in"
+    }
+  },
   "bucket": {
     "S3S001": "Test connection profile {name} to S3 success.",
     "S3S002": "Profile: {name} is connected.",

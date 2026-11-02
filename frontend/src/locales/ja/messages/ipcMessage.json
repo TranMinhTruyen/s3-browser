@@ -2,6 +2,15 @@
   "common": {
     "CME001": "IPC呼び出し中にエラーが発生しました"
   },
+  "params": {
+    "secret": {
+      "mfaCode": "MFA コード",
+      "secretKey": "シークレットキー",
+      "ldapPassword": "LDAP パスワード",
+      "keyPassword": "秘密鍵のパスワード",
+      "oidcSession": "サインイン"
+    }
+  },
   "bucket": {
     "S3S001": "プロファイル {name} のS3接続テストに成功しました",
     "S3S002": "プロファイル: {name} に接続しました",

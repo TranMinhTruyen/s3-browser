@@ -2,6 +2,15 @@
   "common": {
     "CME001": "Lỗi khi gọi IPC"
   },
+  "params": {
+    "secret": {
+      "mfaCode": "Mã MFA",
+      "secretKey": "Secret key",
+      "ldapPassword": "Mật khẩu LDAP",
+      "keyPassword": "Mật khẩu private key",
+      "oidcSession": "Đăng nhập"
+    }
+  },
   "bucket": {
     "S3S001": "Kiểm tra kết nối hồ sơ {name} tới S3 thành công",
     "S3S002": "Hồ sơ: {name} đã kết nối",

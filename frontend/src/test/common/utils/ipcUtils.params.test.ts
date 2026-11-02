@@ -5,17 +5,25 @@ import { callIPC } from '@/common/utils/ipcUtils';
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), warning: vi.fn(), info: vi.fn(), success: vi.fn() },
 }));
+const labels: Record<string, string> = {
+  'ipcMessage:params.secret.mfaCode': 'MFA code',
+  'ipcMessage:params.secret.secretKey': 'Secret key',
+  'ipcMessage:params.secret.ldapPassword': 'LDAP password',
+  'ipcMessage:params.secret.keyPassword': 'Private key password',
+  'ipcMessage:params.secret.oidcSession': 'Sign-in',
+};
 // Labels and the message template are translated; everything else echoes its key.
 vi.mock('@/locales/i18n', () => ({
   default: {
+    exists: (key: string) => key in labels,
     t: (key: string) =>
       ({
         'ipcMessage:bucket.S3E046': '{secret} is required for {name}',
-        'connectModal:form.label.mfaCode': 'MFA code',
-        'connectModal:form.label.secretKey': 'Secret key',
-        'connectModal:form.label.ldapPassword': 'LDAP password',
-        'connectModal:form.label.keyPassword': 'Private key password',
-        'connectModal:form.label.oidcSession': 'Sign-in',
+        'ipcMessage:params.secret.mfaCode': 'MFA code',
+        'ipcMessage:params.secret.secretKey': 'Secret key',
+        'ipcMessage:params.secret.ldapPassword': 'LDAP password',
+        'ipcMessage:params.secret.keyPassword': 'Private key password',
+        'ipcMessage:params.secret.oidcSession': 'Sign-in',
       })[key] ?? key,
   },
 }));

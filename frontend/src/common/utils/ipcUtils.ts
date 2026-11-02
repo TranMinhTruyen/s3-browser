@@ -98,23 +98,14 @@ export async function callIPC<A extends unknown[], T>(
   }
 }
 
-/** Technical secret names the backend puts in the `secret` param (S3E046), with the label that shows them. */
-const SECRET_LABELS: Record<string, string> = {
-  mfaCode: 'connectModal:form.label.mfaCode',
-  secretKey: 'connectModal:form.label.secretKey',
-  ldapPassword: 'connectModal:form.label.ldapPassword',
-  keyPassword: 'connectModal:form.label.keyPassword',
-  oidcSession: 'connectModal:form.label.oidcSession',
-};
-
-/** Message codes (of the `bucket` module) whose `secret` param is one of {@link SECRET_LABELS}. */
+/** Message codes (of the `bucket` module) whose `secret` param is a technical name (e.g. `mfaCode`). */
 const SECRET_PARAM_CODES = new Set(['S3E046']);
 
-/** Replaces the technical `secret` param of the codes in {@link SECRET_PARAM_CODES} with its translated label. */
+/** Replaces the technical `secret` param of {@link SECRET_PARAM_CODES} with its `ipcMessage:params.secret.*` label. */
 function translateParams({ moduleName, messageCode, params }: Message) {
-  const label =
-    moduleName === 'bucket' && SECRET_PARAM_CODES.has(messageCode ?? '') ? SECRET_LABELS[params?.secret] : undefined;
-  return label ? { ...params, secret: i18n.t(label) } : params;
+  if (moduleName !== 'bucket' || !SECRET_PARAM_CODES.has(messageCode ?? '')) return params;
+  const key = `ipcMessage:params.secret.${params?.secret}`;
+  return i18n.exists(key) ? { ...params, secret: i18n.t(key) } : params;
 }
 
 function showMessages<T>(output: Output<T>): void {
