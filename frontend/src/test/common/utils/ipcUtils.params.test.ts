@@ -14,15 +14,17 @@ vi.mock('@/locales/i18n', () => ({
         'connectModal:form.label.mfaCode': 'MFA code',
         'connectModal:form.label.secretKey': 'Secret key',
         'connectModal:form.label.ldapPassword': 'LDAP password',
+        'connectModal:form.label.keyPassword': 'Private key password',
+        'connectModal:form.label.oidcSession': 'Sign-in',
       })[key] ?? key,
   },
 }));
 
-const show = async (params: unknown) => {
+const show = async (params: unknown, moduleName = 'bucket', messageCode: string | null = 'S3E046') => {
   const output = {
     result: true,
     body: 1,
-    messageList: [{ messageType: 'E', moduleName: 'bucket', messageCode: 'S3E046', params }],
+    messageList: [{ messageType: 'E', moduleName, messageCode, params }],
   } as never;
   await callIPC(vi.fn().mockResolvedValue(output), [] as never);
   return vi.mocked(toast.error).mock.calls.at(-1)?.[0];
@@ -37,12 +39,27 @@ describe('callIPC message params', () => {
     ['mfaCode', 'MFA code is required for Prod'],
     ['secretKey', 'Secret key is required for Prod'],
     ['ldapPassword', 'LDAP password is required for Prod'],
+    ['keyPassword', 'Private key password is required for Prod'],
+    ['oidcSession', 'Sign-in is required for Prod'],
   ])('shows the label of the technical secret name %s', async (secret, expected) => {
     expect(await show({ secret, name: 'Prod' })).toBe(expected);
   });
 
   it('keeps an unknown secret name as it is', async () => {
     expect(await show({ secret: 'sessionToken', name: 'Prod' })).toBe('sessionToken is required for Prod');
+  });
+
+  it.each([
+    ['another module', 'profile', 'S3E046'],
+    ['another code', 'bucket', 'S3E001'],
+  ])('does not translate the secret of %s', async (_name, moduleName, messageCode) => {
+    expect(await show({ secret: 'secretKey', name: 'Prod' }, moduleName, messageCode)).toBe(
+      `ipcMessage:${moduleName}.${messageCode}`
+    );
+  });
+
+  it('copes with a message without a code', async () => {
+    expect(await show({ secret: 'secretKey' }, 'bucket', null)).toBe('ipcMessage:bucket.null');
   });
 
   it.each([

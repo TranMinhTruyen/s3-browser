@@ -1,4 +1,4 @@
-import { Output } from '@wails/S3Browser/models/common';
+import { type Message, Output } from '@wails/S3Browser/models/common';
 import { CancelError, CancellablePromise } from '@wailsio/runtime';
 import { toast } from 'sonner';
 import { createUUID, formatStringJson, isNullOrEmpty } from '@/common/utils/stringUtils';
@@ -103,11 +103,17 @@ const SECRET_LABELS: Record<string, string> = {
   mfaCode: 'connectModal:form.label.mfaCode',
   secretKey: 'connectModal:form.label.secretKey',
   ldapPassword: 'connectModal:form.label.ldapPassword',
+  keyPassword: 'connectModal:form.label.keyPassword',
+  oidcSession: 'connectModal:form.label.oidcSession',
 };
 
-/** Replaces a technical `secret` param with its translated label; other params are untouched. */
-function translateParams(params: Record<string, any> | null | undefined) {
-  const label = SECRET_LABELS[params?.secret];
+/** Message codes (of the `bucket` module) whose `secret` param is one of {@link SECRET_LABELS}. */
+const SECRET_PARAM_CODES = new Set(['S3E046']);
+
+/** Replaces the technical `secret` param of the codes in {@link SECRET_PARAM_CODES} with its translated label. */
+function translateParams({ moduleName, messageCode, params }: Message) {
+  const label =
+    moduleName === 'bucket' && SECRET_PARAM_CODES.has(messageCode ?? '') ? SECRET_LABELS[params?.secret] : undefined;
   return label ? { ...params, secret: i18n.t(label) } : params;
 }
 
@@ -117,7 +123,7 @@ function showMessages<T>(output: Output<T>): void {
     .forEach(item => {
       const message = formatStringJson(
         i18n.t(`ipcMessage:${item.moduleName}.${item.messageCode}`),
-        translateParams(item?.params)
+        translateParams(item)
       );
       const description = !isNullOrEmpty(item.errorDetail) ? item.errorDetail : '';
       switch (item.messageType) {

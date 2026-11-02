@@ -5,7 +5,7 @@ Tài liệu test thủ công, KHÔNG phải requirement. Mọi tài khoản bên
 MinIO/LDAP/Floci chạy local bằng Docker, không dùng cho môi trường thật.
 
   PHẦN A (mục 1-7): provider MinIO - Access key, Anonymous, MinIO STS, LDAP.
-                    OIDC và Certificate (mTLS) chưa có (giai đoạn 3, branch SP-11/auth_minio_oidc_cert).
+  PHẦN C (mục 14-16): provider MinIO bật TLS - OIDC (Keycloak), Certificate (mTLS) và CA certificate file.
   PHẦN B (mục 8-13): provider AWS, giả lập bằng Floci - Access key, AWS CLI profile,
                     Assume role, AWS SSO, Default chain, Anonymous.
 
@@ -414,3 +414,64 @@ Chạy trong Git Bash. Cần AWS CLI v2. Bật 3 cờ ở mục 8 trong compose 
 
   Tắt kiểm tra quyền (khi project khác cần dùng key bất kỳ): xoá 3 cờ ở mục 8 khỏi
   docker-compose-local-aws.yml rồi chạy lại `docker compose ... up -d`.
+
+
+
+######################################################################################
+PHẦN C - MinIO TLS, OIDC (Keycloak) và Certificate (mTLS)
+######################################################################################
+
+
+14. Môi trường
+--------------
+
+  Dựng theo test-env/README.txt mục 7 (gen-certs.sh, Keycloak, rồi MinIO TLS).
+
+  Thành phần       Container            Địa chỉ trên máy
+  ---------------  -------------------  ---------------------------------------------
+  MinIO TLS        s3b-test-minio-tls   https://localhost:10020  <- Endpoint nhập vào app
+  Keycloak         s3b-test-keycloak    http://localhost:8180    (Admin: admin / KeycloakAdmin#2026)
+  CA                                    test-env/certs/ca.pem    <- "CA certificate file"
+
+  Bucket có sẵn: s3b-tls (file docs/readme.txt). MinIO root: admin / MinioRoot#2026.
+  Redirect URI của app (đã khai báo trong realm): http://127.0.0.1:48765/callback
+
+
+15. Profile cần tạo trong app và kết quả mong đợi
+-------------------------------------------------
+
+Mọi profile: Provider = MinIO, Endpoint = https://localhost:10020, Path style bật.
+Đường dẫn file bên dưới tính từ test-env/certs/ (khi chọn file trong app, chọn file thật trong thư mục đó).
+
+  #    Method       Thông tin nhập                                          Kết quả mong đợi
+  ---  -----------  ------------------------------------------------------  ----------------------------------------
+  P14  OIDC         Issuer URL = http://localhost:8180/realms/s3browser,     Đăng nhập Keycloak (oidc-user /
+                    Client ID = s3browser, Callback port = 48765,            OidcUser#2026), Connect liệt kê
+                    CA = ca.pem                                              s3b-tls (policy readwrite)
+  P15  OIDC         như P14, Issuer URL = http://localhost:8180/realms/sai   S3E041 (Keycloak không có realm này)
+  P16  Certificate  Cert = client/client.crt, Key = client/client.key,       Connect thành công (policy readwrite
+                    CA = ca.pem                                              theo CN của cert)
+  P17  Certificate  Cert = client/client.crt, Key = client/client-enc.key,   Connect thành công
+                    tick "Private key có mật khẩu", mật khẩu ClientKey#2026
+  P18  Certificate  như P17, mật khẩu = sai-mat-khau                         S3E043
+  P19  Certificate  như P17, để trống mật khẩu                               S3E048
+  P20  Certificate  Cert = client/client.crt, Key = client/client-legacy.key S3E043 kèm gợi ý openssl pkcs8 -topk8
+                    (tick có mật khẩu, mật khẩu ClientKey#2026)
+  P21  Certificate  như P16 nhưng không chọn CA                              Lỗi TLS "unknown authority", không treo
+  P22  Certificate  như P16, Cert = file không tồn tại                       S3E042 nêu đường dẫn
+  P23  Certificate  như P16, Endpoint = http://localhost:10020               PFE009 (cần https)
+  P24  Access key   admin / MinioRoot#2026, CA = ca.pem                      Kết nối được (CA áp cho mọi method MinIO)
+  P25  Access key   như P24, CA = file không tồn tại                         S3E049 nêu đường dẫn
+  P26  Access key   như P24, CA = client/client.key (PEM không có chứng chỉ) S3E049 nêu đường dẫn
+
+  Ghi chú OIDC: app gửi id_token (kèm access_token) cho MinIO (Q-G3-2 = A). Claim "policy" của Keycloak
+  được gán cứng readwrite cho mọi user (keycloak/s3browser-realm.json). Nếu MinIO từ chối token thì báo
+  lại để chuyển sang phương án C (chọn loại token trong profile).
+  Hết hạn OIDC (case O10): Keycloak Admin -> realm s3browser -> Realm settings -> Tokens ->
+  Access Token Lifespan = 2-3 phút (mặc định 5 phút).
+
+
+16. Dọn dẹp
+-----------
+
+  Xem test-env/README.txt mục 8.

@@ -30,6 +30,8 @@ type (
 	DroppedGroup = bucket.DroppedGroup
 	// CredentialExpiringOutput re-exports bucket.CredentialExpiringOutput.
 	CredentialExpiringOutput = bucket.CredentialExpiringOutput
+	// OidcLoginOutput re-exports bucket.OidcLoginOutput.
+	OidcLoginOutput = bucket.OidcLoginOutput
 	// ConnectOutput re-exports bucket.ConnectOutput.
 	ConnectOutput = bucket.ConnectOutput
 	// ListBucketInput re-exports bucket.ListBucketInput.

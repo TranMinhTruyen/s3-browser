@@ -37,10 +37,6 @@ vi.mock('@tanstack/react-virtual', () => ({
     },
   }),
 }));
-vi.mock('@wailsio/runtime', async importOriginal => {
-  const actual = await importOriginal<typeof import('@wailsio/runtime')>();
-  return { ...actual, Events: { ...actual.Events, On: vi.fn() } };
-});
 vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({ PickFiles: vi.fn() }));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }));

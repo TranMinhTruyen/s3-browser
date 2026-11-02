@@ -38,9 +38,12 @@ import {
 import AuthAnonymousFields from '@/components/modals/connect/fields/AuthAnonymousFields';
 import AuthAssumeRoleFields from '@/components/modals/connect/fields/AuthAssumeRoleFields';
 import AuthAwsProfileFields from '@/components/modals/connect/fields/AuthAwsProfileFields';
+import AuthCertFields from '@/components/modals/connect/fields/AuthCertFields';
 import AuthLdapFields from '@/components/modals/connect/fields/AuthLdapFields';
 import AuthMinioStsFields from '@/components/modals/connect/fields/AuthMinioStsFields';
+import AuthOidcFields from '@/components/modals/connect/fields/AuthOidcFields';
 import AuthStaticFields from '@/components/modals/connect/fields/AuthStaticFields';
+import CaFileField from '@/components/modals/connect/fields/CaFileField';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 import { MODAL_CHROME_HEIGHT } from '@/components/modals/modalLayout';
 
@@ -113,6 +116,8 @@ export default createMantineModal<ConnectModalProps, false>(
     const ldapPassword = form.useWatchValue('authSecret.ldapPassword');
     const sourceType = form.useWatchValue('authConfig.sourceType');
     const mfaSerial = form.useWatchValue('authConfig.mfaSerial');
+    const keyEncrypted = form.useWatchValue('authConfig.keyEncrypted');
+    const keyPassword = form.useWatchValue('authSecret.keyPassword');
 
     form.watch('provider', ({ value }) => {
       if (!value) return;
@@ -126,8 +131,12 @@ export default createMantineModal<ConnectModalProps, false>(
     // A different method does not share the old method's fields (e.g. a non-SSO profile must not reach `sso`).
     form.watch('authType', ({ value }) => {
       form.clearErrors(); // errors from the previous method no longer apply
-      form.setFieldValue('authConfig', getDefaultAuthConfig(value));
+      // The CA belongs to the MinIO server, not to the method: keep it.
+      const { caFile } = form.getValues().authConfig;
+      form.setFieldValue('authConfig', { ...getDefaultAuthConfig(value), caFile });
       form.setFieldValue('mfaCode', '');
+      form.setFieldValue('oidcSessionId', '');
+      form.setFieldValue('authSecret.keyPassword', '');
     });
 
     const secretRequired = mode === 'connect' || mode === 'manualconnect';
@@ -145,11 +154,11 @@ export default createMantineModal<ConnectModalProps, false>(
 
     // Auto connect needs stored secrets and a method that connects without input (no MFA code).
     const authState = useMemo(
-      () => ({ authType, authConfig: { sourceType, mfaSerial } }),
-      [authType, sourceType, mfaSerial]
+      () => ({ authType, authConfig: { sourceType, mfaSerial, keyEncrypted } }),
+      [authType, sourceType, mfaSerial, keyEncrypted]
     );
     const autoConnectLocked = !canAutoConnect(authState);
-    const typedSecrets: Record<string, string> = { secretKey, ldapPassword };
+    const typedSecrets: Record<string, string> = { secretKey, ldapPassword, keyPassword };
     const requiredSecrets = getRequiredSecrets(authState);
     const secretsReady = requiredSecrets.every(name => !!typedSecrets[name] || savedSecrets.includes(name));
     // Saving secrets only matters for methods that have some; the others (anonymous, SSO...) auto connect without.
@@ -340,6 +349,9 @@ export default createMantineModal<ConnectModalProps, false>(
                 {authType === 'anonymous' && <AuthAnonymousFields form={form} />}
                 {authType === 'minioAssumeRole' && <AuthMinioStsFields {...authFieldsProps} />}
                 {authType === 'minioLdap' && <AuthLdapFields {...authFieldsProps} />}
+                {authType === 'minioOidc' && <AuthOidcFields form={form} />}
+                {authType === 'minioCert' && <AuthCertFields {...authFieldsProps} />}
+                {provider === 'minio' && <CaFileField form={form} />}
 
                 {secretRequired ? null : (
                   <Text size="xs" c="dimmed">

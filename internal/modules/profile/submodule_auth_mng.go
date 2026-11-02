@@ -10,6 +10,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+)
+
+// Range of the OIDC callback port (0 means the default).
+const (
+	minCallbackPort = 1024
+	maxCallbackPort = 65535
 )
 
 // errInvalidAuthConfig marks a stored auth_config that cannot be parsed (PFE009).
@@ -92,6 +99,13 @@ func (m *submoduleAuthMng) prepare(
 		}
 	}
 
+	if err := validateAuthConfig(input); err != nil {
+		return authColumns{}, errMessage(PFE009, err)
+	}
+	if input.Provider != cnst.ProviderMinio {
+		input.AuthConfig.CaFile = "" // the extra CA only applies to MinIO connections
+	}
+
 	config, err := json.Marshal(input.AuthConfig)
 	if err != nil {
 		return authColumns{}, errMessage(PFE009, err)
@@ -129,6 +143,31 @@ func (m *submoduleAuthMng) prepare(
 		}
 	}
 	return cols, nil
+}
+
+// validateAuthConfig checks the fields the OIDC and certificate methods cannot connect without.
+func validateAuthConfig(input models.ConnectionProfileInput) error {
+	cfg := input.AuthConfig
+	switch input.AuthType {
+	case cnst.AuthMinioOidc:
+		if cfg.ClientId == "" || cfg.IssuerUrl == "" {
+			return errors.New("OIDC needs a client id and an issuer URL")
+		}
+		if !utils.IsSecureUrl(cfg.IssuerUrl) {
+			return errors.New("OIDC issuer URL must be https (http only for localhost)")
+		}
+		if cfg.CallbackPort != 0 && (cfg.CallbackPort < minCallbackPort || cfg.CallbackPort > maxCallbackPort) {
+			return fmt.Errorf("OIDC callback port must be between %d and %d", minCallbackPort, maxCallbackPort)
+		}
+	case cnst.AuthMinioCert:
+		if cfg.CertFile == "" || cfg.KeyFile == "" {
+			return errors.New("certificate authentication needs a certificate file and a key file")
+		}
+		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(input.Endpoint)), "http://") {
+			return errors.New("certificate authentication needs an https endpoint")
+		}
+	}
+	return nil
 }
 
 // seal encrypts v; an empty v is stored as NULL.
@@ -205,7 +244,7 @@ func keepNeeded(s plainSecrets, input models.ConnectionProfileInput) plainSecret
 	if input.AuthType != cnst.AuthMinioLdap {
 		s.LdapPassword = ""
 	}
-	if input.AuthType != cnst.AuthMinioCert {
+	if input.AuthType != cnst.AuthMinioCert || !input.AuthConfig.KeyEncrypted {
 		s.KeyPassword = ""
 	}
 	return s

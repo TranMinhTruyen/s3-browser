@@ -32,6 +32,10 @@ describe('authUtils', () => {
     [{ authType: 'anonymous' }, []],
     [{ authType: 'minioAssumeRole' }, ['secretKey']],
     [{ authType: 'minioLdap' }, ['ldapPassword']],
+    [{ authType: 'minioOidc' }, []],
+    [{ authType: 'minioCert' }, []],
+    [{ authType: 'minioCert', authConfig: { keyEncrypted: false } }, []],
+    [{ authType: 'minioCert', authConfig: { keyEncrypted: true } }, ['keyPassword']],
   ])('getRequiredSecrets(%j) is %j', (profile, expected) => {
     expect(getRequiredSecrets(profile as never)).toEqual(expected);
   });
@@ -45,6 +49,7 @@ describe('authUtils', () => {
     [{ authType: 'anonymous' }, true],
     [{ authType: 'minioAssumeRole' }, true],
     [{ authType: 'minioLdap' }, true],
+    [{ authType: 'minioCert' }, true],
     [{ authType: 'unknown' }, false],
   ])('canAutoConnect(%j) is %s', (profile, expected) => {
     expect(canAutoConnect(profile as never)).toBe(expected);
@@ -77,6 +82,18 @@ describe('authUtils', () => {
     ['minioLdap without the password saved', { authType: 'minioLdap', savedSecrets: [] }, true],
     ['minioLdap with unrelated secrets', { authType: 'minioLdap', savedSecrets: ['secretKey'] }, true],
     ['minioLdap with no savedSecrets', { authType: 'minioLdap' }, true],
+    ['minioOidc always needs a sign-in', { authType: 'minioOidc', accessKey: 'AK', savedSecrets: ['secretKey'] }, true],
+    ['minioCert with an unencrypted key needs nothing', { authType: 'minioCert' }, false],
+    [
+      'minioCert with an encrypted key not saved',
+      { authType: 'minioCert', authConfig: { keyEncrypted: true }, savedSecrets: [] },
+      true,
+    ],
+    [
+      'minioCert with the key password saved',
+      { authType: 'minioCert', authConfig: { keyEncrypted: true }, savedSecrets: ['keyPassword'] },
+      false,
+    ],
   ])('needsManualInput: %s -> %s', (_name, profile, expected) => {
     expect(needsManualInput(profile as never)).toBe(expected);
   });

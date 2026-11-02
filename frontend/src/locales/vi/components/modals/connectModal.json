@@ -25,7 +25,19 @@
       "ldapPassword": "Mật khẩu LDAP",
       "policy": "Policy nội tuyến (JSON, tùy chọn)",
       "buckets": "Bucket",
-      "durationOptional": "Thời hạn (giây, tùy chọn)"
+      "durationOptional": "Thời hạn (giây, tùy chọn)",
+      "roleArnOptional": "Role ARN (tuỳ chọn)",
+      "clientId": "Client ID",
+      "issuerUrl": "Issuer URL",
+      "scope": "Scope (tuỳ chọn)",
+      "callbackPort": "Cổng callback",
+      "redirectUri": "Redirect URI",
+      "certFile": "File chứng chỉ client",
+      "keyFile": "File private key",
+      "keyPassword": "Mật khẩu private key",
+      "keyEncrypted": "Private key có mật khẩu",
+      "oidcSession": "Đăng nhập",
+      "caFile": "File chứng chỉ CA (tuỳ chọn)"
     },
     "placeholder": {
       "saved": "Đã lưu, để trống để giữ nguyên",
@@ -36,7 +48,12 @@
       "mfaSerial": "arn:aws:iam::123456789012:mfa/user",
       "durationDefault": "Mặc định: do máy chủ quyết định",
       "policy": "{\"Version\": \"2012-10-17\", \"Statement\": []}",
-      "buckets": "Nhập tên bucket rồi nhấn Enter"
+      "buckets": "Nhập tên bucket rồi nhấn Enter",
+      "issuerUrl": "https://idp.example.com/realms/main",
+      "scope": "Mặc định: openid",
+      "certFile": "Chọn chứng chỉ (.pem, .crt)",
+      "keyFile": "Chọn private key (.pem, .key)",
+      "caFile": "Mặc định: chứng chỉ của hệ điều hành"
     },
     "sourceType": {
       "static": "Access key",
@@ -47,7 +64,12 @@
       "mfaCode": "Dùng một lần, không được lưu",
       "profilePlaceholder": "<profile>",
       "ssoLogin": "Hãy đăng nhập trước bằng lệnh: aws sso login --profile {{profile}}",
-      "anonymousBuckets": "Truy cập ẩn danh không thể liệt kê bucket: hãy nhập tên các bucket công khai cần mở."
+      "anonymousBuckets": "Truy cập ẩn danh không thể liệt kê bucket: hãy nhập tên các bucket công khai cần mở.",
+      "redirectUri": "Đăng ký địa chỉ này làm redirect URI của client trong nhà cung cấp danh tính.",
+      "oidcLogin": "Trình duyệt sẽ mở để đăng nhập. Phiên đăng nhập chỉ dùng một lần và không được lưu.",
+      "certTls": "File chỉ được đọc khi kết nối, nội dung không được lưu. Endpoint phải dùng https://.",
+      "keyNotStored": "Hỗ trợ key PKCS#8 có mật khẩu. Mật khẩu chỉ được lưu khi bạn tick Lưu bí mật.",
+      "caFile": "CA tin cậy thêm cho server MinIO dùng chứng chỉ tự ký hoặc nội bộ. Để trống để dùng chứng chỉ của hệ điều hành."
     },
     "tooltip": {
       "autoConnectLocked": "Phương thức xác thực này cần nhập thông tin mỗi lần kết nối nên không thể tự động kết nối."
@@ -55,7 +77,19 @@
     "button": {
       "testConnection": "Kiểm tra kết nối",
       "createProfile": "Tạo hồ sơ",
-      "editProfile": "Cập nhật hồ sơ"
+      "editProfile": "Cập nhật hồ sơ",
+      "oidcLogin": "Đăng nhập",
+      "oidcCancel": "Huỷ đăng nhập",
+      "chooseFile": "Chọn file...",
+      "clearFile": "Xoá file",
+      "copy": "Sao chép",
+      "copied": "Đã sao chép"
+    },
+    "status": {
+      "oidcSignedIn": "Đã đăng nhập, còn hiệu lực đến {{time}}",
+      "oidcNotSignedIn": "Chưa đăng nhập",
+      "oidcWaiting": "Đang chờ đăng nhập trên trình duyệt...",
+      "oidcExpired": "Phiên đăng nhập đã hết hạn, hãy đăng nhập lại"
     }
   },
   "authType": {

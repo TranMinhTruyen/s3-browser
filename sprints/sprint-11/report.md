@@ -1,5 +1,5 @@
 ## Kết quả sprint-11
-- Trạng thái: Hoàn thành một phần. **GĐ1 (`SP-11/auth_core`, PR #21) và GĐ2 (`SP-11/auth_minio_anonymous`) đã xong**. GĐ3 (`SP-11/auth_minio_oidc_cert`) chỉ tách branch sau khi PR GĐ2 được merge (Q-P5). Kết quả GĐ2 ở mục "Giai đoạn 2" cuối file.
+- Trạng thái: Hoàn thành (chờ test thủ công GĐ3 trước khi push/PR). GĐ1 (PR #21), GĐ2 (PR #23) đã merge; GĐ3 (`SP-11/auth_minio_oidc_cert`) đã xong và commit local. Kết quả GĐ2, GĐ3 ở các mục "Giai đoạn 2", "Giai đoạn 3" cuối file.
 - Tổng thay đổi GĐ1: +3899 / -347 dòng, 67 file. Trong đó 8 file code sinh tự động (bindings, sqlc, go.sum): +52 / -45.
 - Sửa ngoài branch sau GĐ1: PR #22 `fix(db)` (app không khởi động khi DB đã ở version mới nhất: goose trả `ErrNoMigrationFiles`); commit `01ea7688` trên master (ConnectModal chỉ cuộn phần thân, size `xl`, xoá lỗi validate cũ khi đổi provider/phương thức).
 
@@ -8,8 +8,8 @@
 |---|---|---|---|---|
 | SP-11/auth_core | R1, R2 (trừ anonymous), R4 | 2/3 | PR #21 (đã merge) | Đạt |
 | SP-11/fix_migration_check | R4 (hotfix) | - | PR #22 (đã merge) | Đạt |
-| SP-11/auth_minio_anonymous | R2 anonymous, R3 STS/LDAP/anonymous, RR1 | 2/3 | (commit cùng file này) | Đạt |
-| SP-11/auth_minio_oidc_cert | R3 OIDC, mTLS | - | - | Chưa làm (chờ merge GĐ2) |
+| SP-11/auth_minio_anonymous | R2 anonymous, R3 STS/LDAP/anonymous, RR1 | 2/3 | PR #23 (đã merge) | Đạt |
+| SP-11/auth_minio_oidc_cert | R3 OIDC, mTLS, RX1 (CA file), RX2 (Low GĐ2) | 2/3 | (commit cùng file này) | Đạt, chờ test thủ công |
 
 ### File sửa đổi (GĐ1, không tính code sinh tự động)
 | File | +/- |
@@ -185,3 +185,91 @@
 - Hook `useUnmountSignal` cho `callIPC` cần huỷ khi unmount.
 - `ipcUtils.translateParams` là nơi duy nhất map param kỹ thuật sang nhãn i18n.
 - `setup.ts` của test: ý nghĩa `asyncUtilTimeout`, stub `document.fonts`, cách chặn banner runtime.
+
+---
+
+## Giai đoạn 3 (`SP-11/auth_minio_oidc_cert`)
+- Trạng thái: Đạt (review 2/3 vòng). Chưa test thủ công (mục 10 `plan.md`), làm trước khi push/PR.
+- Tách từ `origin/master` @ `60905736`. Thay đổi (không tính bindings gitignore): 47 file sửa +1959 / -308 (gồm `plan.md`), 20 file mới 1889 dòng (production 1018, test 668, test-env 203).
+
+### File thêm mới
+| File | Số dòng |
+|---|---|
+| internal/modules/bucket/submodule_oidc_login.go | 394 |
+| internal/modules/bucket/submodule_cert_loader.go | 100 |
+| internal/modules/bucket/submodule_auth_files.go | 56 |
+| internal/modules/bucket/submodule_admin_creds.go | 46 |
+| internal/pkg/utils/url.go | 29 |
+| models/bucket/oidc_login_output.go | 10 |
+| frontend/src/components/modals/connect/fields/AuthOidcFields.tsx | 213 |
+| frontend/src/components/modals/connect/fields/FilePathField.tsx | 79 |
+| frontend/src/components/modals/connect/fields/AuthCertFields.tsx | 69 |
+| frontend/src/components/modals/connect/fields/CaFileField.tsx | 22 |
+| frontend/src/test/components/modals/connect/fields/AuthOidcFields.test.tsx | 409 |
+| frontend/src/test/components/modals/connect/fields/AuthCertFields.test.tsx | 108 |
+| frontend/src/test/components/modals/connect/fields/FilePathField.test.tsx | 108 |
+| frontend/src/test/components/modals/connect/fields/CaFileField.test.tsx | 43 |
+| sprints/sprint-11/test-env/docker-compose-keycloak.yml | 30 |
+| sprints/sprint-11/test-env/docker-compose-minio-tls.yml | 61 |
+| sprints/sprint-11/test-env/keycloak/s3browser-realm.json | 49 |
+| sprints/sprint-11/test-env/scripts/gen-certs.sh | 54 |
+| sprints/sprint-11/test-env/scripts/minio-tls-init.sh | 9 |
+
+### File sửa đổi chính
+| File | Dòng đổi (+/-) |
+|---|---|
+| go.mod / go.sum | 3 / +2 (`youmark/pkcs8`, `x/oauth2` direct) |
+| internal/handlers/bucket_handler.go | +13 |
+| internal/modules/bucket/module.go | 50 (S3E039–043, S3E047–049, `LoginMinioOidc`, `ChooseAuthFile`) |
+| internal/modules/bucket/submodule_cfg_credentials.go | 94 |
+| internal/modules/bucket/submodule_cfg_mng.go | 92 |
+| internal/modules/global/submodule_conn_container.go | 33 |
+| internal/modules/profile/submodule_auth_mng.go | 41 |
+| internal/pkg/db/migration.go | 40 |
+| internal/modules/bucket/{submodule_bucket_mng,submodule_connection_mng,call_helper}.go | 12 / 12 / 4 |
+| models/alias.go, models/profile/auth_config.go | +2 / +2 |
+| frontend/src/common/hooks/useCredentialExpiring.ts | 37 |
+| frontend/src/common/utils/{authUtils,ipcUtils}.ts | 10 / 16 |
+| frontend/src/components/modals/connect/{ConnectModal.tsx,authMethods.ts,connectSchema.ts} | 20 / 4 / 61 |
+| frontend/src/components/modals/upload/UploadFileList.tsx | 2 |
+| frontend/src/locales/{en,vi,ja}: connectModal.json / credentialExpiring.json / ipcMessage.json | 42 / +5 / +8 mỗi ngôn ngữ |
+| frontend/src/test/** (12 file, gồm setup.ts) | xem `git log --stat` |
+| CLAUDE.md | +8 / -2 (quy ước xác thực, màu, mock runtime; người dùng yêu cầu) |
+
+### Đối chiếu yêu cầu (GĐ3)
+| Yêu cầu | Trạng thái | Ghi chú |
+|---|---|---|
+| R3 minioOidc | Đạt (code), chờ test thủ công | Public client + PKCE S256, state, nonce, listener 127.0.0.1:<port> (48765), timeout 5 phút, phiên chỉ RAM (tối đa 8, TTL min(exp,10 phút), dùng lại cho Test rồi Connect); NewSTSWebIdentity gửi id_token + access_token; không auto-connect; hết hạn → toast "Đăng nhập lại"; issuer/endpoint chỉ https hoặc http loopback. |
+| R3 minioCert | Đạt, đã chạy thử MinIO docker | PKCS#8 có/không mật khẩu; PEM kiểu cũ → S3E043 kèm gợi ý; KeyEncrypted; endpoint phải https. |
+| RX1 CA file | Đạt | Mọi authType MinIO; chỉ transport MinIO; S3E049. |
+| RX2 L1 màu | Đạt | Badge dùng var(--mantine-color-orange-6). |
+| RX2 L7 MinioAdmin | Đạt | Provider adminCreds đọc SwapCreds. |
+| RX2 L8 inaccessible | Đạt | listBucket anonymous chạy lại HeadBucket, lỗi mạng giữ cờ cũ. |
+| RX2 L9 | Đạt (Q-G3-16 A, Q-G3-20 A) | Bỏ credSet.Minio; token OIDC xoá sau lần dùng; Close() không gán nil, GC thu hồi. |
+| RX2 translateParams / setup.ts / backup | Đạt | Chỉ S3E046 bucket; mock runtime toàn cục, asyncUtilTimeout 2000; pruneBackups theo ModTime. |
+| B11 test-env | Đạt | Keycloak :8180, MinIO TLS :10020/:10021, profile P14–P26. |
+
+### Kết quả kiểm tra (vòng 2)
+- go vet / go build / golangci-lint: PASS. sqlc không đổi. Bindings sinh lại thành công.
+- tsc / biome / oxlint: PASS. vitest: 98 file, 1535 test PASS, console sạch.
+
+### Coverage frontend (≥ 95%)
+| File | Lines | Branches | Đạt |
+|---|---|---|---|
+| useCredentialExpiring.ts, authUtils.ts, ipcUtils.ts, authMethods.ts, connectSchema.ts | 100 | 100 | Đạt |
+| ConnectModal.tsx | 100 | 98.95 | Đạt |
+| AuthOidcFields.tsx, AuthCertFields.tsx, CaFileField.tsx, FilePathField.tsx, UploadFileList.tsx | 100 | 100 | Đạt |
+
+### Vòng review
+- Vòng 1: tester bắt 2 bug (Cancel OIDC disabled; lần đăng nhập huỷ settle muộn ghi đè). Reviewer M1 màu, M2 scheme issuer/endpoint, L1–L5. Đã sửa hết.
+- Vòng 2: ĐẠT.
+
+### Lệch so với plan
+- Thêm FilePathField.tsx dùng chung. S3E043 luôn kèm gợi ý openssl. Callback sai state trả 400 và tiếp tục chờ. newHTTPClient(caFile) trả error. Keycloak test-env gán cứng policy=readwrite.
+- `report.md` và `memory/MEMORY.md` do session chính ghi theo nội dung orchestrator soạn (harness chặn subagent ghi file report), người dùng đồng ý.
+
+### Vấn đề còn lại (low)
+- FE chấp nhận `http://127.1`, BE từ chối (lệch an toàn). IsSecureUrl không có Go test.
+- ConnectModal.tsx dòng 220 chưa phủ (trên ngưỡng).
+- Chưa xác minh: MinIO nhận id_token + access_token (O1), huỷ dialog trên macOS/Linux, SystemCertPool Windows, hết hạn minioCert.
+- Chưa cập nhật docs/ARCHITECTURE*.md, user guide.
