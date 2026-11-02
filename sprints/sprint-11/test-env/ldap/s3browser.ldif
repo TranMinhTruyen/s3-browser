@@ -1,0 +1,26 @@
+dn: ou=users,dc=s3browser,dc=local
+objectClass: organizationalUnit
+ou: users
+
+dn: ou=groups,dc=s3browser,dc=local
+objectClass: organizationalUnit
+ou: groups
+
+dn: uid=ldap-rw,ou=users,dc=s3browser,dc=local
+objectClass: inetOrgPerson
+uid: ldap-rw
+cn: LDAP ReadWrite
+sn: ReadWrite
+userPassword: LdapRw#2026
+
+dn: uid=ldap-ro,ou=users,dc=s3browser,dc=local
+objectClass: inetOrgPerson
+uid: ldap-ro
+cn: LDAP ReadOnly
+sn: ReadOnly
+userPassword: LdapRo#2026
+
+dn: cn=s3-writers,ou=groups,dc=s3browser,dc=local
+objectClass: groupOfNames
+cn: s3-writers
+member: uid=ldap-rw,ou=users,dc=s3browser,dc=local
