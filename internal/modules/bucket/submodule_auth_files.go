@@ -2,6 +2,7 @@ package bucket
 
 import (
 	"S3Browser/internal/pkg/cnst"
+	"S3Browser/internal/pkg/utils"
 	"S3Browser/models"
 	"log/slog"
 
@@ -47,6 +48,10 @@ func (m *submoduleAuthFilesMng) chooseAuthFile(kind string) models.Output[string
 	}
 
 	path, err := dialog.PromptForSingleSelection()
+	if utils.IsDialogCancelled(err) {
+		m.logger.Debug("choose auth file cancelled")
+		return output
+	}
 	if err != nil {
 		m.logger.Error("choose auth file error", slog.Any("detail", err.Error()))
 		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E029, err.Error()))

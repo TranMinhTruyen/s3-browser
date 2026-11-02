@@ -112,6 +112,10 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 		destDir, err = m.app.Dialog.SaveFile().SetFilename(path.Base(input.Objects[0])).PromptForSingleSelection()
 	}
 
+	if utils.IsDialogCancelled(err) {
+		m.logger.Debug("download destination dialog cancelled")
+		return output
+	}
 	if err != nil {
 		m.logger.Error("get destination path error", slog.Any("detail", err.Error()))
 		return output.ThrowError(models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E009, err.Error(),
