@@ -9,7 +9,7 @@ const TAB = 't1';
 const setup = (prefix: string, bucket: string | undefined = 'bkt') => {
   useTabListStore.setState({
     activeTab: TAB,
-    tabList: { [TAB]: { currentView: 'objectList', bucket, prefix, selectionItem: [], deletingItems: [] } as never },
+    tabList: { [TAB]: { currentView: 'objectList', bucket, prefix, selectionItem: {}, deletingItems: {} } as never },
   });
   const { container } = renderWithProviders(<TabBreadcrumb tabId={TAB} bucket={bucket} prefix={prefix} />);
   // Anchors without href have no link role, so the clickable crumbs are found by tag.

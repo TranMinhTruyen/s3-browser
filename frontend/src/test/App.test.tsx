@@ -39,7 +39,7 @@ const addTab = (id: string, profileId: string | null) =>
   useTabListStore.setState(s => ({
     tabList: {
       ...s.tabList,
-      [id]: { profileId, currentView: 'bucketList', prefix: '', selectionItem: [], deletingItems: [] } as never,
+      [id]: { profileId, currentView: 'bucketList', prefix: '', selectionItem: {}, deletingItems: {} } as never,
     },
   }));
 

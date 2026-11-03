@@ -11,8 +11,8 @@ const tab = (profileId?: string) => ({
   profileId,
   currentView: 'bucketList' as const,
   prefix: '',
-  selectionItem: [],
-  deletingItems: [],
+  selectionItem: {},
+  deletingItems: {},
 });
 
 describe('TabLabel', () => {

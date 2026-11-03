@@ -53,7 +53,7 @@ describe('ObjectDetailDrawer', () => {
   beforeEach(() => {
     callIPCMock.mockReset();
     useTabListStore.setState({
-      tabList: { [TAB_ID]: { currentView: 'objectList', prefix: '', selectionItem: [], deletingItems: [] } },
+      tabList: { [TAB_ID]: { currentView: 'objectList', prefix: '', selectionItem: {}, deletingItems: {} } },
     });
   });
 

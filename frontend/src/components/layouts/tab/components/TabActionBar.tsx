@@ -1,6 +1,6 @@
 import { Group, Tooltip } from '@mantine/core';
 import { ArrowLeft, BroomSparkles, Download, PlugZap, RefreshCw, Trash, Upload } from 'lucide-react';
-import { memo, RefObject, useCallback } from 'react';
+import { memo, RefObject, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { tintedColor } from '@/common/theme/tintedColor';
@@ -11,7 +11,7 @@ import SearchInput from '@/components/inputs/SearchInput';
 import type { ObjectListViewRef } from '@/pages/object/ObjectListView';
 
 // Stable fallback so the selector does not return a new array on every call.
-const EMPTY_SELECTION: string[] = [];
+const EMPTY_SELECTION: Record<string, true> = {};
 
 type TabActionBarProps = {
   tabId: string;
@@ -58,10 +58,11 @@ function TabActionBar(props: TabActionBarProps) {
   const { t: tBucket } = useTranslation('bucket', { keyPrefix: 'page' });
   const { t: tObject } = useTranslation('object', { keyPrefix: 'page' });
 
-  const selectedItems = useTabListStore(s => s.tabList[tabId]?.selectionItem ?? EMPTY_SELECTION);
+  const selection = useTabListStore(s => s.tabList[tabId]?.selectionItem ?? EMPTY_SELECTION);
+  const selectedItems = useMemo(() => Object.keys(selection), [selection]);
   const hasDeletingSelected = useTabListStore(s => {
     const tab = s.tabList[tabId];
-    return !!tab && tab.selectionItem.some(k => tab.deletingItems.includes(k));
+    return !!tab && Object.keys(tab.selectionItem).some(k => tab.deletingItems[k] === true);
   });
   const clearSelectItem = useTabListStore(s => s.clearSelectItem);
 
