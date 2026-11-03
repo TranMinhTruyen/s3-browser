@@ -57,3 +57,11 @@ export const showUploadLimitModal = async (
 export const showMfaCodeModal = async (
   props: Parameters<typeof import('@/components/modals/connect/MfaCodeModal')['default']['show']>[0]
 ) => (await loadModal(() => import('@/components/modals/connect/MfaCodeModal')))?.default.show(props);
+
+export const showDeleteConfirmModal = async (
+  props: Parameters<typeof import('@/components/modals/delete/DeleteConfirmModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/components/modals/delete/DeleteConfirmModal')))?.default.show(props);
+
+export const showDeleteResultModal = async (
+  props: Parameters<typeof import('@/components/modals/delete/DeleteResultModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/components/modals/delete/DeleteResultModal')))?.default.show(props);

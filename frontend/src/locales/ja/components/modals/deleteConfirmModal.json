@@ -1,0 +1,8 @@
+{
+  "title": "ファイルを削除",
+  "warning": "この操作は元に戻せません。",
+  "rootFolder": "(選択したファイル)",
+  "selectedCount": "{selected}/{total} ファイル",
+  "selectAll": "すべて選択",
+  "delete": "削除"
+}

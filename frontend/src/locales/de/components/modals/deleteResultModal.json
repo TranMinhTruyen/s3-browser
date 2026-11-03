@@ -1,0 +1,10 @@
+{
+  "title": "Löschergebnis",
+  "deletedCount": "Erfolgreich: {count}",
+  "failedCount": "Fehlgeschlagen: {count}",
+  "deletedSection": "Erfolgreich ({count})",
+  "failedSection": "Fehlgeschlagen ({count})",
+  "truncated": "{shown} von {total} Fehlern angezeigt",
+  "fileName": "Dateiname",
+  "reason": "Grund"
+}

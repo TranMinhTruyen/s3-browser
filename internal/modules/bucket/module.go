@@ -30,14 +30,8 @@ var (
 	// Download file {object} success, destination {dest}
 	S3S004 = "S3S004"
 
-	// Delete file {object} success.
-	S3S005 = "S3S005"
-
 	// Upload file {name} success, key {key}.
 	S3S006 = "S3S006"
-
-	// Deleted {count} object(s) under folder {prefix}.
-	S3S007 = "S3S007"
 
 	// ---- Error ----
 
@@ -74,9 +68,6 @@ var (
 	// Download object: {object} error.
 	S3E012 = "S3E012"
 
-	// Delete object: {object} error.
-	S3E013 = "S3E013"
-
 	// File {name} not exist.
 	S3E014 = "S3E014"
 
@@ -97,9 +88,6 @@ var (
 
 	// Invalid folder {prefix}, it can't be deleted.
 	S3E020 = "S3E020"
-
-	// Delete folder {prefix} error: {failed} object(s) failed, {deleted} deleted.
-	S3E021 = "S3E021"
 
 	// Folder {folder} has more than {max} files over {size} GiB to upload.
 	S3E022 = "S3E022"
@@ -438,14 +426,19 @@ func (m *Module) CancelAllUploads() models.Output[any] {
 	return m.submoduleUploaderMng.cancelAllUploads()
 }
 
-// DeleteObject deletes the objects in input.Objects. ctx is the call context.
-func (m *Module) DeleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
+// DeleteObject deletes the objects in input.Objects in batches. A key that fails is listed in the body
+// and doesn't make Result false. ctx is the call context.
+func (m *Module) DeleteObject(
+	ctx context.Context,
+	input models.DeleteObjInput,
+) models.Output[models.DeleteObjOutput] {
 	return m.submoduleObjMng.deleteObject(ctx, input)
 }
 
 // DeletePrefix deletes every object under input.Prefix (the folder, its sub folders
 // and the folder marker). Only current versions are deleted. An empty prefix or "/"
-// is rejected so a whole bucket can't be deleted. ctx is the call context.
+// is rejected so a whole bucket can't be deleted. A key that fails is counted and its detail kept (up to
+// maxFailureDetails); it doesn't make Result false. ctx is the call context.
 func (m *Module) DeletePrefix(
 	ctx context.Context,
 	input models.DeletePrefixInput,

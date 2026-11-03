@@ -10,6 +10,8 @@ import uploaderWindow from '@/locales/vi/components/layouts/transfer/uploaderWin
 import confirmModal from '@/locales/vi/components/modals/confirmModal.json';
 import connectModal from '@/locales/vi/components/modals/connectModal.json';
 import credentialExpiring from '@/locales/vi/components/modals/credentialExpiring.json';
+import deleteConfirmModal from '@/locales/vi/components/modals/deleteConfirmModal.json';
+import deleteResultModal from '@/locales/vi/components/modals/deleteResultModal.json';
 import historyModal from '@/locales/vi/components/modals/historyModal.json';
 import settingModal from '@/locales/vi/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/vi/components/modals/uploadLimitModal.json';
@@ -26,6 +28,8 @@ const vietnameseResource: ResourceLanguage = {
   connectModal: connectModal,
   credentialExpiring: credentialExpiring,
   confirmModal: confirmModal,
+  deleteConfirmModal: deleteConfirmModal,
+  deleteResultModal: deleteResultModal,
   historyModal: historyModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,

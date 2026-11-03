@@ -10,6 +10,8 @@ import uploaderWindow from '@/locales/ja/components/layouts/transfer/uploaderWin
 import confirmModal from '@/locales/ja/components/modals/confirmModal.json';
 import connectModal from '@/locales/ja/components/modals/connectModal.json';
 import credentialExpiring from '@/locales/ja/components/modals/credentialExpiring.json';
+import deleteConfirmModal from '@/locales/ja/components/modals/deleteConfirmModal.json';
+import deleteResultModal from '@/locales/ja/components/modals/deleteResultModal.json';
 import historyModal from '@/locales/ja/components/modals/historyModal.json';
 import settingModal from '@/locales/ja/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/ja/components/modals/uploadLimitModal.json';
@@ -26,6 +28,8 @@ const japaneseResource: ResourceLanguage = {
   connectModal: connectModal,
   credentialExpiring: credentialExpiring,
   confirmModal: confirmModal,
+  deleteConfirmModal: deleteConfirmModal,
+  deleteResultModal: deleteResultModal,
   historyModal: historyModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,

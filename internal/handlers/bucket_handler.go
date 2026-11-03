@@ -149,7 +149,10 @@ func (h *BucketHandler) CancelAllUploads() models.Output[any] {
 }
 
 // DeleteObject deletes the given objects.
-func (h *BucketHandler) DeleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
+func (h *BucketHandler) DeleteObject(
+	ctx context.Context,
+	input models.DeleteObjInput,
+) models.Output[models.DeleteObjOutput] {
 	return h.bucket.DeleteObject(ctx, input)
 }
 

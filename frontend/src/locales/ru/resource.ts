@@ -10,6 +10,8 @@ import uploaderWindow from '@/locales/ru/components/layouts/transfer/uploaderWin
 import confirmModal from '@/locales/ru/components/modals/confirmModal.json';
 import connectModal from '@/locales/ru/components/modals/connectModal.json';
 import credentialExpiring from '@/locales/ru/components/modals/credentialExpiring.json';
+import deleteConfirmModal from '@/locales/ru/components/modals/deleteConfirmModal.json';
+import deleteResultModal from '@/locales/ru/components/modals/deleteResultModal.json';
 import historyModal from '@/locales/ru/components/modals/historyModal.json';
 import settingModal from '@/locales/ru/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/ru/components/modals/uploadLimitModal.json';
@@ -26,6 +28,8 @@ const russianResource: ResourceLanguage = {
   connectModal: connectModal,
   credentialExpiring: credentialExpiring,
   confirmModal: confirmModal,
+  deleteConfirmModal: deleteConfirmModal,
+  deleteResultModal: deleteResultModal,
   historyModal: historyModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,

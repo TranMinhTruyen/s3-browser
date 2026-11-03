@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-type ModalKey = 'connect' | 'mfaCode' | 'history' | 'setting' | 'uploadPicker' | 'uploadLimit';
+type ModalKey =
+  | 'connect'
+  | 'mfaCode'
+  | 'history'
+  | 'setting'
+  | 'uploadPicker'
+  | 'uploadLimit'
+  | 'deleteResult'
+  | 'deleteConfirm';
 type LazyModals = typeof import('@/components/modals/lazyModals');
 
 // The chunk factories wait for `gate` and throw when `fail` is set, which makes the dynamic `import()` reject.
@@ -10,7 +18,17 @@ const h = vi.hoisted(() => ({
   show: {} as Record<string, ReturnType<typeof vi.fn>>,
   toast: { error: vi.fn(), loading: vi.fn(), dismiss: vi.fn() },
 }));
-for (const key of ['connect', 'mfaCode', 'history', 'setting', 'uploadPicker', 'uploadLimit']) h.show[key] = vi.fn();
+for (const key of [
+  'connect',
+  'mfaCode',
+  'history',
+  'setting',
+  'uploadPicker',
+  'uploadLimit',
+  'deleteResult',
+  'deleteConfirm',
+])
+  h.show[key] = vi.fn();
 
 const chunk = (key: ModalKey) => async () => {
   await h.gate;
@@ -26,9 +44,16 @@ const CHUNKS: [string, ModalKey][] = [
   ['setting/SettingModal', 'setting'],
   ['upload/UploadPickerModal', 'uploadPicker'],
   ['upload/UploadLimitModal', 'uploadLimit'],
+  ['delete/DeleteConfirmModal', 'deleteConfirm'],
+  ['delete/DeleteResultModal', 'deleteResult'],
 ];
 
-const PROPS = { picker: { tabId: 't' } as never, limit: { groups: [] } as never };
+const PROPS = {
+  picker: { tabId: 't' } as never,
+  limit: { groups: [] } as never,
+  confirm: { files: [{ key: 'a', size: 1 }] } as never,
+  result: { deleted: 1, failed: 0, failures: [] } as never,
+};
 const wrappers: [ModalKey, (m: LazyModals) => Promise<unknown>][] = [
   ['connect', m => m.showConnectModal({ mode: 'editProfile' })],
   ['mfaCode', m => m.showMfaCodeModal({ connectionId: 'c', profileName: 'n' })],
@@ -36,6 +61,8 @@ const wrappers: [ModalKey, (m: LazyModals) => Promise<unknown>][] = [
   ['setting', m => m.showSettingModal()],
   ['uploadPicker', m => m.showUploadPickerModal(PROPS.picker)],
   ['uploadLimit', m => m.showUploadLimitModal(PROPS.limit)],
+  ['deleteConfirm', m => m.showDeleteConfirmModal(PROPS.confirm)],
+  ['deleteResult', m => m.showDeleteResultModal(PROPS.result)],
 ];
 
 // What MfaCodeModal imports besides modalUtils; stubbed by the string-failure test.
@@ -137,10 +164,14 @@ describe('lazyModals', () => {
     await lazy.showConnectModal({ mode: 'manualconnect' });
     await lazy.showUploadPickerModal(PROPS.picker);
     await lazy.showUploadLimitModal(PROPS.limit);
+    await lazy.showDeleteConfirmModal(PROPS.confirm);
+    await lazy.showDeleteResultModal(PROPS.result);
 
     expect(h.show.connect).toHaveBeenCalledWith({ mode: 'manualconnect' });
     expect(h.show.uploadPicker).toHaveBeenCalledWith(PROPS.picker);
     expect(h.show.uploadLimit).toHaveBeenCalledWith(PROPS.limit);
+    expect(h.show.deleteConfirm).toHaveBeenCalledWith(PROPS.confirm);
+    expect(h.show.deleteResult).toHaveBeenCalledWith(PROPS.result);
   });
 
   it('passes the connection to the MFA code modal', async () => {

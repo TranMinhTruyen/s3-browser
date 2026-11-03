@@ -1,0 +1,8 @@
+{
+  "title": "Delete files",
+  "warning": "This action cannot be undone.",
+  "rootFolder": "(selected files)",
+  "selectedCount": "{selected}/{total} files",
+  "selectAll": "Select all",
+  "delete": "Delete"
+}
