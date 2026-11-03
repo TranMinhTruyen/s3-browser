@@ -53,6 +53,7 @@ func (m *submoduleBucketMng) listBucket(
 		// Check again so a bucket whose policy changed since connecting gets the right flag.
 		checkAnonymousBuckets(ctx, s3Conn)
 		if isCallCanceled(ctx) {
+			// Canceled by the frontend: fail silently, nobody waits for the result.
 			return output.ThrowError()
 		}
 		output.Body.BucketList = anonymousBuckets(s3Conn, "")
@@ -69,20 +70,10 @@ func (m *submoduleBucketMng) listBucket(
 	result, err := s3Conn.Client.ListBuckets(ctx, listBucketInput)
 
 	if err != nil {
-		if isCallCanceled(ctx) {
-			output.Result = false
-			return output
-		}
-
-		if isCredentialsExpired(err) {
-			return output.ThrowError(expiredMessage(input.ProfileName, err))
-		}
-
-		return output.ThrowError(
+		return failCall(ctx, output, input.ProfileName, err,
 			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E007, err.Error(), map[string]any{
 				"name": input.ProfileName,
-			}),
-		)
+			}))
 	}
 
 	body := models.ListBucketOutput{

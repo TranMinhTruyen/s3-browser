@@ -18,14 +18,8 @@ import (
 // submoduleObjMng lists, deletes and reads the detail of objects.
 type submoduleObjMng struct {
 	logger *slog.Logger
+	app    *application.App
 	global *global.Module
-	// getDeleter returns the S3 client of a connection; ok is false if it isn't connected.
-	// It sits next to global as the seam tests replace with a fake client.
-	getDeleter func(connID string) (client s3Deleter, ok bool)
-	// getHeader returns the S3 client used to read object headers; ok is false if it isn't connected.
-	getHeader func(connID string) (client s3Header, ok bool)
-	// appContext returns the app lifetime context. Tests replace it so they don't need a running app.
-	appContext func() context.Context
 }
 
 // deleteConcurrency limits the objects deleted (or head-checked) at once.
@@ -39,22 +33,8 @@ func newSubmoduleObjMng(
 ) *submoduleObjMng {
 	return &submoduleObjMng{
 		logger: logger.With("submodules", "object_mng"),
+		app:    app,
 		global: global,
-		getDeleter: func(connID string) (s3Deleter, bool) {
-			conn, ok := global.GetConnContainer(connID)
-			if !ok {
-				return nil, false
-			}
-			return conn.Client, true
-		},
-		getHeader: func(connID string) (s3Header, bool) {
-			conn, ok := global.GetConnContainer(connID)
-			if !ok {
-				return nil, false
-			}
-			return conn.Client, true
-		},
-		appContext: app.Context,
 	}
 }
 
@@ -70,7 +50,7 @@ func (m *submoduleObjMng) listObject(
 	ctx context.Context,
 	input models.ListObjectInput,
 ) models.Output[models.ListObjectOutput] {
-	ctx, cancel := withCallContext(ctx, m.appContext(), 5*time.Minute)
+	ctx, cancel := withCallContext(ctx, m.app.Context(), 5*time.Minute)
 	defer cancel()
 
 	output := models.NewOutput[models.ListObjectOutput]()
@@ -95,28 +75,11 @@ func (m *submoduleObjMng) listObject(
 	objects, err := s3Conn.Client.ListObjectsV2(ctx, listObjectInput)
 
 	if err != nil {
-		// The frontend canceled the call; nobody is waiting for the result.
-		if isCallCanceled(ctx) {
-			output.Result = false
-			return output
-		}
-
-		if isCredentialsExpired(err) {
-			return output.ThrowError(expiredMessage(input.ProfileName, err))
-		}
-
-		return output.ThrowError(
-			models.NewParamsMessage(
-				cnst.MessageTypeError,
-				cnst.Bucket,
-				S3E008,
-				UnwrapAwsError(err),
-				map[string]any{
-					"name":   input.ProfileName,
-					"bucket": input.Bucket,
-				},
-			),
-		)
+		return failCall(ctx, output, input.ProfileName, err,
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E008, UnwrapAwsError(err), map[string]any{
+				"name":   input.ProfileName,
+				"bucket": input.Bucket,
+			}))
 	}
 
 	body := models.ListObjectOutput{
@@ -162,7 +125,7 @@ func (m *submoduleObjMng) listObject(
 // deleteObject deletes input.Objects one by one (up to deleteConcurrency at once) and
 // adds one message per key. Result is false if any key failed.
 func (m *submoduleObjMng) deleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
-	ctx, cancel := withCallContext(ctx, m.appContext(), 5*time.Minute)
+	ctx, cancel := withCallContext(ctx, m.app.Context(), 5*time.Minute)
 	defer cancel()
 
 	output := models.NewOutput[any]()

@@ -101,7 +101,7 @@ func normalizePrefix(p string) string {
 // gets a renamed key and nothing is overwritten.
 func existingKeys(
 	ctx context.Context,
-	client s3Uploader,
+	client *s3.Client,
 	bucket, prefix string,
 	items []models.UploadObj,
 ) map[string]struct{} {
