@@ -12,7 +12,7 @@ Bộ nhớ giữa các session (trạng thái sprint, quyết định, lỗi đ�
 
 - App desktop viết bằng **Wails v3** (Go backend + React TS frontend) để duyệt và thao tác bucket/object trên **AWS S3** và **MinIO**.
 - Repo: `TranMinhTruyen/kanban-board`, thư mục `App/S3Browser`, nhánh `master`.
-- Go module tên `S3Browser`, Go 1.27. Wails `v3.0.0`, `@wailsio/runtime`.
+- Go module tên `S3Browser`, Go 1.27. Wails `v3.1.0`, `@wailsio/runtime`.
 - **Wails v3 đã stable**: luôn tra cứu https://v3.wails.io/ trước khi dùng API Wails, không dựa vào kiến thức có sẵn.
 
 ## 2. Luật bắt buộc
@@ -145,7 +145,7 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 - Hỗ trợ **7 ngôn ngữ**: `en`, `vi`, `ja`, `zh-CN` (giản thể), `zh-TW` (phồn thể, từ vựng Đài Loan), `ru`, `de`. Danh sách ngôn ngữ nằm trong code (`LANGUAGES` ở `common/cnst/settingConst.ts` và `languages` ở `internal/modules/setting/submodule_setting_mng.go`), không đưa vào DB; ngôn ngữ đã chọn lưu trong `settings.json`.
 - Namespace theo component/page trong `frontend/src/locales/<lang>/...`, đăng ký trong `resource.ts` của **cả 7 ngôn ngữ**. Mọi file JSON phải có đúng tập key và placeholder `{{x}}`/`{x}` như bản `en`.
 - Thuật ngữ dịch theo AWS console đã bản địa hoá (ví dụ zh-TW: credentials/certificate → 憑證; ru: endpoint → «конечная точка»). "Path style" giữ nguyên tiếng Anh (trừ `ja`).
-- Thêm ngôn ngữ mới: thêm mã vào cả 2 danh sách trên, tạo thư mục locale + `resource.ts`, đăng ký trong `locales/i18n.ts`; ngôn ngữ CJK cần fallback font riêng trong `getFontFamily`.
+- Thêm ngôn ngữ mới: thêm mã vào cả 2 danh sách trên, tạo thư mục locale + `resource.ts`, thêm loader `import()` động vào `RESOURCE_LOADERS` trong `locales/i18n.ts` (chỉ `en` import tĩnh, ngôn ngữ khác nạp qua `loadLanguage` trước khi `changeLanguage`); ngôn ngữ CJK cần fallback font riêng trong `getFontFamily`.
 
 ### Lệnh (chạy trong `frontend/`)
 

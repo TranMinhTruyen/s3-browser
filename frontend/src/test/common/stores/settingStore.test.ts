@@ -34,6 +34,32 @@ describe('settingStore', () => {
       expect(applySettings).toHaveBeenCalledWith(dark);
     });
 
+    it('waits for applySettings (language bundle) before it finishes', async () => {
+      let finish!: () => void;
+      vi.mocked(applySettings).mockReturnValueOnce(
+        new Promise<void>(resolve => {
+          finish = resolve;
+        })
+      );
+      callIPCMock.mockResolvedValueOnce({ settings: dark, autostartSupported: true });
+
+      let done = false;
+      const loading = state()
+        .load()
+        .then(() => {
+          done = true;
+        });
+      await vi.waitFor(() => expect(applySettings).toHaveBeenCalledWith(dark));
+      await Promise.resolve();
+      expect(done).toBe(false);
+      expect(state().autostartSupported).toBe(false);
+
+      finish();
+      await loading;
+      expect(done).toBe(true);
+      expect(state().autostartSupported).toBe(true);
+    });
+
     it('falls back to the defaults and no autostart when the call fails', async () => {
       useSettingStore.setState({ saved: dark, draft: dark, autostartSupported: true });
       callIPCMock.mockResolvedValueOnce(null);

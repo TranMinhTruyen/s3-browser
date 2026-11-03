@@ -35,7 +35,7 @@ const SCOPE = 'Setting';
 
 /** App settings (theme, font, language, launch on startup). */
 export const useSettingStore = createAppStore<SettingState & SettingAction>((set, get) => {
-  const setBoth = (values: AppSettingValues, action: string) => {
+  const setBoth = (values: AppSettingValues, action: string): Promise<void> => {
     set(
       state => {
         state.saved = values;
@@ -45,7 +45,7 @@ export const useSettingStore = createAppStore<SettingState & SettingAction>((set
       undefined,
       `${SCOPE}/${action}`
     );
-    applySettings(values);
+    return applySettings(values);
   };
 
   return {
@@ -57,7 +57,7 @@ export const useSettingStore = createAppStore<SettingState & SettingAction>((set
     load: async () => {
       const output = await callIPC(GetSettings, [], { scope: `${SCOPE}/load`, showMessage: false });
       const values = normalizeSettings(output?.settings);
-      setBoth(values, 'load');
+      await setBoth(values, 'load');
       set({ autostartSupported: output?.autostartSupported === true }, undefined, `${SCOPE}/load`);
     },
 
