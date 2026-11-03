@@ -1,0 +1,8 @@
+{
+  "title": "刪除結果",
+  "deletedCount": "成功：{count}",
+  "failedCount": "失敗：{count}",
+  "deletedSection": "成功 ({count})",
+  "failedSection": "失敗 ({count})",
+  "truncated": "顯示 {shown}/{total} 個錯誤"
+}

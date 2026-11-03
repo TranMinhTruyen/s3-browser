@@ -1,0 +1,8 @@
+{
+  "title": "削除結果",
+  "deletedCount": "成功: {count}",
+  "failedCount": "失敗: {count}",
+  "deletedSection": "成功 ({count})",
+  "failedSection": "失敗 ({count})",
+  "truncated": "{total} 件中 {shown} 件のエラーを表示"
+}

@@ -6,6 +6,7 @@ import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
 import { WARNING_COLOR } from '@/components/modals/modalColors';
+import TruncatedText from '@/components/TruncatedText';
 import classes from '@/pages/bucket/page.module.css';
 
 type BucketItemProps = {
@@ -54,9 +55,9 @@ function BucketItem(props: BucketItemProps) {
         {/* miw=0 lets the flex item shrink, so a long bucket name is truncated instead of overflowing. */}
         <Stack miw={0}>
           <Group gap="xs" wrap="nowrap">
-            <Text size="xl" fw="bold" truncate="end">
+            <TruncatedText size="xl" fw="bold">
               {item.name}
-            </Text>
+            </TruncatedText>
             {item.inaccessible ? (
               <Tooltip label={t('tooltip.inaccessible')}>
                 <TriangleAlert size={18} color={WARNING_COLOR} aria-label={t('tooltip.inaccessible')} />

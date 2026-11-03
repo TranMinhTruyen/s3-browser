@@ -12,7 +12,7 @@ const rowRenders = vi.hoisted(() => new Map<string, number>());
 vi.mock('@/components/buttons/ActionIcon', async importOriginal => {
   const Original = (await importOriginal<{ default: ComponentType<Record<string, unknown>> }>()).default;
   const Counted = (props: Record<string, unknown>) => {
-    const label = String(props['aria-label']);
+    const label = String(props.tooltip);
     rowRenders.set(label, (rowRenders.get(label) ?? 0) + 1);
     return <Original {...props} />;
   };
@@ -85,6 +85,24 @@ describe('ObjectItem', () => {
     expect(screen.queryByText(/bytes|KB/)).not.toBeInTheDocument();
     expect(screen.queryByText('Size')).not.toBeInTheDocument();
     expect(screen.queryByText('Last Modified')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['file', fileItem, 'cat.png'],
+    ['folder', folderItem, 'photos'],
+  ])('shows the %s name in a tooltip only when it is cut', async (_kind, item, name) => {
+    const { user } = setup(item);
+    const text = screen.getByText(name);
+
+    Object.defineProperty(text, 'scrollWidth', { configurable: true, value: 50 });
+    Object.defineProperty(text, 'clientWidth', { configurable: true, value: 100 });
+    await user.hover(text);
+    expect(screen.getAllByText(name)).toHaveLength(1);
+    await user.unhover(text);
+
+    Object.defineProperty(text, 'scrollWidth', { configurable: true, value: 200 });
+    await user.hover(text);
+    await waitFor(() => expect(screen.getAllByText(name)).toHaveLength(2));
   });
 
   it('opens the detail when the card body is clicked', async () => {
@@ -222,6 +240,30 @@ describe('ObjectItem', () => {
     const section = screen.getByRole('checkbox').closest<HTMLElement>('.mantine-Card-section')!;
     await user.click(section);
     expect(onOpenDetail).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])('toggles once when the section is clicked (selected: %s)', async selected => {
+    if (selected) useTabListStore.getState().addSelectItem(TAB_ID, [fileItem.key]);
+    const { user, onOpenDetail, onToggleSelect } = setup(fileItem);
+    const section = screen.getByRole('checkbox').closest<HTMLElement>('.mantine-Card-section')!;
+    await user.click(section);
+    expect(onToggleSelect).toHaveBeenCalledExactlyOnceWith(fileItem.key, !selected);
+    expect(onOpenDetail).not.toHaveBeenCalled();
+  });
+
+  it('toggles once when the checkbox is clicked and not the card click', async () => {
+    const { user, onOpenDetail, onToggleSelect } = setup(fileItem);
+    await user.click(screen.getByRole('checkbox'));
+    expect(onToggleSelect).toHaveBeenCalledTimes(1);
+    expect(onOpenDetail).not.toHaveBeenCalled();
+  });
+
+  it('opens the folder when its section is clicked', async () => {
+    const { user, onOpenFolder, onToggleSelect } = setup(folderItem);
+    const section = document.querySelector<HTMLElement>('.mantine-Card-section')!;
+    await user.click(section);
+    expect(onOpenFolder).toHaveBeenCalledExactlyOnceWith(folderItem.key);
+    expect(onToggleSelect).not.toHaveBeenCalled();
   });
 
   describe('deleting spinner', () => {

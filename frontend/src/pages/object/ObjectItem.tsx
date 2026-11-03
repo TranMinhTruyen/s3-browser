@@ -1,10 +1,11 @@
-import { Card, Menu, Text } from '@mantine/core';
+import { Card, Menu } from '@mantine/core';
 import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
 import { Download, Ellipsis, Folder, Trash } from 'lucide-react';
-import { ChangeEvent, MouseEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
+import { MouseEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
+import TruncatedText from '@/components/TruncatedText';
 import classes from '@/pages/object/page.module.css';
 
 // Fixed row height: the virtualizer knows every row's position without measuring.
@@ -15,6 +16,7 @@ const ICON_SECTION_STYLE = { flexShrink: 0, display: 'flex', alignItems: 'center
 const NAME_SECTION_STYLE = { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' } as const;
 const MENU_SECTION_STYLE = { ...ICON_SECTION_STYLE, minWidth: '56px' } as const;
 const CHECKBOX_STYLES = { input: { cursor: 'pointer' } };
+const CHECKBOX_SECTION_STYLE = { ...ICON_SECTION_STYLE, cursor: 'pointer' } as const;
 
 /** Texts of a row, translated once by the list so rows do not subscribe to i18n. */
 export type ObjectItemLabels = {
@@ -41,7 +43,7 @@ type ObjectRowProps = {
   name: string;
   labels: ObjectItemLabels;
   onClick: () => void;
-  onChangeCheckbox: (e: ChangeEvent<HTMLInputElement>) => void;
+  onToggle: () => void;
   onClickDownload: () => void;
   onClickDelete: () => void;
 };
@@ -50,13 +52,22 @@ const stopPropagation = (e: MouseEvent) => e.stopPropagation();
 
 /** Card layout of a row: leading icon section, truncated name and the "more actions" menu. */
 const ObjectRow = memo(function ObjectRow(props: ObjectRowProps) {
-  const { isFolder, isSelected, isDeleting, name, labels, onClick, onChangeCheckbox, onClickDownload, onClickDelete } =
-    props;
+  const { isFolder, isSelected, isDeleting, name, labels, onClick, onToggle, onClickDownload, onClickDelete } = props;
 
   // A Menu is heavy and a list shows hundreds of rows: it is mounted only once the user opens it.
   const [menuOpened, setMenuOpened] = useState(false);
 
   const onClickMoreActions = useCallback(() => setMenuOpened(true), []);
+
+  // The whole section toggles the selection (a click or Space on the checkbox bubbles up to it, so it fires once)
+  // and must not trigger the row click.
+  const onClickSection = useCallback(
+    (e: MouseEvent) => {
+      e.stopPropagation();
+      onToggle();
+    },
+    [onToggle]
+  );
 
   // The button is remounted when the menu closes: give the focus back to it (not to body).
   // On open the Menu moves the focus into its dropdown itself.
@@ -74,26 +85,22 @@ const ObjectRow = memo(function ObjectRow(props: ObjectRowProps) {
         px="8px"
         withBorder
         className={classes.iconSection}
-        style={ICON_SECTION_STYLE}
-        onClick={isFolder ? undefined : stopPropagation}
+        style={isFolder ? ICON_SECTION_STYLE : CHECKBOX_SECTION_STYLE}
+        onClick={isFolder ? undefined : onClickSection}
       >
-        {isFolder ? (
-          <Folder size="20px" />
-        ) : (
-          <CheckBoxInput styles={CHECKBOX_STYLES} checked={isSelected} onChange={onChangeCheckbox} />
-        )}
+        {isFolder ? <Folder size="20px" /> : <CheckBoxInput styles={CHECKBOX_STYLES} checked={isSelected} readOnly />}
       </Card.Section>
       <Card.Section inheritPadding px="md" py="md" style={NAME_SECTION_STYLE}>
-        <Text size="xl" truncate="end" fw={500}>
+        <TruncatedText size="xl" fw={500}>
           {name}
-        </Text>
+        </TruncatedText>
       </Card.Section>
       {/* The menu area must not trigger the row click. */}
       <Card.Section ref={menuSectionRef} onClick={stopPropagation} style={MENU_SECTION_STYLE}>
         {menuOpened ? (
           <Menu width={200} opened onChange={setMenuOpened}>
             <Menu.Target>
-              <ActionIcon key="menu" loading={isDeleting} aria-label={labels.moreActions}>
+              <ActionIcon key="menu" loading={isDeleting} tooltip={labels.moreActions}>
                 <Ellipsis />
               </ActionIcon>
             </Menu.Target>
@@ -110,7 +117,7 @@ const ObjectRow = memo(function ObjectRow(props: ObjectRowProps) {
             </Menu.Dropdown>
           </Menu>
         ) : (
-          <ActionIcon key="button" loading={isDeleting} aria-label={labels.moreActions} onClick={onClickMoreActions}>
+          <ActionIcon key="button" loading={isDeleting} tooltip={labels.moreActions} onClick={onClickMoreActions}>
             <Ellipsis />
           </ActionIcon>
         )}
@@ -143,12 +150,7 @@ function ObjectItem(props: ObjectItemProps) {
     else onOpenDetail(item);
   }, [item, onOpenFolder, onOpenDetail]);
 
-  const onChangeCheckbox = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      onToggleSelect(item.key, e.currentTarget.checked);
-    },
-    [onToggleSelect, item.key]
-  );
+  const onToggle = useCallback(() => onToggleSelect(item.key, !isSelected), [onToggleSelect, item.key, isSelected]);
 
   return (
     <ObjectRow
@@ -158,7 +160,7 @@ function ObjectItem(props: ObjectItemProps) {
       name={item.isFolder ? item.name || '/' : item.name}
       labels={labels}
       onClick={onClickRow}
-      onChangeCheckbox={onChangeCheckbox}
+      onToggle={onToggle}
       onClickDownload={onClickDownload}
       onClickDelete={onClickDelete}
     />

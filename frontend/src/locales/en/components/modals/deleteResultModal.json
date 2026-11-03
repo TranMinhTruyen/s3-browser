@@ -1,0 +1,8 @@
+{
+  "title": "Delete result",
+  "deletedCount": "Succeeded: {count}",
+  "failedCount": "Failed: {count}",
+  "deletedSection": "Succeeded ({count})",
+  "failedSection": "Failed ({count})",
+  "truncated": "Showing {shown}/{total} errors"
+}

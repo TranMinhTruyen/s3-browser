@@ -172,7 +172,7 @@ describe('UploaderWindow', () => {
     renderWithProviders(<UploaderWindow />);
     emit('uploader:upload-started', started('u1'));
 
-    await userEvent.click(screen.getByTitle('Cancel all'));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel all' }));
 
     expect(callIPCMock).toHaveBeenCalledWith(CancelAllUploads, []);
   });

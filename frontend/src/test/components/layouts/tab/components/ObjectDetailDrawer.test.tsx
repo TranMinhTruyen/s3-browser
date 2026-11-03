@@ -176,8 +176,8 @@ describe('ObjectDetailDrawer', () => {
     const user = userEvent.setup();
 
     const copyButton = screen.getAllByRole('button', { name: 'Copy' })[0];
-    // The button sits next to the text holding the value.
-    const value = copyButton.parentElement!.textContent;
+    // The button sits in a span wrapper, next to the text holding the value.
+    const value = copyButton.parentElement!.parentElement!.textContent;
     await user.click(copyButton);
 
     // Wait for it right after the click and unmount at once: the tooltip transition keeps updating on its own

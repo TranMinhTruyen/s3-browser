@@ -17,6 +17,7 @@ import { useSelectCombobox } from '@/common/hooks/useSelectCombobox';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
 import ComboboxClearButton from '@/components/inputs/combobox/ComboboxClearButton';
 import ComboboxOptions from '@/components/inputs/combobox/ComboboxOptions';
+import TruncatedText from '@/components/TruncatedText';
 
 type ComboboxItem = { name: string; value: string };
 
@@ -132,7 +133,7 @@ function Combobox(props: ComboboxProps) {
           rightSectionPointerEvents={showClear ? 'all' : 'none'}
           onClick={onClickToggle}
         >
-          {selected ? <Text truncate="end">{selected.name}</Text> : <Input.Placeholder>{label}</Input.Placeholder>}
+          {selected ? <TruncatedText>{selected.name}</TruncatedText> : <Input.Placeholder>{label}</Input.Placeholder>}
         </InputBase>
       </MCombobox.Target>
 

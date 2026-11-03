@@ -10,6 +10,8 @@ import uploaderWindow from '@/locales/de/components/layouts/transfer/uploaderWin
 import confirmModal from '@/locales/de/components/modals/confirmModal.json';
 import connectModal from '@/locales/de/components/modals/connectModal.json';
 import credentialExpiring from '@/locales/de/components/modals/credentialExpiring.json';
+import deleteConfirmModal from '@/locales/de/components/modals/deleteConfirmModal.json';
+import deleteResultModal from '@/locales/de/components/modals/deleteResultModal.json';
 import historyModal from '@/locales/de/components/modals/historyModal.json';
 import settingModal from '@/locales/de/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/de/components/modals/uploadLimitModal.json';
@@ -26,6 +28,8 @@ const germanResource: ResourceLanguage = {
   connectModal: connectModal,
   credentialExpiring: credentialExpiring,
   confirmModal: confirmModal,
+  deleteConfirmModal: deleteConfirmModal,
+  deleteResultModal: deleteResultModal,
   historyModal: historyModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,

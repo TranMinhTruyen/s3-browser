@@ -1,0 +1,8 @@
+{
+  "title": "Удаление файлов",
+  "warning": "Это действие нельзя отменить.",
+  "rootFolder": "(выбранные файлы)",
+  "selectedCount": "Файлов: {selected}/{total}",
+  "selectAll": "Выбрать все",
+  "delete": "Удалить"
+}

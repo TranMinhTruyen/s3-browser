@@ -68,6 +68,10 @@ type (
 	DownloadHistoryInput = bucket.DownloadHistoryInput
 	// DownloadHistoryOutput re-exports bucket.DownloadHistoryOutput.
 	DownloadHistoryOutput = bucket.DownloadHistoryOutput
+	// DeleteFailure re-exports bucket.DeleteFailure.
+	DeleteFailure = bucket.DeleteFailure
+	// DeleteObjOutput re-exports bucket.DeleteObjOutput.
+	DeleteObjOutput = bucket.DeleteObjOutput
 	// DeleteObjInput re-exports bucket.DeleteObjInput.
 	DeleteObjInput = bucket.DeleteObjInput
 	// DeletePrefixInput re-exports bucket.DeletePrefixInput.

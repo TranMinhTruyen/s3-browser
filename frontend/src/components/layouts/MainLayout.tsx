@@ -1,4 +1,4 @@
-import { AppShell, Group, Image, Splitter, Text, Tooltip } from '@mantine/core';
+import { AppShell, Group, Image, Splitter, Text } from '@mantine/core';
 import { Window } from '@wailsio/runtime';
 import { RotateCcwClock, Settings } from 'lucide-react';
 import { type MouseEvent, useCallback } from 'react';
@@ -46,17 +46,13 @@ function MainLayout() {
           </Group>
 
           <Group gap="xs" wrap="nowrap" ml="auto" style={{ '--wails-draggable': 'no-drag' }}>
-            <Tooltip label={tSetting('title')}>
-              <ActionIcon aria-label={tSetting('title')} {...tintedColor('gray', 'ai')} onClick={onClickSetting}>
-                <Settings />
-              </ActionIcon>
-            </Tooltip>
+            <ActionIcon tooltip={tSetting('title')} {...tintedColor('gray', 'ai')} onClick={onClickSetting}>
+              <Settings />
+            </ActionIcon>
 
-            <Tooltip label={t('title')}>
-              <ActionIcon aria-label={t('title')} {...tintedColor('gray', 'ai')} onClick={onClickHistory}>
-                <RotateCcwClock />
-              </ActionIcon>
-            </Tooltip>
+            <ActionIcon tooltip={t('title')} {...tintedColor('gray', 'ai')} onClick={onClickHistory}>
+              <RotateCcwClock />
+            </ActionIcon>
 
             <WindowControls />
           </Group>

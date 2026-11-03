@@ -12,6 +12,7 @@ import { formatFileSize } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 import { MODAL_CHROME_HEIGHT } from '@/components/modals/modalLayout';
+import TruncatedText from '@/components/TruncatedText';
 
 const PAGE_SIZE = 10;
 
@@ -36,9 +37,9 @@ const HistoryCard = memo(function HistoryCard(props: HistoryCardProps) {
     <Card padding="8px" orientation="horizontal" withBorder>
       <Card.Section inheritPadding px="md" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' }}>
         <Stack style={{ flex: 1, minWidth: 0 }}>
-          <Text size="xl" truncate="end" fw={500}>
+          <TruncatedText size="xl" fw={500}>
             {item.fileName}
-          </Text>
+          </TruncatedText>
           <Group gap="xl" wrap="nowrap">
             <Box miw="100px">
               <Text c="dimmed">{t('label.sizeLbl')}</Text>
@@ -59,7 +60,7 @@ const HistoryCard = memo(function HistoryCard(props: HistoryCardProps) {
               <Text c="dimmed">{t('label.destPathLbl')}</Text>
               {item.destPath ? (
                 <Anchor onClick={onClickOpenDest}>
-                  <Text truncate="end">{item.destPath}</Text>
+                  <TruncatedText>{item.destPath}</TruncatedText>
                 </Anchor>
               ) : (
                 <Text>{t('label.emptyLbl')}</Text>

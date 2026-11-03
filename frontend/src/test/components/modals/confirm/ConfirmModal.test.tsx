@@ -16,13 +16,17 @@ describe('ConfirmModal', () => {
     renderWithProviders(<div />);
     let result: Promise<boolean | null> | undefined;
     act(() => {
-      result = ConfirmModal.show({ type: 'info', confirmCode: 'C000004', params: { object: 'a.txt' } });
+      result = ConfirmModal.show({ type: 'info', confirmCode: 'C000006', params: { object: 'dir' } });
     });
     await flush();
 
     expect(screen.getByText('Info')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
-    expect(screen.getByText('Please confirm that you want to delete [a.txt] ?')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Please confirm that you want to delete folder [dir] and ALL of its contents? This action cannot be undone.'
+      )
+    ).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'OK' }));
 
@@ -32,7 +36,7 @@ describe('ConfirmModal', () => {
   it('puts Cancel on the left and OK on the right of a non-wrapping footer', async () => {
     renderWithProviders(<div />);
     act(() => {
-      ConfirmModal.show({ type: 'info', confirmCode: 'C000004', params: { object: 'a.txt' } });
+      ConfirmModal.show({ type: 'info', confirmCode: 'C000006', params: { object: 'dir' } });
     });
     await flush();
 

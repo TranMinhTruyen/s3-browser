@@ -1,4 +1,4 @@
-import { Box, CopyButton, DataList, Divider, Group, Loader, ScrollArea, Stack, Text, Tooltip } from '@mantine/core';
+import { Box, CopyButton, DataList, Divider, Group, Loader, ScrollArea, Stack, Text } from '@mantine/core';
 import { GetObjectDetail } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ObjectDetailOutput } from '@wails/S3Browser/models/bucket';
 import dayjs from 'dayjs';
@@ -55,11 +55,9 @@ function DetailRow(props: DetailRowProps) {
           {copyable && value ? (
             <CopyButton value={value}>
               {({ copied, copy }) => (
-                <Tooltip label={copied ? t('copied') : t('copy')}>
-                  <ActionIcon size="sm" onClick={copy} aria-label={t('copy')}>
-                    {copied ? <Check size="14px" /> : <Copy size="14px" />}
-                  </ActionIcon>
-                </Tooltip>
+                <ActionIcon size="sm" onClick={copy} tooltip={copied ? t('copied') : t('copy')}>
+                  {copied ? <Check size="14px" /> : <Copy size="14px" />}
+                </ActionIcon>
               )}
             </CopyButton>
           ) : null}
@@ -128,11 +126,9 @@ function ObjectDetailDrawer(props: ObjectDetailDrawerProps) {
     >
       <Group justify="space-between" p="8px" wrap="nowrap" style={{ flexShrink: 0 }}>
         <Text fw={600}>{t('title')}</Text>
-        <Tooltip label={t('tooltip.close')}>
-          <ActionIcon onClick={onClickClose} aria-label={t('tooltip.close')}>
-            <X />
-          </ActionIcon>
-        </Tooltip>
+        <ActionIcon onClick={onClickClose} tooltip={t('tooltip.close')}>
+          <X />
+        </ActionIcon>
       </Group>
 
       <ScrollArea style={{ flex: 1, minHeight: 0 }}>

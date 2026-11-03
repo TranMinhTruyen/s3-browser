@@ -3,7 +3,6 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { DeleteObject, DeletePrefix, DownloadObject } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
-import { Output } from '@wails/S3Browser/models/common';
 import {
   Ref,
   RefObject,
@@ -23,12 +22,11 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { onTabGone } from '@/common/utils/tabUtils';
 import Button from '@/components/buttons/Button';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
+import { showDeleteConfirmModal, showDeleteResultModal } from '@/components/modals/lazyModals';
 import ObjectItem, { OBJECT_ROW_HEIGHT, ObjectItemLabels } from '@/pages/object/ObjectItem';
 
-// Download or delete is refused above this many objects at once.
-const MAX_OBJECTS_PER_ACTION = 5;
-// Backend message code of a key deleted successfully (its `params.object` is the key).
-const DELETE_OBJECT_SUCCESS_CODE = 'S3S005';
+// Download is refused above this many objects at once (delete has no limit).
+const MAX_DOWNLOAD_OBJECTS = 5;
 const ROW_GAP = 8;
 // Load the next page once this many screens of rows are left below the viewport (at least PREFETCH_MIN_ROWS rows).
 const PREFETCH_SCREENS = 2;
@@ -85,6 +83,9 @@ function ObjectListView(props: ObjectListViewProps) {
     onRefresh,
     onClickLoadMore,
   } = useObjectPaging({ tabId, connectionId, profileName, bucket, prefix, keyword, listKey, scrollRef });
+  // Read at click time, so the menu handler keeps its identity when pages load.
+  const objectDatasRef = useRef(objectDatas);
+  objectDatasRef.current = objectDatas;
   const changePrefix = useTabListStore(s => s.changePrefix);
   const addSelectItem = useTabListStore(s => s.addSelectItem);
   const removeSelectItem = useTabListStore(s => s.removeSelectItem);
@@ -104,19 +105,6 @@ function ObjectListView(props: ObjectListViewProps) {
     [closeDetail, tabId]
   );
 
-  // Runs on success and on partial failure: only keys reported as S3S005 are actually deleted. Output may be undefined.
-  const closeDetailIfDeletedByOutput = useCallback(
-    (output?: Output<unknown>) =>
-      closeDetailIfDeleted(
-        (output?.messageList ?? [])
-          .filter(message => message.messageCode === DELETE_OBJECT_SUCCESS_CODE)
-          .map(message => message.params?.object)
-          .filter(object => object !== undefined && object !== null && object !== '')
-          .map(String)
-      ),
-    [closeDetailIfDeleted]
-  );
-
   // The selection does not outlive the view, but survives the tab being hidden (Activity).
   useEffect(() => onTabGone(tabId, () => clearSelectItem(tabId)), [clearSelectItem, tabId]);
 
@@ -127,7 +115,7 @@ function ObjectListView(props: ObjectListViewProps) {
       // the folder marker, not the files in it, so they are never sent.
       const objects = keys.filter(key => !key.endsWith('/'));
       if (objects.length === 0) return;
-      if (objects.length > MAX_OBJECTS_PER_ACTION) {
+      if (action === 'download' && objects.length > MAX_DOWNLOAD_OBJECTS) {
         ConfirmModal.show({
           type: 'warning',
           confirmCode: 'C000005',
@@ -139,25 +127,32 @@ function ObjectListView(props: ObjectListViewProps) {
           await callIPC(DownloadObject, [{ connectionId: connectionId, profileName, bucket, objects }]);
           break;
         case 'delete': {
-          const confirmModal = await ConfirmModal.show({
-            type: 'warning',
-            confirmCode: 'C000004',
-            params: {
-              object: objects.join(', '),
-            },
-            size: 'md',
+          // Sizes are looked up only for the picked keys, from the list as it is now.
+          const selectedKeys = new Set(objects);
+          const sizes = new Map<string, number>();
+          for (const o of objectDatasRef.current) if (selectedKeys.has(o.key)) sizes.set(o.key, o.size);
+          const toDelete = await showDeleteConfirmModal({
+            files: objects.map(key => ({ key, size: sizes.get(key) ?? 0 })),
           });
-          if (confirmModal) {
-            setDeleting(tabId, objects, true);
+          // Canceled, or every file unticked.
+          if (toDelete?.length) {
+            setDeleting(tabId, toDelete, true);
             try {
-              // Result is false if any key failed; each key reports its own result: S3S005 deleted, S3E013 failed.
-              await callIPC(DeleteObject, [{ connectionId, profileName, bucket, objects }], {
-                resolveAction: closeDetailIfDeletedByOutput,
-                rejectAction: closeDetailIfDeletedByOutput,
-              });
+              const body = await callIPC(DeleteObject, [{ connectionId, profileName, bucket, objects: toDelete }]);
+              if (body) {
+                closeDetailIfDeleted(body.deleted ?? []);
+                // Opened before the refresh, so a failing refresh cannot hide the result. Not awaited: the
+                // selection is cleared and the list is usable while the dialog is open.
+                void showDeleteResultModal({
+                  deleted: body.deleted?.length ?? 0,
+                  failed: body.failed?.length ?? 0,
+                  deletedKeys: body.deleted ?? [],
+                  failures: body.failed ?? [],
+                });
+              }
               await onRefresh();
             } finally {
-              setDeleting(tabId, objects, false);
+              setDeleting(tabId, toDelete, false);
             }
           }
           break;
@@ -165,7 +160,7 @@ function ObjectListView(props: ObjectListViewProps) {
       }
       clearSelectItem(tabId);
     },
-    [bucket, profileName, connectionId, onRefresh, setDeleting, tabId, clearSelectItem, closeDetailIfDeletedByOutput]
+    [bucket, profileName, connectionId, onRefresh, setDeleting, tabId, clearSelectItem, closeDetailIfDeleted]
   );
 
   const onClickDeleteFolder = useCallback(
@@ -186,7 +181,10 @@ function ObjectListView(props: ObjectListViewProps) {
       try {
         const body = await callIPC(DeletePrefix, [{ connectionId, profileName, bucket, prefix: folderKey }]);
         // Keep the drawer on failure (even a partial one); the object it shows may still exist.
-        if (body) closeDetailIfDeleted([folderKey]);
+        if (body?.failed === 0) closeDetailIfDeleted([folderKey]);
+        // Opened before the refresh, so a failing refresh cannot hide the result.
+        if (body)
+          void showDeleteResultModal({ deleted: body.deleted, failed: body.failed, failures: body.failures ?? [] });
         // Refresh even on failure or cancel: part of the folder may already be deleted.
         await onRefresh();
       } finally {

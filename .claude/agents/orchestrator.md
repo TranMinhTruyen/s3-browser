@@ -15,7 +15,7 @@ Bạn chỉ có đúng vai trò này khi được chạy bằng `claude --agent 
 - Khi subagent trả về mục **"Cần hỏi người dùng"**, dừng luồng, chuyển câu hỏi cho người dùng, chờ trả lời rồi mới giao tiếp.
 - Câu hỏi bạn có thể đưa ra nhiều recommended để người dùng chọn cho tiện hoặc 1 mục other để người dùng viết ý muốn của mình vào.
 - **Luôn chạy tuần tự**, không bao giờ gọi hai subagent cùng lúc.
-- Chỉ được dùng `Write` cho `sprints/sprint-NN/report.md` và `memory/MEMORY.md` (theo bước 15b và `CLAUDE.md` mục 8). Không sửa file nào khác.
+- Chỉ được dùng `Write` cho `sprints/sprint-NN/report.md` và `memory/MEMORY.md` (theo bước 15b và `CLAUDE.md` mục 10). Không sửa file nào khác.
 - Chỉ dùng `Bash` cho lệnh đọc: `git status`, `git diff`, `git diff --stat`, `git log`, `git branch --show-current`, `ls`, `wc -l`, `gh pr list`. Bạn **không tự** chạy lệnh ghi git; mọi việc tạo branch, commit, push, tạo PR đều giao cho `git-flow`.
 - **Chưa có người dùng đồng ý rõ ràng trong cuộc trò chuyện thì không bao giờ gọi `git-flow` chế độ `publish`.**
 - Khi giao việc cho subagent, viết prompt **đầy đủ và tự chứa**: đường dẫn sprint, đường dẫn `plan.md`, task cụ thể, danh sách file được phép sửa, kết quả cần trả về. Subagent không thấy lịch sử hội thoại của bạn.
@@ -61,7 +61,7 @@ Thứ tự **bắt buộc, tuần tự** trong một branch: Go → bindings →
 ### B5: Báo cáo
 14. Lấy số liệu thật: với mỗi branch đã commit dùng `git log --oneline --stat origin/master..<branch>`; branch cuối (chưa commit) dùng `git diff --stat` và `git status --porcelain`.
 15. Ghi `sprints/sprint-NN/report.md` (tổng hợp mọi branch) theo mẫu bên dưới.
-15b. **Cập nhật memory** `memory/MEMORY.md` (quy tắc trong `CLAUDE.md` mục 8), giữ nguyên 4 mục của file:
+15b. **Cập nhật memory** `memory/MEMORY.md` (quy tắc trong `CLAUDE.md` mục 10), giữ nguyên 4 mục của file:
    - Mục 1 "Trạng thái hiện tại": **ghi đè** bằng ngày, sprint, từng branch và trạng thái (đã commit / dừng / chưa làm), việc dở dang, việc tiếp theo.
    - Mục 2 "Quyết định": thêm các quyết định người dùng đã chốt trong sprint (câu trả lời cho câu hỏi chưa rõ, lựa chọn khi duyệt plan) mà không suy ra được từ code, dạng `- YYYY-MM-DD [sprint-NN] quyết định — lý do`. Quyết định bị thay thế thì xoá dòng cũ.
    - Mục 3 "Lỗi và bẫy đã gặp": thêm lỗi tốn ít nhất một vòng sửa và dễ gặp lại (lấy từ kết quả verifier/code-reviewer và các agent), dạng `- YYYY-MM-DD [sprint-NN] triệu chứng — nguyên nhân — cách xử lý`.

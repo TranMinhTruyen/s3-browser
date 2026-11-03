@@ -10,6 +10,8 @@ import uploaderWindow from '@/locales/zh-CN/components/layouts/transfer/uploader
 import confirmModal from '@/locales/zh-CN/components/modals/confirmModal.json';
 import connectModal from '@/locales/zh-CN/components/modals/connectModal.json';
 import credentialExpiring from '@/locales/zh-CN/components/modals/credentialExpiring.json';
+import deleteConfirmModal from '@/locales/zh-CN/components/modals/deleteConfirmModal.json';
+import deleteResultModal from '@/locales/zh-CN/components/modals/deleteResultModal.json';
 import historyModal from '@/locales/zh-CN/components/modals/historyModal.json';
 import settingModal from '@/locales/zh-CN/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/zh-CN/components/modals/uploadLimitModal.json';
@@ -26,6 +28,8 @@ const simplifiedChineseResource: ResourceLanguage = {
   connectModal: connectModal,
   credentialExpiring: credentialExpiring,
   confirmModal: confirmModal,
+  deleteConfirmModal: deleteConfirmModal,
+  deleteResultModal: deleteResultModal,
   historyModal: historyModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,

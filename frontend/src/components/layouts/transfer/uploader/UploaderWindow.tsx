@@ -85,7 +85,7 @@ function UploaderWindow() {
     const bottom = EDGE + (hasDownloader ? downloaderHeight + GAP : 0);
     return (
       <Affix position={{ bottom, right: EDGE }}>
-        <ActionIcon onClick={openWindow} size="xl" aria-label={t('title')}>
+        <ActionIcon onClick={openWindow} size="xl" tooltip={t('title')}>
           <Upload />
         </ActionIcon>
       </Affix>
@@ -105,8 +105,7 @@ function UploaderWindow() {
               {...tintedColor('red', 'ai')}
               size="md"
               onClick={onClickCancelAll}
-              title={t('action.cancelAll')}
-              aria-label={t('action.cancelAll')}
+              tooltip={t('action.cancelAll')}
             >
               <X />
             </ActionIcon>

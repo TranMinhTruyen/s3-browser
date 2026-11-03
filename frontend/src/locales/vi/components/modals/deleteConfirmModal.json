@@ -1,0 +1,8 @@
+{
+  "title": "Xóa file",
+  "warning": "Thao tác này không thể hoàn tác.",
+  "rootFolder": "(file đã chọn)",
+  "selectedCount": "{selected}/{total} file",
+  "selectAll": "Chọn tất cả",
+  "delete": "Xóa"
+}

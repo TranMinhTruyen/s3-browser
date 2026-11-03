@@ -1,4 +1,4 @@
-import { CopyButton, Group, Stack, Text, Tooltip } from '@mantine/core';
+import { CopyButton, Group, Stack, Text } from '@mantine/core';
 import { LoginMinioOidc } from '@wails/S3Browser/internal/handlers/buckethandler';
 import dayjs from 'dayjs';
 import { Check, Copy } from 'lucide-react';
@@ -169,11 +169,9 @@ function AuthOidcFields({ form }: Pick<AuthFieldsProps, 'form'>) {
         rightSection={
           <CopyButton value={redirectUri}>
             {({ copied, copy }) => (
-              <Tooltip label={copied ? t('form.button.copied') : t('form.button.copy')}>
-                <ActionIcon size="sm" onClick={copy} aria-label={t('form.button.copy')}>
-                  {copied ? <Check size="14px" /> : <Copy size="14px" />}
-                </ActionIcon>
-              </Tooltip>
+              <ActionIcon size="sm" onClick={copy} tooltip={copied ? t('form.button.copied') : t('form.button.copy')}>
+                {copied ? <Check size="14px" /> : <Copy size="14px" />}
+              </ActionIcon>
             )}
           </CopyButton>
         }
