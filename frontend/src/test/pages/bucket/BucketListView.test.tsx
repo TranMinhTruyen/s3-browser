@@ -88,7 +88,7 @@ describe('BucketListView', () => {
     expect(screen.getByText('beta')).toBeInTheDocument();
     expect(callIPCMock).toHaveBeenCalledExactlyOnceWith(
       GetListBucket,
-      [{ connectionId: 'conn', profileName: 'my-profile', nextCursor: '', limit: 10 }],
+      [{ connectionId: 'conn', profileName: 'my-profile', nextCursor: '', limit: 1000 }],
       { signal: expect.any(AbortSignal) }
     );
   });
@@ -132,7 +132,7 @@ describe('BucketListView', () => {
     expect(screen.getByText('alpha')).toBeInTheDocument();
     expect(callIPCMock).toHaveBeenCalledTimes(2);
     expect(callIPCMock.mock.calls[1][1]).toEqual([
-      { connectionId: 'conn', profileName: 'my-profile', nextCursor: 'c1', limit: 10 },
+      { connectionId: 'conn', profileName: 'my-profile', nextCursor: 'c1', limit: 1000 },
     ]);
   });
 
@@ -492,7 +492,9 @@ describe('BucketListView', () => {
       await act(async () => {});
       const listCalls = callIPCMock.mock.calls.filter(c => c[0] === GetListBucket);
       expect(listCalls).toHaveLength(1);
-      expect(listCalls[0][1]).toEqual([{ connectionId: 'conn', profileName: 'my-profile', nextCursor: '', limit: 10 }]);
+      expect(listCalls[0][1]).toEqual([
+        { connectionId: 'conn', profileName: 'my-profile', nextCursor: '', limit: 1000 },
+      ]);
       expect(loader()).not.toBeInTheDocument();
     });
 
@@ -545,7 +547,7 @@ describe('BucketListView', () => {
   });
 
   describe('when the tab is only hidden (Activity)', () => {
-    const tabState = { currentView: 'bucketList' as const, prefix: '', selectionItem: [], deletingItems: [] };
+    const tabState = { currentView: 'bucketList' as const, prefix: '', selectionItem: {}, deletingItems: {} };
     const scrollRef = { current: document.createElement('div') } as RefObject<HTMLElement | null>;
     const ui = (mode: 'visible' | 'hidden') => (
       <Activity mode={mode}>

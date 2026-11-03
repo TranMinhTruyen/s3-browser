@@ -189,7 +189,7 @@ describe('useFilesDroppedUpload', () => {
     });
 
     describe('when the tab is only hidden', () => {
-      const tabState = { currentView: 'objectList' as const, prefix: '', selectionItem: [], deletingItems: [] };
+      const tabState = { currentView: 'objectList' as const, prefix: '', selectionItem: {}, deletingItems: {} };
       let mode: 'visible' | 'hidden' = 'visible';
       const wrapper = ({ children }: { children: ReactNode }) => <Activity mode={mode}>{children}</Activity>;
 

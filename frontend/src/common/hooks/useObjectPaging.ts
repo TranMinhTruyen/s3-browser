@@ -4,8 +4,9 @@ import { RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { onTabGone } from '@/common/utils/tabUtils';
 
-// Objects fetched per page.
-export const OBJECT_PAGE_SIZE = 20;
+// Objects fetched per page: a small first page shows up fast, later pages are big to keep scrolling smooth.
+export const FIRST_PAGE_SIZE = 200;
+export const NEXT_PAGE_SIZE = 1000;
 
 type UseObjectPagingParams = {
   tabId: string;
@@ -51,17 +52,16 @@ export function useObjectPaging(params: UseObjectPagingParams) {
   // Lists the folder, or searches it when a keyword is applied. Both return the same shape.
   const handleGetListObject = useCallback(
     (cursor: string, signal?: AbortSignal) => {
+      const limit = cursor ? NEXT_PAGE_SIZE : FIRST_PAGE_SIZE;
       if (!connectionId || !bucket) return Promise.resolve(undefined);
       if (keyword) {
         return callIPC(SearchObject, [{ connectionId, profileName, bucket, prefix, keyword, nextCursor: cursor }], {
           signal,
         });
       }
-      return callIPC(
-        GetListObject,
-        [{ connectionId, profileName, bucket, prefix, nextCursor: cursor, limit: OBJECT_PAGE_SIZE }],
-        { signal }
-      );
+      return callIPC(GetListObject, [{ connectionId, profileName, bucket, prefix, nextCursor: cursor, limit }], {
+        signal,
+      });
     },
     [bucket, prefix, profileName, connectionId, keyword]
   );
@@ -92,10 +92,10 @@ export function useObjectPaging(params: UseObjectPagingParams) {
     const output = await handleGetListObject(nextCursor, ctrl.signal);
     if (ctrl.signal.aborted) return;
     if (output) {
-      // A search cursor can overlap the previous page, so drop keys already shown.
       setObjectDatas(prev => {
-        const seen = new Set(prev.map(item => item.key));
-        const added = output.objectList.filter(item => !seen.has(item.key));
+        // A search cursor can overlap the previous page, so drop keys already shown. A folder listing cannot.
+        const seen = new Set(keyword ? prev.map(item => item.key) : []);
+        const added = keyword ? output.objectList.filter(item => !seen.has(item.key)) : output.objectList;
         // Nothing new: keep the same array so the list does not re-render.
         return added.length > 0 ? [...prev, ...added] : prev;
       });
@@ -105,7 +105,7 @@ export function useObjectPaging(params: UseObjectPagingParams) {
       setLoadMoreError(true);
     }
     setIsLoadingMore(false);
-  }, [nextCursor, handleGetListObject, startRequest]);
+  }, [nextCursor, keyword, handleGetListObject, startRequest]);
 
   // Also runs when the prefix or keyword changes, because loadFirstPage depends on them.
   useEffect(() => {

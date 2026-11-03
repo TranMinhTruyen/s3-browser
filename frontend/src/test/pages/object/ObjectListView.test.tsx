@@ -17,6 +17,7 @@ import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import UploadLimitModal from '@/components/modals/upload/UploadLimitModal';
+import { OBJECT_ROW_HEIGHT } from '@/pages/object/ObjectItem';
 import ObjectListView, { ObjectListViewRef } from '@/pages/object/ObjectListView';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
@@ -26,6 +27,8 @@ const virtual = vi.hoisted(() => ({
   endIndex: null as number | null,
   scrollElement: null as unknown,
   estimate: null as number | null,
+  // Height of the viewport; null means the virtualizer has not measured it yet.
+  scrollHeight: null as number | null,
 }));
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: ({
@@ -47,6 +50,7 @@ vi.mock('@tanstack/react-virtual', () => ({
     },
     getTotalSize: () => count * 100,
     measureElement: () => {},
+    scrollRect: virtual.scrollHeight === null ? null : { width: 0, height: virtual.scrollHeight },
     range: count === 0 ? null : { startIndex: 0, endIndex: virtual.endIndex ?? count - 1 },
   }),
 }));
@@ -109,6 +113,7 @@ describe('ObjectListView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     virtual.endIndex = null;
+    virtual.scrollHeight = null;
     // Mimics the real callIPC: an Output ({ result, ... }) runs resolveAction/rejectAction and yields its body;
     // any other resolved value is treated as the body itself.
     callIPCMock.mockImplementation((async (
@@ -131,7 +136,7 @@ describe('ObjectListView', () => {
     listMock.mockResolvedValue(page([fileA, fileB, folder]));
     useTabListStore.setState({
       activeTab: TAB_ID,
-      tabList: { [TAB_ID]: { currentView: 'objectList', prefix: 'dir/', selectionItem: [], deletingItems: [] } },
+      tabList: { [TAB_ID]: { currentView: 'objectList', prefix: 'dir/', selectionItem: {}, deletingItems: {} } },
     });
   });
 
@@ -146,7 +151,7 @@ describe('ObjectListView', () => {
       bucket: 'bkt',
       prefix: 'dir/',
       nextCursor: '',
-      limit: 20,
+      limit: 200,
     });
   });
 
@@ -154,7 +159,8 @@ describe('ObjectListView', () => {
     const { scrollRef } = renderList();
     await screen.findByText('a.txt');
     expect(virtual.scrollElement).toBe(scrollRef.current);
-    expect(virtual.estimate).toBe(104);
+    expect(virtual.estimate).toBe(OBJECT_ROW_HEIGHT);
+    expect(OBJECT_ROW_HEIGHT).toBe(88);
   });
 
   it('loads the next page when the end of the list is reached', async () => {
@@ -175,6 +181,65 @@ describe('ObjectListView', () => {
     expect(listMock).toHaveBeenCalledTimes(1);
   });
 
+  describe('prefetching the next page', () => {
+    // 6 rows: the last index is 5. The threshold index is 5 - max(2, ceil(2 * height / (88 + 8))).
+    const many = Array.from({ length: 6 }, (_, i) => new ObjectItem({ key: `f${i}`, name: `f${i}` }));
+
+    it.each([
+      ['no viewport measured yet, last row 2 away', null, 3, true],
+      ['no viewport measured yet, last row 3 away', null, 2, false],
+      ['tiny viewport still prefetches 2 rows ahead', 10, 3, true],
+      ['tiny viewport, last row 3 away', 10, 2, false],
+      ['viewport of 2 screens = 4 rows ahead', 184, 1, true],
+      ['viewport of 2 screens = 4 rows ahead, 5 away', 184, 0, false],
+      ['a tall viewport covers the whole list', 460, 0, true],
+    ])('%s', async (_name, scrollHeight, endIndex, loads) => {
+      virtual.endIndex = endIndex;
+      virtual.scrollHeight = scrollHeight;
+      listMock.mockResolvedValueOnce(page(many, 'cursor-1')).mockResolvedValueOnce(page([fileB]));
+      renderList();
+      await screen.findByText('f5');
+      await act(async () => {});
+
+      expect(listMock).toHaveBeenCalledTimes(loads ? 2 : 1);
+      if (loads) {
+        expect(listMock).toHaveBeenLastCalledWith(expect.objectContaining({ nextCursor: 'cursor-1', limit: 1000 }));
+      }
+    });
+
+    it('does not ask for a page while the previous one is still loading', async () => {
+      listMock.mockResolvedValueOnce(page(many, 'cursor-1')).mockReturnValueOnce(new Promise(() => {}) as never);
+      const { setKeyword } = renderList();
+      await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+      expect(document.querySelector('.mantine-Loader-root')).toBeInTheDocument();
+
+      // Something else re-renders the list while the page is pending.
+      setKeyword(undefined);
+      await act(async () => {});
+
+      expect(listMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not retry in a loop after a failed page', async () => {
+      listMock.mockResolvedValueOnce(page(many, 'cursor-1')).mockResolvedValueOnce(null as never);
+      renderList();
+      await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      await act(async () => {});
+
+      expect(listMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not ask for a page when the list has no cursor', async () => {
+      listMock.mockResolvedValue(page(many));
+      renderList();
+      await screen.findByText('f5');
+      await act(async () => {});
+
+      expect(listMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('opens the detail of the clicked object in the store', async () => {
     const { user } = renderList();
     await user.click(await screen.findByText('a.txt'));
@@ -185,7 +250,7 @@ describe('ObjectListView', () => {
     const { user } = renderList();
     await screen.findByText('a.txt');
     await user.click(within(cardOf('a.txt')).getByRole('checkbox'));
-    expect(tab().selectionItem).toEqual(['a.txt']);
+    expect(tab().selectionItem).toEqual({ 'a.txt': true });
     expect(tab().detailItem).toBeUndefined();
   });
 
@@ -340,6 +405,19 @@ describe('ObjectListView', () => {
       bucket: 'bkt',
       objects: ['a.txt'],
     });
+  });
+
+  it('ignores a delete click on a folder that is already being deleted', async () => {
+    const { user } = renderList();
+    await screen.findByText('dir');
+    await user.click(within(cardOf('dir')).getByRole('button'));
+    const deleteItem = await screen.findByText('Delete');
+
+    act(() => useTabListStore.getState().setDeleting(TAB_ID, ['dir/'], true));
+    await user.click(deleteItem);
+
+    expect(confirmMock).not.toHaveBeenCalled();
+    expect(DeletePrefix).not.toHaveBeenCalled();
   });
 
   it('does not delete when the confirmation is declined', async () => {
@@ -519,7 +597,7 @@ describe('ObjectListView', () => {
       const box = within(cardOf('a.txt')).getByRole('checkbox');
       await user.click(box);
       await user.click(box);
-      expect(tab().selectionItem).toEqual([]);
+      expect(tab().selectionItem).toEqual({});
     });
 
     it('opens a folder as the new prefix', async () => {
@@ -571,6 +649,17 @@ describe('ObjectListView', () => {
       await waitFor(() => expect(confirmMock).toHaveBeenCalled());
       expect(DeletePrefix).not.toHaveBeenCalled();
       expect(listMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('is not blocked by an inherited property name used as the folder key', async () => {
+      confirmMock.mockResolvedValue(false as never);
+      listMock.mockResolvedValue(page([new ObjectItem({ key: 'constructor', name: 'constructor', isFolder: true })]));
+      const { user } = renderList();
+      await user.click(await screen.findByRole('button', { name: 'More actions' }));
+      await user.click(await screen.findByText('Delete'));
+      await waitFor(() =>
+        expect(confirmMock).toHaveBeenCalledWith(expect.objectContaining({ params: { object: 'constructor' } }))
+      );
     });
 
     it('confirms with the folder key when the folder has no name', async () => {
@@ -1005,8 +1094,8 @@ describe('ObjectListView', () => {
     const tabState = (patch: Record<string, unknown> = {}) => ({
       currentView: 'objectList' as const,
       prefix: 'dir/',
-      selectionItem: [] as string[],
-      deletingItems: [] as string[],
+      selectionItem: {} as Record<string, true>,
+      deletingItems: {} as Record<string, true>,
       ...patch,
     });
     const ui = (scrollRef: RefObject<HTMLElement | null>, mode: 'visible' | 'hidden') => (
@@ -1042,7 +1131,7 @@ describe('ObjectListView', () => {
     beforeEach(() => {
       useTabListStore.setState({
         activeTab: TAB_ID,
-        tabList: { [TAB_ID]: tabState({ selectionItem: ['a.txt'] }), 'tab-2': tabState() },
+        tabList: { [TAB_ID]: tabState({ selectionItem: { 'a.txt': true as const } }), 'tab-2': tabState() },
       });
     });
 
@@ -1051,10 +1140,10 @@ describe('ObjectListView', () => {
       await screen.findByText('a.txt');
 
       hide();
-      expect(tab().selectionItem).toEqual(['a.txt']);
+      expect(tab().selectionItem).toEqual({ 'a.txt': true });
       show();
 
-      expect(tab().selectionItem).toEqual(['a.txt']);
+      expect(tab().selectionItem).toEqual({ 'a.txt': true });
       expect(screen.getByText('b.txt')).toBeInTheDocument();
       expect(listMock).toHaveBeenCalledTimes(1);
     });
@@ -1075,7 +1164,7 @@ describe('ObjectListView', () => {
 
       unmount();
 
-      expect(tab().selectionItem).toEqual([]);
+      expect(tab().selectionItem).toEqual({});
     });
 
     it('cancels the running list request when a hidden tab is closed', async () => {

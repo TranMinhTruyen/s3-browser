@@ -80,8 +80,8 @@ const profile = (patch: Partial<ConnectionProfileOutput> = {}) =>
 const tabState = (patch: Record<string, unknown> = {}) => ({
   currentView: 'bucketList' as const,
   prefix: '',
-  selectionItem: [] as string[],
-  deletingItems: [] as string[],
+  selectionItem: {},
+  deletingItems: {},
   profileId: 'p1',
   ...patch,
 });
@@ -111,7 +111,7 @@ describe('TabDetail', () => {
 
   describe('header', () => {
     it('lists the profiles and updates the tab when one is chosen', async () => {
-      setTab({ profileId: null, selectionItem: ['x'], bucket: 'old', prefix: 'a/' });
+      setTab({ profileId: null, selectionItem: { x: true }, bucket: 'old', prefix: 'a/' });
       const user = setup();
       await user.click(profilePicker());
       await user.click(await screen.findByText('Prof'));
@@ -120,7 +120,7 @@ describe('TabDetail', () => {
         currentView: 'bucketList',
         bucket: undefined,
         prefix: '',
-        selectionItem: [],
+        selectionItem: {},
       });
     });
 
@@ -259,12 +259,12 @@ describe('TabDetail', () => {
     });
 
     it('refreshes the object list and clears the selection', async () => {
-      setTab({ currentView: 'objectList', bucket: 'b', selectionItem: ['k'] });
+      setTab({ currentView: 'objectList', bucket: 'b', selectionItem: { k: true } });
       const user = setup();
       await user.click(btn('Refresh object list'));
       expect(h.objectRefresh).toHaveBeenCalledTimes(1);
       expect(h.bucketRefresh).not.toHaveBeenCalled();
-      expect(tab().selectionItem).toEqual([]);
+      expect(tab().selectionItem).toEqual({});
     });
 
     it('goes back to the bucket list from the bucket root', async () => {
@@ -328,18 +328,18 @@ describe('TabDetail', () => {
     });
 
     it('clears, downloads and deletes the selection', async () => {
-      setTab({ currentView: 'objectList', bucket: 'b', selectionItem: ['k1', 'k2'] });
+      setTab({ currentView: 'objectList', bucket: 'b', selectionItem: { k1: true, k2: true } });
       const user = setup();
       await user.click(btn('Download selected'));
       expect(h.menu).toHaveBeenLastCalledWith(['k1', 'k2'], 'download');
       await user.click(btn('Delete selected'));
       expect(h.menu).toHaveBeenLastCalledWith(['k1', 'k2'], 'delete');
       await user.click(btn('Clear selected'));
-      expect(tab().selectionItem).toEqual([]);
+      expect(tab().selectionItem).toEqual({});
     });
 
     it('disables clear and download while a selected item is being deleted', () => {
-      setTab({ currentView: 'objectList', bucket: 'b', selectionItem: ['k1'], deletingItems: ['k1'] });
+      setTab({ currentView: 'objectList', bucket: 'b', selectionItem: { k1: true }, deletingItems: { k1: true } });
       setup();
       expect(btn('Clear selected')).toBeDisabled();
       expect(btn('Download selected')).toBeDisabled();
@@ -347,7 +347,7 @@ describe('TabDetail', () => {
     });
 
     it('keeps the selection actions enabled when only other items are being deleted', () => {
-      setTab({ currentView: 'objectList', bucket: 'b', selectionItem: ['k1'], deletingItems: ['other'] });
+      setTab({ currentView: 'objectList', bucket: 'b', selectionItem: { k1: true }, deletingItems: { other: true } });
       setup();
       expect(btn('Clear selected')).toBeEnabled();
     });
@@ -396,7 +396,7 @@ describe('TabDetail', () => {
         const nameBox = () => screen.getByPlaceholderText('Search by name');
         beforeEach(() => {
           setProfile({ isConnected: true });
-          setTab({ selectionItem: ['k'] });
+          setTab({ selectionItem: { k: true } });
         });
 
         it('applies the keyword to the bucket list only, without touching the selection', async () => {
@@ -404,7 +404,7 @@ describe('TabDetail', () => {
           expect(screen.getByText('bucket keyword=[]')).toBeInTheDocument();
           await user.type(nameBox(), ' foo {Enter}');
           expect(screen.getByText('bucket keyword=[foo]')).toBeInTheDocument();
-          expect(tab().selectionItem).toEqual(['k']);
+          expect(tab().selectionItem).toEqual({ k: true });
         });
 
         it('refreshes the bucket list when the same keyword is submitted again', async () => {
@@ -423,7 +423,7 @@ describe('TabDetail', () => {
           await user.click(btn('Clear search'));
           expect(screen.getByText('bucket keyword=[]')).toBeInTheDocument();
           expect(nameBox()).toHaveValue('');
-          expect(tab().selectionItem).toEqual(['k']);
+          expect(tab().selectionItem).toEqual({ k: true });
         });
 
         it('gives the bucket list no keyword while the object list is shown, and drops it on return', async () => {
@@ -439,12 +439,12 @@ describe('TabDetail', () => {
       });
 
       it('applies the keyword to the object list and clears the selection', async () => {
-        objectTab({ selectionItem: ['k'] });
+        objectTab({ selectionItem: { k: true } });
         const user = setup();
         expect(screen.getByText('keyword=[]')).toBeInTheDocument();
         await user.type(searchBox(), ' foo {Enter}');
         expect(screen.getByText('keyword=[foo]')).toBeInTheDocument();
-        expect(tab().selectionItem).toEqual([]);
+        expect(tab().selectionItem).toEqual({});
       });
 
       it('searches with the search button', async () => {
@@ -471,33 +471,33 @@ describe('TabDetail', () => {
       });
 
       it('changes nothing when cleared without an applied keyword', async () => {
-        objectTab({ selectionItem: ['k'] });
+        objectTab({ selectionItem: { k: true } });
         const user = setup();
         await user.type(searchBox(), '{Enter}');
         await user.type(searchBox(), 'foo');
         await user.click(btn('Clear search'));
         expect(screen.getByText('keyword=[]')).toBeInTheDocument();
         expect(searchBox()).toHaveValue('');
-        expect(tab().selectionItem).toEqual(['k']);
+        expect(tab().selectionItem).toEqual({ k: true });
         expect(h.objectRefresh).not.toHaveBeenCalled();
       });
 
       it('clears the selection on clear only when a keyword is applied', async () => {
-        objectTab({ selectionItem: ['k'] });
+        objectTab({ selectionItem: { k: true } });
         const user = setup();
         // Empty Enter with no keyword: selection stays.
         await user.type(searchBox(), '{Enter}');
-        expect(tab().selectionItem).toEqual(['k']);
+        expect(tab().selectionItem).toEqual({ k: true });
         // Text typed but never applied, then cleared: selection stays.
         await user.type(searchBox(), 'foo');
         await user.click(btn('Clear search'));
-        expect(tab().selectionItem).toEqual(['k']);
+        expect(tab().selectionItem).toEqual({ k: true });
         // Applied keyword, then cleared: selection is cleared.
         await user.type(searchBox(), 'foo{Enter}');
         act(() => useTabListStore.getState().addSelectItem(TAB, ['k2']));
-        expect(tab().selectionItem).toEqual(['k2']);
+        expect(tab().selectionItem).toEqual({ k2: true });
         await user.click(btn('Clear search'));
-        expect(tab().selectionItem).toEqual([]);
+        expect(tab().selectionItem).toEqual({});
       });
 
       it('searches again from the first page when the same keyword is submitted', async () => {
@@ -509,7 +509,7 @@ describe('TabDetail', () => {
         await user.click(btn('Search'));
         expect(h.objectRefresh).toHaveBeenCalledTimes(1);
         expect(screen.getByText('keyword=[foo]')).toBeInTheDocument();
-        expect(tab().selectionItem).toEqual([]);
+        expect(tab().selectionItem).toEqual({});
       });
 
       it('does not refresh when the keyword differs from the applied one', async () => {

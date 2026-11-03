@@ -22,7 +22,7 @@ const setTabs = (list: Record<string, string | null>) => {
   const tabList = Object.fromEntries(
     Object.entries(list).map(([id, profileId]) => [
       id,
-      { profileId, currentView: 'objectList', bucket: 'b', prefix: 'x/', selectionItem: [], deletingItems: [] },
+      { profileId, currentView: 'objectList', bucket: 'b', prefix: 'x/', selectionItem: {}, deletingItems: {} },
     ])
   );
   useTabListStore.setState({ tabList: tabList as never, activeTab: Object.keys(list)[0] });

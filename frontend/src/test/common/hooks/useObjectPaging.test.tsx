@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { GetListObject, SearchObject } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Activity, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { OBJECT_PAGE_SIZE, useObjectPaging } from '@/common/hooks/useObjectPaging';
+import { FIRST_PAGE_SIZE, NEXT_PAGE_SIZE, useObjectPaging } from '@/common/hooks/useObjectPaging';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 
@@ -35,8 +35,9 @@ const mockIPC = () => vi.mocked(callIPC) as unknown as ReturnType<typeof vi.fn>;
 const signalOf = (call: number) => (mockIPC().mock.calls[call][2] as { signal: AbortSignal }).signal;
 
 describe('useObjectPaging', () => {
-  it('exposes the page size', () => {
-    expect(OBJECT_PAGE_SIZE).toBe(20);
+  it('exposes the page sizes', () => {
+    expect(FIRST_PAGE_SIZE).toBe(200);
+    expect(NEXT_PAGE_SIZE).toBe(1000);
   });
 
   it('loads the first page of the folder listing', async () => {
@@ -46,7 +47,7 @@ describe('useObjectPaging', () => {
     await waitFor(() => expect(result.current.isLoaded).toBe(true));
     expect(callIPC).toHaveBeenCalledExactlyOnceWith(
       GetListObject,
-      [{ connectionId: 'conn', profileName: 'prof', bucket: 'bkt', prefix: 'dir/', nextCursor: '', limit: 20 }],
+      [{ connectionId: 'conn', profileName: 'prof', bucket: 'bkt', prefix: 'dir/', nextCursor: '', limit: 200 }],
       { signal: expect.any(AbortSignal) }
     );
     expect(keysOf(result)).toEqual(['a', 'b']);
@@ -140,28 +141,67 @@ describe('useObjectPaging', () => {
   });
 
   describe('next page', () => {
-    it('appends new keys only and follows the new cursor', async () => {
+    it('appends the whole page, even a repeated key, and follows the new cursor with the big page size', async () => {
       mockIPC()
         .mockResolvedValueOnce(page(['a', 'b'], 'c1'))
         .mockResolvedValueOnce(page(['b', 'c'], 'c2'));
       const { result } = setup();
+      await waitFor(() => expect(result.current.nextCursor).toBe('c1'));
+      expect(mockIPC().mock.calls[0][1]).toEqual([expect.objectContaining({ nextCursor: '', limit: FIRST_PAGE_SIZE })]);
+
+      await act(async () => {
+        await result.current.loadNextPage();
+      });
+
+      expect(mockIPC().mock.calls[1][0]).toBe(GetListObject);
+      expect(mockIPC().mock.calls[1][1]).toEqual([
+        expect.objectContaining({ nextCursor: 'c1', limit: NEXT_PAGE_SIZE }),
+      ]);
+      // A folder listing never overlaps, so nothing is filtered.
+      expect(keysOf(result)).toEqual(['a', 'b', 'b', 'c']);
+      expect(result.current.nextCursor).toBe('c2');
+      expect(result.current.isLoadingMore).toBe(false);
+    });
+
+    it('keeps the same array when the folder page is empty', async () => {
+      mockIPC()
+        .mockResolvedValueOnce(page(['a'], 'c1'))
+        .mockResolvedValueOnce(page([], 'c2'));
+      const { result } = setup();
+      await waitFor(() => expect(result.current.nextCursor).toBe('c1'));
+      const before = result.current.objectDatas;
+
+      await act(async () => {
+        await result.current.loadNextPage();
+      });
+
+      expect(result.current.objectDatas).toBe(before);
+      expect(result.current.nextCursor).toBe('c2');
+    });
+
+    it('drops keys already shown while searching, without a page size', async () => {
+      mockIPC()
+        .mockResolvedValueOnce(page(['a', 'b'], 'c1'))
+        .mockResolvedValueOnce(page(['b', 'c'], 'c2'));
+      const { result } = setup({ keyword: 'abc' });
       await waitFor(() => expect(result.current.nextCursor).toBe('c1'));
 
       await act(async () => {
         await result.current.loadNextPage();
       });
 
-      expect(mockIPC().mock.calls[1][1]).toEqual([expect.objectContaining({ nextCursor: 'c1', limit: 20 })]);
+      expect(mockIPC().mock.calls[1][0]).toBe(SearchObject);
+      expect(mockIPC().mock.calls[1][1][0]).toEqual(expect.objectContaining({ nextCursor: 'c1', keyword: 'abc' }));
+      expect(mockIPC().mock.calls[1][1][0]).not.toHaveProperty('limit');
       expect(keysOf(result)).toEqual(['a', 'b', 'c']);
       expect(result.current.nextCursor).toBe('c2');
-      expect(result.current.isLoadingMore).toBe(false);
     });
 
-    it('keeps the same array when the page has nothing new', async () => {
+    it('keeps the same array when a search page has nothing new', async () => {
       mockIPC()
         .mockResolvedValueOnce(page(['a'], 'c1'))
         .mockResolvedValueOnce(page(['a'], 'c2'));
-      const { result } = setup();
+      const { result } = setup({ keyword: 'abc' });
       await waitFor(() => expect(result.current.nextCursor).toBe('c1'));
       const before = result.current.objectDatas;
 
@@ -273,7 +313,7 @@ describe('useObjectPaging', () => {
   });
 
   describe('when the tab is only hidden (Activity)', () => {
-    const tabState = { currentView: 'objectList' as const, prefix: '', selectionItem: [], deletingItems: [] };
+    const tabState = { currentView: 'objectList' as const, prefix: '', selectionItem: {}, deletingItems: {} };
     let mode: 'visible' | 'hidden' = 'visible';
     const wrapper = ({ children }: { children: ReactNode }) => <Activity mode={mode}>{children}</Activity>;
     const setupActivity = () => renderHook(p => useObjectPaging(p), { initialProps: baseParams(), wrapper });

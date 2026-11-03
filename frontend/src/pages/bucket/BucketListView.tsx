@@ -11,7 +11,7 @@ import Button from '@/components/buttons/Button';
 import BucketItem from '@/pages/bucket/BucketItem';
 
 // Buckets fetched per page.
-const BUCKET_PAGE_SIZE = 10;
+const BUCKET_PAGE_SIZE = 1000;
 // Row height before measuring, and the gap between rows.
 const ROW_ESTIMATE_SIZE = 88;
 const ROW_GAP = 8;

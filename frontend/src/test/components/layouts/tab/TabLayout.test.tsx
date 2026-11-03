@@ -479,7 +479,7 @@ describe('TabLayout', () => {
   });
 
   describe('hidden tabs (Activity)', () => {
-    const tabState = { currentView: 'bucketList' as const, prefix: '', selectionItem: [], deletingItems: [] };
+    const tabState = { currentView: 'bucketList' as const, prefix: '', selectionItem: {}, deletingItems: {} };
     const twoTabs = () => useTabListStore.setState({ activeTab: 'a', tabList: { a: tabState, b: tabState } });
 
     it('does not mount the content of a tab that was never active', () => {

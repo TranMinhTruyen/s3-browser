@@ -22,6 +22,8 @@ describe('tabListStore', () => {
   it('starts with one empty tab', () => {
     expect(Object.keys(state().tabList)).toHaveLength(1);
     expect(state().tabList[activeId()]).toMatchObject({ currentView: 'bucketList', prefix: '' });
+    expect(state().tabList[activeId()].selectionItem).toEqual({});
+    expect(state().tabList[activeId()].deletingItems).toEqual({});
   });
 
   it('setActiveTab ignores an empty id', () => {
@@ -136,8 +138,8 @@ describe('tabListStore', () => {
       currentView: 'objectList',
       bucket: 'bkt',
       prefix: '',
-      selectionItem: [],
     });
+    expect(state().tabList[id].selectionItem).toEqual({});
     expect(state().tabList[id].detailItem).toBeUndefined();
 
     state().changeCurrentView(id, 'bucketList', 'bkt');
@@ -153,7 +155,8 @@ describe('tabListStore', () => {
     state().addSelectItem(id, ['x']);
     state().openDetail(id, item);
     state().changeCurrentView(id, 'bucketList');
-    expect(state().tabList[id]).toMatchObject({ currentView: 'bucketList', prefix: '', selectionItem: [] });
+    expect(state().tabList[id]).toMatchObject({ currentView: 'bucketList', prefix: '' });
+    expect(state().tabList[id].selectionItem).toEqual({});
     expect(state().tabList[id].bucket).toBeUndefined();
     expect(state().tabList[id].detailItem).toBeUndefined();
   });
@@ -163,7 +166,8 @@ describe('tabListStore', () => {
     state().addSelectItem(id, ['x']);
     state().openDetail(id, item);
     state().changePrefix(id, 'a/');
-    expect(state().tabList[id]).toMatchObject({ prefix: 'a/', selectionItem: [] });
+    expect(state().tabList[id]).toMatchObject({ prefix: 'a/' });
+    expect(state().tabList[id].selectionItem).toEqual({});
     expect(state().tabList[id].detailItem).toBeUndefined();
     state().changePrefix('ghost', 'b/');
     expect(state().tabList.ghost).toBeUndefined();
@@ -188,7 +192,12 @@ describe('tabListStore', () => {
 
   it('resetViewByProfile and clearProfile clear bucket, folder, selection and detail', () => {
     const mine = activeId();
-    const dirty = { currentView: 'objectList' as const, bucket: 'b', prefix: 'x/', selectionItem: ['k'] };
+    const dirty = {
+      currentView: 'objectList' as const,
+      bucket: 'b',
+      prefix: 'x/',
+      selectionItem: { k: true as const },
+    };
     state().updateTab(mine, { profileId: 'p1', ...dirty, detailItem: item });
     state().addTab();
     const other = activeId();
@@ -199,8 +208,8 @@ describe('tabListStore', () => {
       profileId: 'p1',
       currentView: 'bucketList',
       prefix: '',
-      selectionItem: [],
     });
+    expect(state().tabList[mine].selectionItem).toEqual({});
     expect(state().tabList[mine].bucket).toBeUndefined();
     expect(state().tabList[mine].detailItem).toBeUndefined();
     expect(state().tabList[other]).toMatchObject({ ...dirty, detailItem: item });
@@ -211,8 +220,8 @@ describe('tabListStore', () => {
       profileId: null,
       currentView: 'bucketList',
       prefix: '',
-      selectionItem: [],
     });
+    expect(state().tabList[mine].selectionItem).toEqual({});
     expect(state().tabList[mine].bucket).toBeUndefined();
     expect(state().tabList[mine].detailItem).toBeUndefined();
     expect(state().tabList[other]).toMatchObject({ profileId: 'p2', ...dirty });
@@ -222,11 +231,11 @@ describe('tabListStore', () => {
     const id = activeId();
     state().addSelectItem(id, ['a', 'b']);
     state().addSelectItem(id, ['b', 'c']);
-    expect(state().tabList[id].selectionItem).toEqual(['a', 'b', 'c']);
-    state().removeSelectItem(id, ['b']);
-    expect(state().tabList[id].selectionItem).toEqual(['a', 'c']);
+    expect(state().tabList[id].selectionItem).toEqual({ a: true, b: true, c: true });
+    state().removeSelectItem(id, ['b', 'missing']);
+    expect(state().tabList[id].selectionItem).toEqual({ a: true, c: true });
     state().clearSelectItem(id);
-    expect(state().tabList[id].selectionItem).toEqual([]);
+    expect(state().tabList[id].selectionItem).toEqual({});
 
     state().addSelectItem('ghost', ['a']);
     state().removeSelectItem('ghost', ['a']);
@@ -249,9 +258,9 @@ describe('tabListStore', () => {
     const id = activeId();
     state().setDeleting(id, ['a', 'b'], true);
     state().setDeleting(id, ['b', 'c'], true);
-    expect(state().tabList[id].deletingItems).toEqual(['a', 'b', 'c']);
-    state().setDeleting(id, ['a'], false);
-    expect(state().tabList[id].deletingItems).toEqual(['b', 'c']);
+    expect(state().tabList[id].deletingItems).toEqual({ a: true, b: true, c: true });
+    state().setDeleting(id, ['a', 'missing'], false);
+    expect(state().tabList[id].deletingItems).toEqual({ b: true, c: true });
     state().setDeleting('ghost', ['a'], true);
     expect(state().tabList.ghost).toBeUndefined();
   });
