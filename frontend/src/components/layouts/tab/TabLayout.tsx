@@ -14,7 +14,7 @@ import { horizontalListSortingStrategy, SortableContext } from '@dnd-kit/sortabl
 import { Group, Paper, Tabs } from '@mantine/core';
 import { Plus } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Activity, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
@@ -181,9 +181,12 @@ function TabLayout() {
       {tabIds.map(key => (
         <Tabs.Panel key={key} value={key} style={{ flex: 1, minHeight: 0 }}>
           {visited.has(key) && (
-            <Paper withBorder radius="md" h="100%" p="4px" style={{ overflow: 'hidden' }}>
-              <TabDetail tabId={key} />
-            </Paper>
+            // Hidden tabs keep their state but stop rendering/effects until shown again.
+            <Activity mode={key === activeTab ? 'visible' : 'hidden'}>
+              <Paper withBorder radius="md" h="100%" p="4px" style={{ overflow: 'hidden' }}>
+                <TabDetail tabId={key} />
+              </Paper>
+            </Activity>
           )}
         </Tabs.Panel>
       ))}

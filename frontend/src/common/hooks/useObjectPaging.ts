@@ -2,11 +2,13 @@ import { GetListObject, SearchObject } from '@wails/S3Browser/internal/handlers/
 import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
 import { RefObject, useCallback, useEffect, useRef, useState } from 'react';
 import { callIPC } from '@/common/utils/ipcUtils';
+import { onTabGone } from '@/common/utils/tabUtils';
 
 // Objects fetched per page.
 export const OBJECT_PAGE_SIZE = 20;
 
 type UseObjectPagingParams = {
+  tabId: string;
   connectionId?: string;
   profileName?: string;
   bucket?: string;
@@ -23,7 +25,7 @@ type UseObjectPagingParams = {
  * Loads the first page whenever the list source changes and aborts the running request on unmount.
  */
 export function useObjectPaging(params: UseObjectPagingParams) {
-  const { connectionId, profileName, bucket, prefix, keyword, listKey, scrollRef } = params;
+  const { tabId, connectionId, profileName, bucket, prefix, keyword, listKey, scrollRef } = params;
 
   const [objectDatas, setObjectDatas] = useState<ObjectItemData[]>([]);
   const [nextCursor, setNextCursor] = useState('');
@@ -36,6 +38,8 @@ export function useObjectPaging(params: UseObjectPagingParams) {
   // True once the first page of the current list has loaded, so an empty search result can be told from loading.
   const [isLoaded, setIsLoaded] = useState(false);
   const requestCtrl = useRef<AbortController>(null);
+  // The loadFirstPage the list was last loaded for: showing a hidden tab again must not reload it.
+  const loadedFor = useRef<unknown>(null);
 
   const startRequest = useCallback(() => {
     requestCtrl.current?.abort();
@@ -105,19 +109,27 @@ export function useObjectPaging(params: UseObjectPagingParams) {
 
   // Also runs when the prefix or keyword changes, because loadFirstPage depends on them.
   useEffect(() => {
-    if (!connectionId || !bucket) return;
+    if (!connectionId || !bucket) {
+      // Disconnected: reconnecting to the same source must load the list again.
+      loadedFor.current = null;
+      return;
+    }
+    if (loadedFor.current === loadFirstPage) return;
+    loadedFor.current = loadFirstPage;
     // oxlint-disable-next-line react/set-state-in-effect -- reset the list before the new source loads
     setObjectDatas([]);
     scrollRef.current?.scrollTo({ top: 0 });
     loadFirstPage();
   }, [connectionId, bucket, loadFirstPage, scrollRef]);
 
-  // Cancel any running request when the view unmounts.
+  // Cancel any running request when the view unmounts. A hidden tab (Activity) keeps its request and list.
   useEffect(
-    () => () => {
-      requestCtrl.current?.abort();
-    },
-    []
+    () =>
+      onTabGone(tabId, () => {
+        requestCtrl.current?.abort();
+        loadedFor.current = null;
+      }),
+    [tabId]
   );
 
   const onRefresh = useCallback(async () => {

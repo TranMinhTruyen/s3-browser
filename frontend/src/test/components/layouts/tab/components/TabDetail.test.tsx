@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { ConnectS3ByProfile, UploadObject } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { ObjectItem } from '@wails/S3Browser/models/bucket';
-import { type Ref, useImperativeHandle } from 'react';
+import { Activity, type Ref, useImperativeHandle } from 'react';
 import { toast } from 'sonner';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
@@ -13,6 +13,7 @@ import { showConnectModal, showUploadPickerModal } from '@/components/modals/laz
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 type BucketStubProps = {
+  tabId: string;
   keyword?: string;
   profile?: { id?: string } | null;
   active: boolean;
@@ -25,12 +26,13 @@ const h = vi.hoisted(() => ({ bucketRefresh: vi.fn(), objectRefresh: vi.fn(), me
 
 // The two list views are tested on their own: here they are stubs exposing their ref and callbacks.
 vi.mock('@/pages/bucket/BucketListView', () => ({
-  default: function BucketListViewStub({ profile, active, keyword, onSelectBucket, ref }: BucketStubProps) {
+  default: function BucketListViewStub({ tabId, profile, active, keyword, onSelectBucket, ref }: BucketStubProps) {
     useImperativeHandle(ref, () => ({ onRefresh: h.bucketRefresh }), []);
     return (
       <div>
         <span>{`bucket list profile=${profile?.id ?? 'none'} active=${active}`}</span>
         <span>{`bucket keyword=[${keyword}]`}</span>
+        <span>{`bucket tab=${tabId}`}</span>
         <button type="button" onClick={() => onSelectBucket('my-bucket')}>
           pick bucket
         </button>
@@ -786,6 +788,71 @@ describe('TabDetail', () => {
       await waitFor(() => expect(toast.warning).toHaveBeenCalled());
       expect(callIPC).not.toHaveBeenCalled();
       expect(useTabListStore.getState().uploadingTabId).toBe('other');
+    });
+  });
+
+  it('passes its tab id to the bucket list', () => {
+    setup();
+    expect(screen.getByText(`bucket tab=${TAB}`)).toBeInTheDocument();
+  });
+
+  describe('scroll position when the tab is hidden (Activity)', () => {
+    // jsdom has no layout: back scrollTop with a variable and let the test play the browser (display none resets it).
+    const scroller = () => {
+      const el = document.querySelector<HTMLElement>(`[data-tab-id="${TAB}"]`)!;
+      const box = { top: 0, writes: [] as number[] };
+      Object.defineProperty(el, 'scrollTop', {
+        configurable: true,
+        get: () => box.top,
+        set: (value: number) => {
+          box.top = value;
+          box.writes.push(value);
+        },
+      });
+      return box;
+    };
+    const ui = (mode: 'visible' | 'hidden') => (
+      <Activity mode={mode}>
+        <TabDetail tabId={TAB} />
+      </Activity>
+    );
+
+    it('restores the scroll offset that the browser reset while the tab was hidden', () => {
+      const view = renderWithProviders(ui('visible'));
+      const box = scroller();
+      box.top = 240;
+
+      view.rerender(ui('hidden'));
+      box.top = 0;
+      view.rerender(ui('visible'));
+
+      expect(box.top).toBe(240);
+    });
+
+    it('does not touch the scroll offset when the tab was never scrolled', () => {
+      const view = renderWithProviders(ui('visible'));
+      const box = scroller();
+
+      view.rerender(ui('hidden'));
+      view.rerender(ui('visible'));
+
+      expect(box.writes).toEqual([]);
+    });
+
+    it('keeps the latest offset across several hide and show rounds', () => {
+      const view = renderWithProviders(ui('visible'));
+      const box = scroller();
+      box.top = 100;
+      view.rerender(ui('hidden'));
+      box.top = 0;
+      view.rerender(ui('visible'));
+      box.top = 300;
+
+      view.rerender(ui('hidden'));
+      box.top = 0;
+      view.rerender(ui('visible'));
+
+      expect(box.top).toBe(300);
     });
   });
 });

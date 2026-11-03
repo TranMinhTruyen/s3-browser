@@ -1,7 +1,9 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { GetListObject, SearchObject } from '@wails/S3Browser/internal/handlers/buckethandler';
-import { describe, expect, it, vi } from 'vitest';
+import { Activity, type ReactNode } from 'react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OBJECT_PAGE_SIZE, useObjectPaging } from '@/common/hooks/useObjectPaging';
+import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn() }));
@@ -18,6 +20,7 @@ const keysOf = (r: { current: ReturnType<typeof useObjectPaging> }) => r.current
 
 const scrollTo = vi.fn();
 const baseParams = (patch: Partial<Params> = {}): Params => ({
+  tabId: 'tab-1',
   connectionId: 'conn',
   profileName: 'prof',
   bucket: 'bkt',
@@ -108,6 +111,24 @@ describe('useObjectPaging', () => {
     await act(async () => resolveOld(page(['old'], 'stale')));
     expect(keysOf(result)).toEqual(['new']);
     expect(result.current.nextCursor).toBe('');
+  });
+
+  it.each([
+    ['connection', { connectionId: undefined }],
+    ['bucket', { bucket: undefined }],
+  ])('loads the first page again when the same list comes back after losing the %s', async (_name, lost) => {
+    mockIPC().mockResolvedValue(page(['a']));
+    const { result, rerender } = setup();
+    await waitFor(() => expect(result.current.isLoaded).toBe(true));
+    expect(callIPC).toHaveBeenCalledTimes(1);
+
+    rerender(baseParams(lost));
+    expect(callIPC).toHaveBeenCalledTimes(1);
+    rerender(baseParams());
+
+    await waitFor(() => expect(callIPC).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.isLoaded).toBe(true));
+    expect(keysOf(result)).toEqual(['a']);
   });
 
   it('aborts the running request on unmount', async () => {
@@ -249,5 +270,108 @@ describe('useObjectPaging', () => {
       await result.current.onRefresh();
     });
     expect(keysOf(result)).toEqual(['a']);
+  });
+
+  describe('when the tab is only hidden (Activity)', () => {
+    const tabState = { currentView: 'objectList' as const, prefix: '', selectionItem: [], deletingItems: [] };
+    let mode: 'visible' | 'hidden' = 'visible';
+    const wrapper = ({ children }: { children: ReactNode }) => <Activity mode={mode}>{children}</Activity>;
+    const setupActivity = () => renderHook(p => useObjectPaging(p), { initialProps: baseParams(), wrapper });
+    const hide = (rerender: (p: Params) => void) => {
+      useTabListStore.setState({ activeTab: 'tab-2' });
+      mode = 'hidden';
+      rerender(baseParams());
+    };
+    const show = (rerender: (p: Params) => void) => {
+      useTabListStore.setState({ activeTab: 'tab-1' });
+      mode = 'visible';
+      rerender(baseParams());
+    };
+
+    beforeEach(() => {
+      mode = 'visible';
+      useTabListStore.setState({ activeTab: 'tab-1', tabList: { 'tab-1': tabState, 'tab-2': tabState } });
+    });
+
+    it('does not abort the running request, and its page is there when the tab is shown', async () => {
+      let resolve: (v: Page) => void = () => {};
+      mockIPC().mockReturnValueOnce(new Promise<Page>(r => (resolve = r)));
+      const { result, rerender } = setupActivity();
+      await waitFor(() => expect(callIPC).toHaveBeenCalledTimes(1));
+
+      hide(rerender);
+      expect(signalOf(0).aborted).toBe(false);
+
+      await act(async () => resolve(page(['a', 'b'], 'c1')));
+      show(rerender);
+      await waitFor(() => expect(keysOf(result)).toEqual(['a', 'b']));
+      expect(callIPC).toHaveBeenCalledTimes(1);
+      expect(result.current.isLoaded).toBe(true);
+      expect(result.current.nextCursor).toBe('c1');
+    });
+
+    it('keeps the loaded list and does not load the first page again when shown', async () => {
+      mockIPC().mockResolvedValue(page(['a'], 'c1'));
+      const { result, rerender } = setupActivity();
+      await waitFor(() => expect(result.current.isLoaded).toBe(true));
+      scrollTo.mockClear();
+
+      hide(rerender);
+      show(rerender);
+
+      expect(callIPC).toHaveBeenCalledTimes(1);
+      expect(keysOf(result)).toEqual(['a']);
+      expect(scrollTo).not.toHaveBeenCalled();
+    });
+
+    it('loads the first page again when the list source changed while hidden', async () => {
+      mockIPC()
+        .mockResolvedValueOnce(page(['a']))
+        .mockResolvedValueOnce(page(['z']));
+      const { result, rerender } = setupActivity();
+      await waitFor(() => expect(result.current.isLoaded).toBe(true));
+
+      hide(rerender);
+      useTabListStore.setState({ activeTab: 'tab-1' });
+      mode = 'visible';
+      rerender(baseParams({ prefix: 'other/', listKey: 'list-2' }));
+
+      await waitFor(() => expect(keysOf(result)).toEqual(['z']));
+      expect(callIPC).toHaveBeenCalledTimes(2);
+    });
+
+    it('still aborts when the tab is closed while visible', async () => {
+      mockIPC().mockReturnValue(new Promise(() => {}));
+      const { unmount } = setupActivity();
+      await waitFor(() => expect(callIPC).toHaveBeenCalled());
+
+      useTabListStore.setState({ tabList: { 'tab-2': tabState } });
+      unmount();
+
+      expect(signalOf(0).aborted).toBe(true);
+    });
+
+    it('loads the first page again when remounted after a real unmount', async () => {
+      mockIPC().mockResolvedValue(page(['a']));
+      const first = setupActivity();
+      await waitFor(() => expect(first.result.current.isLoaded).toBe(true));
+      first.unmount();
+
+      const second = setupActivity();
+      await waitFor(() => expect(second.result.current.isLoaded).toBe(true));
+      expect(callIPC).toHaveBeenCalledTimes(2);
+    });
+
+    it('aborts the running request when a hidden tab is closed', async () => {
+      mockIPC().mockReturnValue(new Promise(() => {}));
+      const { rerender, unmount } = setupActivity();
+      await waitFor(() => expect(callIPC).toHaveBeenCalled());
+
+      hide(rerender);
+      useTabListStore.setState({ tabList: { 'tab-2': tabState } });
+      unmount();
+
+      expect(signalOf(0).aborted).toBe(true);
+    });
   });
 });
