@@ -11,7 +11,7 @@
 - フロントエンド: Mantine 9、zustand 5 + immer、NiceModal、i18next (en / vi / ja)、sonner (トースト)、`@tanstack/react-virtual`、zod、dayjs。パッケージマネージャーは **bun**。
 
 ```
-App/S3Browser
+s3-browser
 ├── main.go                 エントリ: logger、Wails app、サービス、メインウィンドウ
 ├── internal/
 │   ├── app.go              DB・モジュール・ハンドラーの構築、Shutdown
@@ -155,7 +155,7 @@ Wails のバインディングは Go のハンドラーから生成されます�
 go tool wails3 generate bindings -clean=true -ts
 ```
 
-| 作業 | コマンド (特記なき限り `App/S3Browser` で実行) |
+| 作業 | コマンド (特記なき限りリポジトリのルートで実行) |
 |---|---|
 | 開発 | `go tool wails3 task dev` |
 | ビルド | `go tool wails3 task build` |

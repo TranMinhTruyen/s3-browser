@@ -10,7 +10,7 @@ allowed-tools: Read, Glob, Write
 
 Tên sprint người dùng truyền vào: `$ARGUMENTS`
 
-Mọi đường dẫn tính từ `App/S3Browser`. Skill này chỉ được tạo **một** file mới là `sprints/sprint-NN/requirement.md`. Không sửa file nào khác, không chạy lệnh git.
+Mọi đường dẫn tính từ gốc repo. Skill này chỉ được tạo **một** file mới là `sprints/sprint-NN/requirement.md`. Không sửa file nào khác, không chạy lệnh git.
 
 ## Các bước
 
@@ -28,5 +28,5 @@ Mọi đường dẫn tính từ `App/S3Browser`. Skill này chỉ được tạ
 
 Bước tiếp theo:
 1. Viết yêu cầu vào file trên (có thể tách mỗi tính năng một file `.md` trong cùng thư mục).
-2. Chạy `claude --agent orchestrator` ở `App/S3Browser` và gõ: `làm sprint-NN`.
+2. Chạy `claude --agent orchestrator` ở gốc repo và gõ: `làm sprint-NN`.
 ```

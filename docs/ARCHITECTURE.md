@@ -11,7 +11,7 @@ A short tour of the code for new developers. Conventions live in `CLAUDE.md`; th
 - Frontend: Mantine 9, zustand 5 + immer, NiceModal, i18next (en / vi / ja), sonner (toast), `@tanstack/react-virtual`, zod, dayjs. Package manager: **bun**.
 
 ```
-App/S3Browser
+s3-browser
 ├── main.go                 entry: logger, Wails app, services, main window
 ├── internal/
 │   ├── app.go              builds DB, modules and handlers; Shutdown
@@ -155,7 +155,7 @@ Wails bindings are generated from the Go handlers; regenerate after any change t
 go tool wails3 generate bindings -clean=true -ts
 ```
 
-| Task | Command (run in `App/S3Browser` unless noted) |
+| Task | Command (run at the repo root unless noted) |
 |---|---|
 | Dev | `go tool wails3 task dev` |
 | Build | `go tool wails3 task build` |

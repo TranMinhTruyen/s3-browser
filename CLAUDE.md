@@ -2,7 +2,7 @@
 
 File này được Claude Code tự động load cho session chính và mọi subagent. Đây là **nguồn quy ước duy nhất**: các file agent trong `.claude/agents/` và skill trong `.claude/skills/` không lặp lại nội dung ở đây. Khi convention trong code thay đổi, cập nhật file này trước.
 
-> Mở `claude` trong thư mục `App/S3Browser` (hoặc thư mục con) thì file này, các agent và skill mới được load, vì git root của repo là `kanban-board/`.
+> Mở `claude` ở thư mục gốc repo (hoặc thư mục con) thì file này, các agent và skill mới được load.
 
 Bộ nhớ giữa các session (trạng thái sprint, quyết định, lỗi đã gặp) được import từ file dưới đây, quy tắc ở mục **10. Memory**:
 
@@ -32,7 +32,7 @@ Hãy tự hỏi: "Liệu một kỹ sư cấp cao có cho rằng cách làm này
 ## 3. Tổng quan
 
 - App desktop viết bằng **Wails v3** (Go backend + React TS frontend) để duyệt và thao tác bucket/object trên **AWS S3** và **MinIO**.
-- Repo: `TranMinhTruyen/kanban-board`, thư mục `App/S3Browser`, nhánh `master`.
+- Repo: `TranMinhTruyen/s3-browser`, nhánh `master`. Tách từ monorepo `TranMinhTruyen/kanban-board` (thư mục `App/S3Browser`) ngày 2026-11-03; số PR từ #33 trở về trước thuộc repo cũ.
 - Go module tên `S3Browser`, Go 1.27. Wails `v3.1.0`, `@wailsio/runtime`.
 - **Wails v3 đã stable**: luôn tra cứu https://v3.wails.io/ trước khi dùng API Wails, không dựa vào kiến thức có sẵn.
 
@@ -124,7 +124,7 @@ Skill nằm trong `.claude/skills/<name>/SKILL.md` (bị chặn ghi, chỉ ngư�
 
 Tất cả tool Go được khai báo trong `tool (...)` của `go.mod` (wails3, sqlc, golangci-lint), luôn gọi qua `go tool`, không cần cài riêng:
 - Format/lint: `go tool golangci-lint run ./...` theo `.golangci.yml` (errcheck, govet, staticcheck, lll 120, goimports, golines 120).
-- Kiểm tra: `go vet ./...`, `go build ./...` (chạy ở `App/S3Browser`).
+- Kiểm tra: `go vet ./...`, `go build ./...` (chạy ở gốc repo).
 - Sinh bindings: `go tool wails3 generate bindings -clean=true -ts` (chạy qua skill `wails3-bindings` để có luôn bước kiểm tra frontend).
 - Sinh sqlc: `go tool sqlc generate`.
 - Chạy dev: `go tool wails3 task dev`.

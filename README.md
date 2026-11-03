@@ -50,7 +50,7 @@ Prerequisites:
 - The WebView2 Fixed Version (extracted CAB from Microsoft) to build the portable package.
 - [Node.js](https://nodejs.org/) only to generate the docs.
 
-Commands, run in the project root `App/S3Browser` unless noted:
+Commands, run at the repo root unless noted:
 
 ```bash
 # Install frontend dependencies

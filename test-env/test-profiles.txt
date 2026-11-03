@@ -244,10 +244,10 @@ PHẦN B - AWS giả lập bằng Floci
 8. Môi trường Floci
 -------------------
 
-  Container: local-aws-floci-1 (image floci/floci:latest)
+  Container: s3b-test-floci (image floci/floci:latest)
   Endpoint:  http://localhost:4566     Region dùng cho test: ap-southeast-1
-  Compose:   kanban-board/docker-compose-local-aws.yml
-             docker compose -f docker-compose-local-aws.yml -p local-aws up -d
+  Compose:   test-env/docker-compose-floci.yml
+             docker compose -f docker-compose-floci.yml -p s3b-floci-test up -d
 
   Floci mặc định KHÔNG kiểm tra quyền (key nào cũng dùng được). Compose đã bật 3 cờ:
     FLOCI_SERVICES_IAM_ENFORCEMENT_ENABLED=true   kiểm tra IAM policy
@@ -311,7 +311,7 @@ Path style bật.
   P-DC   Default chain    Mở app với biến môi trường (xem dưới)        Như F1
 
   Default chain đọc credential từ môi trường của process app, nên phải mở app từ terminal
-  đã set biến. PowerShell, trong App/S3Browser:
+  đã set biến. PowerShell, ở gốc repo:
     $env:AWS_CONFIG_FILE = "$HOME\.aws\floci-config"
     $env:AWS_SHARED_CREDENTIALS_FILE = "$HOME\.aws\floci-credentials"
     $env:AWS_PROFILE = "floci-rw"
@@ -413,7 +413,7 @@ Chạy trong Git Bash. Cần AWS CLI v2. Bật 3 cờ ở mục 8 trong compose 
     rm ~/.aws/floci-config ~/.aws/floci-credentials
 
   Tắt kiểm tra quyền (khi project khác cần dùng key bất kỳ): xoá 3 cờ ở mục 8 khỏi
-  docker-compose-local-aws.yml rồi chạy lại `docker compose ... up -d`.
+  test-env/docker-compose-floci.yml rồi chạy lại `docker compose ... up -d`.
 
 
 

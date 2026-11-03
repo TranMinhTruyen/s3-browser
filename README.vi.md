@@ -50,7 +50,7 @@ Yêu cầu:
 - WebView2 Fixed Version (file CAB đã giải nén từ Microsoft) để tạo bản portable.
 - [Node.js](https://nodejs.org/) chỉ để sinh tài liệu.
 
-Các lệnh, chạy ở thư mục gốc `App/S3Browser` trừ khi có ghi chú:
+Các lệnh, chạy ở gốc repo trừ khi có ghi chú:
 
 ```bash
 # Cài dependency frontend

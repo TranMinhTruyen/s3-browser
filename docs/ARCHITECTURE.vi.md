@@ -11,7 +11,7 @@ Tổng quan ngắn gọn về mã nguồn dành cho lập trình viên mới. C�
 - Frontend: Mantine 9, zustand 5 + immer, NiceModal, i18next (en / vi / ja), sonner (toast), `@tanstack/react-virtual`, zod, dayjs. Package manager: **bun**.
 
 ```
-App/S3Browser
+s3-browser
 ├── main.go                 điểm vào: logger, Wails app, service, cửa sổ chính
 ├── internal/
 │   ├── app.go              khởi tạo DB, module, handler; Shutdown
@@ -155,7 +155,7 @@ Binding Wails được sinh từ các handler Go; hãy sinh lại sau mỗi thay
 go tool wails3 generate bindings -clean=true -ts
 ```
 
-| Việc | Lệnh (chạy trong `App/S3Browser` trừ khi ghi khác) |
+| Việc | Lệnh (chạy ở gốc repo trừ khi ghi khác) |
 |---|---|
 | Dev | `go tool wails3 task dev` |
 | Build | `go tool wails3 task build` |

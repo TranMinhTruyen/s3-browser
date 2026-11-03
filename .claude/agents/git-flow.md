@@ -14,14 +14,14 @@ Bên gọi luôn đưa: **chế độ** (`branch` | `commit` | `publish`), số 
 - Chỉ dùng đúng các lệnh ghi git sau: `git fetch origin master`, `git switch -c SP-...`, `git add -A -- ...`, `git commit -F -`, `git push -u origin SP-...`, `gh pr create --base master ...`. Lệnh đọc (`git status`, `git diff`, `git log`, `git rev-parse`, `git branch --show-current`, `git branch --list`, `git ls-remote`, `gh auth status`, `gh pr list`, `gh pr view`) dùng tự do.
 - **Không bao giờ**: push vào `master`, `--force`/`-f`/`--force-with-lease`, `--amend`, `git reset`, `git checkout`, `git restore`, `git stash`, `git rebase`, `git merge`, `git clean`, xoá branch, `gh pr merge`, `--no-verify`.
 - Tên branch phải khớp `^SP-[0-9]{2}/[a-z0-9_]{1,40}$`. Không khớp thì dừng và trả "Cần hỏi người dùng".
-- `git status --porcelain` trả đường dẫn tính từ **gốc repo** (`kanban-board/`), ví dụ `App/S3Browser/sprints/sprint-09/plan.md`.
+- `git status --porcelain` trả đường dẫn tính từ **gốc repo**, ví dụ `sprints/sprint-09/plan.md`.
 - Lệnh nào lỗi thì dừng ngay, trả nguyên văn lỗi. Không thử cách khác để "cho qua".
 
 ## Chế độ `branch`
 
 Đầu vào: `NN`, tên branch (lấy từ mục "Branch" trong `plan.md` đã được duyệt).
 
-1. `git status --porcelain`. Chỉ được phép có dòng `??` nằm dưới `App/S3Browser/sprints/sprint-NN/`. Có bất kỳ thay đổi nào khác (file tracked đang sửa, file mới ngoài thư mục sprint, kể cả ở app khác trong monorepo) thì dừng, trả "Cần hỏi người dùng" kèm danh sách file.
+1. `git status --porcelain`. Chỉ được phép có dòng `??` nằm dưới `sprints/sprint-NN/`. Có bất kỳ thay đổi nào khác (file tracked đang sửa, file mới ngoài thư mục sprint) thì dừng, trả "Cần hỏi người dùng" kèm danh sách file.
 2. Kiểm tên branch theo regex ở trên.
 3. `git branch --list <branch>` và `git ls-remote --heads origin <branch>`. Branch đã có ở local hoặc remote thì dừng, trả "Cần hỏi người dùng" (dùng lại hay đổi tên).
 4. `git fetch origin master`. Lỗi (mạng, quyền) thì dừng, **không** tách từ `master` local.
@@ -40,8 +40,8 @@ Trả về:
 Đầu vào: `NN`, tên branch, các mã yêu cầu thuộc branch (ví dụ `R1, R3`), cờ **`include_sprint_docs`** (`true` chỉ với branch cuối cùng của sprint), và tóm tắt thay đổi orchestrator đưa (task, binding/migration/message code/i18n mới).
 
 1. `git branch --show-current` phải đúng branch được giao, không phải `master`. Sai thì dừng.
-2. Stage **mọi thay đổi** trong working tree (lựa chọn của người dùng), chạy ở `App/S3Browser`:
-   - `include_sprint_docs: false`: `git add -A -- ':/' ':(top,exclude)App/S3Browser/sprints/sprint-NN' ':(top,exclude)App/S3Browser/memory'`
+2. Stage **mọi thay đổi** trong working tree (lựa chọn của người dùng), chạy ở gốc repo:
+   - `include_sprint_docs: false`: `git add -A -- ':/' ':(top,exclude)sprints/sprint-NN' ':(top,exclude)memory'`
    - `include_sprint_docs: true`: `git add -A -- ':/'`
    Thư mục sprint chưa track được giữ lại để các branch sau còn đọc được `plan.md`, và chỉ được commit ở branch cuối. `memory/MEMORY.md` (orchestrator cập nhật ở B5) cũng chỉ được commit ở branch cuối.
 3. `git diff --cached --name-only`. Nếu có file khớp `.env`, `.env.*` (trừ `.env.example`), `*.pem`, `*.key`, `*.p12`, `*credentials*`, `*secret*`, file sinh ra khi build/test (`coverage/`, `*.out`, `*.log`, `node_modules/`, `dist/`, `build/bin/`), hoặc file > 5 MB (`git diff --cached --stat` để xem), thì **không commit**, trả "Cần hỏi người dùng" kèm danh sách. Không có gì được stage thì báo và dừng.
