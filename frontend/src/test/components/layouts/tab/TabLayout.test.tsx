@@ -1,13 +1,13 @@
 import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import TabLayout from '@/components/layouts/tab/TabLayout';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 const detailRenders = vi.hoisted(() => {
-  const state = { count: 0, bump: () => void (state.count += 1) };
+  const state = { count: 0, created: 0, bump: () => void (state.count += 1) };
   return state;
 });
 const dnd = vi.hoisted(() => ({
@@ -19,9 +19,15 @@ const dnd = vi.hoisted(() => ({
 
 // Like the real TabDetail, the mock is memoized.
 vi.mock('@/components/layouts/tab/components/TabDetail', () => ({
-  default: memo(() => {
+  default: memo(({ tabId }: { tabId: string }) => {
     detailRenders.bump();
-    return <div>tab detail</div>;
+    // Local state: proves a hidden tab keeps its instance instead of being mounted again.
+    const [instance] = useState(() => detailRenders.created++);
+    return (
+      <div data-testid={`detail-${tabId}`} data-instance={instance}>
+        tab detail
+      </div>
+    );
   }),
 }));
 vi.mock('@/components/layouts/tab/components/TabDragPreview', () => ({
@@ -74,6 +80,7 @@ describe('TabLayout', () => {
   beforeEach(() => {
     useTabListStore.getState().reset();
     detailRenders.count = 0;
+    detailRenders.created = 0;
   });
 
   it('adds a tab from the add button and closes it again', async () => {
@@ -468,6 +475,48 @@ describe('TabLayout', () => {
       scrollIntoView().mockClear();
       act(() => useTabListStore.getState().addTab());
       expect(scrollIntoView()).toHaveBeenCalled();
+    });
+  });
+
+  describe('hidden tabs (Activity)', () => {
+    const tabState = { currentView: 'bucketList' as const, prefix: '', selectionItem: [], deletingItems: [] };
+    const twoTabs = () => useTabListStore.setState({ activeTab: 'a', tabList: { a: tabState, b: tabState } });
+
+    it('does not mount the content of a tab that was never active', () => {
+      twoTabs();
+      renderWithProviders(<TabLayout />);
+
+      expect(screen.getByTestId('detail-a')).toBeInTheDocument();
+      expect(screen.queryByTestId('detail-b')).not.toBeInTheDocument();
+      expect(detailRenders.created).toBe(1);
+    });
+
+    it('hides the content of the inactive tab instead of unmounting it, and shows it again as the same instance', () => {
+      twoTabs();
+      renderWithProviders(<TabLayout />);
+
+      act(() => useTabListStore.getState().setActiveTab('b'));
+      expect(screen.getByTestId('detail-b')).toBeVisible();
+      expect(screen.getByTestId('detail-a')).toBeInTheDocument();
+      expect(screen.getByTestId('detail-a')).not.toBeVisible();
+
+      act(() => useTabListStore.getState().setActiveTab('a'));
+      expect(screen.getByTestId('detail-a')).toBeVisible();
+      expect(screen.getByTestId('detail-b')).not.toBeVisible();
+      expect(screen.getByTestId('detail-a')).toHaveAttribute('data-instance', '0');
+      expect(detailRenders.created).toBe(2);
+    });
+
+    it('unmounts the content when its tab is closed', async () => {
+      twoTabs();
+      renderWithProviders(<TabLayout />);
+      act(() => useTabListStore.getState().setActiveTab('b'));
+
+      await userEvent.click(screen.getAllByRole('button', { name: 'Close tab' })[0]);
+
+      expect(tabIds()).toEqual(['b']);
+      expect(screen.queryByTestId('detail-a')).not.toBeInTheDocument();
+      expect(screen.getByTestId('detail-b')).toBeVisible();
     });
   });
 });

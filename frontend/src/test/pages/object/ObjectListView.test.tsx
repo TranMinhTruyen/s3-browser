@@ -11,7 +11,7 @@ import {
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { ObjectItem } from '@wails/S3Browser/models/bucket';
 import { Events } from '@wailsio/runtime';
-import { createRef, RefObject } from 'react';
+import { Activity, createRef, RefObject } from 'react';
 import { toast } from 'sonner';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
@@ -130,6 +130,7 @@ describe('ObjectListView', () => {
     }) as unknown as typeof callIPC);
     listMock.mockResolvedValue(page([fileA, fileB, folder]));
     useTabListStore.setState({
+      activeTab: TAB_ID,
       tabList: { [TAB_ID]: { currentView: 'objectList', prefix: 'dir/', selectionItem: [], deletingItems: [] } },
     });
   });
@@ -997,6 +998,96 @@ describe('ObjectListView', () => {
       await act(async () => finish({ result: true }));
       expect(listMock).toHaveBeenCalledTimes(1);
       expect(useTabListStore.getState().uploadingTabId).toBeNull();
+    });
+  });
+
+  describe('when the tab is only hidden (Activity)', () => {
+    const tabState = (patch: Record<string, unknown> = {}) => ({
+      currentView: 'objectList' as const,
+      prefix: 'dir/',
+      selectionItem: [] as string[],
+      deletingItems: [] as string[],
+      ...patch,
+    });
+    const ui = (scrollRef: RefObject<HTMLElement | null>, mode: 'visible' | 'hidden') => (
+      <Activity mode={mode}>
+        <ObjectListView tabId={TAB_ID} bucket="bkt" profile={profile} scrollRef={scrollRef} />
+      </Activity>
+    );
+    const setup = () => {
+      const scrollRef = { current: document.createElement('div') } as RefObject<HTMLElement | null>;
+      const view = renderWithProviders(ui(scrollRef, 'visible'));
+      return {
+        ...view,
+        hide: () => {
+          useTabListStore.setState({ activeTab: 'tab-2' });
+          view.rerender(ui(scrollRef, 'hidden'));
+        },
+        show: () => {
+          useTabListStore.setState({ activeTab: TAB_ID });
+          view.rerender(ui(scrollRef, 'visible'));
+        },
+      };
+    };
+    // Captures the signal of the first request and never answers it.
+    const hangAndCapture = () => {
+      const captured: { signal?: AbortSignal } = {};
+      callIPCMock.mockImplementation(((_b: unknown, _a: unknown, options: { signal?: AbortSignal }) => {
+        captured.signal = options.signal;
+        return new Promise(() => {});
+      }) as unknown as typeof callIPC);
+      return captured;
+    };
+
+    beforeEach(() => {
+      useTabListStore.setState({
+        activeTab: TAB_ID,
+        tabList: { [TAB_ID]: tabState({ selectionItem: ['a.txt'] }), 'tab-2': tabState() },
+      });
+    });
+
+    it('keeps the selection and the loaded rows, and does not load the first page again when shown', async () => {
+      const { hide, show } = setup();
+      await screen.findByText('a.txt');
+
+      hide();
+      expect(tab().selectionItem).toEqual(['a.txt']);
+      show();
+
+      expect(tab().selectionItem).toEqual(['a.txt']);
+      expect(screen.getByText('b.txt')).toBeInTheDocument();
+      expect(listMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not cancel the running list request when hidden', async () => {
+      const captured = hangAndCapture();
+      const { hide } = setup();
+      await waitFor(() => expect(captured.signal).toBeDefined());
+
+      hide();
+
+      expect(captured.signal?.aborted).toBe(false);
+    });
+
+    it('clears the selection when the view is unmounted while its tab is the active one', async () => {
+      const { unmount } = setup();
+      await screen.findByText('a.txt');
+
+      unmount();
+
+      expect(tab().selectionItem).toEqual([]);
+    });
+
+    it('cancels the running list request when a hidden tab is closed', async () => {
+      const captured = hangAndCapture();
+      const { hide, unmount } = setup();
+      await waitFor(() => expect(captured.signal).toBeDefined());
+
+      hide();
+      useTabListStore.setState({ tabList: { 'tab-2': tabState() } });
+      unmount();
+
+      expect(captured.signal?.aborted).toBe(true);
     });
   });
 });

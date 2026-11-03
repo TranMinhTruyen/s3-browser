@@ -6,6 +6,7 @@ import { Bucket } from '@wails/S3Browser/models/bucket';
 import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { callIPC } from '@/common/utils/ipcUtils';
+import { onTabGone } from '@/common/utils/tabUtils';
 import Button from '@/components/buttons/Button';
 import BucketItem from '@/pages/bucket/BucketItem';
 
@@ -20,6 +21,7 @@ export type BucketListViewRef = {
 };
 
 type BucketListViewProps = {
+  tabId: string;
   profile?: ConnectionProfileOutput | null;
   active: boolean;
   scrollRef: RefObject<HTMLElement | null>;
@@ -31,7 +33,7 @@ type BucketListViewProps = {
 
 /** Virtualized bucket list of the active connection; exposes imperative actions via `BucketListViewRef`. */
 function BucketListView(props: BucketListViewProps) {
-  const { profile, active, scrollRef, keyword = '', onSelectBucket, ref } = props;
+  const { tabId, profile, active, scrollRef, keyword = '', onSelectBucket, ref } = props;
 
   const { t } = useTranslation('bucket', { keyPrefix: 'page' });
 
@@ -51,6 +53,8 @@ function BucketListView(props: BucketListViewProps) {
   const profileName = profile?.name;
   const listKey = `${connectionId}|${keyword}`;
   const requestCtrl = useRef<AbortController>(null);
+  // The loadFirstPage the list was last loaded for: showing a hidden tab again must not reload it.
+  const loadedFor = useRef<unknown>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   const startRequest = useCallback(() => {
@@ -117,13 +121,26 @@ function BucketListView(props: BucketListViewProps) {
 
   // Also runs when the keyword changes, because loadFirstPage depends on it.
   useEffect(() => {
-    if (!connectionId) return;
+    if (!connectionId) {
+      // Disconnected: reconnecting to the same profile must load the list again.
+      loadedFor.current = null;
+      return;
+    }
+    if (loadedFor.current === loadFirstPage) return;
+    loadedFor.current = loadFirstPage;
     setBucketDatas([]);
     loadFirstPage();
   }, [connectionId, loadFirstPage]);
 
-  // Cancel any running request when the view unmounts.
-  useEffect(() => () => requestCtrl.current?.abort(), []);
+  // Cancel any running request when the view unmounts. A hidden tab (Activity) keeps its request and list.
+  useEffect(
+    () =>
+      onTabGone(tabId, () => {
+        requestCtrl.current?.abort();
+        loadedFor.current = null;
+      }),
+    [tabId]
+  );
 
   const onRefresh = useCallback(async () => {
     setBucketDatas([]);

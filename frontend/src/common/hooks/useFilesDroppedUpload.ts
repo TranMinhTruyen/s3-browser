@@ -3,6 +3,7 @@ import { Events } from '@wailsio/runtime';
 import { useCallback, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { formatStringJson } from '@/common/utils/stringUtils';
+import { onTabGone } from '@/common/utils/tabUtils';
 import { ensureUploadIdle, runUpload } from '@/common/utils/uploadUtils';
 import { showUploadLimitModal } from '@/components/modals/lazyModals';
 import i18n from '@/locales/i18n';
@@ -32,10 +33,11 @@ export function useFilesDroppedUpload(params: UseFilesDroppedUploadParams) {
   }, [onRefresh]);
   useEffect(() => {
     isMountedRef.current = true;
-    return () => {
+    // A hidden tab (Activity) is still alive: an upload that ends meanwhile must refresh its list.
+    return onTabGone(tabId, () => {
       isMountedRef.current = false;
-    };
-  }, []);
+    });
+  }, [tabId]);
 
   const onFilesDropped = useCallback(
     async ({
