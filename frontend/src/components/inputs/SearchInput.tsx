@@ -1,4 +1,4 @@
-import { Group, Tooltip } from '@mantine/core';
+import { Group } from '@mantine/core';
 import { Search, X } from 'lucide-react';
 import { ChangeEvent, KeyboardEvent, memo, useCallback, useState } from 'react';
 import ActionIcon from '@/components/buttons/ActionIcon';
@@ -17,6 +17,7 @@ type SearchInputProps = {
   onClear: () => void;
 };
 
+/** Search box with a clear button and a search button; Enter or the button submits the trimmed text. */
 function SearchInput(props: SearchInputProps) {
   const { value = '', placeholder, searchLabel, clearLabel, disabled, onSearch, onClear } = props;
 
@@ -54,19 +55,15 @@ function SearchInput(props: SearchInputProps) {
         onKeyDown={onKeyDownText}
         rightSection={
           text && !disabled ? (
-            <Tooltip label={clearLabel}>
-              <ActionIcon size="sm" variant="subtle" onClick={onClickClear} aria-label={clearLabel}>
-                <X />
-              </ActionIcon>
-            </Tooltip>
+            <ActionIcon size="sm" variant="subtle" onClick={onClickClear} tooltip={clearLabel}>
+              <X />
+            </ActionIcon>
           ) : null
         }
       />
-      <Tooltip label={searchLabel}>
-        <ActionIcon onClick={onSubmitSearch} aria-label={searchLabel} disabled={disabled}>
-          <Search />
-        </ActionIcon>
-      </Tooltip>
+      <ActionIcon onClick={onSubmitSearch} tooltip={searchLabel} disabled={disabled}>
+        <Search />
+      </ActionIcon>
     </Group>
   );
 }

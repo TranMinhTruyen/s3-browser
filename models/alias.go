@@ -28,6 +28,10 @@ type (
 	DroppedFile = bucket.DroppedFile
 	// DroppedGroup re-exports bucket.DroppedGroup.
 	DroppedGroup = bucket.DroppedGroup
+	// CredentialExpiringOutput re-exports bucket.CredentialExpiringOutput.
+	CredentialExpiringOutput = bucket.CredentialExpiringOutput
+	// OidcLoginOutput re-exports bucket.OidcLoginOutput.
+	OidcLoginOutput = bucket.OidcLoginOutput
 	// ConnectOutput re-exports bucket.ConnectOutput.
 	ConnectOutput = bucket.ConnectOutput
 	// ListBucketInput re-exports bucket.ListBucketInput.
@@ -50,6 +54,8 @@ type (
 	ObjectDetailInput = bucket.ObjectDetailInput
 	// ObjectDetailOutput re-exports bucket.ObjectDetailOutput.
 	ObjectDetailOutput = bucket.ObjectDetailOutput
+	// DownloadProgressBatchOutput re-exports bucket.DownloadProgressBatchOutput.
+	DownloadProgressBatchOutput = bucket.DownloadProgressBatchOutput
 	// DownloadProgressOutput re-exports bucket.DownloadProgressOutput.
 	DownloadProgressOutput = bucket.DownloadProgressOutput
 	// DownloadObjInput re-exports bucket.DownloadObjInput.
@@ -62,12 +68,18 @@ type (
 	DownloadHistoryInput = bucket.DownloadHistoryInput
 	// DownloadHistoryOutput re-exports bucket.DownloadHistoryOutput.
 	DownloadHistoryOutput = bucket.DownloadHistoryOutput
+	// DeleteFailure re-exports bucket.DeleteFailure.
+	DeleteFailure = bucket.DeleteFailure
+	// DeleteObjOutput re-exports bucket.DeleteObjOutput.
+	DeleteObjOutput = bucket.DeleteObjOutput
 	// DeleteObjInput re-exports bucket.DeleteObjInput.
 	DeleteObjInput = bucket.DeleteObjInput
 	// DeletePrefixInput re-exports bucket.DeletePrefixInput.
 	DeletePrefixInput = bucket.DeletePrefixInput
 	// DeletePrefixOutput re-exports bucket.DeletePrefixOutput.
 	DeletePrefixOutput = bucket.DeletePrefixOutput
+	// UploadProgressBatchOutput re-exports bucket.UploadProgressBatchOutput.
+	UploadProgressBatchOutput = bucket.UploadProgressBatchOutput
 	// UploadProgressOutput re-exports bucket.UploadProgressOutput.
 	UploadProgressOutput = bucket.UploadProgressOutput
 	// FilesDroppedOutput re-exports bucket.FilesDroppedOutput.
@@ -108,6 +120,12 @@ type (
 	ConnectionProfileOutput = profile.ConnectionProfileOutput
 	// GetAllConnectionProfileOutput re-exports profile.GetAllConnectionProfileOutput.
 	GetAllConnectionProfileOutput = profile.GetAllConnectionProfileOutput
+	// AuthConfig re-exports profile.AuthConfig.
+	AuthConfig = profile.AuthConfig
+	// AuthSecret re-exports profile.AuthSecret.
+	AuthSecret = profile.AuthSecret
+	// AwsProfileOutput re-exports profile.AwsProfileOutput.
+	AwsProfileOutput = profile.AwsProfileOutput
 )
 
 // common functions

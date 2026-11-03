@@ -1,0 +1,38 @@
+{
+  "title": "Настройки",
+  "label": {
+    "theme": "Тема",
+    "font": "Шрифт",
+    "language": "Язык",
+    "launchOnStartup": "Запускать при старте Windows"
+  },
+  "option": {
+    "theme": {
+      "light": "Светлая",
+      "dark": "Тёмная",
+      "auto": "Как в системе"
+    },
+    "font": {
+      "nunito": "Nunito",
+      "system-ui": "Системный",
+      "segoe-ui": "Segoe UI",
+      "arial": "Arial",
+      "roboto": "Roboto",
+      "be-vietnam-pro": "Be Vietnam Pro",
+      "verdana": "Verdana",
+      "meiryo-ui": "Meiryo UI",
+      "monospace": "Моноширинный",
+      "jetbrains-mono": "JetBrains Mono"
+    }
+  },
+  "button": {
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "apply": "Применить",
+    "reset": "Сбросить"
+  },
+  "message": {
+    "saved": "Настройки сохранены.",
+    "applied": "Настройки применены до закрытия приложения."
+  }
+}

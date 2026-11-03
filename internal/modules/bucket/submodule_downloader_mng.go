@@ -29,7 +29,8 @@ type submoduleDownloaderMng struct {
 	app                         *application.App
 	global                      *global.Module
 	submoduleDownloadHistoryMng *submoduleDownloadHistoryMng
-	jobs                        sync.Map
+	progress                    *utils.BatchReporter[models.DownloadProgressOutput]
+	jobs                        jobRegistry
 	destsMu                     sync.Mutex
 	dests                       map[string]struct{}
 }
@@ -46,13 +47,11 @@ func newSubmoduleDownloaderMng(
 		app:                         app,
 		global:                      global,
 		submoduleDownloadHistoryMng: submoduleDownloadHistoryMng,
-		dests:                       make(map[string]struct{}),
+		progress: utils.NewBatchReporter(app.Context, func(items []models.DownloadProgressOutput) {
+			app.Event.Emit(EventDownloadProgressBatch, models.DownloadProgressBatchOutput{Items: items})
+		}),
+		dests: make(map[string]struct{}),
 	}
-}
-
-// downloaderJob is a running single-object download that can be canceled.
-type downloaderJob struct {
-	cancel context.CancelFunc
 }
 
 // downloadResult is the outcome of one object, turned into a message after all finish.
@@ -65,6 +64,8 @@ type downloadResult struct {
 }
 
 // downloadConcurrency limits both the objects downloaded at once and the parts fetched at once per object.
+// So up to downloadConcurrency^2 (36) connections can be open. Not lowered: no measurement shows a gain,
+// and fewer connections would slow a few large objects.
 const downloadConcurrency = 6
 
 // downloadObject asks the user where to save, then downloads every object in input.Objects.
@@ -87,6 +88,13 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 	}
 	defer releaseConn()
 
+	// Credentials that can't be renewed and run out soon may end the transfer midway: warn, but go on.
+	output.AddMessage(transferExpiryWarning(s3Conn, input.ProfileName)...)
+
+	if len(input.Objects) == 0 {
+		return output
+	}
+
 	var (
 		destDir string
 		err     error
@@ -103,6 +111,10 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 		destDir, err = m.app.Dialog.SaveFile().SetFilename(path.Base(input.Objects[0])).PromptForSingleSelection()
 	}
 
+	if utils.IsDialogCancelled(err) {
+		m.logger.Debug("download destination dialog cancelled")
+		return output
+	}
 	if err != nil {
 		m.logger.Error("get destination path error", slog.Any("detail", err.Error()))
 		return output.ThrowError(models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E009, err.Error(),
@@ -173,6 +185,9 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 					"object": r.key,
 				}),
 			)
+		case isCredentialsExpired(r.err):
+			m.logger.Error(fmt.Sprintf("Download object: %s: credentials expired", r.key))
+			output.AddMessage(expiredMessage(input.ProfileName, r.err))
 		default:
 			m.logger.Error(fmt.Sprintf("Download object: %s error", r.key))
 			output.AddMessage(
@@ -188,8 +203,7 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 // cancelDownloadOne cancels the running download with the given ID.
 // Unknown or already finished IDs are ignored.
 func (m *submoduleDownloaderMng) cancelDownloadOne(id string) models.Output[any] {
-	if v, ok := m.jobs.LoadAndDelete(id); ok {
-		v.(downloaderJob).cancel()
+	if m.jobs.cancel(id) {
 		m.logger.Info(fmt.Sprintf("download %s is canceled", id))
 	}
 	return models.NewOutput[any]()
@@ -197,11 +211,7 @@ func (m *submoduleDownloaderMng) cancelDownloadOne(id string) models.Output[any]
 
 // cancelAllDownloads cancels every running download.
 func (m *submoduleDownloaderMng) cancelAllDownloads() models.Output[any] {
-	m.jobs.Range(func(k, v any) bool {
-		v.(downloaderJob).cancel()
-		m.logger.Info(fmt.Sprintf("download %s is canceled", k))
-		return true
-	})
+	m.jobs.cancelAll(func(id string) { m.logger.Info(fmt.Sprintf("download %s is canceled", id)) })
 	m.logger.Info("all downloads is canceled")
 	return models.NewOutput[any]()
 }
@@ -238,6 +248,8 @@ func destKey(p string) string {
 }
 
 // destTaken reports whether p cannot be used. The caller must hold destsMu.
+// The dests check and the reservation must be one step under the lock. The disk check (Lstat, cheap,
+// only for multi download) sits here too for simplicity; the lock only contends with release.
 func (m *submoduleDownloaderMng) destTaken(p string, checkDisk bool) bool {
 	if _, ok := m.dests[destKey(p)]; ok {
 		return true
@@ -276,11 +288,9 @@ func (m *submoduleDownloaderMng) downloadOne(
 	tm *transfermanager.Client,
 	bucket, key, dest string,
 ) downloadResult {
-	ctx, cancel := context.WithCancel(parent)
-
 	// Register the job so it can be canceled; remove it when the download ends.
-	m.jobs.Store(id, downloaderJob{cancel: cancel})
-	defer func() { cancel(); m.jobs.Delete(id) }()
+	ctx, done := m.jobs.start(parent, id)
+	defer done()
 
 	saved, err := m.submoduleDownloadHistoryMng.createDownloadHistory(models.DownloadHistoryItem{
 		ID:       id,
@@ -296,12 +306,7 @@ func (m *submoduleDownloaderMng) downloadOne(
 	// Tell the frontend a new download has started.
 	m.app.Event.Emit(EventLoadDownloadHistory, saved)
 
-	size, err := download(ctx, tm, bucket, key, dest, func(done, total int64) {
-		m.app.Event.Emit(
-			EventDownloadObjectProgress,
-			models.DownloadProgressOutput{DownloadId: id, Downloaded: done, Total: total},
-		)
-	})
+	size, err := download(ctx, tm, bucket, key, dest, id, m.progress)
 
 	// Map the error to a history status. If the context was canceled, report
 	// context.Canceled instead of whatever error the S3 call returned.

@@ -10,12 +10,15 @@ import (
 
 // Accepted values; the frontend uses the same keys.
 var (
-	themes    = []string{"light", "dark", "auto"}
-	fonts     = []string{"nunito", "system-ui", "segoe-ui", "arial", "monospace", "jetbrains-mono"}
-	languages = []string{"en", "vi", "ja"}
+	themes = []string{"light", "dark", "auto"}
+	fonts  = []string{
+		"nunito", "system-ui", "segoe-ui", "arial", "roboto", "be-vietnam-pro", "verdana", "meiryo-ui",
+		"monospace", "jetbrains-mono",
+	}
+	languages = []string{"en", "vi", "ja", "zh-CN", "zh-TW", "ru", "de"}
 )
 
-// defaultSettings is what the app uses when nothing is saved, and what "reset" returns.
+// defaultSettings is what the app uses when nothing is saved, and the fallback for any unknown value.
 func defaultSettings() models.AppSettings {
 	return models.AppSettings{Theme: "light", Font: "nunito", Language: "en"}
 }

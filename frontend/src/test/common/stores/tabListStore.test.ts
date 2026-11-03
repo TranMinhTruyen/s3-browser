@@ -22,6 +22,8 @@ describe('tabListStore', () => {
   it('starts with one empty tab', () => {
     expect(Object.keys(state().tabList)).toHaveLength(1);
     expect(state().tabList[activeId()]).toMatchObject({ currentView: 'bucketList', prefix: '' });
+    expect(state().tabList[activeId()].selectionItem).toEqual({});
+    expect(state().tabList[activeId()].deletingItems).toEqual({});
   });
 
   it('setActiveTab ignores an empty id', () => {
@@ -95,6 +97,13 @@ describe('tabListStore', () => {
       expect(Object.keys(state().tabList)).toHaveLength(2);
     });
 
+    it.each(['toString', 'constructor', '__proto__'])('ignores the inherited key %s', key => {
+      state().addTab();
+      const before = state().tabList;
+      state().closeTab(key);
+      expect(state().tabList).toBe(before);
+    });
+
     it('keeps the active tab when closing another one', () => {
       const first = activeId();
       state().addTab();
@@ -129,8 +138,8 @@ describe('tabListStore', () => {
       currentView: 'objectList',
       bucket: 'bkt',
       prefix: '',
-      selectionItem: [],
     });
+    expect(state().tabList[id].selectionItem).toEqual({});
     expect(state().tabList[id].detailItem).toBeUndefined();
 
     state().changeCurrentView(id, 'bucketList', 'bkt');
@@ -139,12 +148,26 @@ describe('tabListStore', () => {
     expect(state().tabList.ghost).toBeUndefined();
   });
 
+  it('changeCurrentView to bucketList clears bucket, folder, selection and detail', () => {
+    const id = activeId();
+    state().changeCurrentView(id, 'objectList', 'bkt');
+    state().changePrefix(id, 'a/');
+    state().addSelectItem(id, ['x']);
+    state().openDetail(id, item);
+    state().changeCurrentView(id, 'bucketList');
+    expect(state().tabList[id]).toMatchObject({ currentView: 'bucketList', prefix: '' });
+    expect(state().tabList[id].selectionItem).toEqual({});
+    expect(state().tabList[id].bucket).toBeUndefined();
+    expect(state().tabList[id].detailItem).toBeUndefined();
+  });
+
   it('changePrefix clears selection and detail', () => {
     const id = activeId();
     state().addSelectItem(id, ['x']);
     state().openDetail(id, item);
     state().changePrefix(id, 'a/');
-    expect(state().tabList[id]).toMatchObject({ prefix: 'a/', selectionItem: [] });
+    expect(state().tabList[id]).toMatchObject({ prefix: 'a/' });
+    expect(state().tabList[id].selectionItem).toEqual({});
     expect(state().tabList[id].detailItem).toBeUndefined();
     state().changePrefix('ghost', 'b/');
     expect(state().tabList.ghost).toBeUndefined();
@@ -167,15 +190,52 @@ describe('tabListStore', () => {
     expect(state().tabList[other].profileId).toBe('p2');
   });
 
+  it('resetViewByProfile and clearProfile clear bucket, folder, selection and detail', () => {
+    const mine = activeId();
+    const dirty = {
+      currentView: 'objectList' as const,
+      bucket: 'b',
+      prefix: 'x/',
+      selectionItem: { k: true as const },
+    };
+    state().updateTab(mine, { profileId: 'p1', ...dirty, detailItem: item });
+    state().addTab();
+    const other = activeId();
+    state().updateTab(other, { profileId: 'p2', ...dirty, detailItem: item });
+
+    state().resetViewByProfile('p1');
+    expect(state().tabList[mine]).toMatchObject({
+      profileId: 'p1',
+      currentView: 'bucketList',
+      prefix: '',
+    });
+    expect(state().tabList[mine].selectionItem).toEqual({});
+    expect(state().tabList[mine].bucket).toBeUndefined();
+    expect(state().tabList[mine].detailItem).toBeUndefined();
+    expect(state().tabList[other]).toMatchObject({ ...dirty, detailItem: item });
+
+    state().updateTab(mine, { ...dirty, detailItem: item });
+    state().clearProfile('p1');
+    expect(state().tabList[mine]).toMatchObject({
+      profileId: null,
+      currentView: 'bucketList',
+      prefix: '',
+    });
+    expect(state().tabList[mine].selectionItem).toEqual({});
+    expect(state().tabList[mine].bucket).toBeUndefined();
+    expect(state().tabList[mine].detailItem).toBeUndefined();
+    expect(state().tabList[other]).toMatchObject({ profileId: 'p2', ...dirty });
+  });
+
   it('selection actions', () => {
     const id = activeId();
     state().addSelectItem(id, ['a', 'b']);
     state().addSelectItem(id, ['b', 'c']);
-    expect(state().tabList[id].selectionItem).toEqual(['a', 'b', 'c']);
-    state().removeSelectItem(id, ['b']);
-    expect(state().tabList[id].selectionItem).toEqual(['a', 'c']);
+    expect(state().tabList[id].selectionItem).toEqual({ a: true, b: true, c: true });
+    state().removeSelectItem(id, ['b', 'missing']);
+    expect(state().tabList[id].selectionItem).toEqual({ a: true, c: true });
     state().clearSelectItem(id);
-    expect(state().tabList[id].selectionItem).toEqual([]);
+    expect(state().tabList[id].selectionItem).toEqual({});
 
     state().addSelectItem('ghost', ['a']);
     state().removeSelectItem('ghost', ['a']);
@@ -198,9 +258,9 @@ describe('tabListStore', () => {
     const id = activeId();
     state().setDeleting(id, ['a', 'b'], true);
     state().setDeleting(id, ['b', 'c'], true);
-    expect(state().tabList[id].deletingItems).toEqual(['a', 'b', 'c']);
-    state().setDeleting(id, ['a'], false);
-    expect(state().tabList[id].deletingItems).toEqual(['b', 'c']);
+    expect(state().tabList[id].deletingItems).toEqual({ a: true, b: true, c: true });
+    state().setDeleting(id, ['a', 'missing'], false);
+    expect(state().tabList[id].deletingItems).toEqual({ b: true, c: true });
     state().setDeleting('ghost', ['a'], true);
     expect(state().tabList.ghost).toBeUndefined();
   });
@@ -244,6 +304,11 @@ describe('tabListStore', () => {
 
     it('falls back to the first tab when the active tab is unknown', () => {
       state().restoreTabs({ tabs: [{ id: 'a' }, { id: 'b' }], activeTab: 'zzz' } as never);
+      expect(activeId()).toBe('a');
+    });
+
+    it.each(['toString', 'constructor'])('falls back to the first tab for inherited active tab %s', key => {
+      state().restoreTabs({ tabs: [{ id: 'a' }, { id: 'b' }], activeTab: key } as never);
       expect(activeId()).toBe('a');
     });
 

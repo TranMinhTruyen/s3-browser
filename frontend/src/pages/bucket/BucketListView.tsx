@@ -6,14 +6,22 @@ import { Bucket } from '@wails/S3Browser/models/bucket';
 import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { callIPC } from '@/common/utils/ipcUtils';
+import { onTabGone } from '@/common/utils/tabUtils';
 import Button from '@/components/buttons/Button';
 import BucketItem from '@/pages/bucket/BucketItem';
+
+// Buckets fetched per page.
+const BUCKET_PAGE_SIZE = 1000;
+// Row height before measuring, and the gap between rows.
+const ROW_ESTIMATE_SIZE = 88;
+const ROW_GAP = 8;
 
 export type BucketListViewRef = {
   onRefresh?: () => Promise<void>;
 };
 
 type BucketListViewProps = {
+  tabId: string;
   profile?: ConnectionProfileOutput | null;
   active: boolean;
   scrollRef: RefObject<HTMLElement | null>;
@@ -25,7 +33,7 @@ type BucketListViewProps = {
 
 /** Virtualized bucket list of the active connection; exposes imperative actions via `BucketListViewRef`. */
 function BucketListView(props: BucketListViewProps) {
-  const { profile, active, scrollRef, keyword = '', onSelectBucket, ref } = props;
+  const { tabId, profile, active, scrollRef, keyword = '', onSelectBucket, ref } = props;
 
   const { t } = useTranslation('bucket', { keyPrefix: 'page' });
 
@@ -45,6 +53,8 @@ function BucketListView(props: BucketListViewProps) {
   const profileName = profile?.name;
   const listKey = `${connectionId}|${keyword}`;
   const requestCtrl = useRef<AbortController>(null);
+  // The loadFirstPage the list was last loaded for: showing a hidden tab again must not reload it.
+  const loadedFor = useRef<unknown>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   const startRequest = useCallback(() => {
@@ -61,7 +71,9 @@ function BucketListView(props: BucketListViewProps) {
       if (keyword) {
         return callIPC(SearchBucket, [{ connectionId, profileName, keyword, nextCursor: cursor }], { signal });
       }
-      return callIPC(GetListBucket, [{ connectionId, profileName, nextCursor: cursor, limit: 10 }], { signal });
+      return callIPC(GetListBucket, [{ connectionId, profileName, nextCursor: cursor, limit: BUCKET_PAGE_SIZE }], {
+        signal,
+      });
     },
     [profileName, connectionId, keyword]
   );
@@ -109,13 +121,26 @@ function BucketListView(props: BucketListViewProps) {
 
   // Also runs when the keyword changes, because loadFirstPage depends on it.
   useEffect(() => {
-    if (!connectionId) return;
+    if (!connectionId) {
+      // Disconnected: reconnecting to the same profile must load the list again.
+      loadedFor.current = null;
+      return;
+    }
+    if (loadedFor.current === loadFirstPage) return;
+    loadedFor.current = loadFirstPage;
     setBucketDatas([]);
     loadFirstPage();
   }, [connectionId, loadFirstPage]);
 
-  // Cancel any running request when the view unmounts.
-  useEffect(() => () => requestCtrl.current?.abort(), []);
+  // Cancel any running request when the view unmounts. A hidden tab (Activity) keeps its request and list.
+  useEffect(
+    () =>
+      onTabGone(tabId, () => {
+        requestCtrl.current?.abort();
+        loadedFor.current = null;
+      }),
+    [tabId]
+  );
 
   const onRefresh = useCallback(async () => {
     setBucketDatas([]);
@@ -143,9 +168,9 @@ function BucketListView(props: BucketListViewProps) {
   const virtualizer = useVirtualizer({
     count: bucketList.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 88,
+    estimateSize: () => ROW_ESTIMATE_SIZE,
     getItemKey: idx => bucketList[idx].name ?? idx,
-    gap: 8,
+    gap: ROW_GAP,
     overscan: 5,
     scrollMargin,
     enabled: active,
@@ -177,7 +202,8 @@ function BucketListView(props: BucketListViewProps) {
   ]);
 
   const isEmpty = bucketList.length === 0;
-  const showEmpty = !!keyword && isLoaded && isEmpty && !nextCursor;
+  // Only once this very list has loaded (not while loading, after an error, or on a stale previous list).
+  const showEmpty = !!connectionId && isLoaded && cursorKey === listKey && isEmpty && !nextCursor;
   // Retry after a failed page, or continue a search that found nothing yet.
   const showLoadMore = !!keyword && !!nextCursor && !isLoadingMore && (isEmpty || loadMoreError);
   // With no rows the list has no height, so the footer flows normally instead of hanging below the rows.
@@ -206,7 +232,7 @@ function BucketListView(props: BucketListViewProps) {
       ) : null}
       {showEmpty ? (
         <Center style={footerStyle} py="8px">
-          <Text c="dimmed">{t('search.empty')}</Text>
+          <Text c="dimmed">{keyword ? t('search.empty') : t('empty')}</Text>
         </Center>
       ) : null}
       {showLoadMore ? (

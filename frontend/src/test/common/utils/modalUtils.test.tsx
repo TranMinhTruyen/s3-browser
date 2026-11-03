@@ -3,7 +3,7 @@ import { act, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useModalStackStore } from '@/common/stores/modalStackStore';
 import { createMantineModal, type WithMantineModal } from '@/common/utils/modalUtils';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 type BodyProps = WithMantineModal<{ label: string }, string>;
 const captured = new Map<string, BodyProps['mantine']>();
@@ -56,7 +56,7 @@ describe('createMantineModal', () => {
     });
     await flush();
 
-    act(() => captured.get('a')?.props.onClose());
+    await act(async () => captured.get('a')?.props.onClose());
     await expect(result).resolves.toBeNull();
     await flush();
     expect(useModalStackStore.getState().stack).toEqual([]);
@@ -74,8 +74,9 @@ describe('createMantineModal', () => {
     });
     await flush();
 
-    act(() => captured.get('c')?.props.onClose());
+    await act(async () => captured.get('c')?.props.onClose());
     await expect(result).resolves.toBe('cancelled');
+    await flush();
   });
 
   it('only the topmost modal can be closed and stacked modals get a higher z-index', async () => {

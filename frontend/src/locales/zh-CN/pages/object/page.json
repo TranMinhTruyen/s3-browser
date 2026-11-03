@@ -1,0 +1,20 @@
+{
+  "emptyFolder": "此文件夹为空",
+  "tooltip": {
+    "objectList": "对象列表",
+    "backToParent": "返回上级文件夹",
+    "backToBucket": "返回存储桶",
+    "clearSelected": "取消选择",
+    "downloadSelected": "下载所选项",
+    "deleteSelected": "删除所选项",
+    "moreActions": "更多操作"
+  },
+  "action": {
+    "download": "下载",
+    "delete": "删除"
+  },
+  "search": {
+    "empty": "没有匹配的对象",
+    "loadMore": "搜索更多"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "emptyFolder": "Dieser Ordner ist leer",
+  "tooltip": {
+    "objectList": "Objektliste",
+    "backToParent": "Zurück zum übergeordneten Ordner",
+    "backToBucket": "Zurück zum Bucket",
+    "clearSelected": "Auswahl aufheben",
+    "downloadSelected": "Auswahl herunterladen",
+    "deleteSelected": "Auswahl löschen",
+    "moreActions": "Weitere Aktionen"
+  },
+  "action": {
+    "download": "Herunterladen",
+    "delete": "Löschen"
+  },
+  "search": {
+    "empty": "Keine passenden Objekte",
+    "loadMore": "Weiter suchen"
+  }
+}

@@ -11,7 +11,7 @@ Tổng quan ngắn gọn về mã nguồn dành cho lập trình viên mới. C�
 - Frontend: Mantine 9, zustand 5 + immer, NiceModal, i18next (en / vi / ja), sonner (toast), `@tanstack/react-virtual`, zod, dayjs. Package manager: **bun**.
 
 ```
-App/S3Browser
+s3-browser
 ├── main.go                 điểm vào: logger, Wails app, service, cửa sổ chính
 ├── internal/
 │   ├── app.go              khởi tạo DB, module, handler; Shutdown
@@ -79,7 +79,7 @@ return output.ThrowError(msg)      // Result = false + message
 
 ### 2.5 Event
 
-Event từ backend sang frontend là hằng số trong `modules/<x>/events.go`, tên dạng `domain:kebab-name`, ví dụ `uploader:upload-progress`, `downloader:download-progress`, `uploader:files-dropped`. Event được đăng ký trong `init()` bằng `application.RegisterEvent[PayloadType](name)`; phải gọi trực tiếp trong `init` để công cụ sinh binding tạo được kiểu payload. Event tiến độ được giới hạn tần suất (200 ms) bởi `utils.ReportEvery`. File thả vào cửa sổ đi qua `main.go` (`WindowFilesDropped` -> `BucketHandler.FilesDropped`) rồi được phát lại thành `uploader:files-dropped` / `uploader:picker-files-dropped`.
+Event từ backend sang frontend là hằng số trong `modules/<x>/events.go`, tên dạng `domain:kebab-name`, ví dụ `uploader:upload-progress-batch`, `downloader:download-progress-batch`, `uploader:files-dropped`. Event được đăng ký trong `init()` bằng `application.RegisterEvent[PayloadType](name)`; phải gọi trực tiếp trong `init` để công cụ sinh binding tạo được kiểu payload. Event tiến độ được gộp theo lô: một ticker 200 ms dùng chung (`utils.BatchReporter`) gửi một event chứa tiến độ của mọi job đang chạy (`{items: [...]}`). File thả vào cửa sổ đi qua `main.go` (`WindowFilesDropped` -> `BucketHandler.FilesDropped`) rồi được phát lại thành `uploader:files-dropped` / `uploader:picker-files-dropped`.
 
 ### 2.6 Database
 
@@ -155,7 +155,7 @@ Binding Wails được sinh từ các handler Go; hãy sinh lại sau mỗi thay
 go tool wails3 generate bindings -clean=true -ts
 ```
 
-| Việc | Lệnh (chạy trong `App/S3Browser` trừ khi ghi khác) |
+| Việc | Lệnh (chạy ở gốc repo trừ khi ghi khác) |
 |---|---|
 | Dev | `go tool wails3 task dev` |
 | Build | `go tool wails3 task build` |

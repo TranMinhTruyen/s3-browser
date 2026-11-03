@@ -1,5 +1,6 @@
 {
   "V000001": "{0} là bắt buộc",
   "V000002": "{0} không được vượt quá {1} ký tự",
-  "V000003": "{0} không đúng định dạng"
+  "V000003": "{0} phải nằm trong khoảng {1} đến {2}",
+  "V000004": "{0} không hợp lệ"
 }

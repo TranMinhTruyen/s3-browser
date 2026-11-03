@@ -14,79 +14,54 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"golang.org/x/sync/errgroup"
 )
-
-// uploadHost is what the uploader needs from the application: a context that ends when
-// the app shuts down, and a way to send events to the frontend. Tests replace it.
-type uploadHost interface {
-	Context() context.Context
-	Emit(name string, data ...any)
-}
-
-// appHost is the uploadHost backed by the Wails application.
-type appHost struct{ app *application.App }
-
-// Context returns the app context, which ends on shutdown.
-func (h appHost) Context() context.Context { return h.app.Context() }
-
-// Emit sends an event to the frontend.
-func (h appHost) Emit(name string, data ...any) { h.app.Event.Emit(name, data...) }
 
 // submoduleUploaderMng uploads files. State is shared by all tabs: one uploadObject call at
 // a time (busy), and every file in flight is a cancelable job (jobs) so the user can stop
 // one file or the whole batch.
 type submoduleUploaderMng struct {
 	logger *slog.Logger
-	host   uploadHost
-	// getClient returns the S3 client of a connection and marks a transfer running on it
-	// until release is called; ok is false if it isn't connected.
-	getClient func(connID string) (client s3Uploader, release func(), ok bool)
-	// jobs maps upload ID -> uploaderJob for the files in flight; a sync.Map because the
-	// cancel handlers read it while uploadOne goroutines add and remove entries.
-	jobs sync.Map
+	app    *application.App
+	global *global.Module
+	// progress batches the progress of all running uploads into one event.
+	progress *utils.BatchReporter[models.UploadProgressOutput]
+	// jobs holds the cancelable files in flight.
+	jobs jobRegistry
 	// busy is set while an uploadObject call runs; only one runs at a time, across all tabs.
 	busy atomic.Bool
 	// batchCancel cancels the running uploadObject call, including its key check;
 	// nil when no call runs.
 	batchMu     sync.Mutex
 	batchCancel context.CancelFunc
-	// pickPaths opens the native dialog to choose files; empty paths means the user
-	// canceled. A field (not a uploadHost method) so tests can replace it.
-	pickPaths func() ([]string, error)
 }
 
 // newSubmoduleUploaderMng wires the uploader to the Wails app and the shared connections.
 func newSubmoduleUploaderMng(
 	app *application.App,
 	logger *slog.Logger,
-	global *global.Module,
+	globalModule *global.Module,
 ) *submoduleUploaderMng {
 	return &submoduleUploaderMng{
 		logger: logger.With("submodules", "uploader_mng"),
-		host:   appHost{app: app},
-		getClient: func(connID string) (s3Uploader, func(), bool) {
-			conn, release, ok := global.AcquireConn(connID)
-			if !ok {
-				return nil, nil, false
-			}
-			return conn.Client, release, true
-		},
-		pickPaths: func() ([]string, error) {
-			dialog := app.Dialog.OpenFile().CanChooseFiles(true).CanChooseDirectories(false)
-			// The app has one window; attach to it so the dialog is modal (Current may be nil).
-			if window := app.Window.Current(); window != nil {
-				dialog.AttachToWindow(window)
-			}
-			return dialog.PromptForMultipleSelection()
-		},
+		app:    app,
+		global: globalModule,
+		progress: utils.NewBatchReporter(app.Context, func(items []models.UploadProgressOutput) {
+			app.Event.Emit(EventUploadProgressBatch, models.UploadProgressBatchOutput{Items: items})
+		}),
 	}
 }
 
-// uploaderJob is a running single-file upload that can be canceled.
-type uploaderJob struct {
-	cancel context.CancelFunc
+// pickPaths opens the native dialog to choose files; empty paths means the user canceled.
+func (m *submoduleUploaderMng) pickPaths() ([]string, error) {
+	dialog := m.app.Dialog.OpenFile().CanChooseFiles(true).CanChooseDirectories(false)
+	// The app has one window; attach to it so the dialog is modal (Current may be nil).
+	if window := m.app.Window.Current(); window != nil {
+		dialog.AttachToWindow(window)
+	}
+	return dialog.PromptForMultipleSelection()
 }
 
 const (
@@ -100,9 +75,8 @@ const (
 	maxTotalFiles = 1000
 )
 
-// largeFileSize is the size above which a file is "large" (10 GiB). It is a variable so
-// tests can lower it instead of creating 10 GiB files.
-var largeFileSize int64 = 10 << 30
+// largeFileSize is the size above which a file is "large" (10 GiB).
+const largeFileSize int64 = 10 << 30
 
 // uploadResult is the outcome of one file, turned into a message after all files finish.
 type uploadResult struct {
@@ -160,24 +134,27 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 
 	// Counts this call as a running transfer, so the profile can't be deleted meanwhile.
 	// All uploads finish inside this call (g.Wait below), so the release goes here.
-	client, releaseConn, ok := m.getClient(input.ConnectionId)
+	conn, releaseConn, ok := m.global.AcquireConn(input.ConnectionId)
 	if !ok {
 		m.logger.Error("get connection profile failed")
 		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 	defer releaseConn()
 
+	// Credentials that can't be renewed and run out soon may end the transfer midway: warn, but go on.
+	output.AddMessage(transferExpiryWarning(conn, input.ProfileName)...)
+
 	// One context for the whole call, so cancelAllUploads also stops the key check
 	// below and the files that haven't started yet. It is not a Wails call context: this
 	// call blocks while the user works, so it only ends on cancelAllUploads or app shutdown.
-	ctx, cancel := context.WithCancel(m.host.Context())
+	ctx, cancel := context.WithCancel(m.app.Context())
 	m.setBatchCancel(cancel)
 	defer func() { m.setBatchCancel(nil); cancel() }()
 
 	prefix := normalizePrefix(input.Prefix)
 	// Find which keys (relative to prefix) are already used, before any upload starts,
 	// so the keys can be picked below without a lock.
-	used := existingKeys(ctx, client, input.Bucket, prefix, items)
+	used := existingKeys(ctx, conn.Client, input.Bucket, prefix, items)
 
 	// Pick the ID and key of every item first, in order, so no lock is needed.
 	ids := make([]string, len(items))
@@ -208,13 +185,13 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 				case sem <- struct{}{}:
 				case <-ctx.Done():
 					// Canceled while waiting: uploadOne reports it without uploading.
-					results[i] = m.uploadOne(ctx, ids[i], client, input.Bucket, items[i])
+					results[i] = m.uploadOne(ctx, ids[i], conn.Client, input.Bucket, items[i])
 					continue
 				}
 				wg.Add(1)
 				go func() {
 					defer func() { <-sem; wg.Done() }()
-					results[i] = m.uploadOne(ctx, ids[i], client, input.Bucket, items[i])
+					results[i] = m.uploadOne(ctx, ids[i], conn.Client, input.Bucket, items[i])
 				}()
 			}
 			return nil
@@ -241,6 +218,9 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 					"name": name,
 				}),
 			)
+		case isCredentialsExpired(r.err):
+			m.logger.Error(fmt.Sprintf("upload file %s: credentials expired", r.path))
+			output.AddMessage(expiredMessage(input.ProfileName, r.err))
 		default:
 			m.logger.Error(fmt.Sprintf("upload file %s error", r.path), slog.Any("detail", r.err.Error()))
 			output.AddMessage(
@@ -261,23 +241,22 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 func (m *submoduleUploaderMng) uploadOne(
 	parent context.Context,
 	id string,
-	client s3Uploader,
+	client *s3.Client,
 	bucket string,
 	item models.UploadObj,
 ) uploadResult {
-	ctx, cancel := context.WithCancel(parent)
-
 	// Register the job so it can be canceled; remove it when the upload ends.
-	m.jobs.Store(id, uploaderJob{cancel: cancel})
-	defer func() { cancel(); m.jobs.Delete(id) }()
+	ctx, done := m.jobs.start(parent, id)
+	defer done()
 
-	// The size is for the UI only (uploadFile reads it again from the open file); a stat
-	// error is not fatal here because uploadFile reports it.
+	// This stats the file again (groupUploadItems did it too): one cheap call per file, and
+	// keeping it here avoids passing sizes around. The size is for the UI only (uploadFile reads it
+	// again from the open file); a stat error is not fatal here because uploadFile reports it.
 	var total int64
 	if info, statErr := os.Stat(item.Path); statErr == nil {
 		total = info.Size()
 	}
-	m.host.Emit(EventUploadObjectStarted, models.UploadStartedOutput{
+	m.app.Event.Emit(EventUploadObjectStarted, models.UploadStartedOutput{
 		UploadId: id,
 		FileName: filepath.Base(item.Path),
 		Key:      item.Key,
@@ -288,12 +267,7 @@ func (m *submoduleUploaderMng) uploadOne(
 	// A batch canceled before this file started (e.g. during the key check) sends nothing.
 	err := ctx.Err()
 	if err == nil {
-		_, err = uploadFile(ctx, client, bucket, item.Key, item.Path, func(done, total int64) {
-			m.host.Emit(
-				EventUploadObjectProgress,
-				models.UploadProgressOutput{UploadId: id, Uploaded: done, Total: total},
-			)
-		})
+		_, err = uploadFile(ctx, client, bucket, item.Key, item.Path, id, m.progress)
 	}
 
 	// If the context was canceled, report context.Canceled instead of whatever error
@@ -309,7 +283,7 @@ func (m *submoduleUploaderMng) uploadOne(
 	case err != nil:
 		status = models.UploadStatusError
 	}
-	m.host.Emit(EventUploadObjectFinished, models.UploadFinishedOutput{UploadId: id, Status: status})
+	m.app.Event.Emit(EventUploadObjectFinished, models.UploadFinishedOutput{UploadId: id, Status: status})
 
 	return uploadResult{path: item.Path, key: item.Key, err: err}
 }
@@ -317,8 +291,7 @@ func (m *submoduleUploaderMng) uploadOne(
 // cancelUploadOne cancels the running upload with the given ID.
 // Unknown or already finished IDs are ignored.
 func (m *submoduleUploaderMng) cancelUploadOne(id string) models.Output[any] {
-	if v, ok := m.jobs.LoadAndDelete(id); ok {
-		v.(uploaderJob).cancel()
+	if m.jobs.cancel(id) {
 		m.logger.Info(fmt.Sprintf("upload %s is canceled", id))
 	}
 	return models.NewOutput[any]()
@@ -339,11 +312,7 @@ func (m *submoduleUploaderMng) cancelAllUploads() models.Output[any] {
 		m.batchCancel()
 	}
 	m.batchMu.Unlock()
-	m.jobs.Range(func(k, v any) bool {
-		v.(uploaderJob).cancel()
-		m.logger.Info(fmt.Sprintf("upload %s is canceled", k))
-		return true
-	})
+	m.jobs.cancelAll(func(id string) { m.logger.Info(fmt.Sprintf("upload %s is canceled", id)) })
 	m.logger.Info("all uploads is canceled")
 	return models.NewOutput[any]()
 }

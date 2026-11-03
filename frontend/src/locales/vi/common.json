@@ -9,5 +9,13 @@
     "clear": "Xoá",
     "close": "Đóng"
   },
-  "modalLoadError": "Không mở được hộp thoại. Vui lòng thử lại."
+  "appName": "S3Browser",
+  "window": {
+    "minimise": "Thu nhỏ",
+    "maximise": "Phóng to",
+    "restore": "Khôi phục",
+    "close": "Đóng"
+  },
+  "modalLoadError": "Không mở được hộp thoại. Vui lòng thử lại.",
+  "modalLoading": "Đang mở hộp thoại..."
 }

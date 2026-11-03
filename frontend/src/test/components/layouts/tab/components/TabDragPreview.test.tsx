@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import TabDragPreview from '@/components/layouts/tab/components/TabDragPreview';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 vi.mock('@/components/layouts/tab/components/TabLabel', () => ({
   default: ({ tabId }: { tabId: string }) => <span>{`label ${tabId}`}</span>,

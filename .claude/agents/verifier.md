@@ -12,7 +12,7 @@ Bạn là **verifier** của S3Browser. Bạn chỉ chạy kiểm tra và báo c
 ## Các bước
 
 1. Xác định phạm vi bằng `git status --porcelain` và `git diff --name-only`.
-2. Nếu có file Go thay đổi (chạy ở `App/S3Browser`):
+2. Nếu có file Go thay đổi (chạy ở gốc repo):
    - `go vet ./...`
    - `go build ./...`
    - `go tool golangci-lint run ./...`

@@ -11,7 +11,7 @@ import (
 
 const selectConnectionProfileById = `-- name: SelectConnectionProfileById :one
 SELECT
-    cp.id, cp.name, cp.color, cp.provider, cp.endpoint, cp.region, cp.access_key, cp.secret_key, cp.path_style, cp.auto_connect, cp.created_at, cp.updated_at, cp.version
+    cp.id, cp.name, cp.color, cp.provider, cp.endpoint, cp.region, cp.access_key, cp.secret_key, cp.path_style, cp.auto_connect, cp.created_at, cp.updated_at, cp.version, cp.auth_type, cp.auth_config, cp.auth_secret
 FROM
     connection_profiles cp 
 WHERE
@@ -35,6 +35,9 @@ func (q *Queries) SelectConnectionProfileById(ctx context.Context, id string) (C
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Version,
+		&i.AuthType,
+		&i.AuthConfig,
+		&i.AuthSecret,
 	)
 	return i, err
 }

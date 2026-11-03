@@ -1,14 +1,12 @@
 package setting
 
 import (
-	"S3Browser/internal/pkg/portable"
 	"S3Browser/models"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"sync"
 )
 
@@ -17,7 +15,7 @@ const (
 	maxTabs      = 100
 )
 
-// submoduleTabMng reads and writes tabs.json in the app data dir.
+// submoduleTabMng reads and writes tabs.json in the app data dir; mu serializes get and save.
 type submoduleTabMng struct {
 	logger  *slog.Logger
 	appName string
@@ -60,7 +58,7 @@ func (m *submoduleTabMng) get() (models.TabState, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	path, err := m.path()
+	path, err := dataFilePath(m.appName, tabsFileName)
 	if err != nil {
 		return emptyTabState(), err
 	}
@@ -96,18 +94,9 @@ func (m *submoduleTabMng) save(state models.TabState) (invalid, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	path, err := m.path()
+	path, err := dataFilePath(m.appName, tabsFileName)
 	if err != nil {
 		return nil, err
 	}
 	return nil, writeJSONAtomic(path, state)
-}
-
-// path returns the tabs file path, creating the data dir when missing.
-func (m *submoduleTabMng) path() (string, error) {
-	dir, err := portable.DataDir(m.appName)
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, tabsFileName), nil
 }

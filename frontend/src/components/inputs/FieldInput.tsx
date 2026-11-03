@@ -60,6 +60,10 @@ type FieldInputProps =
   | PinFieldProps
   | ColorFieldProps;
 
+/**
+ * Mantine text-like input chosen by `type` (text by default). Translates `error` through `useFieldError`;
+ * `pin` and `color` do not show an error, so it is dropped for them.
+ */
 function FieldInput(props: FieldInputProps) {
   const { size = 'sm' } = props;
 

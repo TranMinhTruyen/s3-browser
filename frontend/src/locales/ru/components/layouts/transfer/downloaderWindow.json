@@ -1,0 +1,13 @@
+{
+  "title": "Скачивание",
+  "action": {
+    "cancelAll": "Отменить все",
+    "cancel": "Отмена",
+    "close": "Закрыть"
+  },
+  "label": {
+    "objectLbl": "Объект",
+    "downloadedLbl": "Скачано",
+    "remainingLbl": "Осталось"
+  }
+}

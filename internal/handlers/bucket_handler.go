@@ -27,19 +27,50 @@ func NewBucketHandler(app *application.App, logger *slog.Logger, bucket *bucket.
 
 // ConnectS3 tests the connection when isTestConn is set, otherwise connects and keeps it open.
 func (h *BucketHandler) ConnectS3(
+	ctx context.Context,
 	input models.ConnectionProfileInput,
 	isTestConn bool,
 	isExistingProfile bool,
 ) models.Output[models.ConnectOutput] {
 	if isTestConn {
-		return h.bucket.TestConnection(input)
+		return h.bucket.TestConnection(ctx, input)
 	}
-	return h.bucket.Connect(input, isExistingProfile)
+	return h.bucket.Connect(ctx, input, isExistingProfile)
 }
 
 // ConnectS3ByProfile connects using a saved profile.
-func (h *BucketHandler) ConnectS3ByProfile(connectionId string) models.Output[models.ConnectOutput] {
-	return h.bucket.ConnectByProfile(connectionId)
+func (h *BucketHandler) ConnectS3ByProfile(
+	ctx context.Context,
+	connectionId string,
+) models.Output[models.ConnectOutput] {
+	return h.bucket.ConnectByProfile(ctx, connectionId)
+}
+
+// ReauthConnection renews the credentials of a live connection (new MFA code) without dropping it.
+func (h *BucketHandler) ReauthConnection(
+	ctx context.Context,
+	connectionId string,
+	input models.ConnectionProfileInput,
+) models.Output[models.ConnectOutput] {
+	return h.bucket.ReauthConnection(ctx, connectionId, input)
+}
+
+// LoginMinioOidc signs in with OpenID Connect in the system browser and returns the session id for the connect.
+func (h *BucketHandler) LoginMinioOidc(
+	ctx context.Context,
+	cfg models.AuthConfig,
+) models.Output[models.OidcLoginOutput] {
+	return h.bucket.LoginMinioOidc(ctx, cfg)
+}
+
+// ChooseAuthFile opens the file dialog for a certificate, key or CA file (kind: cert, key, ca).
+func (h *BucketHandler) ChooseAuthFile(kind string) models.Output[string] {
+	return h.bucket.ChooseAuthFile(kind)
+}
+
+// ListAwsProfiles lists the profiles of the AWS CLI config files; empty paths mean the standard files.
+func (h *BucketHandler) ListAwsProfiles(configFile, credentialsFile string) models.Output[[]models.AwsProfileOutput] {
+	return h.bucket.ListAwsProfiles(configFile, credentialsFile)
 }
 
 // DisconnectAll closes every connection.
@@ -118,7 +149,10 @@ func (h *BucketHandler) CancelAllUploads() models.Output[any] {
 }
 
 // DeleteObject deletes the given objects.
-func (h *BucketHandler) DeleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
+func (h *BucketHandler) DeleteObject(
+	ctx context.Context,
+	input models.DeleteObjInput,
+) models.Output[models.DeleteObjOutput] {
 	return h.bucket.DeleteObject(ctx, input)
 }
 

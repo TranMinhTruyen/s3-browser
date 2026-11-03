@@ -1,0 +1,14 @@
+{
+  "title": "Uploading",
+  "label": {
+    "objectLbl": "Object",
+    "uploadedLbl": "Uploaded",
+    "remainingLbl": "Remaining",
+    "finalizingLbl": "Finalizing…"
+  },
+  "action": {
+    "cancelAll": "Cancel all",
+    "cancel": "Cancel",
+    "close": "Close"
+  }
+}

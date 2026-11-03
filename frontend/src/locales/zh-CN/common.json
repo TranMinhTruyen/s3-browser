@@ -1,0 +1,21 @@
+{
+  "button": {
+    "create": "创建",
+    "update": "更新",
+    "refresh": "刷新",
+    "connect": "连接",
+    "cancel": "取消",
+    "OK": "确定",
+    "clear": "清除",
+    "close": "关闭"
+  },
+  "appName": "S3Browser",
+  "window": {
+    "minimise": "最小化",
+    "maximise": "最大化",
+    "restore": "还原",
+    "close": "关闭"
+  },
+  "modalLoadError": "无法打开对话框，请重试。",
+  "modalLoading": "正在加载对话框..."
+}

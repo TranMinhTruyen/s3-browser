@@ -1,0 +1,49 @@
+{
+  "realm": "s3browser",
+  "enabled": true,
+  "sslRequired": "none",
+  "accessTokenLifespan": 300,
+  "clients": [
+    {
+      "clientId": "s3browser",
+      "name": "S3Browser desktop app",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "redirectUris": ["http://127.0.0.1:48765/callback"],
+      "webOrigins": [],
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      },
+      "protocolMappers": [
+        {
+          "name": "minio-policy",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-hardcoded-claim-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "policy",
+            "claim.value": "readwrite",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "oidc-user",
+      "enabled": true,
+      "email": "oidc-user@s3browser.local",
+      "emailVerified": true,
+      "firstName": "Oidc",
+      "lastName": "User",
+      "credentials": [{ "type": "password", "value": "OidcUser#2026", "temporary": false }]
+    }
+  ]
+}

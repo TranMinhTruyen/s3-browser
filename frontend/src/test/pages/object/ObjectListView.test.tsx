@@ -11,14 +11,16 @@ import {
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { ObjectItem } from '@wails/S3Browser/models/bucket';
 import { Events } from '@wailsio/runtime';
-import { createRef, RefObject } from 'react';
+import { Activity, createRef, RefObject } from 'react';
 import { toast } from 'sonner';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
-import ConfirmModal from '@/components/modals/ConfirmModal';
-import UploadLimitModal from '@/components/modals/UploadLimitModal';
+import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
+import { showDeleteConfirmModal, showDeleteResultModal } from '@/components/modals/lazyModals';
+import UploadLimitModal from '@/components/modals/upload/UploadLimitModal';
+import { OBJECT_ROW_HEIGHT } from '@/pages/object/ObjectItem';
 import ObjectListView, { ObjectListViewRef } from '@/pages/object/ObjectListView';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 // jsdom has no layout, so the real virtualizer would render no row: render every row instead.
 // `endIndex` is the last row the user "sees"; null means the end of the list.
@@ -26,6 +28,8 @@ const virtual = vi.hoisted(() => ({
   endIndex: null as number | null,
   scrollElement: null as unknown,
   estimate: null as number | null,
+  // Height of the viewport; null means the virtualizer has not measured it yet.
+  scrollHeight: null as number | null,
 }));
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: ({
@@ -47,13 +51,10 @@ vi.mock('@tanstack/react-virtual', () => ({
     },
     getTotalSize: () => count * 100,
     measureElement: () => {},
+    scrollRect: virtual.scrollHeight === null ? null : { width: 0, height: virtual.scrollHeight },
     range: count === 0 ? null : { startIndex: 0, endIndex: virtual.endIndex ?? count - 1 },
   }),
 }));
-vi.mock('@wailsio/runtime', async importOriginal => {
-  const actual = await importOriginal<typeof import('@wailsio/runtime')>();
-  return { ...actual, Events: { ...actual.Events, On: vi.fn(() => vi.fn()) } };
-});
 vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
   GetListObject: vi.fn(),
   SearchObject: vi.fn(),
@@ -66,9 +67,14 @@ vi.mock('@/common/utils/ipcUtils', async importOriginal => ({
   ...(await importOriginal<typeof import('@/common/utils/ipcUtils')>()),
   callIPC: vi.fn(),
 }));
-vi.mock('@/components/modals/ConfirmModal', () => ({ default: { show: vi.fn() } }));
+vi.mock('@/components/modals/confirm/ConfirmModal', () => ({ default: { show: vi.fn() } }));
+vi.mock('@/components/modals/lazyModals', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/components/modals/lazyModals')>()),
+  showDeleteConfirmModal: vi.fn(),
+  showDeleteResultModal: vi.fn(),
+}));
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }));
-vi.mock('@/components/modals/UploadLimitModal', () => ({ default: { show: vi.fn() } }));
+vi.mock('@/components/modals/upload/UploadLimitModal', () => ({ default: { show: vi.fn() } }));
 
 const TAB_ID = 'tab-1';
 const profile = { id: 'conn', name: 'my-profile' } as ConnectionProfileOutput;
@@ -79,6 +85,8 @@ const folder = new ObjectItem({ key: 'dir/', name: 'dir', isFolder: true });
 const callIPCMock = vi.mocked(callIPC);
 const listMock = vi.mocked(GetListObject);
 const confirmMock = vi.mocked(ConfirmModal.show);
+const showConfirmMock = vi.mocked(showDeleteConfirmModal);
+const showResultMock = vi.mocked(showDeleteResultModal);
 
 const page = (objectList: ObjectItem[], nextCursor = '') => ({ objectList, nextCursor }) as never;
 
@@ -112,7 +120,11 @@ const tab = () => useTabListStore.getState().tabList[TAB_ID];
 describe('ObjectListView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The user keeps every file ticked.
+    showConfirmMock.mockImplementation((async ({ files }: { files: { key: string }[] }) =>
+      files.map(f => f.key)) as never);
     virtual.endIndex = null;
+    virtual.scrollHeight = null;
     // Mimics the real callIPC: an Output ({ result, ... }) runs resolveAction/rejectAction and yields its body;
     // any other resolved value is treated as the body itself.
     callIPCMock.mockImplementation((async (
@@ -134,7 +146,8 @@ describe('ObjectListView', () => {
     }) as unknown as typeof callIPC);
     listMock.mockResolvedValue(page([fileA, fileB, folder]));
     useTabListStore.setState({
-      tabList: { [TAB_ID]: { currentView: 'objectList', prefix: 'dir/', selectionItem: [], deletingItems: [] } },
+      activeTab: TAB_ID,
+      tabList: { [TAB_ID]: { currentView: 'objectList', prefix: 'dir/', selectionItem: {}, deletingItems: {} } },
     });
   });
 
@@ -149,7 +162,7 @@ describe('ObjectListView', () => {
       bucket: 'bkt',
       prefix: 'dir/',
       nextCursor: '',
-      limit: 20,
+      limit: 200,
     });
   });
 
@@ -157,7 +170,8 @@ describe('ObjectListView', () => {
     const { scrollRef } = renderList();
     await screen.findByText('a.txt');
     expect(virtual.scrollElement).toBe(scrollRef.current);
-    expect(virtual.estimate).toBe(104);
+    expect(virtual.estimate).toBe(OBJECT_ROW_HEIGHT);
+    expect(OBJECT_ROW_HEIGHT).toBe(88);
   });
 
   it('loads the next page when the end of the list is reached', async () => {
@@ -178,6 +192,65 @@ describe('ObjectListView', () => {
     expect(listMock).toHaveBeenCalledTimes(1);
   });
 
+  describe('prefetching the next page', () => {
+    // 6 rows: the last index is 5. The threshold index is 5 - max(2, ceil(2 * height / (88 + 8))).
+    const many = Array.from({ length: 6 }, (_, i) => new ObjectItem({ key: `f${i}`, name: `f${i}` }));
+
+    it.each([
+      ['no viewport measured yet, last row 2 away', null, 3, true],
+      ['no viewport measured yet, last row 3 away', null, 2, false],
+      ['tiny viewport still prefetches 2 rows ahead', 10, 3, true],
+      ['tiny viewport, last row 3 away', 10, 2, false],
+      ['viewport of 2 screens = 4 rows ahead', 184, 1, true],
+      ['viewport of 2 screens = 4 rows ahead, 5 away', 184, 0, false],
+      ['a tall viewport covers the whole list', 460, 0, true],
+    ])('%s', async (_name, scrollHeight, endIndex, loads) => {
+      virtual.endIndex = endIndex;
+      virtual.scrollHeight = scrollHeight;
+      listMock.mockResolvedValueOnce(page(many, 'cursor-1')).mockResolvedValueOnce(page([fileB]));
+      renderList();
+      await screen.findByText('f5');
+      await act(async () => {});
+
+      expect(listMock).toHaveBeenCalledTimes(loads ? 2 : 1);
+      if (loads) {
+        expect(listMock).toHaveBeenLastCalledWith(expect.objectContaining({ nextCursor: 'cursor-1', limit: 1000 }));
+      }
+    });
+
+    it('does not ask for a page while the previous one is still loading', async () => {
+      listMock.mockResolvedValueOnce(page(many, 'cursor-1')).mockReturnValueOnce(new Promise(() => {}) as never);
+      const { setKeyword } = renderList();
+      await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+      expect(document.querySelector('.mantine-Loader-root')).toBeInTheDocument();
+
+      // Something else re-renders the list while the page is pending.
+      setKeyword(undefined);
+      await act(async () => {});
+
+      expect(listMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not retry in a loop after a failed page', async () => {
+      listMock.mockResolvedValueOnce(page(many, 'cursor-1')).mockResolvedValueOnce(null as never);
+      renderList();
+      await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      await act(async () => {});
+
+      expect(listMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not ask for a page when the list has no cursor', async () => {
+      listMock.mockResolvedValue(page(many));
+      renderList();
+      await screen.findByText('f5');
+      await act(async () => {});
+
+      expect(listMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it('opens the detail of the clicked object in the store', async () => {
     const { user } = renderList();
     await user.click(await screen.findByText('a.txt'));
@@ -188,26 +261,20 @@ describe('ObjectListView', () => {
     const { user } = renderList();
     await screen.findByText('a.txt');
     await user.click(within(cardOf('a.txt')).getByRole('checkbox'));
-    expect(tab().selectionItem).toEqual(['a.txt']);
+    expect(tab().selectionItem).toEqual({ 'a.txt': true });
     expect(tab().detailItem).toBeUndefined();
   });
 
-  // Result is false as soon as one key failed (backend contract).
-  const deleteOutput = (...messages: [code: string, key: string][]) =>
-    ({
-      result: messages.every(([code]) => code === 'S3S005'),
-      body: null,
-      messageList: messages.map(([messageCode, key]) => ({ messageCode, params: { object: key } })),
-    }) as never;
+  const deleteOutput = (deleted: string[], failed: { key: string; error: string }[] = []) =>
+    ({ result: true, body: { deleted, failed } }) as never;
 
   const deleteViaMenu = async (user: ReturnType<typeof renderList>['user'], name: string) => {
     await user.click(within(cardOf(name)).getByRole('button'));
     await user.click(await screen.findByText('Delete'));
   };
 
-  it('closes the drawer when its object is deleted in a partially failed delete', async () => {
-    confirmMock.mockResolvedValue(true as never);
-    vi.mocked(DeleteObject).mockResolvedValue(deleteOutput(['S3S005', 'a.txt'], ['S3E013', 'b.txt']));
+  it('closes the drawer when its object is in the deleted keys of a partially failed delete', async () => {
+    vi.mocked(DeleteObject).mockResolvedValue(deleteOutput(['a.txt'], [{ key: 'b.txt', error: 'denied' }]));
     const { user } = renderList();
     await user.click(await screen.findByText('a.txt'));
 
@@ -215,26 +282,8 @@ describe('ObjectListView', () => {
     await waitFor(() => expect(tab().detailItem).toBeUndefined());
   });
 
-  // Without the filter these messages would be stringified to 'undefined' / 'null' / '' and match a drawer with that key.
-  it.each([
-    ['undefined', [{ messageCode: 'S3S005' }, { messageCode: 'S3S005', params: {} }]],
-    ['null', [{ messageCode: 'S3S005', params: { object: null } }]],
-    ['', [{ messageCode: 'S3S005', params: { object: '' } }]],
-  ])('ignores success messages without a usable object param (drawer key "%s")', async (detailKey, messageList) => {
-    confirmMock.mockResolvedValue(true as never);
-    vi.mocked(DeleteObject).mockResolvedValue({ result: true, body: null, messageList } as never);
-    const { user } = renderList();
-    await screen.findByText('a.txt');
-    useTabListStore.getState().openDetail(TAB_ID, new ObjectItem({ key: detailKey, name: 'x' }));
-
-    await deleteViaMenu(user, 'a.txt');
-    await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
-    expect(tab().detailItem?.key).toBe(detailKey);
-  });
-
-  it('keeps the drawer open when its object failed in a partially failed delete', async () => {
-    confirmMock.mockResolvedValue(true as never);
-    vi.mocked(DeleteObject).mockResolvedValue(deleteOutput(['S3E013', 'a.txt'], ['S3S005', 'b.txt']));
+  it('keeps the drawer open when its object is among the failed keys', async () => {
+    vi.mocked(DeleteObject).mockResolvedValue(deleteOutput(['b.txt'], [{ key: 'a.txt', error: 'denied' }]));
     const { user } = renderList();
     await user.click(await screen.findByText('a.txt'));
 
@@ -244,7 +293,6 @@ describe('ObjectListView', () => {
   });
 
   it('keeps the drawer open when the delete call throws', async () => {
-    confirmMock.mockResolvedValue(true as never);
     vi.mocked(DeleteObject).mockRejectedValue(new Error('boom'));
     const { user } = renderList();
     await user.click(await screen.findByText('a.txt'));
@@ -252,35 +300,128 @@ describe('ObjectListView', () => {
     await deleteViaMenu(user, 'a.txt');
     await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
     expect(tab().detailItem).toEqual(fileA);
+    expect(showResultMock).not.toHaveBeenCalled();
   });
 
   it('closes the drawer when its own object is deleted', async () => {
-    confirmMock.mockResolvedValue(true as never);
-    vi.mocked(DeleteObject).mockResolvedValue(deleteOutput(['S3S005', 'a.txt']));
+    vi.mocked(DeleteObject).mockResolvedValue(deleteOutput(['a.txt']));
     const { user } = renderList();
     await user.click(await screen.findByText('a.txt'));
     expect(tab().detailItem).toEqual(fileA);
 
     listMock.mockResolvedValue(page([fileB]));
-    await user.click(within(cardOf('a.txt')).getByRole('button'));
-    await user.click(await screen.findByText('Delete'));
+    await deleteViaMenu(user, 'a.txt');
     await waitFor(() => expect(tab().detailItem).toBeUndefined());
   });
 
-  it('keeps the drawer open when deleting its object failed', async () => {
-    confirmMock.mockResolvedValue(true as never);
-    vi.mocked(DeleteObject).mockResolvedValue(deleteOutput(['S3E013', 'a.txt']));
+  it('opens the result dialog with the deleted keys and the failures', async () => {
+    const failed = [{ key: 'b.txt', error: 'denied' }];
+    vi.mocked(DeleteObject).mockResolvedValue(deleteOutput(['a.txt'], failed));
+    const { user } = renderList();
+    await screen.findByText('a.txt');
+
+    await deleteViaMenu(user, 'a.txt');
+    await waitFor(() =>
+      expect(showResultMock).toHaveBeenCalledExactlyOnceWith({
+        deleted: 1,
+        failed: 1,
+        deletedKeys: ['a.txt'],
+        failures: failed,
+      })
+    );
+  });
+
+  it('treats a body without deleted and failed lists as empty', async () => {
+    vi.mocked(DeleteObject).mockResolvedValue({ result: true, body: {} } as never);
     const { user } = renderList();
     await user.click(await screen.findByText('a.txt'));
 
-    await user.click(within(cardOf('a.txt')).getByRole('button'));
-    await user.click(await screen.findByText('Delete'));
-    await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+    await deleteViaMenu(user, 'a.txt');
+    await waitFor(() =>
+      expect(showResultMock).toHaveBeenCalledExactlyOnceWith({ deleted: 0, failed: 0, deletedKeys: [], failures: [] })
+    );
     expect(tab().detailItem).toEqual(fileA);
   });
 
-  it('keeps the drawer open when another object is deleted', async () => {
+  it('opens no dialog but still refreshes and resets deleting when the delete returns no body', async () => {
+    vi.mocked(DeleteObject).mockResolvedValue({ result: false, body: null } as never);
+    const { user } = renderList();
+    await user.click(await screen.findByText('a.txt'));
+
+    await deleteViaMenu(user, 'a.txt');
+    await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+    expect(showResultMock).not.toHaveBeenCalled();
+    expect(tab().detailItem).toEqual(fileA);
+    expect(tab().deletingItems['a.txt']).toBeFalsy();
+  });
+
+  it('opens the result dialog even when the refresh after an object delete throws, and resets deleting', async () => {
+    vi.mocked(DeleteObject).mockResolvedValue(deleteOutput(['a.txt']));
+    const { ref, scrollRef } = renderList();
+    await screen.findByText('a.txt');
+    scrollRef.current!.scrollTo = () => {
+      throw new Error('scroll failed');
+    };
+
+    await expect(act(async () => ref.current?.onClickMenuButton?.(['a.txt'], 'delete'))).rejects.toThrow(
+      'scroll failed'
+    );
+
+    expect(showResultMock).toHaveBeenCalledExactlyOnceWith({
+      deleted: 1,
+      failed: 0,
+      deletedKeys: ['a.txt'],
+      failures: [],
+    });
+    expect(tab().deletingItems['a.txt']).toBeFalsy();
+  });
+
+  it('opens the result dialog before the refresh after an object delete finishes', async () => {
+    vi.mocked(DeleteObject).mockResolvedValue(deleteOutput(['a.txt']));
+    const { user } = renderList();
+    await screen.findByText('a.txt');
+    let finish: (v: never) => void = () => {};
+    listMock.mockReturnValue(new Promise<never>(resolve => (finish = resolve)) as never);
+
+    await deleteViaMenu(user, 'a.txt');
+
+    await waitFor(() => expect(showResultMock).toHaveBeenCalledTimes(1));
+    expect(listMock).toHaveBeenCalledTimes(2);
+    expect(tab().deletingItems['a.txt']).toBe(true);
+    await act(async () => finish(page([fileB])));
+    await waitFor(() => expect(tab().deletingItems['a.txt']).toBeFalsy());
+  });
+
+  it('opens the result dialog before the refresh after a folder delete finishes', async () => {
     confirmMock.mockResolvedValue(true as never);
+    vi.mocked(DeletePrefix).mockResolvedValue({ result: true, body: { deleted: 2, failed: 0 } } as never);
+    const { user } = renderList();
+    await screen.findByText('dir');
+    let finish: (v: never) => void = () => {};
+    listMock.mockReturnValue(new Promise<never>(resolve => (finish = resolve)) as never);
+
+    await deleteViaMenu(user, 'dir');
+
+    await waitFor(() => expect(showResultMock).toHaveBeenCalledTimes(1));
+    expect(listMock).toHaveBeenCalledTimes(2);
+    expect(tab().deletingItems['dir/']).toBe(true);
+    await act(async () => finish(page([fileB])));
+    await waitFor(() => expect(tab().deletingItems['dir/']).toBeFalsy());
+  });
+
+  it('keeps the menu handler identity when the loaded objects change', async () => {
+    const { ref } = renderList();
+    await screen.findByText('a.txt');
+    const before = ref.current?.onClickMenuButton;
+    listMock.mockResolvedValue(page([fileB]));
+
+    await act(async () => ref.current?.onRefresh?.());
+    await waitFor(() => expect(screen.queryByText('a.txt')).not.toBeInTheDocument());
+
+    expect(ref.current?.onClickMenuButton).toBe(before);
+  });
+
+  it('keeps the drawer open when another object is deleted', async () => {
     const { user } = renderList();
     await user.click(await screen.findByText('a.txt'));
 
@@ -292,7 +433,6 @@ describe('ObjectListView', () => {
   });
 
   it('keeps the drawer open after a refresh even if its object is not in the first page', async () => {
-    confirmMock.mockResolvedValue(true as never);
     const { user } = renderList();
     await user.click(await screen.findByText('a.txt'));
 
@@ -303,40 +443,57 @@ describe('ObjectListView', () => {
     expect(tab().detailItem).toEqual(fileA);
   });
 
-  it('keeps the drawer open when deleting a folder fails', async () => {
+  it('keeps the drawer open and reports the failures when deleting a folder partially fails', async () => {
     confirmMock.mockResolvedValue(true as never);
-    vi.mocked(DeletePrefix).mockResolvedValue({ result: false, body: { deleted: 0, failed: 1 } } as never);
+    const failures = [{ key: 'dir/y.txt', error: 'denied' }];
+    vi.mocked(DeletePrefix).mockResolvedValue({ result: true, body: { deleted: 1, failed: 1, failures } } as never);
     const { user } = renderList();
     await screen.findByText('dir');
     useTabListStore.getState().openDetail(TAB_ID, new ObjectItem({ key: 'dir/x.txt', name: 'x.txt' }));
 
-    await user.click(within(cardOf('dir')).getByRole('button'));
-    await user.click(await screen.findByText('Delete'));
+    await deleteViaMenu(user, 'dir');
     await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
     expect(tab().detailItem?.key).toBe('dir/x.txt');
+    expect(showResultMock).toHaveBeenCalledExactlyOnceWith({ deleted: 1, failed: 1, failures });
   });
 
-  it('closes the drawer when a folder containing its object is deleted', async () => {
+  it('closes the drawer and opens the dialog without failures when a folder is fully deleted', async () => {
     confirmMock.mockResolvedValue(true as never);
-    vi.mocked(DeletePrefix).mockResolvedValue({ result: true, body: { deleted: 1, failed: 0 } } as never);
+    vi.mocked(DeletePrefix).mockResolvedValue({ result: true, body: { deleted: 3, failed: 0 } } as never);
     const { user } = renderList();
     await screen.findByText('dir');
     useTabListStore.getState().openDetail(TAB_ID, new ObjectItem({ key: 'dir/x.txt', name: 'x.txt' }));
 
-    await user.click(within(cardOf('dir')).getByRole('button'));
-    await user.click(await screen.findByText('Delete'));
+    await deleteViaMenu(user, 'dir');
     await waitFor(() => expect(tab().detailItem).toBeUndefined());
+    await waitFor(() =>
+      expect(showResultMock).toHaveBeenCalledExactlyOnceWith({ deleted: 3, failed: 0, failures: [] })
+    );
   });
 
-  it('deletes an object after confirmation, then refreshes', async () => {
+  it('opens no dialog but refreshes and resets deleting when the folder delete returns no body', async () => {
     confirmMock.mockResolvedValue(true as never);
+    vi.mocked(DeletePrefix).mockResolvedValue({ result: false, body: null } as never);
+    const { user } = renderList();
+    await screen.findByText('dir');
+    useTabListStore.getState().openDetail(TAB_ID, new ObjectItem({ key: 'dir/x.txt', name: 'x.txt' }));
+
+    await deleteViaMenu(user, 'dir');
+    await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+    expect(showResultMock).not.toHaveBeenCalled();
+    expect(tab().detailItem?.key).toBe('dir/x.txt');
+    expect(tab().deletingItems['dir/']).toBeFalsy();
+  });
+
+  it('lists the object with its size in the delete dialog, deletes it, then refreshes', async () => {
     const { user } = renderList();
     await screen.findByText('a.txt');
     await user.click(within(cardOf('a.txt')).getByRole('button'));
     await user.click(await screen.findByText('Delete'));
 
     await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
-    expect(confirmMock).toHaveBeenCalledWith(expect.objectContaining({ confirmCode: 'C000004' }));
+    expect(showConfirmMock).toHaveBeenCalledExactlyOnceWith({ files: [{ key: 'a.txt', size: 1 }] });
+    expect(confirmMock).not.toHaveBeenCalled();
     expect(DeleteObject).toHaveBeenCalledExactlyOnceWith({
       connectionId: 'conn',
       profileName: 'my-profile',
@@ -345,16 +502,52 @@ describe('ObjectListView', () => {
     });
   });
 
-  it('does not delete when the confirmation is declined', async () => {
-    confirmMock.mockResolvedValue(false as never);
+  it('ignores a delete click on a folder that is already being deleted', async () => {
+    const { user } = renderList();
+    await screen.findByText('dir');
+    await user.click(within(cardOf('dir')).getByRole('button'));
+    const deleteItem = await screen.findByText('Delete');
+
+    act(() => useTabListStore.getState().setDeleting(TAB_ID, ['dir/'], true));
+    await user.click(deleteItem);
+
+    expect(confirmMock).not.toHaveBeenCalled();
+    expect(DeletePrefix).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['canceled', null],
+    ['every file unticked', []],
+  ])('does not delete when the dialog is %s', async (_name, picked) => {
+    showConfirmMock.mockResolvedValue(picked as never);
     const { user } = renderList();
     await screen.findByText('a.txt');
     await user.click(within(cardOf('a.txt')).getByRole('button'));
     await user.click(await screen.findByText('Delete'));
 
-    await waitFor(() => expect(confirmMock).toHaveBeenCalled());
+    await waitFor(() => expect(showConfirmMock).toHaveBeenCalled());
     expect(DeleteObject).not.toHaveBeenCalled();
+    expect(showResultMock).not.toHaveBeenCalled();
     expect(listMock).toHaveBeenCalledTimes(1);
+    expect(tab().deletingItems['a.txt']).toBeFalsy();
+  });
+
+  it('deletes only the keys the user left ticked', async () => {
+    showConfirmMock.mockResolvedValue(['b.txt'] as never);
+    vi.mocked(DeleteObject).mockResolvedValue(deleteOutput(['b.txt']));
+    const { user } = renderList();
+    await screen.findByText('b.txt');
+
+    await deleteViaMenu(user, 'b.txt');
+    await waitFor(() => expect(DeleteObject).toHaveBeenCalled());
+    expect(DeleteObject).toHaveBeenCalledWith(expect.objectContaining({ objects: ['b.txt'] }));
+  });
+
+  it('sends size 0 for an object that is not in the loaded list', async () => {
+    const { ref } = renderList();
+    await screen.findByText('a.txt');
+    await act(async () => ref.current?.onClickMenuButton?.(['zz.txt'], 'delete'));
+    expect(showConfirmMock).toHaveBeenCalledExactlyOnceWith({ files: [{ key: 'zz.txt', size: 0 }] });
   });
 
   it('deletes a folder with DeletePrefix', async () => {
@@ -522,7 +715,7 @@ describe('ObjectListView', () => {
       const box = within(cardOf('a.txt')).getByRole('checkbox');
       await user.click(box);
       await user.click(box);
-      expect(tab().selectionItem).toEqual([]);
+      expect(tab().selectionItem).toEqual({});
     });
 
     it('opens a folder as the new prefix', async () => {
@@ -554,13 +747,33 @@ describe('ObjectListView', () => {
       expect(DownloadObject).toHaveBeenCalledWith(expect.objectContaining({ objects: ['a.txt'] }));
     });
 
-    it('warns instead of acting on more than 5 objects', async () => {
+    it('warns instead of downloading more than 5 objects', async () => {
       const { ref } = renderList();
       await screen.findByText('a.txt');
-      await act(async () => ref.current?.onClickMenuButton?.(['1', '2', '3', '4', '5', '6'], 'delete'));
+      await act(async () => ref.current?.onClickMenuButton?.(['1', '2', '3', '4', '5', '6'], 'download'));
       expect(confirmMock).toHaveBeenCalledExactlyOnceWith({ type: 'warning', confirmCode: 'C000005' });
       expect(DeleteObject).not.toHaveBeenCalled();
       expect(DownloadObject).not.toHaveBeenCalled();
+    });
+
+    it('downloads exactly 5 objects without warning', async () => {
+      const { ref } = renderList();
+      await screen.findByText('a.txt');
+      await act(async () => ref.current?.onClickMenuButton?.(['1', '2', '3', '4', '5'], 'download'));
+      expect(confirmMock).not.toHaveBeenCalled();
+      expect(DownloadObject).toHaveBeenCalledTimes(1);
+    });
+
+    it('deletes more than 5 objects without a limit', async () => {
+      const keys = ['1', '2', '3', '4', '5', '6'];
+      vi.mocked(DeleteObject).mockResolvedValue(deleteOutput(keys));
+      const { ref } = renderList();
+      await screen.findByText('a.txt');
+      await act(async () => ref.current?.onClickMenuButton?.(keys, 'delete'));
+      expect(confirmMock).not.toHaveBeenCalled();
+      expect(showConfirmMock).toHaveBeenCalledExactlyOnceWith({ files: keys.map(key => ({ key, size: 0 })) });
+      expect(DeleteObject).toHaveBeenCalledWith(expect.objectContaining({ objects: keys }));
+      expect(showResultMock).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -574,6 +787,17 @@ describe('ObjectListView', () => {
       await waitFor(() => expect(confirmMock).toHaveBeenCalled());
       expect(DeletePrefix).not.toHaveBeenCalled();
       expect(listMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('is not blocked by an inherited property name used as the folder key', async () => {
+      confirmMock.mockResolvedValue(false as never);
+      listMock.mockResolvedValue(page([new ObjectItem({ key: 'constructor', name: 'constructor', isFolder: true })]));
+      const { user } = renderList();
+      await user.click(await screen.findByRole('button', { name: 'More actions' }));
+      await user.click(await screen.findByText('Delete'));
+      await waitFor(() =>
+        expect(confirmMock).toHaveBeenCalledWith(expect.objectContaining({ params: { object: 'constructor' } }))
+      );
     });
 
     it('confirms with the folder key when the folder has no name', async () => {
@@ -793,6 +1017,113 @@ describe('ObjectListView', () => {
     });
   });
 
+  describe('empty state', () => {
+    const searchMock = vi.mocked(SearchObject);
+    const EMPTY_FOLDER = 'This folder is empty';
+    const NO_MATCH = 'No matching objects';
+    const pending = () => new Promise(() => {}) as never;
+
+    it('shows the empty folder message once an empty folder has loaded without a cursor', async () => {
+      listMock.mockResolvedValue(page([]));
+      renderList();
+      expect(await screen.findByText(EMPTY_FOLDER)).toBeInTheDocument();
+      expect(screen.queryByText(NO_MATCH)).not.toBeInTheDocument();
+    });
+
+    it('shows the search message instead when a keyword is applied', async () => {
+      searchMock.mockResolvedValue(page([]));
+      renderList({ keyword: 'kw' });
+      expect(await screen.findByText(NO_MATCH)).toBeInTheDocument();
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+    });
+
+    it('does not show it while loading', async () => {
+      listMock.mockImplementation(pending);
+      renderList();
+      await waitFor(() => expect(listMock).toHaveBeenCalled());
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+    });
+
+    it('does not show it when the first page failed', async () => {
+      listMock.mockRejectedValue(new Error('boom'));
+      renderList();
+      await waitFor(() => expect(listMock).toHaveBeenCalled());
+      await act(async () => {});
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+    });
+
+    it('does not show it while a cursor is left', async () => {
+      listMock.mockResolvedValueOnce(page([], 'c1')).mockImplementation(pending);
+      renderList();
+      await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+    });
+
+    it('does not show it for the previous list right after the prefix changes', async () => {
+      listMock.mockResolvedValueOnce(page([])).mockImplementation(pending);
+      renderList();
+      expect(await screen.findByText(EMPTY_FOLDER)).toBeInTheDocument();
+      act(() => useTabListStore.getState().changePrefix(TAB_ID, 'other/'));
+      await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+    });
+
+    it('does not show it for the previous list right after the keyword changes', async () => {
+      listMock.mockResolvedValue(page([]));
+      searchMock.mockImplementation(pending);
+      const { setKeyword } = renderList();
+      expect(await screen.findByText(EMPTY_FOLDER)).toBeInTheDocument();
+      setKeyword('kw');
+      await waitFor(() => expect(searchMock).toHaveBeenCalled());
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+      expect(screen.queryByText(NO_MATCH)).not.toBeInTheDocument();
+    });
+
+    it('does not show it without a profile', () => {
+      renderList({ withProfile: false });
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+    });
+
+    it('does not show it without a bucket', () => {
+      renderList({ bucket: null });
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+    });
+
+    it('shows it after a refresh finds the folder empty, but not while the refresh is pending', async () => {
+      let finish: (v: unknown) => void = () => {};
+      listMock.mockResolvedValueOnce(page([fileA]));
+      const { ref } = renderList();
+      await screen.findByText('a.txt');
+      listMock.mockImplementationOnce(() => new Promise(r => (finish = r)) as never);
+      act(() => {
+        ref.current?.onRefresh?.();
+      });
+      await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+      await act(async () => finish(page([])));
+      expect(await screen.findByText(EMPTY_FOLDER)).toBeInTheDocument();
+      expect(screen.queryByText('a.txt')).not.toBeInTheDocument();
+    });
+
+    it('shows it after the last object is deleted', async () => {
+      listMock.mockResolvedValueOnce(page([fileA])).mockResolvedValue(page([]));
+      const { user } = renderList();
+      await screen.findByText('a.txt');
+      await user.click(within(cardOf('a.txt')).getByRole('button'));
+      await user.click(await screen.findByText('Delete'));
+      expect(await screen.findByText(EMPTY_FOLDER)).toBeInTheDocument();
+    });
+
+    it('hides it when the connection is lost', async () => {
+      listMock.mockResolvedValue(page([]));
+      const { disconnect } = renderList();
+      expect(await screen.findByText(EMPTY_FOLDER)).toBeInTheDocument();
+      disconnect();
+      expect(screen.queryByText(EMPTY_FOLDER)).not.toBeInTheDocument();
+    });
+  });
+
   describe('file drop limits', () => {
     const getHandler = () => vi.mocked(Events.On).mock.calls.at(-1)![1] as unknown as (e: { data: unknown }) => void;
     const file = { path: 'C:/x.txt', relKey: 'x.txt' };
@@ -893,6 +1224,96 @@ describe('ObjectListView', () => {
       await act(async () => finish({ result: true }));
       expect(listMock).toHaveBeenCalledTimes(1);
       expect(useTabListStore.getState().uploadingTabId).toBeNull();
+    });
+  });
+
+  describe('when the tab is only hidden (Activity)', () => {
+    const tabState = (patch: Record<string, unknown> = {}) => ({
+      currentView: 'objectList' as const,
+      prefix: 'dir/',
+      selectionItem: {} as Record<string, true>,
+      deletingItems: {} as Record<string, true>,
+      ...patch,
+    });
+    const ui = (scrollRef: RefObject<HTMLElement | null>, mode: 'visible' | 'hidden') => (
+      <Activity mode={mode}>
+        <ObjectListView tabId={TAB_ID} bucket="bkt" profile={profile} scrollRef={scrollRef} />
+      </Activity>
+    );
+    const setup = () => {
+      const scrollRef = { current: document.createElement('div') } as RefObject<HTMLElement | null>;
+      const view = renderWithProviders(ui(scrollRef, 'visible'));
+      return {
+        ...view,
+        hide: () => {
+          useTabListStore.setState({ activeTab: 'tab-2' });
+          view.rerender(ui(scrollRef, 'hidden'));
+        },
+        show: () => {
+          useTabListStore.setState({ activeTab: TAB_ID });
+          view.rerender(ui(scrollRef, 'visible'));
+        },
+      };
+    };
+    // Captures the signal of the first request and never answers it.
+    const hangAndCapture = () => {
+      const captured: { signal?: AbortSignal } = {};
+      callIPCMock.mockImplementation(((_b: unknown, _a: unknown, options: { signal?: AbortSignal }) => {
+        captured.signal = options.signal;
+        return new Promise(() => {});
+      }) as unknown as typeof callIPC);
+      return captured;
+    };
+
+    beforeEach(() => {
+      useTabListStore.setState({
+        activeTab: TAB_ID,
+        tabList: { [TAB_ID]: tabState({ selectionItem: { 'a.txt': true as const } }), 'tab-2': tabState() },
+      });
+    });
+
+    it('keeps the selection and the loaded rows, and does not load the first page again when shown', async () => {
+      const { hide, show } = setup();
+      await screen.findByText('a.txt');
+
+      hide();
+      expect(tab().selectionItem).toEqual({ 'a.txt': true });
+      show();
+
+      expect(tab().selectionItem).toEqual({ 'a.txt': true });
+      expect(screen.getByText('b.txt')).toBeInTheDocument();
+      expect(listMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not cancel the running list request when hidden', async () => {
+      const captured = hangAndCapture();
+      const { hide } = setup();
+      await waitFor(() => expect(captured.signal).toBeDefined());
+
+      hide();
+
+      expect(captured.signal?.aborted).toBe(false);
+    });
+
+    it('clears the selection when the view is unmounted while its tab is the active one', async () => {
+      const { unmount } = setup();
+      await screen.findByText('a.txt');
+
+      unmount();
+
+      expect(tab().selectionItem).toEqual({});
+    });
+
+    it('cancels the running list request when a hidden tab is closed', async () => {
+      const captured = hangAndCapture();
+      const { hide, unmount } = setup();
+      await waitFor(() => expect(captured.signal).toBeDefined());
+
+      hide();
+      useTabListStore.setState({ tabList: { 'tab-2': tabState() } });
+      unmount();
+
+      expect(captured.signal?.aborted).toBe(true);
     });
   });
 });

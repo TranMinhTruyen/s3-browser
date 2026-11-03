@@ -1,0 +1,16 @@
+{
+  "contextMenu": {
+    "connect": "连接",
+    "disconnect": "断开连接",
+    "edit": "编辑",
+    "delete": "删除"
+  },
+  "tooltip": {
+    "connect": "连接",
+    "createProfile": "创建连接配置文件",
+    "refresh": "刷新连接配置文件列表"
+  },
+  "profile": {
+    "empty": "暂无连接配置文件。请使用上方的按钮创建。"
+  }
+}

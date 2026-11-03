@@ -1,0 +1,16 @@
+{
+  "contextMenu": {
+    "connect": "Kết nối",
+    "disconnect": "Ngắt kết nối",
+    "edit": "Chỉnh sửa",
+    "delete": "Xóa"
+  },
+  "tooltip": {
+    "connect": "Kết nối",
+    "createProfile": "Tạo hồ sơ kết nối",
+    "refresh": "Làm mới danh sách hồ sơ kết nối"
+  },
+  "profile": {
+    "empty": "Chưa có hồ sơ kết nối. Dùng các nút phía trên để tạo mới."
+  }
+}

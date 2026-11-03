@@ -1,0 +1,14 @@
+{
+  "title": "Upload läuft",
+  "label": {
+    "objectLbl": "Objekt",
+    "uploadedLbl": "Hochgeladen",
+    "remainingLbl": "Verbleibend",
+    "finalizingLbl": "Wird abgeschlossen…"
+  },
+  "action": {
+    "cancelAll": "Alle abbrechen",
+    "cancel": "Abbrechen",
+    "close": "Schließen"
+  }
+}

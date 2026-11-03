@@ -22,11 +22,14 @@ SET
     , secret_key = ? 
     , path_style = ? 
     , auto_connect = ? 
+    , auth_type = ? 
+    , auth_config = ? 
+    , auth_secret = ? 
     , updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') 
     , version = version + 1 
 WHERE
     id = ? 
-    AND version = ? RETURNING id, name, color, provider, endpoint, region, access_key, secret_key, path_style, auto_connect, created_at, updated_at, version
+    AND version = ? RETURNING id, name, color, provider, endpoint, region, access_key, secret_key, path_style, auto_connect, created_at, updated_at, version, auth_type, auth_config, auth_secret
 `
 
 type UpdateConnectionProfileByIdParams struct {
@@ -35,10 +38,13 @@ type UpdateConnectionProfileByIdParams struct {
 	Provider    string         `json:"provider"`
 	Endpoint    string         `json:"endpoint"`
 	Region      string         `json:"region"`
-	AccessKey   string         `json:"access_key"`
+	AccessKey   sql.NullString `json:"access_key"`
 	SecretKey   sql.NullString `json:"secret_key"`
 	PathStyle   sql.NullBool   `json:"path_style"`
 	AutoConnect sql.NullBool   `json:"auto_connect"`
+	AuthType    string         `json:"auth_type"`
+	AuthConfig  sql.NullString `json:"auth_config"`
+	AuthSecret  sql.NullString `json:"auth_secret"`
 	ID          string         `json:"id"`
 	Version     int64          `json:"version"`
 }
@@ -54,6 +60,9 @@ func (q *Queries) UpdateConnectionProfileById(ctx context.Context, arg UpdateCon
 		arg.SecretKey,
 		arg.PathStyle,
 		arg.AutoConnect,
+		arg.AuthType,
+		arg.AuthConfig,
+		arg.AuthSecret,
 		arg.ID,
 		arg.Version,
 	)
@@ -72,6 +81,9 @@ func (q *Queries) UpdateConnectionProfileById(ctx context.Context, arg UpdateCon
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Version,
+		&i.AuthType,
+		&i.AuthConfig,
+		&i.AuthSecret,
 	)
 	return i, err
 }

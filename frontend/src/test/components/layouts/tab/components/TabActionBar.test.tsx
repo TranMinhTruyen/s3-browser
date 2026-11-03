@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import TabActionBar from '@/components/layouts/tab/components/TabActionBar';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 const TAB = 't1';
 const menu = vi.fn();
@@ -24,7 +24,7 @@ const setTab = (patch: Record<string, unknown> = {}) =>
   useTabListStore.setState({
     activeTab: TAB,
     tabList: {
-      [TAB]: { currentView: 'objectList', prefix: '', selectionItem: [], deletingItems: [], ...patch } as never,
+      [TAB]: { currentView: 'objectList', prefix: '', selectionItem: {}, deletingItems: {}, ...patch } as never,
     },
   });
 
@@ -103,7 +103,7 @@ describe('TabActionBar', () => {
   });
 
   it('shows neither back nor selection actions in the bucket list', () => {
-    setTab({ selectionItem: ['a'] });
+    setTab({ selectionItem: { a: true } });
     setup({ currentView: 'bucketList' });
     expect(queryBtn('Back to bucket')).not.toBeInTheDocument();
     expect(queryBtn('Clear selected')).not.toBeInTheDocument();
@@ -156,24 +156,24 @@ describe('TabActionBar', () => {
     });
 
     it('clear the selection', async () => {
-      setTab({ selectionItem: ['a', 'b'] });
+      setTab({ selectionItem: { a: true, b: true } });
       const { user } = setup();
       await user.click(btn('Clear selected'));
-      expect(useTabListStore.getState().tabList[TAB].selectionItem).toEqual([]);
+      expect(useTabListStore.getState().tabList[TAB].selectionItem).toEqual({});
     });
 
     it.each([
       ['Download selected', 'download'],
       ['Delete selected', 'delete'],
     ])('"%s" runs the %s menu action on the selected keys', async (name, action) => {
-      setTab({ selectionItem: ['a', 'b'] });
+      setTab({ selectionItem: { a: true, b: true } });
       const { user } = setup();
       await user.click(btn(name));
       expect(menu).toHaveBeenCalledExactlyOnceWith(['a', 'b'], action);
     });
 
     it('do not fail when the object list is not mounted', async () => {
-      setTab({ selectionItem: ['a'] });
+      setTab({ selectionItem: { a: true } });
       const { user } = setup({ objectListRef: { current: null } });
       await user.click(btn('Download selected'));
       await user.click(btn('Delete selected'));
@@ -181,15 +181,22 @@ describe('TabActionBar', () => {
     });
 
     it('disable clear and download but not delete while a selected item is being deleted', () => {
-      setTab({ selectionItem: ['a', 'b'], deletingItems: ['b'] });
+      setTab({ selectionItem: { a: true, b: true }, deletingItems: { b: true } });
       setup();
       expect(btn('Clear selected')).toBeDisabled();
       expect(btn('Download selected')).toBeDisabled();
       expect(btn('Delete selected')).toBeEnabled();
     });
 
+    it.each(['constructor', 'toString'])('stay enabled for the selected inherited key "%s"', key => {
+      setTab({ selectionItem: { [key]: true }, deletingItems: {} });
+      setup();
+      expect(btn('Clear selected')).toBeEnabled();
+      expect(btn('Download selected')).toBeEnabled();
+    });
+
     it('stay enabled when only other items are being deleted', () => {
-      setTab({ selectionItem: ['a'], deletingItems: ['z'] });
+      setTab({ selectionItem: { a: true }, deletingItems: { z: true } });
       setup();
       expect(btn('Clear selected')).toBeEnabled();
     });

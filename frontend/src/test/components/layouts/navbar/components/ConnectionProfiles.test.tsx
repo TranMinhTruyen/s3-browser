@@ -9,9 +9,9 @@ import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ConnectionProfiles from '@/components/layouts/navbar/components/ConnectionProfiles';
-import ConfirmModal from '@/components/modals/ConfirmModal';
+import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import { showConnectModal } from '@/components/modals/lazyModals';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 // jsdom has no layout, so render every row except the keys listed in `hidden` (scrolled out of the range).
 const virtual = vi.hoisted(() => ({
@@ -31,17 +31,12 @@ vi.mock('@tanstack/react-virtual', () => ({
         Array.from({ length: options.count }, (_, index) => ({
           key: options.getItemKey(index),
           index,
-          start: index * 72,
+          start: index * 76,
         })).filter(row => !virtual.hidden.has(String(row.key))),
-      getTotalSize: () => options.count * 72,
-      measureElement: () => {},
+      getTotalSize: () => options.count * 76,
     };
   },
 }));
-vi.mock('@wailsio/runtime', async importOriginal => {
-  const actual = await importOriginal<typeof import('@wailsio/runtime')>();
-  return { ...actual, Events: { ...actual.Events, On: vi.fn() } };
-});
 vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
   ConnectS3ByProfile: vi.fn(),
   Disconnect: vi.fn(),
@@ -51,7 +46,7 @@ vi.mock('@wails/S3Browser/internal/handlers/profilehandler', () => ({
   GetAllConnectionProfile: vi.fn(),
 }));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
-vi.mock('@/components/modals/ConfirmModal', () => ({ default: { show: vi.fn() } }));
+vi.mock('@/components/modals/confirm/ConfirmModal', () => ({ default: { show: vi.fn() } }));
 vi.mock('@/components/modals/lazyModals', () => ({ showConnectModal: vi.fn(), showHistoryModal: vi.fn() }));
 
 const callIPCMock = vi.mocked(callIPC);
@@ -65,7 +60,8 @@ const profile = (id: string, extra: Partial<ConnectionProfileOutput> = {}) =>
     name: `${id}-name`,
     provider: 'aws',
     color: '#d0ebff',
-    secretKey: 'SK',
+    accessKey: 'AK',
+    savedSecrets: ['secretKey'],
     isConnected: false,
     ...extra,
   });
@@ -81,8 +77,8 @@ const clearProfile = vi.fn();
 let handlers: Record<string, (e: { data: unknown }) => void>;
 const unsubscribe = vi.fn();
 
-function renderProfiles(initial: Record<string, ConnectionProfileOutput | undefined>) {
-  useProfileStore.setState({ connectionProfiles: initial, loadConnectionProfiles });
+function renderProfiles(initial: Record<string, ConnectionProfileOutput | undefined>, loaded = false) {
+  useProfileStore.setState({ connectionProfiles: initial, loaded, loadConnectionProfiles });
   return renderWithProviders(<ConnectionProfiles />);
 }
 
@@ -110,18 +106,33 @@ describe('ConnectionProfiles', () => {
   });
 
   describe('rendering', () => {
-    it('loads the profiles on mount, lists them and clears the store on unmount', async () => {
+    it('lists the profiles without loading them and keeps the store on unmount (App owns the load)', async () => {
       const { unmount } = renderProfiles({ a: profile('a'), skipped: undefined, b: profile('b', { name: 'Bee' }) });
 
-      expect(loadConnectionProfiles).toHaveBeenCalledTimes(1);
+      expect(loadConnectionProfiles).not.toHaveBeenCalled();
       expect(screen.getByText('a-name')).toBeInTheDocument();
       expect(screen.getByText('Bee')).toBeInTheDocument();
       expect(screen.getAllByText('aws')).toHaveLength(2);
 
       unmount();
 
-      expect(profiles()).toEqual({});
+      expect(Object.keys(profiles())).toEqual(['a', 'skipped', 'b']);
+      expect(loadConnectionProfiles).not.toHaveBeenCalled();
       expect(unsubscribe).toHaveBeenCalled();
+    });
+
+    it('shows the empty state only when the profiles are loaded and the list is empty', () => {
+      const empty = 'No connection profiles yet. Use the buttons above to create one.';
+      const { unmount } = renderProfiles({}, false);
+      expect(screen.queryByText(empty)).not.toBeInTheDocument();
+      unmount();
+
+      const loadedEmpty = renderProfiles({}, true);
+      expect(screen.getByText(empty)).toBeInTheDocument();
+      loadedEmpty.unmount();
+
+      renderProfiles({ a: profile('a') }, true);
+      expect(screen.queryByText(empty)).not.toBeInTheDocument();
     });
 
     it('shows a connected profile with a green status and a disconnected one with a red status', () => {
@@ -141,23 +152,35 @@ describe('ConnectionProfiles', () => {
   });
 
   describe('virtualization', () => {
-    it('keys rows by profile id, estimates 64px, and attaches the scroll container', () => {
+    it('keys rows by profile id, uses a fixed 76px row, and attaches the scroll container', () => {
       renderProfiles({ a: profile('a'), b: profile('b') });
 
       const opts = virtual.options as {
         count: number;
-        gap: number;
         overscan: number;
         estimate: number;
+        gap?: number;
+        measureElement?: unknown;
         getScrollElement: () => HTMLElement;
         getItemKey: (i: number) => string;
       };
       expect(opts.count).toBe(2);
-      expect(opts.gap).toBe(8);
-      expect(opts.overscan).toBe(5);
-      expect(opts.estimate).toBe(64);
+      expect(opts.gap).toBeUndefined();
+      expect(opts.measureElement).toBeUndefined();
+      expect(opts.overscan).toBe(10);
+      expect(opts.estimate).toBe(76);
       expect(opts.getItemKey(1)).toBe('b');
       expect(opts.getScrollElement()).toContainElement(screen.getByText('a-name'));
+    });
+
+    it('sizes the list by rows x 76 and positions fixed-height rows without measuring them', () => {
+      renderProfiles({ a: profile('a'), b: profile('b'), c: profile('c') });
+
+      const row = (name: string) => card(name).parentElement as HTMLElement;
+      expect(row('b-name').parentElement).toHaveStyle({ height: '228px' });
+      expect(row('a-name')).toHaveStyle({ height: '68px', transform: 'translateY(0px)' });
+      expect(row('c-name')).toHaveStyle({ height: '68px', transform: 'translateY(152px)' });
+      expect(card('a-name')).not.toHaveAttribute('data-index');
     });
 
     it('only renders the rows the virtualizer returns', () => {
@@ -166,21 +189,6 @@ describe('ConnectionProfiles', () => {
 
       expect(screen.getByText('a-name')).toBeInTheDocument();
       expect(screen.queryByText('b-name')).not.toBeInTheDocument();
-    });
-
-    it('clears the opened menu when its item leaves the rendered rows, so it stays closed on return', async () => {
-      renderProfiles({ a: profile('a'), b: profile('b') });
-      fireEvent.contextMenu(card('a-name'));
-      expect(await screen.findAllByRole('menuitem')).not.toHaveLength(0);
-
-      virtual.hidden = new Set(['a']);
-      act(() => useProfileStore.getState().updateConnectionProfiles('b', profile('b', { name: 'Bee' })));
-      await waitFor(() => expect(screen.queryByText('a-name')).not.toBeInTheDocument());
-
-      virtual.hidden = new Set();
-      act(() => useProfileStore.getState().updateConnectionProfiles('b', profile('b', { name: 'Bee2' })));
-      expect(await screen.findByText('a-name')).toBeInTheDocument();
-      await waitFor(() => expect(screen.queryByRole('menuitem')).not.toBeInTheDocument());
     });
   });
 
@@ -208,7 +216,7 @@ describe('ConnectionProfiles', () => {
       await flush();
 
       expect(callIPCMock).toHaveBeenCalledTimes(1);
-      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['auto']);
+      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['auto'], { signal: expect.any(AbortSignal) });
       expect(profiles().auto?.isConnected).toBe(true);
 
       // A later change of the list does not auto connect again.
@@ -228,11 +236,11 @@ describe('ConnectionProfiles', () => {
       act(() => useProfileStore.setState({ connectionProfiles: { late: profile('late', { autoConnect: true }) } }));
       await flush();
 
-      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['late']);
+      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['late'], { signal: expect.any(AbortSignal) });
     });
 
     it('asks for the secret key instead when an auto connect profile has none saved', async () => {
-      const noSecret = profile('p', { autoConnect: true, secretKey: '' });
+      const noSecret = profile('p', { autoConnect: true, savedSecrets: [] });
       renderProfiles({ p: noSecret });
       await flush();
 
@@ -249,7 +257,7 @@ describe('ConnectionProfiles', () => {
       act(() => handlers['bucket:connect-save-profile']({ data: profile('a', { autoConnect: true }) }));
       await flush();
 
-      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['a']);
+      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['a'], { signal: expect.any(AbortSignal) });
     });
   });
 
@@ -281,9 +289,9 @@ describe('ConnectionProfiles', () => {
 
       fireEvent.doubleClick(card('a-name'));
 
-      await waitFor(() => expect(profiles().a?.isConnected).toBe(true));
-      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['a']);
-      expect(card('a-name').querySelector('.lucide-cable')).toBeInTheDocument();
+      await waitFor(() => expect(card('a-name').querySelector('.lucide-cable')).toBeInTheDocument());
+      expect(profiles().a?.isConnected).toBe(true);
+      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['a'], { signal: expect.any(AbortSignal) });
     });
 
     it('connects from the context menu', async () => {
@@ -337,7 +345,7 @@ describe('ConnectionProfiles', () => {
     });
 
     it('opens the connect modal for a profile without a saved secret key once auto connect ran', async () => {
-      const noSecret = profile('a', { secretKey: '' });
+      const noSecret = profile('a', { savedSecrets: [] });
       renderProfiles({ a: noSecret });
       await flush(); // the auto connect pass runs on the first non-empty list
 
@@ -345,6 +353,42 @@ describe('ConnectionProfiles', () => {
 
       expect(connectModalMock).toHaveBeenCalledWith({ mode: 'manualconnect', connectionProfile: { ...noSecret } });
       expect(callIPCMock).not.toHaveBeenCalled();
+    });
+
+    it('opens the connect modal for an assume role profile with an MFA device', async () => {
+      const mfa = profile('a', { authType: 'assumeRole', authConfig: { mfaSerial: 'arn:mfa' } as never });
+      renderProfiles({ a: mfa });
+      await flush();
+
+      fireEvent.doubleClick(card('a-name'));
+
+      expect(connectModalMock).toHaveBeenCalledWith({ mode: 'manualconnect', connectionProfile: { ...mfa } });
+      expect(callIPCMock).not.toHaveBeenCalled();
+    });
+
+    it('connects directly a profile that needs no secret, such as an AWS CLI profile', async () => {
+      ipcResult.set(ConnectS3ByProfile, { isConnected: true });
+      renderProfiles({ a: profile('a', { authType: 'sharedProfile', accessKey: '', savedSecrets: [] }) });
+      await flush();
+
+      fireEvent.doubleClick(card('a-name'));
+
+      await waitFor(() => expect(profiles().a?.isConnected).toBe(true));
+      expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['a'], { signal: expect.any(AbortSignal) });
+      expect(connectModalMock).not.toHaveBeenCalled();
+    });
+
+    it('does not auto connect an assume role profile with an MFA device but asks for the code', async () => {
+      const mfa = profile('a', {
+        autoConnect: true,
+        authType: 'assumeRole',
+        authConfig: { mfaSerial: 'arn:mfa' } as never,
+      });
+      renderProfiles({ a: mfa });
+      await flush();
+
+      expect(callIPCMock).not.toHaveBeenCalled();
+      expect(connectModalMock).toHaveBeenCalledWith({ mode: 'manualconnect', connectionProfile: { ...mfa } });
     });
   });
 
@@ -393,17 +437,30 @@ describe('ConnectionProfiles', () => {
       expect(profiles().a?.isConnected).toBe(false);
     });
 
-    it('offers disconnect and delete for a connected profile, connect, edit and delete otherwise', async () => {
-      renderProfiles({ on: profile('on', { isConnected: true }), off: profile('off') });
-      const menuItems = async () => (await screen.findAllByRole('menuitem')).map(i => i.textContent);
+    it.each([
+      ['a connected profile', true, ['Disconnect', 'Delete']],
+      ['a disconnected profile', false, ['Connect', 'Edit', 'Delete']],
+    ])('offers the matching actions for %s', async (_n, isConnected, expected) => {
+      renderProfiles({ p: profile('p', { isConnected }) });
 
-      fireEvent.contextMenu(card('on-name'));
-      expect(await menuItems()).toEqual(['Disconnect', 'Delete']);
+      fireEvent.contextMenu(card('p-name'));
 
-      await userEvent.keyboard('{Escape}');
-      await waitFor(() => expect(screen.queryByRole('menuitem')).not.toBeInTheDocument());
-      fireEvent.contextMenu(card('off-name'));
-      expect(await menuItems()).toEqual(['Connect', 'Edit', 'Delete']);
+      expect((await screen.findAllByRole('menuitem')).map(i => i.textContent)).toEqual(expected);
+    });
+
+    it('switches the actions when the profile of the open menu connects', async () => {
+      renderProfiles({ p: profile('p') });
+      fireEvent.contextMenu(card('p-name'));
+      await screen.findAllByRole('menuitem');
+
+      act(() => useProfileStore.getState().updateConnectionProfiles('p', profile('p', { isConnected: true })));
+
+      await waitFor(() =>
+        expect(screen.getAllByRole('menuitem', { hidden: true }).map(i => i.textContent)).toEqual([
+          'Disconnect',
+          'Delete',
+        ])
+      );
     });
   });
 
@@ -432,7 +489,9 @@ describe('ConnectionProfiles', () => {
       await waitFor(() => expect(profiles().a).toBeUndefined());
       expect(confirmMock).toHaveBeenCalledTimes(1);
       expect(confirmMock).toHaveBeenCalledWith({ type: 'warning', confirmCode: 'C000002' });
-      expect(callIPCMock).toHaveBeenCalledWith(DeleteProfileById, [{ ...off }]);
+      expect(callIPCMock).toHaveBeenCalledWith(DeleteProfileById, [
+        { id: 'a', name: 'a-name', version: off.version, authConfig: off.authConfig, authSecret: {} },
+      ]);
       expect(clearProfile).toHaveBeenCalledWith('a');
       expect(profiles().b).toBeDefined();
     });
@@ -480,7 +539,7 @@ describe('ConnectionProfiles', () => {
 
       await clickMenuItem(user, 'a-name', 'Delete');
 
-      await waitFor(() => expect(loadConnectionProfiles).toHaveBeenCalledTimes(2)); // mount + after the failure
+      await waitFor(() => expect(loadConnectionProfiles).toHaveBeenCalledTimes(1)); // only after the failure
       expect(profiles().a).toBeDefined();
       expect(clearProfile).not.toHaveBeenCalled();
       expect(resetViewByProfile).not.toHaveBeenCalled();
@@ -488,8 +547,8 @@ describe('ConnectionProfiles', () => {
 
     it('resets the views when the failed deletion left the profile disconnected', async () => {
       confirmMock.mockResolvedValue(true);
-      // The first call is the one on mount; the second is the reload after the failed deletion.
-      loadConnectionProfiles.mockResolvedValueOnce(undefined).mockImplementationOnce(async () => {
+      // The reload after the failed deletion.
+      loadConnectionProfiles.mockImplementationOnce(async () => {
         useProfileStore.getState().updateConnectionProfiles('a', profile('a', { isConnected: false }));
       });
       const user = userEvent.setup();
@@ -507,7 +566,7 @@ describe('ConnectionProfiles', () => {
 
       await clickMenuItem(user, 'a-name', 'Delete');
 
-      await waitFor(() => expect(loadConnectionProfiles).toHaveBeenCalledTimes(2));
+      await waitFor(() => expect(loadConnectionProfiles).toHaveBeenCalledTimes(1));
       expect(resetViewByProfile).not.toHaveBeenCalled();
     });
 
@@ -538,17 +597,92 @@ describe('ConnectionProfiles', () => {
   });
 
   describe('context menus', () => {
-    it('keeps only the latest context menu open', async () => {
-      renderProfiles({ a: profile('a'), b: profile('b') });
-
-      fireEvent.contextMenu(card('a-name'));
-      expect(await screen.findAllByRole('menuitem', { name: 'Connect' })).toHaveLength(1);
+    it('opens the menu for the right-clicked row', async () => {
+      confirmMock.mockResolvedValue(false);
+      renderProfiles({ a: profile('a'), b: profile('b', { isConnected: true }) });
 
       fireEvent.contextMenu(card('b-name'));
-      await waitFor(() => expect(screen.getAllByRole('menuitem', { name: 'Connect', hidden: false })).toHaveLength(1));
+      const items = await screen.findAllByRole('menuitem');
+      expect(items.map(i => i.textContent)).toEqual(['Disconnect', 'Delete']);
+    });
+
+    it('does not open a menu, and suppresses the native one, on the empty area of the list', async () => {
+      renderProfiles({ a: profile('a') });
+      const list = card('a-name').parentElement!.parentElement!;
+
+      const notPrevented = fireEvent.contextMenu(list);
+      await flush();
+
+      expect(notPrevented).toBe(false);
+      expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
+    });
+
+    it('closes the menu when its profile is deleted from the store', async () => {
+      renderProfiles({ a: profile('a'), b: profile('b') });
+      fireEvent.contextMenu(card('a-name'));
+      expect(await screen.findAllByRole('menuitem')).not.toHaveLength(0);
+
+      act(() => useProfileStore.getState().deleteConnectionProfiles('a'));
+
+      await waitFor(() => expect(screen.queryByRole('menuitem')).not.toBeInTheDocument());
+    });
+
+    it('closes the open menu when the list scrolls', async () => {
+      renderProfiles({ a: profile('a') });
+      const scroller = card('a-name').parentElement!.parentElement!.parentElement!;
+      fireEvent.contextMenu(card('a-name'));
+      expect(await screen.findAllByRole('menuitem')).not.toHaveLength(0);
+
+      fireEvent.scroll(scroller);
+
+      await waitFor(() => expect(screen.queryByRole('menuitem')).not.toBeInTheDocument());
+    });
+
+    it('listens to scroll only while the menu is open and removes the listener when it closes', async () => {
+      renderProfiles({ a: profile('a') });
+      const scroller = card('a-name').parentElement!.parentElement!.parentElement!;
+      const add = vi.spyOn(scroller, 'addEventListener');
+      const remove = vi.spyOn(scroller, 'removeEventListener');
+      const scrollCalls = (spy: typeof add) => spy.mock.calls.filter(c => c[0] === 'scroll');
+
+      fireEvent.scroll(scroller);
+      expect(scrollCalls(add)).toHaveLength(0);
+
+      fireEvent.contextMenu(card('a-name'));
+      await screen.findAllByRole('menuitem');
+      // Floating UI also listens for scroll while the dropdown is open, so check passive listeners in general.
+      expect(scrollCalls(add).length).toBeGreaterThan(0);
+      expect(scrollCalls(add).some(c => (c[2] as AddEventListenerOptions | undefined)?.passive === true)).toBe(true);
+      expect(scrollCalls(remove)).toHaveLength(0);
 
       await userEvent.keyboard('{Escape}');
-      await waitFor(() => expect(screen.queryByRole('menuitem', { name: 'Connect' })).not.toBeInTheDocument());
+
+      // Every listener added while open is removed again on close.
+      await waitFor(() => expect(scrollCalls(remove)).toHaveLength(scrollCalls(add).length));
+      scrollCalls(add).forEach(c => expect(scrollCalls(remove).map(r => r[1])).toContain(c[1]));
+    });
+
+    it('does not mount a menu inside the rows', () => {
+      renderProfiles({ a: profile('a'), b: profile('b') });
+
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
+
+    it('keeps only the latest context menu open, with the actions of the latest row', async () => {
+      renderProfiles({ a: profile('a'), b: profile('b', { isConnected: true }) });
+
+      fireEvent.contextMenu(card('a-name'));
+      expect((await screen.findAllByRole('menuitem')).map(i => i.textContent)).toEqual(['Connect', 'Edit', 'Delete']);
+
+      fireEvent.contextMenu(card('b-name'));
+      // The dropdown is re-positioned for the new row, so it is not exposed to the accessibility tree meanwhile.
+      await waitFor(() =>
+        expect(screen.getAllByRole('menuitem', { hidden: true }).map(i => i.textContent)).toEqual([
+          'Disconnect',
+          'Delete',
+        ])
+      );
+      expect(document.querySelectorAll('[data-menu-dropdown]')).toHaveLength(1);
     });
   });
 });

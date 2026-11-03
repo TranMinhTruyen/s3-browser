@@ -1,0 +1,20 @@
+{
+  "emptyFolder": "Эта папка пуста",
+  "tooltip": {
+    "objectList": "список объектов",
+    "backToParent": "К родительской папке",
+    "backToBucket": "К бакету",
+    "clearSelected": "Снять выделение",
+    "downloadSelected": "Скачать выбранное",
+    "deleteSelected": "Удалить выбранное",
+    "moreActions": "Другие действия"
+  },
+  "action": {
+    "download": "Скачать",
+    "delete": "Удалить"
+  },
+  "search": {
+    "empty": "Подходящих объектов нет",
+    "loadMore": "Искать дальше"
+  }
+}

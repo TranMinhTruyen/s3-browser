@@ -1,0 +1,13 @@
+{
+  "title": {
+    "info": "Info",
+    "warning": "Warnung"
+  },
+  "confirmCode": {
+    "C000001": "Bitte bestätigen Sie, dass Sie dieses Verbindungsprofil aktualisieren möchten.",
+    "C000002": "Bitte bestätigen Sie, dass Sie dieses Verbindungsprofil löschen möchten.",
+    "C000003": "Bitte trennen Sie zuerst die Verbindung!",
+    "C000005": "Es können höchstens 5 Elemente ausgewählt werden!",
+    "C000006": "Bitte bestätigen Sie, dass Sie den Ordner [{object}] und ALLE seine Inhalte löschen möchten. Diese Aktion kann nicht rückgängig gemacht werden."
+  }
+}

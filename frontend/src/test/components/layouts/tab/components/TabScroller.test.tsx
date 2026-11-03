@@ -3,17 +3,17 @@ import { createRef } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import TabScroller from '@/components/layouts/tab/components/TabScroller';
 import { motionState } from '@/test/_helpers/mockMotion';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 vi.mock('motion/react', async () => (await import('@/test/_helpers/mockMotion')).motionMock);
 
 // Plain button that also exposes the latest onClick so tests can call it after unmount.
 const clicks = vi.hoisted(() => ({}) as Record<string, () => void>);
 vi.mock('@/components/buttons/ActionIcon', () => ({
-  default: ({ children, onClick, disabled, ...rest }: any) => {
-    clicks[rest['aria-label']] = onClick;
+  default: ({ children, onClick, disabled, tooltip, ...rest }: any) => {
+    clicks[tooltip] = onClick;
     return (
-      <button type="button" disabled={disabled} onClick={onClick} {...rest}>
+      <button type="button" disabled={disabled} onClick={onClick} aria-label={tooltip} {...rest}>
         {children}
       </button>
     );

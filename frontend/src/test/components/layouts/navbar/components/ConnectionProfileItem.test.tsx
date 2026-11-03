@@ -1,45 +1,42 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ConnectionProfile } from '@/common/stores/profileStore';
-import ConnectionProfileItem from '@/components/layouts/navbar/components/ConnectionProfileItem';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { type ConnectionProfile, useProfileStore } from '@/common/stores/profileStore';
+import ConnectionProfileItem, { CARD_HEIGHT } from '@/components/layouts/navbar/components/ConnectionProfileItem';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
+
+// getAuthType runs once per render of an item with a profile, so it counts the item renders.
+const renders = vi.hoisted(() => ({ count: vi.fn() }));
+vi.mock('@/common/utils/authUtils', async importActual => {
+  const actual = await importActual<typeof import('@/common/utils/authUtils')>();
+  return {
+    ...actual,
+    getAuthType: (p: Parameters<typeof actual.getAuthType>[0] & { id?: string }) => {
+      renders.count(p.id);
+      return actual.getAuthType(p);
+    },
+  };
+});
 
 const onConnect = vi.fn();
-const onDisconnect = vi.fn();
-const onEdit = vi.fn();
-const onDelete = vi.fn();
-const onMenuChange = vi.fn();
 
 const baseProfile = { id: 'p1', name: 'My S3', provider: 'aws', color: '#d0ebff', isConnected: false };
 
-function renderItem(
-  profile: Partial<ConnectionProfile> = {},
-  props: { connecting?: boolean; menuOpened?: boolean } = {}
-) {
-  return renderWithProviders(
-    <ConnectionProfileItem
-      profileKey="p1"
-      profile={{ ...baseProfile, ...profile } as ConnectionProfile}
-      connecting={props.connecting ?? false}
-      menuOpened={props.menuOpened ?? false}
-      onConnect={onConnect}
-      onDisconnect={onDisconnect}
-      onEdit={onEdit}
-      onDelete={onDelete}
-      onMenuChange={onMenuChange}
-    />
-  );
+function seed(profile: Partial<ConnectionProfile> = {}, id = 'p1') {
+  useProfileStore.setState({ connectionProfiles: { [id]: { ...baseProfile, id, ...profile } as ConnectionProfile } });
+}
+
+function renderItem(profile: Partial<ConnectionProfile> = {}, connecting = false) {
+  seed(profile);
+  return renderWithProviders(<ConnectionProfileItem profileKey="p1" connecting={connecting} onConnect={onConnect} />);
 }
 
 const card = () => screen.getByText('My S3').closest<HTMLElement>('.mantine-Card-root')!;
 const section = () => card().querySelector<HTMLElement>('.mantine-Card-section')!;
-const menuTexts = async () => (await screen.findAllByRole('menuitem')).map(i => i.textContent);
-const menuItem = async (text: string) => (await screen.findAllByRole('menuitem')).find(i => i.textContent === text)!;
 
 describe('ConnectionProfileItem', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useProfileStore.setState({ connectionProfiles: {} });
   });
 
   describe('display', () => {
@@ -48,6 +45,45 @@ describe('ConnectionProfileItem', () => {
 
       expect(screen.getByText('My S3')).toBeInTheDocument();
       expect(screen.getByText('aws')).toBeInTheDocument();
+    });
+
+    it('renders nothing when the profile does not exist', () => {
+      useProfileStore.setState({ connectionProfiles: {} });
+      const { container } = renderWithProviders(
+        <ConnectionProfileItem profileKey="gone" connecting={false} onConnect={onConnect} />
+      );
+
+      expect(container.querySelector('.mantine-Card-root')).not.toBeInTheDocument();
+    });
+
+    it('has a fixed height and exposes its key for the shared context menu', () => {
+      renderItem();
+
+      expect(CARD_HEIGHT).toBe(68);
+      expect(card()).toHaveAttribute('data-profile-key', 'p1');
+      expect(card().style.getPropertyValue('--card-height') || card().getAttribute('style')).toBeTruthy();
+    });
+
+    it('does not mount a menu of its own', () => {
+      renderItem();
+
+      fireEvent.contextMenu(card());
+
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+      expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
+    });
+
+    it('shows the authentication method badge, static for a profile saved before auth types existed', () => {
+      renderItem();
+
+      expect(screen.getByText('Access key')).toBeInTheDocument();
+    });
+
+    it('shows the label of the profile authentication method', () => {
+      renderItem({ authType: 'assumeRole' });
+
+      expect(screen.getByText('Assume role')).toBeInTheDocument();
+      expect(screen.queryByText('Access key')).not.toBeInTheDocument();
     });
 
     it.each([
@@ -84,7 +120,7 @@ describe('ConnectionProfileItem', () => {
     });
 
     it('shows a spinner instead of the status icon while connecting', () => {
-      renderItem({ isConnected: false }, { connecting: true });
+      renderItem({ isConnected: false }, true);
 
       expect(card().querySelector('.mantine-Loader-root')).toBeInTheDocument();
       expect(card().querySelector('.lucide-unplug')).not.toBeInTheDocument();
@@ -106,55 +142,43 @@ describe('ConnectionProfileItem', () => {
 
       expect(onConnect).toHaveBeenCalledWith('p1');
     });
+  });
 
-    it('lists connect, edit and delete for a disconnected profile', async () => {
-      renderItem({}, { menuOpened: true });
-
-      expect(await menuTexts()).toEqual(['Connect', 'Edit', 'Delete']);
-    });
-
-    it('lists disconnect and delete for a connected profile', async () => {
-      renderItem({ isConnected: true }, { menuOpened: true });
-
-      expect(await menuTexts()).toEqual(['Disconnect', 'Delete']);
-    });
-
-    it('does not render the menu items while the menu is closed', () => {
+  describe('reactivity', () => {
+    it('reflects a change of its own profile in the store', () => {
       renderItem();
 
-      expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
+      act(() =>
+        useProfileStore.getState().updateConnectionProfiles('p1', { ...baseProfile, isConnected: true } as never)
+      );
+
+      expect(card().querySelector('.lucide-cable')).toBeInTheDocument();
     });
 
-    it.each([
-      ['Connect', {}, () => onConnect],
-      ['Edit', {}, () => onEdit],
-      ['Delete', {}, () => onDelete],
-      ['Disconnect', { isConnected: true }, () => onDisconnect],
-    ])('calls the %s callback with the key', async (text, profile, cb) => {
-      const user = userEvent.setup();
-      renderItem(profile, { menuOpened: true });
+    it('re-renders only when its own profile changes, not when another profile does', () => {
+      useProfileStore.setState({
+        connectionProfiles: {
+          p1: { ...baseProfile, id: 'p1' } as ConnectionProfile,
+          p2: { ...baseProfile, id: 'p2', name: 'Other' } as ConnectionProfile,
+        },
+      });
+      renderWithProviders(
+        <>
+          <ConnectionProfileItem profileKey="p1" connecting={false} onConnect={onConnect} />
+          <ConnectionProfileItem profileKey="p2" connecting={false} onConnect={onConnect} />
+        </>
+      );
+      const rendersOf = (id: string) => renders.count.mock.calls.filter(c => c[0] === id).length;
+      const before = { p1: rendersOf('p1'), p2: rendersOf('p2') };
 
-      await user.click(await menuItem(text));
+      act(() =>
+        useProfileStore
+          .getState()
+          .updateConnectionProfiles('p2', { ...baseProfile, id: 'p2', name: 'Other', isConnected: true } as never)
+      );
 
-      expect(cb()).toHaveBeenCalledWith('p1');
-    });
-
-    it('reports the menu opening with the key on context menu', async () => {
-      renderItem();
-
-      fireEvent.contextMenu(card());
-
-      await waitFor(() => expect(onMenuChange).toHaveBeenCalledWith('p1', true));
-    });
-
-    it('reports the menu closing with the key on Escape', async () => {
-      const user = userEvent.setup();
-      renderItem({}, { menuOpened: true });
-      await menuTexts();
-
-      await user.keyboard('{Escape}');
-
-      await waitFor(() => expect(onMenuChange).toHaveBeenCalledWith('p1', false));
+      expect(rendersOf('p2')).toBeGreaterThan(before.p2);
+      expect(rendersOf('p1')).toBe(before.p1);
     });
   });
 });

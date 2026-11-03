@@ -1,0 +1,14 @@
+{
+  "title": "正在上传",
+  "label": {
+    "objectLbl": "对象",
+    "uploadedLbl": "已上传",
+    "remainingLbl": "剩余",
+    "finalizingLbl": "正在完成…"
+  },
+  "action": {
+    "cancelAll": "全部取消",
+    "cancel": "取消",
+    "close": "关闭"
+  }
+}

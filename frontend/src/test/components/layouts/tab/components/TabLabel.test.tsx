@@ -2,7 +2,7 @@ import { act, screen } from '@testing-library/react';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import TabLabel from '@/components/layouts/tab/components/TabLabel';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
 vi.mock('@wails/S3Browser/internal/handlers/profilehandler', () => ({ GetAllConnectionProfile: vi.fn() }));
@@ -11,8 +11,8 @@ const tab = (profileId?: string) => ({
   profileId,
   currentView: 'bucketList' as const,
   prefix: '',
-  selectionItem: [],
-  deletingItems: [],
+  selectionItem: {},
+  deletingItems: {},
 });
 
 describe('TabLabel', () => {

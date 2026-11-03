@@ -2,14 +2,21 @@
   "common": {
     "CME001": "Lỗi khi gọi IPC"
   },
+  "params": {
+    "secret": {
+      "mfaCode": "Mã MFA",
+      "secretKey": "Secret key",
+      "ldapPassword": "Mật khẩu LDAP",
+      "keyPassword": "Mật khẩu private key",
+      "oidcSession": "Đăng nhập"
+    }
+  },
   "bucket": {
     "S3S001": "Kiểm tra kết nối hồ sơ {name} tới S3 thành công",
     "S3S002": "Hồ sơ: {name} đã kết nối",
     "S3S003": "Hồ sơ: {name} ngắt kết nối thành công",
     "S3S004": "Tải xuống {object} thành công, thư mục lưu: {dest}",
-    "S3S005": "Xóa {object} thành công",
     "S3S006": "Tải lên {name} thành công, key {key}.",
-    "S3S007": "Đã xóa {count} object trong thư mục {prefix}.",
     "S3E001": "Access key hoặc secret key không hợp lệ với endpoint này",
     "S3E002": "Endpoint từ chối kết nối",
     "S3E003": "Hết thời gian chờ khi kết nối tới endpoint, hãy kiểm tra địa chỉ và máy chủ có đang chạy hay không",
@@ -21,7 +28,6 @@
     "S3E009": "Thư mục lưu {path} không tồn tại",
     "S3E011": "Lỗi khi lấy lịch sử tải xuống",
     "S3E012": "Tải xuống object: {object} thất bại",
-    "S3E013": "Xóa object: {object} thất bại",
     "S3E014": "Tệp {name} không tồn tại",
     "S3E015": "Không thể truy cập tệp {name}",
     "S3E016": "Không thể mở tệp {name}",
@@ -29,7 +35,6 @@
     "S3E018": "Thư mục {folder} có hơn {max} file cần tải lên.",
     "S3E019": "Đường dẫn tải lên của file {name} không hợp lệ.",
     "S3E020": "Thư mục {prefix} không hợp lệ, không thể xóa.",
-    "S3E021": "Xóa thư mục {prefix} thất bại: {failed} object lỗi, {deleted} đã xóa.",
     "S3E022": "Thư mục {folder} có hơn {max} file lớn hơn {size} GiB cần tải lên.",
     "S3E023": "Chỉ được tải lên tối đa {max} file mỗi lần.",
     "S3E024": "Lấy chi tiết object {key} thất bại, profile: {name}, bucket: {bucket}.",
@@ -38,12 +43,35 @@
     "S3E027": "Lỗi tìm kiếm bucket, profile: {name}.",
     "S3E028": "Từ khóa tìm kiếm không được để trống.",
     "S3E029": "Chọn tệp thất bại.",
+    "S3E030": "Thông tin xác thực của hồ sơ {name} đã hết hạn, vui lòng kết nối lại.",
+    "S3E031": "Assume role {roleArn} thất bại: không tìm thấy role hoặc không được phép (sts:AssumeRole).",
+    "S3E032": "Mã MFA không hợp lệ hoặc đã hết hạn.",
+    "S3E033": "Không tìm thấy hoặc không hợp lệ AWS CLI profile {profile}.",
+    "S3E034": "Phiên SSO của profile {profile} đã hết hạn, hãy chạy: aws sso login --profile {profile}",
+    "S3E035": "Không tìm thấy thông tin xác thực trong môi trường (default chain).",
+    "S3E036": "credential_process của profile {profile} thất bại.",
+    "S3E045": "Đọc tệp cấu hình AWS thất bại.",
     "S3W001": "Quyền truy cập bucket bị giới hạn",
     "S3W002": "Đã hủy tải xuống object: {object}",
     "S3W004": "Đã hủy tải lên {name}.",
     "S3W005": "Đang có tiến trình tải lên khác, vui lòng chờ hoàn tất.",
     "S3W006": "Đã bỏ qua {count} mục không thể tải lên (không đọc được, liên kết tượng trưng hoặc không phải file thường).",
-    "S3W007": "Có hơn {max} file được thả vào, các file sau {max} file đầu tiên bị bỏ qua."
+    "S3W007": "Có hơn {max} file được thả vào, các file sau {max} file đầu tiên bị bỏ qua.",
+    "S3E037": "Yêu cầu MinIO STS thất bại.",
+    "S3E038": "Tên đăng nhập hoặc mật khẩu LDAP không đúng.",
+    "S3E039": "Đăng nhập OIDC đã bị huỷ hoặc quá thời gian chờ.",
+    "S3E040": "Cổng callback {port} đang được sử dụng, hãy chọn cổng khác.",
+    "S3E041": "Đăng nhập OIDC thất bại: {detail}.",
+    "S3E042": "Không tìm thấy file chứng chỉ hoặc khoá {path}, vui lòng chọn lại.",
+    "S3E043": "Chứng chỉ hoặc khoá không hợp lệ hoặc không khớp nhau. Khoá có mật khẩu phải ở dạng PKCS#8 (chuyển đổi bằng: openssl pkcs8 -topk8).",
+    "S3E044": "Không bucket nào đã nhập có thể truy cập ẩn danh.",
+    "S3E046": "Cần {secret} để gia hạn thông tin xác thực của hồ sơ {name} (chưa được lưu).",
+    "S3E047": "Không tìm thấy phiên đăng nhập OIDC hoặc phiên đã hết hạn, vui lòng đăng nhập lại.",
+    "S3E048": "Khoá riêng {path} được bảo vệ bằng mật khẩu, hãy nhập mật khẩu của khoá.",
+    "S3E049": "Không tìm thấy file chứng chỉ CA {path} hoặc file không có chứng chỉ hợp lệ.",
+    "S3W008": "Thông tin xác thực của hồ sơ {name} sẽ hết hạn sau {minutes} phút và không thể tự động gia hạn.",
+    "S3W009": "Không thể truy cập bucket {bucket} bằng chế độ ẩn danh.",
+    "S3W010": "Thông tin xác thực của hồ sơ {name} sắp hết hạn, hãy nhập mã MFA mới để giữ kết nối."
   },
   "master": {
     "MTE001": "Lỗi khi tải dữ liệu master"
@@ -55,6 +83,8 @@
     "PFE005": "Cập nhật hồ sơ [{name}] thất bại",
     "PFE006": "Xóa hồ sơ [{name}] thất bại",
     "PFE007": "Hồ sơ [{name}] đang có tác vụ tải lên/tải xuống, không thể xóa",
+    "PFE008": "Phương thức xác thực {authType} không hợp lệ với nhà cung cấp {provider}.",
+    "PFE009": "Cấu hình xác thực không hợp lệ.",
     "PFS001": "Thêm hồ sơ [{name}] thành công",
     "PFS002": "Cập nhật hồ sơ [{name}] thành công",
     "PFS003": "Xóa hồ sơ [{name}] thành công"

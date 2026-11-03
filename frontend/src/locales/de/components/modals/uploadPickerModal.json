@@ -1,0 +1,17 @@
+{
+  "title": "Dateien hochladen",
+  "target": "Hochladen nach: {target}",
+  "selectFiles": "Dateien auswählen",
+  "dropHint": "oder Dateien und Ordner hierher ziehen",
+  "dropHere": "Dateien hier ablegen",
+  "bucketRequired": "Ziel-Bucket auswählen",
+  "emptyList": "Noch keine Dateien hinzugefügt",
+  "selectedCount": "{selected}/{max} Dateien",
+  "selectedLarge": "{selected}/{max} große Dateien",
+  "autoUnselected": "Einige Dateien überschreiten die Upload-Grenzen und wurden abgewählt",
+  "upload": "Hochladen",
+  "large": "Groß",
+  "rootFolder": "(ausgewählte Dateien)",
+  "remove": "Datei entfernen",
+  "removeSelected": "Auswahl entfernen"
+}

@@ -5,16 +5,133 @@
       "name": "プロファイル名",
       "color": "プロファイルの色",
       "endpoint": "エンドポイント",
+      "authType": "認証方式",
       "accessKey": "アクセスキー",
       "secretKey": "シークレットキー",
+      "sessionToken": "セッショントークン (任意)",
+      "configFile": "AWS 設定ファイル (任意)",
+      "credentialsFile": "AWS 認証情報ファイル (任意)",
+      "sourceType": "ロールの引き受けに使う認証情報",
+      "roleArn": "ロール ARN",
+      "externalId": "外部 ID (任意)",
+      "sessionName": "セッション名 (任意)",
+      "durationSeconds": "有効期間 (秒)",
+      "mfaSerial": "MFA デバイスのシリアル (任意)",
+      "mfaCode": "MFA コード",
       "pathStyle": "パススタイル",
-      "savePassword": "シークレットキーを保存",
-      "autoConnect": "自動接続"
+      "savePassword": "シークレットを保存",
+      "autoConnect": "自動接続",
+      "ldapUsername": "LDAP ユーザー名",
+      "ldapPassword": "LDAP パスワード",
+      "policy": "インラインポリシー（JSON、任意）",
+      "buckets": "バケット",
+      "durationOptional": "有効期間（秒、任意）",
+      "roleArnOptional": "ロール ARN（任意）",
+      "clientId": "クライアント ID",
+      "issuerUrl": "発行者 URL",
+      "scope": "スコープ（任意）",
+      "callbackPort": "コールバックポート",
+      "redirectUri": "リダイレクト URI",
+      "certFile": "クライアント証明書ファイル",
+      "keyFile": "秘密鍵ファイル",
+      "keyPassword": "秘密鍵のパスワード",
+      "keyEncrypted": "秘密鍵にパスワードがある",
+      "oidcSession": "サインイン",
+      "caFile": "CA 証明書ファイル（任意）"
+    },
+    "placeholder": {
+      "saved": "保存済み (変更しない場合は空欄)",
+      "configFile": "既定: ~/.aws/config",
+      "credentialsFile": "既定: ~/.aws/credentials",
+      "roleArn": "arn:aws:iam::123456789012:role/RoleName",
+      "sessionName": "既定: s3browser-<user>",
+      "mfaSerial": "arn:aws:iam::123456789012:mfa/user",
+      "durationDefault": "既定値: サーバーが決定",
+      "policy": "{\"Version\": \"2012-10-17\", \"Statement\": []}",
+      "buckets": "バケット名を入力して Enter キーを押してください",
+      "issuerUrl": "https://idp.example.com/realms/main",
+      "scope": "既定: openid",
+      "certFile": "証明書を選択 (.pem, .crt)",
+      "keyFile": "秘密鍵を選択 (.pem, .key)",
+      "caFile": "既定: OS の証明書"
+    },
+    "sourceType": {
+      "static": "アクセスキー",
+      "profile": "AWS CLI プロファイル"
+    },
+    "hint": {
+      "testNeedsSecrets": "保存にシークレットは不要ですが、接続テストには必要です。保存済みのシークレットは返されないため、再入力してください。",
+      "mfaCode": "一度だけ使用し、保存されません",
+      "profilePlaceholder": "<profile>",
+      "ssoLogin": "先に次のコマンドでサインインしてください: aws sso login --profile {{profile}}",
+      "anonymousBuckets": "匿名アクセスではバケット一覧を取得できません。開きたい公開バケットの名前を入力してください。",
+      "redirectUri": "このアドレスを ID プロバイダーのクライアントのリダイレクト URI として登録してください。",
+      "oidcLogin": "ブラウザが開いてサインインします。サインインは一度だけ使用され、保存されません。",
+      "certTls": "ファイルは接続時に読み込まれ、内容は保存されません。エンドポイントは https:// を使用する必要があります。",
+      "keyNotStored": "パスワード付きの PKCS#8 鍵に対応しています。パスワードは「シークレットを保存」にチェックした場合のみ保存されます。",
+      "caFile": "自己署名または社内証明書を使う MinIO サーバー用の追加の信頼済み CA。空欄の場合は OS の証明書を使用します。"
+    },
+    "tooltip": {
+      "autoConnectLocked": "この認証方式は接続のたびに入力が必要なため、自動接続できません。"
     },
     "button": {
       "testConnection": "接続テスト",
       "createProfile": "プロファイルを作成",
-      "editProfile": "プロファイルを更新"
+      "editProfile": "プロファイルを更新",
+      "oidcLogin": "サインイン",
+      "oidcCancel": "サインインをキャンセル",
+      "chooseFile": "ファイルを選択...",
+      "clearFile": "ファイルをクリア",
+      "copy": "コピー",
+      "copied": "コピーしました"
+    },
+    "status": {
+      "oidcSignedIn": "サインイン済み、{{time}} まで有効",
+      "oidcNotSignedIn": "未サインイン",
+      "oidcWaiting": "ブラウザでのサインインを待っています...",
+      "oidcExpired": "サインインの有効期限が切れました。もう一度サインインしてください"
+    }
+  },
+  "authType": {
+    "static": {
+      "label": "アクセスキー",
+      "description": "アクセスキーとシークレットキー (セッショントークンは任意)。"
+    },
+    "sharedProfile": {
+      "label": "AWS CLI プロファイル",
+      "description": "AWS CLI 設定ファイル (~/.aws) のプロファイルを使用します。"
+    },
+    "assumeRole": {
+      "label": "ロールの引き受け",
+      "description": "STS で IAM ロールを引き受けます。MFA で保護することもできます。"
+    },
+    "sso": {
+      "label": "AWS SSO",
+      "description": "AWS CLI でサインイン済みのプロファイルを使用します (aws sso login)。"
+    },
+    "defaultChain": {
+      "label": "デフォルトチェーン",
+      "description": "環境にある認証情報 (環境変数、共有ファイル、インスタンスロール) を使用します。"
+    },
+    "anonymous": {
+      "label": "匿名",
+      "description": "認証情報なしで公開バケットにアクセスします。"
+    },
+    "minioAssumeRole": {
+      "label": "MinIO STS",
+      "description": "MinIO STS から一時的な認証情報を取得します。"
+    },
+    "minioLdap": {
+      "label": "LDAP",
+      "description": "LDAP ユーザーでサインインします。"
+    },
+    "minioOidc": {
+      "label": "OIDC",
+      "description": "OpenID Connect プロバイダーでサインインします。"
+    },
+    "minioCert": {
+      "label": "クライアント証明書",
+      "description": "TLS クライアント証明書でサインインします。"
     }
   }
 }

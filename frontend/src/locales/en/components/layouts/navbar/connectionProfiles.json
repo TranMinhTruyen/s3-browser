@@ -1,0 +1,16 @@
+{
+  "contextMenu": {
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "tooltip": {
+    "connect": "Connect",
+    "createProfile": "Create connection profile",
+    "refresh": "Refresh connection profile list"
+  },
+  "profile": {
+    "empty": "No connection profiles yet. Use the buttons above to create one."
+  }
+}

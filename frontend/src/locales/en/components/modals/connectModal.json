@@ -5,16 +5,133 @@
       "name": "Profile name",
       "color": "Profile color",
       "endpoint": "Endpoint",
+      "authType": "Authentication method",
       "accessKey": "Access key",
       "secretKey": "Secret key",
+      "sessionToken": "Session token (optional)",
+      "configFile": "AWS config file (optional)",
+      "credentialsFile": "AWS credentials file (optional)",
+      "sourceType": "Credentials used to assume the role",
+      "roleArn": "Role ARN",
+      "externalId": "External ID (optional)",
+      "sessionName": "Session name (optional)",
+      "durationSeconds": "Duration (seconds)",
+      "mfaSerial": "MFA device serial (optional)",
+      "mfaCode": "MFA code",
       "pathStyle": "Path style",
-      "savePassword": "Save secret key",
-      "autoConnect": "Auto connect"
+      "savePassword": "Save secrets",
+      "autoConnect": "Auto connect",
+      "ldapUsername": "LDAP username",
+      "ldapPassword": "LDAP password",
+      "policy": "Inline policy (JSON, optional)",
+      "buckets": "Buckets",
+      "durationOptional": "Duration (seconds, optional)",
+      "roleArnOptional": "Role ARN (optional)",
+      "clientId": "Client ID",
+      "issuerUrl": "Issuer URL",
+      "scope": "Scope (optional)",
+      "callbackPort": "Callback port",
+      "redirectUri": "Redirect URI",
+      "certFile": "Client certificate file",
+      "keyFile": "Private key file",
+      "keyPassword": "Private key password",
+      "keyEncrypted": "The private key has a password",
+      "oidcSession": "Sign-in",
+      "caFile": "CA certificate file (optional)"
+    },
+    "placeholder": {
+      "saved": "Saved, leave empty to keep",
+      "configFile": "Default: ~/.aws/config",
+      "credentialsFile": "Default: ~/.aws/credentials",
+      "roleArn": "arn:aws:iam::123456789012:role/RoleName",
+      "sessionName": "Default: s3browser-<user>",
+      "mfaSerial": "arn:aws:iam::123456789012:mfa/user",
+      "durationDefault": "Default: set by the server",
+      "policy": "{\"Version\": \"2012-10-17\", \"Statement\": []}",
+      "buckets": "Type a bucket name and press Enter",
+      "issuerUrl": "https://idp.example.com/realms/main",
+      "scope": "Default: openid",
+      "certFile": "Choose the certificate (.pem, .crt)",
+      "keyFile": "Choose the private key (.pem, .key)",
+      "caFile": "Default: the operating system certificates"
+    },
+    "sourceType": {
+      "static": "Access key",
+      "profile": "AWS CLI profile"
+    },
+    "hint": {
+      "testNeedsSecrets": "Saving does not need secrets, but Test connection does: saved secrets are never returned, so enter them again.",
+      "mfaCode": "Used once, never saved",
+      "profilePlaceholder": "<profile>",
+      "ssoLogin": "Sign in first with: aws sso login --profile {{profile}}",
+      "anonymousBuckets": "Anonymous access cannot list buckets: enter the names of the public buckets to open.",
+      "redirectUri": "Register this address as a redirect URI of the client in your identity provider.",
+      "oidcLogin": "Your browser opens to sign in. The sign-in is used once and never saved.",
+      "certTls": "The files are read on connect and their content is not saved. The endpoint must use https://.",
+      "keyNotStored": "A PKCS#8 key with a password is supported. The password is saved only if you tick Save secrets.",
+      "caFile": "Extra trusted CA for a MinIO server with a self-signed or internal certificate. Leave empty to use the operating system certificates."
+    },
+    "tooltip": {
+      "autoConnectLocked": "This authentication method needs input on every connect, so it cannot auto connect."
     },
     "button": {
       "testConnection": "Test connection",
       "createProfile": "Create profile",
-      "editProfile": "Update profile"
+      "editProfile": "Update profile",
+      "oidcLogin": "Sign in",
+      "oidcCancel": "Cancel sign-in",
+      "chooseFile": "Choose file...",
+      "clearFile": "Clear file",
+      "copy": "Copy",
+      "copied": "Copied"
+    },
+    "status": {
+      "oidcSignedIn": "Signed in, valid until {{time}}",
+      "oidcNotSignedIn": "Not signed in",
+      "oidcWaiting": "Waiting for the sign-in in your browser...",
+      "oidcExpired": "The sign-in has expired, sign in again"
+    }
+  },
+  "authType": {
+    "static": {
+      "label": "Access key",
+      "description": "Access key and secret key, with an optional session token."
+    },
+    "sharedProfile": {
+      "label": "AWS CLI profile",
+      "description": "Use a profile of the AWS CLI config files (~/.aws)."
+    },
+    "assumeRole": {
+      "label": "Assume role",
+      "description": "Assume an IAM role with STS, optionally protected by MFA."
+    },
+    "sso": {
+      "label": "AWS SSO",
+      "description": "Use a profile signed in with the AWS CLI (aws sso login)."
+    },
+    "defaultChain": {
+      "label": "Default chain",
+      "description": "Use the credentials found in the environment: environment variables, shared files or the instance role."
+    },
+    "anonymous": {
+      "label": "Anonymous",
+      "description": "Access public buckets without credentials."
+    },
+    "minioAssumeRole": {
+      "label": "MinIO STS",
+      "description": "Get temporary credentials from MinIO STS."
+    },
+    "minioLdap": {
+      "label": "LDAP",
+      "description": "Sign in with an LDAP user."
+    },
+    "minioOidc": {
+      "label": "OIDC",
+      "description": "Sign in with an OpenID Connect provider."
+    },
+    "minioCert": {
+      "label": "Client certificate",
+      "description": "Sign in with a TLS client certificate."
     }
   }
 }

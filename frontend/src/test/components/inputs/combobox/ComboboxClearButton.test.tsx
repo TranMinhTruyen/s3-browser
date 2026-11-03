@@ -1,7 +1,7 @@
 import { createEvent, fireEvent, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import ComboboxClearButton from '@/components/inputs/combobox/ComboboxClearButton';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 describe('ComboboxClearButton', () => {
   it('prevents default on mousedown so the target keeps focus', () => {

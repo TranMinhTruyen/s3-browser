@@ -61,11 +61,12 @@ const createProxy = () => {
 };
 
 /** Value returned by the mocked `useReducedMotion`; tests flip it and reset it to false afterwards. */
-export const motionState = { reducedMotion: false };
+export const motionState = { reducedMotion: false, isPresent: true };
 
 /** Drop-in replacement for the `motion/react` module: plain HTML elements, no animation. */
 export const motionMock = {
   useReducedMotion: () => motionState.reducedMotion,
+  useIsPresent: () => motionState.isPresent,
   m: createProxy(),
   motion: createProxy(),
   AnimatePresence: passThrough,

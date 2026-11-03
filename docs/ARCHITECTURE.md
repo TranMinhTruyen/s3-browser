@@ -11,7 +11,7 @@ A short tour of the code for new developers. Conventions live in `CLAUDE.md`; th
 - Frontend: Mantine 9, zustand 5 + immer, NiceModal, i18next (en / vi / ja), sonner (toast), `@tanstack/react-virtual`, zod, dayjs. Package manager: **bun**.
 
 ```
-App/S3Browser
+s3-browser
 ├── main.go                 entry: logger, Wails app, services, main window
 ├── internal/
 │   ├── app.go              builds DB, modules and handlers; Shutdown
@@ -79,7 +79,7 @@ return output.ThrowError(msg)      // Result = false + message
 
 ### 2.5 Events
 
-Backend-to-frontend events are constants in `modules/<x>/events.go`, named `domain:kebab-name`, for example `uploader:upload-progress`, `downloader:download-progress`, `uploader:files-dropped`. They are registered in `init()` with `application.RegisterEvent[PayloadType](name)`; it must be called directly from `init` so the binding generator emits the payload type. Progress events are throttled (200 ms) by `utils.ReportEvery`. Dropped files come from `main.go` (`WindowFilesDropped` -> `BucketHandler.FilesDropped`) and are re-emitted as `uploader:files-dropped` / `uploader:picker-files-dropped`.
+Backend-to-frontend events are constants in `modules/<x>/events.go`, named `domain:kebab-name`, for example `uploader:upload-progress-batch`, `downloader:download-progress-batch`, `uploader:files-dropped`. They are registered in `init()` with `application.RegisterEvent[PayloadType](name)`; it must be called directly from `init` so the binding generator emits the payload type. Progress events are batched: one shared 200 ms ticker (`utils.BatchReporter`) sends a single event holding the progress of every running job (`{items: [...]}`). Dropped files come from `main.go` (`WindowFilesDropped` -> `BucketHandler.FilesDropped`) and are re-emitted as `uploader:files-dropped` / `uploader:picker-files-dropped`.
 
 ### 2.6 Database
 
@@ -155,7 +155,7 @@ Wails bindings are generated from the Go handlers; regenerate after any change t
 go tool wails3 generate bindings -clean=true -ts
 ```
 
-| Task | Command (run in `App/S3Browser` unless noted) |
+| Task | Command (run at the repo root unless noted) |
 |---|---|
 | Dev | `go tool wails3 task dev` |
 | Build | `go tool wails3 task build` |

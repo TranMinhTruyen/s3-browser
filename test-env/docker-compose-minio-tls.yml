@@ -1,0 +1,61 @@
+# MinIO with TLS for testing the OIDC and Certificate (mTLS) auth methods and the "CA certificate file" field.
+# 1) sh scripts/gen-certs.sh     2) start docker-compose-keycloak.yml     3) start this file:
+#    docker compose -f docker-compose-minio-tls.yml -p s3b-minio-tls-test up -d
+# Remove everything:    docker compose -f docker-compose-minio-tls.yml -p s3b-minio-tls-test down -v
+# Endpoint in S3Browser: https://localhost:10020 (certificate signed by certs/ca.pem). Accounts: README.txt.
+
+services:
+  minio-tls:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: s3b-test-minio-tls
+    command: server --address :10000 --console-address :10001 --certs-dir /certs /data
+    ports:
+      - "${MINIO_TLS_API_PORT:-10020}:10000" # S3 API + STS over https
+      - "${MINIO_TLS_CONSOLE_PORT:-10021}:10001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: "MinioRoot#2026"
+      # OIDC (identity_openid): the JWT is checked against the keys of this Keycloak realm.
+      # The policy name comes from the "policy" claim (see keycloak/s3browser-realm.json).
+      MINIO_IDENTITY_OPENID_CONFIG_URL: "http://s3b-test-keycloak:8080/realms/s3browser/.well-known/openid-configuration"
+      MINIO_IDENTITY_OPENID_CLIENT_ID: s3browser
+      MINIO_IDENTITY_OPENID_CLAIM_NAME: policy
+      MINIO_IDENTITY_OPENID_SCOPES: openid
+      # Certificate (identity_tls): the CN of the client certificate is the policy name.
+      MINIO_IDENTITY_TLS_ENABLE: "on"
+    volumes:
+      - minio-tls-data:/data
+      - ./certs/minio:/certs:ro # public.crt, private.key and CAs/ca.pem (trusted for client certificates)
+    healthcheck:
+      test: ["CMD-SHELL", "MC_HOST_local=https://localhost:10000 mc --insecure ready local"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+    networks:
+      - s3b-oidc-net
+    restart: unless-stopped
+
+  # One-shot: creates the bucket the OIDC and Certificate profiles browse.
+  minio-tls-init:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: s3b-test-minio-tls-init
+    depends_on:
+      minio-tls:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "/scripts/minio-tls-init.sh"]
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: "MinioRoot#2026"
+    volumes:
+      - ./scripts/minio-tls-init.sh:/scripts/minio-tls-init.sh:ro
+    networks:
+      - s3b-oidc-net
+    restart: "no"
+
+networks:
+  s3b-oidc-net:
+    name: s3b-oidc-net
+    external: true # created by docker-compose-keycloak.yml
+
+volumes:
+  minio-tls-data:

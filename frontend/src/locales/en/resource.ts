@@ -1,18 +1,21 @@
 import { ResourceLanguage } from 'i18next';
 import common from '@/locales/en/common.json';
-import bucketPicker from '@/locales/en/components/bucketPicker.json';
-import downloaderWindow from '@/locales/en/components/downloaderWindow.json';
-import inputs from '@/locales/en/components/inputs.json';
+import bucketPicker from '@/locales/en/components/inputs/bucketPicker.json';
+import inputs from '@/locales/en/components/inputs/inputs.json';
+import connectionProfiles from '@/locales/en/components/layouts/navbar/connectionProfiles.json';
+import objectDetailDrawer from '@/locales/en/components/layouts/tab/objectDetailDrawer.json';
+import tabLayout from '@/locales/en/components/layouts/tab/tabLayout.json';
+import downloaderWindow from '@/locales/en/components/layouts/transfer/downloaderWindow.json';
+import uploaderWindow from '@/locales/en/components/layouts/transfer/uploaderWindow.json';
 import confirmModal from '@/locales/en/components/modals/confirmModal.json';
 import connectModal from '@/locales/en/components/modals/connectModal.json';
+import credentialExpiring from '@/locales/en/components/modals/credentialExpiring.json';
+import deleteConfirmModal from '@/locales/en/components/modals/deleteConfirmModal.json';
+import deleteResultModal from '@/locales/en/components/modals/deleteResultModal.json';
 import historyModal from '@/locales/en/components/modals/historyModal.json';
 import settingModal from '@/locales/en/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/en/components/modals/uploadLimitModal.json';
 import uploadPickerModal from '@/locales/en/components/modals/uploadPickerModal.json';
-import connectionProfiles from '@/locales/en/components/navbar/connectionProfiles.json';
-import objectDetailDrawer from '@/locales/en/components/objectDetailDrawer.json';
-import tabLayout from '@/locales/en/components/tabLayout.json';
-import uploaderWindow from '@/locales/en/components/uploaderWindow.json';
 import ipcMessage from '@/locales/en/messages/ipcMessage.json';
 import validateMessage from '@/locales/en/messages/validateMessage.json';
 import bucketPage from '@/locales/en/pages/bucket/page.json';
@@ -23,7 +26,10 @@ const englishResource: ResourceLanguage = {
   ipcMessage: ipcMessage,
   validateMessage: validateMessage,
   connectModal: connectModal,
+  credentialExpiring: credentialExpiring,
   confirmModal: confirmModal,
+  deleteConfirmModal: deleteConfirmModal,
+  deleteResultModal: deleteResultModal,
   historyModal: historyModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,

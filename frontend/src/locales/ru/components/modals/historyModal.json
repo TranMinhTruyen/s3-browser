@@ -1,0 +1,10 @@
+{
+  "title": "История скачиваний",
+  "label": {
+    "emptyLbl": "ПУСТО",
+    "sizeLbl": "Размер",
+    "downloadAtLbl": "Время скачивания",
+    "statusLbl": "Статус",
+    "destPathLbl": "Путь назначения"
+  }
+}

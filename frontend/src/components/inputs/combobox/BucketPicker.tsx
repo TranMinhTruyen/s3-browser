@@ -1,12 +1,15 @@
-import { CloseButton, Combobox, Group, Input, InputBase, Loader, Text, useCombobox } from '@mantine/core';
+import { Combobox, Group, Input, InputBase, Loader, useCombobox } from '@mantine/core';
 import { useDebouncedValue, useElementSize } from '@mantine/hooks';
 import { GetListBucket, SearchBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Bucket } from '@wails/S3Browser/models/bucket';
 import { CheckIcon } from 'lucide-react';
-import { ChangeEvent, MouseEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
+import { ChangeEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { callIPC } from '@/common/utils/ipcUtils';
 import Button from '@/components/buttons/Button';
+import ComboboxClearButton from '@/components/inputs/combobox/ComboboxClearButton';
+import ComboboxOptions from '@/components/inputs/combobox/ComboboxOptions';
+import TruncatedText from '@/components/TruncatedText';
 
 // Buckets fetched per page.
 const BUCKET_PAGE_SIZE = 20;
@@ -32,12 +35,13 @@ function BucketPicker(props: BucketPickerProps) {
   const { connectionId, profileName, value, label, disabled, error, onChange } = props;
 
   const { t } = useTranslation('bucketPicker');
-  const { t: tCommon } = useTranslation('common');
 
   const [opened, setOpened] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [debouncedKeyword] = useDebouncedValue(keyword.trim(), SEARCH_DEBOUNCE_MS);
   const [buckets, setBuckets] = useState<Bucket[]>([]);
+  // A bucket without a name cannot be picked (and has no React key), so it is not listed.
+  const namedBuckets = useMemo(() => buckets.filter(bucket => bucket.name), [buckets]);
   const [nextCursor, setNextCursor] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const requestCtrl = useRef<AbortController>(null);
@@ -121,8 +125,6 @@ function BucketPicker(props: BucketPickerProps) {
     [onChange, closeDropdown]
   );
 
-  const onMouseDownClear = useCallback((e: MouseEvent<HTMLButtonElement>) => e.preventDefault(), []);
-
   const onClickToggle = useCallback(() => toggleDropdown(), [toggleDropdown]);
 
   const onClickClear = useCallback(() => onChange(null), [onChange]);
@@ -140,38 +142,26 @@ function BucketPicker(props: BucketPickerProps) {
           label={label}
           error={error}
           disabled={disabled}
-          rightSection={
-            showClear ? (
-              <CloseButton
-                size="sm"
-                variant="transparent"
-                aria-label={tCommon('button.clear')}
-                onMouseDown={onMouseDownClear}
-                onClick={onClickClear}
-              />
-            ) : (
-              <Combobox.Chevron />
-            )
-          }
+          rightSection={showClear ? <ComboboxClearButton onClear={onClickClear} /> : <Combobox.Chevron />}
           rightSectionPointerEvents={showClear ? 'all' : 'none'}
           onClick={onClickToggle}
         >
-          {value ? <Text truncate="end">{value}</Text> : <Input.Placeholder>{t('placeholder')}</Input.Placeholder>}
+          {value ? <TruncatedText>{value}</TruncatedText> : <Input.Placeholder>{t('placeholder')}</Input.Placeholder>}
         </InputBase>
       </Combobox.Target>
 
       <Combobox.Dropdown miw={targetWidth}>
         <Combobox.Search value={keyword} onChange={onChangeKeyword} placeholder={t('searchPlaceholder')} />
-        <Combobox.Options mah={250} style={{ overflowY: 'auto' }}>
-          {buckets.map(bucket => (
-            <Combobox.Option key={bucket.name} value={bucket.name ?? ''} active={bucket.name === value}>
+        <ComboboxOptions>
+          {namedBuckets.map(bucket => (
+            <Combobox.Option key={bucket.name} value={bucket.name as string} active={bucket.name === value}>
               <Group gap="xs" wrap="nowrap">
                 {bucket.name === value && <CheckIcon size={12} />}
-                <Text truncate="end">{bucket.name}</Text>
+                <TruncatedText>{bucket.name}</TruncatedText>
               </Group>
             </Combobox.Option>
           ))}
-          {!isLoading && buckets.length === 0 && <Combobox.Empty>{t('empty')}</Combobox.Empty>}
+          {!isLoading && namedBuckets.length === 0 && <Combobox.Empty>{t('empty')}</Combobox.Empty>}
           {isLoading && (
             <Group justify="center" p="xs">
               <Loader size="sm" />
@@ -184,7 +174,7 @@ function BucketPicker(props: BucketPickerProps) {
               </Button>
             </Group>
           )}
-        </Combobox.Options>
+        </ComboboxOptions>
       </Combobox.Dropdown>
     </Combobox>
   );

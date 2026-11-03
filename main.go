@@ -3,9 +3,11 @@ package main
 
 import (
 	"S3Browser/internal"
+	"S3Browser/internal/pkg/db"
 	"S3Browser/internal/pkg/logger"
 	"S3Browser/internal/pkg/portable"
 	"embed"
+	"errors"
 	"log"
 	"path/filepath"
 
@@ -41,12 +43,26 @@ func portableWindowsOptions(appName string) (application.WindowsOptions, error) 
 }
 
 // backgroundColour is the native window background for the saved theme, so the window does not flash the wrong
-// colour before the page renders. "auto" uses the light colour because only the page knows the OS scheme.
-func backgroundColour(theme string) application.RGBA {
-	if theme == "dark" {
+// colour before the page renders. "auto" follows the OS scheme (osDark, see osDarkMode).
+func backgroundColour(theme string, osDark bool) application.RGBA {
+	if theme == "dark" || (theme == "auto" && osDark) {
 		return application.NewRGBA(36, 36, 36, 255)
 	}
 	return application.NewRGBA(255, 255, 255, 255)
+}
+
+// startupErrorMessage explains a database startup failure by stage: a failed backup left the database untouched,
+// a failed migration was rolled back and the error text names the backup file.
+func startupErrorMessage(err error) string {
+	switch {
+	case errors.Is(err, db.ErrBackupFailed):
+		return "The database backup before the upgrade failed, so the upgrade was not run " +
+			"and your data was not changed.\n\n" + err.Error()
+	case errors.Is(err, db.ErrMigrateFailed):
+		return "The database upgrade failed and was rolled back. " +
+			"Your data is kept in the backup file named below.\n\n" + err.Error()
+	}
+	return "The database could not be opened.\n\n" + err.Error()
 }
 
 // main wires logger, app, handlers and the main window, then runs the Wails event loop.
@@ -76,19 +92,32 @@ func main() {
 	}
 	mainApp := application.New(options)
 
-	app := internal.NewApp(mainApp, cfg, appLogger)
+	app, err := internal.NewApp(mainApp, cfg, appLogger)
+	if err != nil {
+		// Native dialogs only work once the app runs, so show the error from ApplicationStarted, then quit.
+		mainApp.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
+			mainApp.Dialog.Error().SetTitle(cfg.Name).SetMessage(startupErrorMessage(err)).Show()
+			mainApp.Quit()
+		})
+		if runErr := mainApp.Run(); runErr != nil {
+			println("error:", runErr.Error())
+		}
+		return
+	}
 	mainApp.OnShutdown(app.Shutdown)
 	mainApp.RegisterService(application.NewService(app.BucketHandler))
 	mainApp.RegisterService(application.NewService(app.MasterHandler))
 	mainApp.RegisterService(application.NewService(app.ProfileHandler))
 	mainApp.RegisterService(application.NewService(app.SettingHandler))
 
+	theme := app.SettingHandler.GetSettings().Body.Settings.Theme
 	mainWindow := mainApp.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:                  cfg.Name,
 		MinWidth:               1024,
 		MinHeight:              768,
+		Frameless:              true,
 		StartState:             application.WindowStateMaximised,
-		BackgroundColour:       backgroundColour(app.SettingHandler.GetSettings().Body.Settings.Theme),
+		BackgroundColour:       backgroundColour(theme, osDarkMode()),
 		OpenInspectorOnStartup: DevMode,
 		EnableFileDrop:         true,
 	})

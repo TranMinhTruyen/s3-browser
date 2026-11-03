@@ -1,0 +1,21 @@
+{
+  "button": {
+    "create": "Erstellen",
+    "update": "Aktualisieren",
+    "refresh": "Neu laden",
+    "connect": "Verbinden",
+    "cancel": "Abbrechen",
+    "OK": "OK",
+    "clear": "Leeren",
+    "close": "Schließen"
+  },
+  "appName": "S3Browser",
+  "window": {
+    "minimise": "Minimieren",
+    "maximise": "Maximieren",
+    "restore": "Wiederherstellen",
+    "close": "Schließen"
+  },
+  "modalLoadError": "Der Dialog konnte nicht geöffnet werden. Bitte versuchen Sie es erneut.",
+  "modalLoading": "Dialog wird geladen..."
+}

@@ -1,0 +1,42 @@
+# Floci (local AWS emulator) with IAM enforcement, for testing the AWS auth methods of S3Browser.
+# Run in this folder:   docker compose -f docker-compose-floci.yml -p s3b-floci-test up -d
+# Remove everything:    docker compose -f docker-compose-floci.yml -p s3b-floci-test down -v
+# The init container writes the AWS CLI profiles to ./generated (copy them to ~/.aws).
+# Accounts and expected results: test-profiles.txt (PHẦN B).
+
+services:
+  floci:
+    image: floci/floci:latest
+    container_name: s3b-test-floci
+    ports:
+      - "${FLOCI_PORT:-4566}:4566"
+    environment:
+      FLOCI_STORAGE_MODE: hybrid
+      # Check access keys and IAM policies like real AWS. Admin key: test / test.
+      FLOCI_SERVICES_IAM_ENFORCEMENT_ENABLED: "true"
+      FLOCI_AUTH_VALIDATE_SIGNATURES: "true"
+      FLOCI_SERVICES_S3_ENFORCE_AUTH: "true"
+    volumes:
+      - floci-data:/app/data
+    restart: unless-stopped
+
+  # One-shot: creates IAM users, roles, policies, buckets and the AWS CLI profile files.
+  floci-init:
+    image: amazon/aws-cli:2.15.41
+    container_name: s3b-test-floci-init
+    depends_on:
+      - floci
+    entrypoint: ["/bin/bash", "/scripts/floci-init.sh"]
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_PAGER: ""
+      # Port written into endpoint_url of the generated profiles (as seen from the host).
+      FLOCI_PORT: "${FLOCI_PORT:-4566}"
+    volumes:
+      - ./scripts/floci-init.sh:/scripts/floci-init.sh:ro
+      - ./generated:/out
+    restart: "no"
+
+volumes:
+  floci-data:

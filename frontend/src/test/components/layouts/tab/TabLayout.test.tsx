@@ -1,13 +1,13 @@
 import { act, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import TabLayout from '@/components/layouts/tab/TabLayout';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 const detailRenders = vi.hoisted(() => {
-  const state = { count: 0, bump: () => void (state.count += 1) };
+  const state = { count: 0, created: 0, bump: () => void (state.count += 1) };
   return state;
 });
 const dnd = vi.hoisted(() => ({
@@ -19,9 +19,15 @@ const dnd = vi.hoisted(() => ({
 
 // Like the real TabDetail, the mock is memoized.
 vi.mock('@/components/layouts/tab/components/TabDetail', () => ({
-  default: memo(() => {
+  default: memo(({ tabId }: { tabId: string }) => {
     detailRenders.bump();
-    return <div>tab detail</div>;
+    // Local state: proves a hidden tab keeps its instance instead of being mounted again.
+    const [instance] = useState(() => detailRenders.created++);
+    return (
+      <div data-testid={`detail-${tabId}`} data-instance={instance}>
+        tab detail
+      </div>
+    );
   }),
 }));
 vi.mock('@/components/layouts/tab/components/TabDragPreview', () => ({
@@ -31,10 +37,8 @@ vi.mock('@/components/layouts/tab/components/TabLabel', () => ({ default: () => 
 vi.mock('motion/react', async () => (await import('@/test/_helpers/mockMotion')).motionMock);
 vi.mock('@dnd-kit/core', () => {
   class PointerSensor {}
-  class KeyboardSensor {}
   return {
     PointerSensor,
-    KeyboardSensor,
     closestCenter: () => [],
     useSensor: (sensor: unknown, options: unknown) => ({ sensor, options }),
     useSensors: (...sensors: unknown[]) => {
@@ -53,7 +57,6 @@ vi.mock('@dnd-kit/core', () => {
 });
 vi.mock('@dnd-kit/sortable', () => ({
   horizontalListSortingStrategy: 'horizontal',
-  sortableKeyboardCoordinates: () => undefined,
   SortableContext: ({ children, ...props }: any) => {
     dnd.sortableProps = props;
     return <>{children}</>;
@@ -77,6 +80,7 @@ describe('TabLayout', () => {
   beforeEach(() => {
     useTabListStore.getState().reset();
     detailRenders.count = 0;
+    detailRenders.created = 0;
   });
 
   it('adds a tab from the add button and closes it again', async () => {
@@ -120,6 +124,33 @@ describe('TabLayout', () => {
     expect(detailRenders.count).toBe(rendersBefore);
   });
 
+  describe('single versus multiple tabs', () => {
+    it('with one tab: not closable, not sortable, no drag hint', () => {
+      renderWithProviders(<TabLayout />);
+      expect(screen.queryByRole('button', { name: 'Close tab' })).not.toBeInTheDocument();
+      expect(screen.getByRole('tab')).not.toHaveAttribute('title');
+      expect(screen.getByRole('tab')).not.toHaveAttribute('aria-describedby');
+    });
+
+    it('with several tabs: closable and sortable with drag hint', async () => {
+      renderWithProviders(<TabLayout />);
+      await userEvent.click(screen.getByRole('button', { name: 'Add tab' }));
+      expect(screen.getAllByRole('button', { name: 'Close tab' })).toHaveLength(2);
+      for (const tab of screen.getAllByRole('tab')) {
+        expect(tab).toHaveAttribute('title', 'Drag to reorder (Ctrl+Shift+←/→)');
+        expect(tab).toHaveAttribute('aria-describedby', 'x');
+      }
+    });
+
+    it('goes back to non-sortable after closing down to one tab', async () => {
+      renderWithProviders(<TabLayout />);
+      await userEvent.click(screen.getByRole('button', { name: 'Add tab' }));
+      await userEvent.click(screen.getAllByRole('button', { name: 'Close tab' })[0]);
+      expect(screen.getByRole('tab')).not.toHaveAttribute('title');
+      expect(screen.queryByRole('button', { name: 'Close tab' })).not.toBeInTheDocument();
+    });
+  });
+
   describe('drag and drop', () => {
     it('configures sortable items, sensors and modifiers', async () => {
       renderWithProviders(<TabLayout />);
@@ -128,10 +159,13 @@ describe('TabLayout', () => {
       expect(dnd.sortableProps.items).toEqual(tabIds());
       expect(dnd.sortableProps.strategy).toBe('horizontal');
       expect(dnd.props.modifiers).toBeUndefined();
+      expect(dnd.props.accessibility).toEqual({
+        screenReaderInstructions: { draggable: 'Drag to reorder (Ctrl+Shift+←/→)' },
+      });
       expect(dnd.overlayProps.modifiers).toEqual(['h', 's']);
       expect(dnd.overlayProps.dropAnimation).toBeNull();
       expect(dnd.sensors[0].options).toEqual({ activationConstraint: { distance: 5 } });
-      expect(dnd.sensors[1].options).toHaveProperty('coordinateGetter');
+      expect(dnd.sensors).toHaveLength(1);
       expect(screen.getAllByRole('tab')).toHaveLength(2);
     });
 
@@ -206,6 +240,67 @@ describe('TabLayout', () => {
       expect(screen.queryByTestId('preview')).not.toBeInTheDocument();
     });
 
+    describe('keyboard reorder (Ctrl+Shift+Left/Right)', () => {
+      const pressMove = async (tab: HTMLElement, key: 'ArrowLeft' | 'ArrowRight') => {
+        await userEvent.click(tab);
+        await userEvent.keyboard(`{Control>}{Shift>}{${key}}{/Shift}{/Control}`);
+      };
+
+      const selected = () => screen.getAllByRole('tab').map(tab => tab.getAttribute('aria-selected'));
+
+      it('swaps a middle tab with its neighbour, keeping it active and focused', async () => {
+        renderWithProviders(<TabLayout />);
+        await userEvent.click(screen.getByRole('button', { name: 'Add tab' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Add tab' }));
+        const [a, b, c] = tabIds();
+
+        const moved = screen.getAllByRole('tab')[1];
+        await pressMove(moved, 'ArrowLeft');
+        expect(tabIds()).toEqual([b, a, c]);
+        expect(useTabListStore.getState().activeTab).toBe(b);
+        expect(selected()).toEqual(['true', 'false', 'false']);
+        expect(screen.getAllByRole('tab')[0]).toHaveFocus();
+
+        await pressMove(screen.getAllByRole('tab')[0], 'ArrowRight');
+        expect(tabIds()).toEqual([a, b, c]);
+        expect(useTabListStore.getState().activeTab).toBe(b);
+        expect(selected()).toEqual(['false', 'true', 'false']);
+        expect(screen.getAllByRole('tab')[1]).toHaveFocus();
+      });
+
+      it('does not wrap around for the first tab moving left or the last tab moving right', async () => {
+        renderWithProviders(<TabLayout />);
+        await userEvent.click(screen.getByRole('button', { name: 'Add tab' }));
+        const before = tabIds();
+
+        await pressMove(screen.getAllByRole('tab')[0], 'ArrowLeft');
+        expect(tabIds()).toEqual(before);
+        expect(useTabListStore.getState().activeTab).toBe(before[0]);
+        expect(selected()).toEqual(['true', 'false']);
+
+        await pressMove(screen.getAllByRole('tab')[1], 'ArrowRight');
+        expect(tabIds()).toEqual(before);
+        expect(useTabListStore.getState().activeTab).toBe(before[1]);
+        expect(selected()).toEqual(['false', 'true']);
+      });
+
+      it.each([
+        ['Ctrl only', '{Control>}{ArrowLeft}{/Control}'],
+        ['Shift only', '{Shift>}{ArrowLeft}{/Shift}'],
+        ['plain arrow', '{ArrowLeft}'],
+      ])('%s keeps the order and lets Mantine switch to the neighbour tab', async (_name, keys) => {
+        renderWithProviders(<TabLayout />);
+        await userEvent.click(screen.getByRole('button', { name: 'Add tab' }));
+        const before = tabIds();
+
+        await userEvent.click(screen.getAllByRole('tab')[1]);
+        await userEvent.keyboard(keys);
+
+        expect(tabIds()).toEqual(before);
+        expect(useTabListStore.getState().activeTab).toBe(before[0]);
+      });
+    });
+
     describe('collisionDetection', () => {
       const rect = (left: number, width = 100) => ({ left, right: left + width, width });
       const detect = (
@@ -274,6 +369,23 @@ describe('TabLayout', () => {
 
       const target = container.querySelector('[data-active]') as HTMLElement;
       expect(scrollIntoView().mock.contexts).toContain(target);
+    });
+
+    it('scrolls the real active tab, not a tab that is still exiting', () => {
+      const { container } = renderWithProviders(<TabLayout />);
+      const viewport = screen.getByRole('tab').closest('div[style*="overflow-x"]')!;
+      // A closing tab stays in the DOM (data-active, data-exiting) before the real active tab.
+      const ghost = screen.getByRole('tab').cloneNode(true) as HTMLElement;
+      ghost.setAttribute('data-exiting', '');
+      viewport.prepend(ghost);
+      scrollIntoView().mockClear();
+
+      act(() => useTabListStore.getState().addTab());
+
+      const real = container.querySelector('[data-active]:not([data-exiting])');
+      expect(real).not.toBe(ghost);
+      expect(scrollIntoView().mock.contexts).toContain(real);
+      expect(scrollIntoView().mock.contexts).not.toContain(ghost);
     });
 
     it('resumes scrolling into view after a cancelled drag', () => {
@@ -363,6 +475,48 @@ describe('TabLayout', () => {
       scrollIntoView().mockClear();
       act(() => useTabListStore.getState().addTab());
       expect(scrollIntoView()).toHaveBeenCalled();
+    });
+  });
+
+  describe('hidden tabs (Activity)', () => {
+    const tabState = { currentView: 'bucketList' as const, prefix: '', selectionItem: {}, deletingItems: {} };
+    const twoTabs = () => useTabListStore.setState({ activeTab: 'a', tabList: { a: tabState, b: tabState } });
+
+    it('does not mount the content of a tab that was never active', () => {
+      twoTabs();
+      renderWithProviders(<TabLayout />);
+
+      expect(screen.getByTestId('detail-a')).toBeInTheDocument();
+      expect(screen.queryByTestId('detail-b')).not.toBeInTheDocument();
+      expect(detailRenders.created).toBe(1);
+    });
+
+    it('hides the content of the inactive tab instead of unmounting it, and shows it again as the same instance', () => {
+      twoTabs();
+      renderWithProviders(<TabLayout />);
+
+      act(() => useTabListStore.getState().setActiveTab('b'));
+      expect(screen.getByTestId('detail-b')).toBeVisible();
+      expect(screen.getByTestId('detail-a')).toBeInTheDocument();
+      expect(screen.getByTestId('detail-a')).not.toBeVisible();
+
+      act(() => useTabListStore.getState().setActiveTab('a'));
+      expect(screen.getByTestId('detail-a')).toBeVisible();
+      expect(screen.getByTestId('detail-b')).not.toBeVisible();
+      expect(screen.getByTestId('detail-a')).toHaveAttribute('data-instance', '0');
+      expect(detailRenders.created).toBe(2);
+    });
+
+    it('unmounts the content when its tab is closed', async () => {
+      twoTabs();
+      renderWithProviders(<TabLayout />);
+      act(() => useTabListStore.getState().setActiveTab('b'));
+
+      await userEvent.click(screen.getAllByRole('button', { name: 'Close tab' })[0]);
+
+      expect(tabIds()).toEqual(['b']);
+      expect(screen.queryByTestId('detail-a')).not.toBeInTheDocument();
+      expect(screen.getByTestId('detail-b')).toBeVisible();
     });
   });
 });

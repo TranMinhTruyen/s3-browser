@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useMasterDataStore } from '@/common/stores/masterDataStore';
 import RegionCombobox from '@/components/inputs/combobox/RegionCombobox';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
 vi.mock('@wails/S3Browser/internal/handlers/masterhandler', () => ({

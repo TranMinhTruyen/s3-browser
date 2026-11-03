@@ -50,7 +50,7 @@ S3Browser は **Wails v3**（Go バックエンド、React + TypeScript フロ�
 - ポータブル版作成用の WebView2 Fixed Version（Microsoft の CAB を展開したもの）。
 - ドキュメント生成のみに [Node.js](https://nodejs.org/)。
 
-コマンド（特記なき限りプロジェクトルート `App/S3Browser` で実行）:
+コマンド（特記なき限りリポジトリのルートで実行）:
 
 ```bash
 # フロントエンドの依存関係をインストール

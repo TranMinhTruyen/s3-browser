@@ -13,9 +13,11 @@ import { useElementSize } from '@mantine/hooks';
 import { CheckIcon } from 'lucide-react';
 import { ChangeEvent, memo, useCallback, useMemo, useState } from 'react';
 import { useFieldError } from '@/common/hooks/useFieldError';
+import { useSelectCombobox } from '@/common/hooks/useSelectCombobox';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
 import ComboboxClearButton from '@/components/inputs/combobox/ComboboxClearButton';
-import { useSelectCombobox } from '@/components/inputs/combobox/useSelectCombobox';
+import ComboboxOptions from '@/components/inputs/combobox/ComboboxOptions';
+import TruncatedText from '@/components/TruncatedText';
 
 type ComboboxItem = { name: string; value: string };
 
@@ -131,18 +133,18 @@ function Combobox(props: ComboboxProps) {
           rightSectionPointerEvents={showClear ? 'all' : 'none'}
           onClick={onClickToggle}
         >
-          {selected ? <Text truncate="end">{selected.name}</Text> : <Input.Placeholder>{label}</Input.Placeholder>}
+          {selected ? <TruncatedText>{selected.name}</TruncatedText> : <Input.Placeholder>{label}</Input.Placeholder>}
         </InputBase>
       </MCombobox.Target>
 
       <MCombobox.Dropdown miw={targetWidth}>
         {hasSearch && <MCombobox.Search value={keyword} onChange={onChangeKeyword} placeholder={searchPlaceholder} />}
-        <MCombobox.Options mah={250} style={{ overflowY: 'auto' }}>
+        <ComboboxOptions>
           {filteredData.map(item => (
             <ComboboxOption key={item.value} item={item} active={item.value === current} />
           ))}
           {filteredData.length === 0 && emptyText && <MCombobox.Empty>{emptyText}</MCombobox.Empty>}
-        </MCombobox.Options>
+        </ComboboxOptions>
       </MCombobox.Dropdown>
     </MCombobox>
   );

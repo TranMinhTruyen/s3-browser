@@ -180,7 +180,7 @@ Deleting a **folder** removes the folder **and everything inside it**. The confi
 Click the **Settings** button (gear icon) at the top right, left of the download history button.
 
 - **Theme**: Light, Dark or Follow system.
-- **Font**: Nunito, System UI, Segoe UI, Arial, Monospace or JetBrains Mono.
+- **Font**: Nunito, System UI, Segoe UI, Arial, Roboto, Be Vietnam Pro, Verdana, Meiryo UI, Monospace or JetBrains Mono.
 - **Language**: English, Tiếng Việt or 日本語. The whole interface changes, including messages.
 - **Launch on Windows startup**: start S3Browser when you sign in to Windows. Only shown in the installed Windows version (not the portable one).
 

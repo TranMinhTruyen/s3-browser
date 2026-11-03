@@ -1,0 +1,16 @@
+{
+  "contextMenu": {
+    "connect": "接続",
+    "disconnect": "切断",
+    "edit": "編集",
+    "delete": "削除"
+  },
+  "tooltip": {
+    "connect": "接続",
+    "createProfile": "接続プロファイルを作成",
+    "refresh": "接続プロファイル一覧を再読み込み"
+  },
+  "profile": {
+    "empty": "接続プロファイルがありません。上のボタンから作成してください。"
+  }
+}

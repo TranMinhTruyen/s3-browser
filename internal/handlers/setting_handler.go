@@ -34,11 +34,6 @@ func (h *SettingHandler) SaveSettings(input models.SaveSettingInput) models.Outp
 	return h.setting.SaveSettings(input)
 }
 
-// ResetSettings returns the default settings without saving them.
-func (h *SettingHandler) ResetSettings() models.Output[models.SettingsOutput] {
-	return h.setting.ResetSettings()
-}
-
 // GetTabState returns the remembered tabs.
 func (h *SettingHandler) GetTabState() models.Output[models.TabState] {
 	return h.setting.GetTabState()

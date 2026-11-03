@@ -1,4 +1,8 @@
 {
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "permissions": {
     "allow": [
       "Bash(git status *)",
@@ -31,6 +35,7 @@
       "Bash(gh auth status*)",
       "Bash(gh pr list *)",
       "Bash(gh pr view *)",
+      "Bash(wc -l *)",
       "Bash(gh pr create --base master *)"
     ],
     "deny": [

@@ -2,15 +2,15 @@ import type { MantineColorScheme, MantineColorSchemeManager } from '@mantine/cor
 import {
   type AppSettingValues,
   DEFAULT_SETTINGS,
-  FONT_FAMILIES,
   FONTS,
   type FontKey,
+  getFontFamily,
   LANGUAGES,
   type LanguageKey,
   THEMES,
   type ThemeKey,
 } from '@/common/cnst/settingConst';
-import i18n from '@/locales/i18n';
+import i18n, { loadLanguage } from '@/locales/i18n';
 
 /** Returns `value` when it is one of `list`, otherwise `fallback`. */
 const pick = <T extends string>(list: readonly T[], value: unknown, fallback: T): T =>
@@ -52,21 +52,36 @@ function setSchemeAttribute(theme: ThemeKey): void {
   document.documentElement.setAttribute('data-mantine-color-scheme', dark ? 'dark' : 'light');
 }
 
+let languageRequest = 0;
+
 /**
  * Applies theme, font and language to the running app (used for load, preview and revert).
  * The scheme attribute is also set directly, so it is right before React mounts (no light flash on a dark OS).
+ * Theme and font apply at once; the language switches after its bundle is loaded (the old one stays meanwhile).
+ * Resolves when the language is settled; a newer call supersedes an older one still loading.
  */
-export function applySettings(settings: AppSettingValues): void {
+export async function applySettings(settings: AppSettingValues): Promise<void> {
   currentScheme = settings.theme;
   setSchemeAttribute(settings.theme);
   onSchemeChange?.(settings.theme);
 
-  const family = FONT_FAMILIES[settings.font];
+  const family = getFontFamily(settings.font, settings.language);
   const style = document.documentElement.style;
-  style.setProperty('--mantine-font-family', family);
-  style.setProperty('--mantine-font-family-headings', family);
+  // A font change restyles the whole page: write it only when the family (incl. CJK fallback) really changed.
+  if (style.getPropertyValue('--mantine-font-family') !== family) {
+    style.setProperty('--mantine-font-family', family);
+    style.setProperty('--mantine-font-family-headings', family);
+  }
+  document.documentElement.lang = settings.language;
 
-  if (i18n.language !== settings.language) {
-    i18n.changeLanguage(settings.language);
+  const request = ++languageRequest;
+  const loaded = await loadLanguage(settings.language);
+  if (request !== languageRequest) {
+    return;
+  }
+  if (!loaded) {
+    document.documentElement.lang = i18n.language; // load failed: the old language stays, so does <html lang>
+  } else if (i18n.language !== settings.language) {
+    await i18n.changeLanguage(settings.language);
   }
 }

@@ -8,6 +8,8 @@ export type ConnectionProfile = ConnectionProfileOutput & {};
 
 interface ProfileState {
   connectionProfiles: Partial<Record<string, ConnectionProfile>>;
+  /** True once the profiles were loaded successfully, so an empty list can be told from "not loaded yet". */
+  loaded: boolean;
 }
 
 interface ProfileAction {
@@ -25,6 +27,7 @@ const SCOPE = 'profile';
 export const useProfileStore = createAppStore<ProfileState & ProfileAction>(
   (set, get) => ({
     connectionProfiles: {},
+    loaded: false,
 
     loadConnectionProfiles: async () => {
       const output = await callIPC(GetAllConnectionProfile, [], { scope: `${SCOPE}/loadConnectionProfiles` });
@@ -32,7 +35,11 @@ export const useProfileStore = createAppStore<ProfileState & ProfileAction>(
         return false;
       }
 
-      set({ connectionProfiles: output.connectionProfiles ?? {} }, undefined, `${SCOPE}/setConnectionProfiles`);
+      set(
+        { connectionProfiles: output.connectionProfiles ?? {}, loaded: true },
+        undefined,
+        `${SCOPE}/setConnectionProfiles`
+      );
       return true;
     },
 
@@ -68,6 +75,7 @@ export const useProfileStore = createAppStore<ProfileState & ProfileAction>(
       set(
         {
           connectionProfiles: {},
+          loaded: false,
         },
         undefined,
         `${SCOPE}/reset`

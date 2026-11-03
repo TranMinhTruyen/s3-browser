@@ -4,18 +4,17 @@ import {
   type DragEndEvent,
   DragOverlay,
   type DragStartEvent,
-  KeyboardSensor,
   PointerSensor,
   type UniqueIdentifier,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
 import { restrictToFirstScrollableAncestor, restrictToHorizontalAxis } from '@dnd-kit/modifiers';
-import { horizontalListSortingStrategy, SortableContext, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
+import { horizontalListSortingStrategy, SortableContext } from '@dnd-kit/sortable';
 import { Group, Paper, Tabs } from '@mantine/core';
 import { Plus } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Activity, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
@@ -39,16 +38,20 @@ function TabLayout() {
   const activeTab = useTabListStore(s => s.activeTab);
   const tabIds = useTabListStore(useShallow(s => Object.keys(s.tabList)));
 
+  // Closing and dragging only make sense with at least two tabs.
+  const multiple = tabIds.length > 1;
+
   const addTab = useTabListStore(s => s.addTab);
   const closeTab = useTabListStore(s => s.closeTab);
   const setActiveTab = useTabListStore(s => s.setActiveTab);
   const moveTab = useTabListStore(s => s.moveTab);
 
-  // Pointer needs a 5px move to start a drag, so clicks still select the tab.
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
+  // Pointer only (needs a 5px move to start a drag, so clicks still select the tab).
+  // No KeyboardSensor: Space/Enter select the tab; keyboard reordering is Ctrl+Shift+Left/Right (onMoveTab).
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  // Screen readers announce this for each tab instead of dnd-kit's default (keyboard drag is not supported).
+  const accessibility = useMemo(() => ({ screenReaderInstructions: { draggable: t('tooltip.dragTab') } }), [t]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const draggingRef = useRef(false);
@@ -91,6 +94,16 @@ function TabLayout() {
     [moveTab]
   );
 
+  // Swap a tab with its neighbour; reads the store so the callback stays stable. No-op at either end.
+  const onMoveTab = useCallback(
+    (tabId: string, offset: -1 | 1) => {
+      const ids = Object.keys(useTabListStore.getState().tabList);
+      const target = ids[ids.indexOf(tabId) + offset];
+      if (target) moveTab(tabId, target);
+    },
+    [moveTab]
+  );
+
   const onClickCloseTab = useCallback(
     (tabId: string, e: React.MouseEvent) => {
       e.stopPropagation();
@@ -111,7 +124,9 @@ function TabLayout() {
   const tabCount = tabIds.length;
   useEffect(() => {
     if (draggingRef.current) return;
-    scrollerRef.current?.querySelector('[data-active]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    scrollerRef.current
+      ?.querySelector('[data-active]:not([data-exiting])')
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }, [tabCount, activeTab]);
 
   return (
@@ -123,10 +138,12 @@ function TabLayout() {
       h="100%"
       style={{ display: 'flex', flexDirection: 'column' }}
     >
-      <Tabs.List style={{ flexWrap: 'nowrap', alignItems: 'center' }}>
+      {/* Transparent border var hides the outline variant's list line: the panel below has its own full border. */}
+      <Tabs.List style={{ flexWrap: 'nowrap', alignItems: 'center', '--tab-border-color': 'transparent' }}>
         <TabScroller ref={scrollerRef}>
           <DndContext
             sensors={sensors}
+            accessibility={accessibility}
             collisionDetection={collisionDetection}
             onDragStart={onDragStartTab}
             onDragEnd={onDragEndTab}
@@ -136,20 +153,27 @@ function TabLayout() {
               <Group gap={0} wrap="nowrap" style={{ alignSelf: 'flex-end' }}>
                 <AnimatePresence initial={false}>
                   {tabIds.map(key => (
-                    <SortableTab key={key} tabId={key} closable={tabIds.length > 1} onClickClose={onClickCloseTab} />
+                    <SortableTab
+                      key={key}
+                      tabId={key}
+                      closable={multiple}
+                      sortable={multiple}
+                      onClickClose={onClickCloseTab}
+                      onMoveTab={onMoveTab}
+                    />
                   ))}
                 </AnimatePresence>
               </Group>
             </SortableContext>
             {createPortal(
               <DragOverlay modifiers={OVERLAY_MODIFIERS} dropAnimation={null}>
-                {activeId && <TabDragPreview tabId={activeId} closable={tabIds.length > 1} />}
+                {activeId && <TabDragPreview tabId={activeId} closable={multiple} />}
               </DragOverlay>,
               document.body
             )}
           </DndContext>
         </TabScroller>
-        <ActionIcon style={{ flexShrink: 0, marginLeft: '2px' }} onClick={addTab} aria-label={t('tooltip.addTab')}>
+        <ActionIcon style={{ flexShrink: 0, marginLeft: '2px' }} onClick={addTab} tooltip={t('tooltip.addTab')}>
           <Plus />
         </ActionIcon>
       </Tabs.List>
@@ -157,14 +181,12 @@ function TabLayout() {
       {tabIds.map(key => (
         <Tabs.Panel key={key} value={key} style={{ flex: 1, minHeight: 0 }}>
           {visited.has(key) && (
-            <Paper
-              withBorder
-              h="100%"
-              p="4px"
-              style={{ overflow: 'hidden', borderTop: 'none', borderTopLeftRadius: 0, borderTopRightRadius: 0 }}
-            >
-              <TabDetail tabId={key} />
-            </Paper>
+            // Hidden tabs keep their state but stop rendering/effects until shown again.
+            <Activity mode={key === activeTab ? 'visible' : 'hidden'}>
+              <Paper withBorder radius="md" h="100%" p="4px" style={{ overflow: 'hidden' }}>
+                <TabDetail tabId={key} />
+              </Paper>
+            </Activity>
           )}
         </Tabs.Panel>
       ))}

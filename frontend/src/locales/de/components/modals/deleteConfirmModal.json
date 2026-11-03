@@ -1,0 +1,8 @@
+{
+  "title": "Dateien löschen",
+  "warning": "Diese Aktion kann nicht rückgängig gemacht werden.",
+  "rootFolder": "(ausgewählte Dateien)",
+  "selectedCount": "{selected}/{total} Dateien",
+  "selectAll": "Alle auswählen",
+  "delete": "Löschen"
+}

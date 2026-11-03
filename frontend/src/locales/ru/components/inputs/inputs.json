@@ -1,0 +1,18 @@
+{
+  "awsProfileCombobox": {
+    "label": "Профиль AWS CLI",
+    "searchPlaceholder": "Поиск профиля",
+    "empty": "Профили не найдены. Проверьте файл ~/.aws/config.",
+    "credentialProcessWarning": "При подключении этот профиль выполняет свою команду credential_process."
+  },
+  "regionCombobox": {
+    "label": "Регион",
+    "placeholder": "Выберите регион",
+    "availabilityZones": {
+      "01": "Азиатско-Тихоокеанский регион",
+      "02": "Северная Америка",
+      "03": "Европа",
+      "04": "Южная Америка"
+    }
+  }
+}

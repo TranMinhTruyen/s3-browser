@@ -3,13 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import TabBreadcrumb from '@/components/layouts/tab/components/TabBreadcrumb';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 const TAB = 't1';
 const setup = (prefix: string, bucket: string | undefined = 'bkt') => {
   useTabListStore.setState({
     activeTab: TAB,
-    tabList: { [TAB]: { currentView: 'objectList', bucket, prefix, selectionItem: [], deletingItems: [] } as never },
+    tabList: { [TAB]: { currentView: 'objectList', bucket, prefix, selectionItem: {}, deletingItems: {} } as never },
   });
   const { container } = renderWithProviders(<TabBreadcrumb tabId={TAB} bucket={bucket} prefix={prefix} />);
   // Anchors without href have no link role, so the clickable crumbs are found by tag.

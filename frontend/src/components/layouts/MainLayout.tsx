@@ -1,12 +1,15 @@
-import { AppShell, Group, Splitter, Tooltip } from '@mantine/core';
+import { AppShell, Group, Image, Splitter, Text } from '@mantine/core';
+import { Window } from '@wailsio/runtime';
 import { RotateCcwClock, Settings } from 'lucide-react';
-import { useCallback } from 'react';
+import { type MouseEvent, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet } from 'react-router-dom';
+import { tintedColor } from '@/common/theme/tintedColor';
 import ActionIcon from '@/components/buttons/ActionIcon';
-import DownloaderWindow from '@/components/layouts/downloader/DownloaderWindow';
 import LeftNavbar from '@/components/layouts/navbar/LeftNavbar';
-import UploaderWindow from '@/components/layouts/uploader/UploaderWindow';
+import DownloaderWindow from '@/components/layouts/transfer/downloader/DownloaderWindow';
+import UploaderWindow from '@/components/layouts/transfer/uploader/UploaderWindow';
+import WindowControls from '@/components/layouts/window/WindowControls';
 import { showHistoryModal, showSettingModal } from '@/components/modals/lazyModals';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 
@@ -14,9 +17,14 @@ import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 function MainLayout() {
   const { t } = useTranslation('historyModal');
   const { t: tSetting } = useTranslation('settingModal');
+  const { t: tCommon } = useTranslation('common');
 
   const onClickHistory = useCallback(() => {
     showHistoryModal();
+  }, []);
+
+  const onDoubleClickHeader = useCallback((e: MouseEvent<HTMLElement>) => {
+    if (!(e.target as HTMLElement).closest('button')) Window.ToggleMaximise();
   }, []);
 
   const onClickSetting = useCallback(() => {
@@ -26,20 +34,27 @@ function MainLayout() {
   return (
     <AppShell header={{ height: '48px' }} styles={{ main: { height: '100vh' } }}>
       <AppShell.Header>
-        <Group h="100%" px="sm" style={{ backgroundColor: INFO_BG_COLOR }}>
-          <Group gap="xs"></Group>
-          <Group ml="auto">
-            <Tooltip label={tSetting('title')}>
-              <ActionIcon aria-label={tSetting('title')} color="gray" onClick={onClickSetting}>
-                <Settings />
-              </ActionIcon>
-            </Tooltip>
+        <Group
+          h="100%"
+          px="sm"
+          style={{ backgroundColor: INFO_BG_COLOR, '--wails-draggable': 'drag' }}
+          onDoubleClick={onDoubleClickHeader}
+        >
+          <Group gap="xs" wrap="nowrap">
+            <Image src="/favicon.ico" alt="" w={20} h={20} />
+            <Text fw={600}>{tCommon('appName')}</Text>
+          </Group>
 
-            <Tooltip label={t('title')}>
-              <ActionIcon aria-label={t('title')} color="gray" onClick={onClickHistory}>
-                <RotateCcwClock />
-              </ActionIcon>
-            </Tooltip>
+          <Group gap="xs" wrap="nowrap" ml="auto" style={{ '--wails-draggable': 'no-drag' }}>
+            <ActionIcon tooltip={tSetting('title')} {...tintedColor('gray', 'ai')} onClick={onClickSetting}>
+              <Settings />
+            </ActionIcon>
+
+            <ActionIcon tooltip={t('title')} {...tintedColor('gray', 'ai')} onClick={onClickHistory}>
+              <RotateCcwClock />
+            </ActionIcon>
+
+            <WindowControls />
           </Group>
         </Group>
       </AppShell.Header>

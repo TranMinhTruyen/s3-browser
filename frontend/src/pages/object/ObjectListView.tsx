@@ -3,24 +3,34 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { DeleteObject, DeletePrefix, DownloadObject } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
-import { Output } from '@wails/S3Browser/models/common';
-import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
+import {
+  Ref,
+  RefObject,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
+import { useFilesDroppedUpload } from '@/common/hooks/useFilesDroppedUpload';
+import { useObjectPaging } from '@/common/hooks/useObjectPaging';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
+import { onTabGone } from '@/common/utils/tabUtils';
 import Button from '@/components/buttons/Button';
-import ConfirmModal from '@/components/modals/ConfirmModal';
-import ObjectItem from '@/pages/object/ObjectItem';
-import { useFilesDroppedUpload } from '@/pages/object/useFilesDroppedUpload';
-import { useObjectPaging } from '@/pages/object/useObjectPaging';
+import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
+import { showDeleteConfirmModal, showDeleteResultModal } from '@/components/modals/lazyModals';
+import ObjectItem, { OBJECT_ROW_HEIGHT, ObjectItemLabels } from '@/pages/object/ObjectItem';
 
-// Download or delete is refused above this many objects at once.
-const MAX_OBJECTS_PER_ACTION = 5;
-// Backend message code of a key deleted successfully (its `params.object` is the key).
-const DELETE_OBJECT_SUCCESS_CODE = 'S3S005';
-// Row height before measuring, and the gap between rows.
-const ROW_ESTIMATE_SIZE = 104;
+// Download is refused above this many objects at once (delete has no limit).
+const MAX_DOWNLOAD_OBJECTS = 5;
 const ROW_GAP = 8;
+// Load the next page once this many screens of rows are left below the viewport (at least PREFETCH_MIN_ROWS rows).
+const PREFETCH_SCREENS = 2;
+const PREFETCH_MIN_ROWS = 2;
 
 export type ObjectListViewRef = {
   onRefresh?: () => Promise<void>;
@@ -43,6 +53,16 @@ function ObjectListView(props: ObjectListViewProps) {
 
   const { t } = useTranslation('object', { keyPrefix: 'page' });
 
+  // Rows get their texts from here, so they do not subscribe to i18n themselves.
+  const labels = useMemo<ObjectItemLabels>(
+    () => ({
+      moreActions: t('tooltip.moreActions'),
+      download: t('action.download'),
+      delete: t('action.delete'),
+    }),
+    [t]
+  );
+
   const [scrollMargin, setScrollMargin] = useState(0);
 
   const connectionId = profile?.id;
@@ -62,7 +82,10 @@ function ObjectListView(props: ObjectListViewProps) {
     loadNextPage,
     onRefresh,
     onClickLoadMore,
-  } = useObjectPaging({ connectionId, profileName, bucket, prefix, keyword, listKey, scrollRef });
+  } = useObjectPaging({ tabId, connectionId, profileName, bucket, prefix, keyword, listKey, scrollRef });
+  // Read at click time, so the menu handler keeps its identity when pages load.
+  const objectDatasRef = useRef(objectDatas);
+  objectDatasRef.current = objectDatas;
   const changePrefix = useTabListStore(s => s.changePrefix);
   const addSelectItem = useTabListStore(s => s.addSelectItem);
   const removeSelectItem = useTabListStore(s => s.removeSelectItem);
@@ -82,21 +105,8 @@ function ObjectListView(props: ObjectListViewProps) {
     [closeDetail, tabId]
   );
 
-  // Runs on success and on partial failure: only keys reported as S3S005 are actually deleted. Output may be undefined.
-  const closeDetailIfDeletedByOutput = useCallback(
-    (output?: Output<unknown>) =>
-      closeDetailIfDeleted(
-        (output?.messageList ?? [])
-          .filter(message => message.messageCode === DELETE_OBJECT_SUCCESS_CODE)
-          .map(message => message.params?.object)
-          .filter(object => object !== undefined && object !== null && object !== '')
-          .map(String)
-      ),
-    [closeDetailIfDeleted]
-  );
-
-  // The selection does not outlive the view.
-  useEffect(() => () => clearSelectItem(tabId), [clearSelectItem, tabId]);
+  // The selection does not outlive the view, but survives the tab being hidden (Activity).
+  useEffect(() => onTabGone(tabId, () => clearSelectItem(tabId)), [clearSelectItem, tabId]);
 
   const onClickMenuButton = useCallback(
     async (keys: string[], action: 'download' | 'delete') => {
@@ -105,7 +115,7 @@ function ObjectListView(props: ObjectListViewProps) {
       // the folder marker, not the files in it, so they are never sent.
       const objects = keys.filter(key => !key.endsWith('/'));
       if (objects.length === 0) return;
-      if (objects.length > MAX_OBJECTS_PER_ACTION) {
+      if (action === 'download' && objects.length > MAX_DOWNLOAD_OBJECTS) {
         ConfirmModal.show({
           type: 'warning',
           confirmCode: 'C000005',
@@ -117,25 +127,32 @@ function ObjectListView(props: ObjectListViewProps) {
           await callIPC(DownloadObject, [{ connectionId: connectionId, profileName, bucket, objects }]);
           break;
         case 'delete': {
-          const confirmModal = await ConfirmModal.show({
-            type: 'warning',
-            confirmCode: 'C000004',
-            params: {
-              object: objects.join(', '),
-            },
-            size: 'md',
+          // Sizes are looked up only for the picked keys, from the list as it is now.
+          const selectedKeys = new Set(objects);
+          const sizes = new Map<string, number>();
+          for (const o of objectDatasRef.current) if (selectedKeys.has(o.key)) sizes.set(o.key, o.size);
+          const toDelete = await showDeleteConfirmModal({
+            files: objects.map(key => ({ key, size: sizes.get(key) ?? 0 })),
           });
-          if (confirmModal) {
-            setDeleting(tabId, objects, true);
+          // Canceled, or every file unticked.
+          if (toDelete?.length) {
+            setDeleting(tabId, toDelete, true);
             try {
-              // Result is false if any key failed; each key reports its own result: S3S005 deleted, S3E013 failed.
-              await callIPC(DeleteObject, [{ connectionId, profileName, bucket, objects }], {
-                resolveAction: closeDetailIfDeletedByOutput,
-                rejectAction: closeDetailIfDeletedByOutput,
-              });
+              const body = await callIPC(DeleteObject, [{ connectionId, profileName, bucket, objects: toDelete }]);
+              if (body) {
+                closeDetailIfDeleted(body.deleted ?? []);
+                // Opened before the refresh, so a failing refresh cannot hide the result. Not awaited: the
+                // selection is cleared and the list is usable while the dialog is open.
+                void showDeleteResultModal({
+                  deleted: body.deleted?.length ?? 0,
+                  failed: body.failed?.length ?? 0,
+                  deletedKeys: body.deleted ?? [],
+                  failures: body.failed ?? [],
+                });
+              }
               await onRefresh();
             } finally {
-              setDeleting(tabId, objects, false);
+              setDeleting(tabId, toDelete, false);
             }
           }
           break;
@@ -143,14 +160,14 @@ function ObjectListView(props: ObjectListViewProps) {
       }
       clearSelectItem(tabId);
     },
-    [bucket, profileName, connectionId, onRefresh, setDeleting, tabId, clearSelectItem, closeDetailIfDeletedByOutput]
+    [bucket, profileName, connectionId, onRefresh, setDeleting, tabId, clearSelectItem, closeDetailIfDeleted]
   );
 
   const onClickDeleteFolder = useCallback(
     async (folderKey: string, name: string) => {
       if (!connectionId || !bucket) return;
       // Already being deleted: ignore a repeated click.
-      if (useTabListStore.getState().tabList[tabId]?.deletingItems?.includes(folderKey)) return;
+      if (useTabListStore.getState().tabList[tabId]?.deletingItems[folderKey] === true) return;
       const confirmed = await ConfirmModal.show({
         type: 'warning',
         confirmCode: 'C000006',
@@ -164,7 +181,10 @@ function ObjectListView(props: ObjectListViewProps) {
       try {
         const body = await callIPC(DeletePrefix, [{ connectionId, profileName, bucket, prefix: folderKey }]);
         // Keep the drawer on failure (even a partial one); the object it shows may still exist.
-        if (body) closeDetailIfDeleted([folderKey]);
+        if (body?.failed === 0) closeDetailIfDeleted([folderKey]);
+        // Opened before the refresh, so a failing refresh cannot hide the result.
+        if (body)
+          void showDeleteResultModal({ deleted: body.deleted, failed: body.failed, failures: body.failures ?? [] });
         // Refresh even on failure or cancel: part of the folder may already be deleted.
         await onRefresh();
       } finally {
@@ -210,7 +230,7 @@ function ObjectListView(props: ObjectListViewProps) {
   const virtualizer = useVirtualizer({
     count: objectList.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_ESTIMATE_SIZE,
+    estimateSize: () => OBJECT_ROW_HEIGHT,
     getItemKey: idx => objectList[idx].key,
     gap: ROW_GAP,
     overscan: 5,
@@ -219,18 +239,22 @@ function ObjectListView(props: ObjectListViewProps) {
 
   const virtualItems = virtualizer.getVirtualItems();
   const lastVisibleIndex = virtualizer.range?.endIndex ?? -1;
+  const prefetchRows = Math.max(
+    PREFETCH_MIN_ROWS,
+    Math.ceil((PREFETCH_SCREENS * (virtualizer.scrollRect?.height ?? 0)) / (OBJECT_ROW_HEIGHT + ROW_GAP))
+  );
 
   useEffect(() => {
     // After a failed page, wait for Refresh instead of retrying in a loop.
     if (!nextCursor || isLoadingMore || loadMoreError || cursorKey !== listKey) return;
     // An empty search has nothing to scroll: the user continues it with the "load more" button.
     if (keyword && objectList.length === 0) return;
-    // Load the next page once only 2 items are left below the viewport.
-    if (lastVisibleIndex >= objectList.length - 1 - 2) {
+    if (lastVisibleIndex >= objectList.length - 1 - prefetchRows) {
       loadNextPage();
     }
   }, [
     lastVisibleIndex,
+    prefetchRows,
     objectList.length,
     nextCursor,
     isLoadingMore,
@@ -242,7 +266,8 @@ function ObjectListView(props: ObjectListViewProps) {
   ]);
 
   const isEmpty = objectList.length === 0;
-  const showEmpty = !!keyword && isLoaded && isEmpty && !nextCursor;
+  // Only once this very list has loaded (not while loading, after an error, or on a stale previous list).
+  const showEmpty = !!connectionId && !!bucket && isLoaded && cursorKey === listKey && isEmpty && !nextCursor;
   // Retry after a failed page, or continue a search that found nothing yet.
   const showLoadMore = !!keyword && !!nextCursor && !isLoadingMore && (isEmpty || loadMoreError);
   // With no rows the list has no height, so the footer flows normally instead of hanging below the rows.
@@ -253,8 +278,6 @@ function ObjectListView(props: ObjectListViewProps) {
       {virtualItems.map(row => (
         <div
           key={row.key}
-          data-index={row.index}
-          ref={virtualizer.measureElement}
           style={{
             position: 'absolute',
             width: '100%',
@@ -264,6 +287,7 @@ function ObjectListView(props: ObjectListViewProps) {
           <ObjectItem
             tabId={tabId}
             item={objectList[row.index]}
+            labels={labels}
             onOpenDetail={onOpenDetail}
             onToggleSelect={onToggleSelect}
             onClickMenuButton={onClickMenuButton}
@@ -279,7 +303,7 @@ function ObjectListView(props: ObjectListViewProps) {
       ) : null}
       {showEmpty ? (
         <Center style={footerStyle} py="8px">
-          <Text c="dimmed">{t('search.empty')}</Text>
+          <Text c="dimmed">{keyword ? t('search.empty') : t('emptyFolder')}</Text>
         </Center>
       ) : null}
       {showLoadMore ? (

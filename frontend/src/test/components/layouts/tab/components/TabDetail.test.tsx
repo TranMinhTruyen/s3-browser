@@ -3,17 +3,17 @@ import userEvent from '@testing-library/user-event';
 import { ConnectS3ByProfile, UploadObject } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { ObjectItem } from '@wails/S3Browser/models/bucket';
-import { type Ref, useImperativeHandle } from 'react';
+import { Activity, type Ref, useImperativeHandle } from 'react';
 import { toast } from 'sonner';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import TabDetail from '@/components/layouts/tab/components/TabDetail';
-import { showConnectModal } from '@/components/modals/lazyModals';
-import UploadPickerModal from '@/components/modals/UploadPickerModal';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { showConnectModal, showUploadPickerModal } from '@/components/modals/lazyModals';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 type BucketStubProps = {
+  tabId: string;
   keyword?: string;
   profile?: { id?: string } | null;
   active: boolean;
@@ -26,12 +26,13 @@ const h = vi.hoisted(() => ({ bucketRefresh: vi.fn(), objectRefresh: vi.fn(), me
 
 // The two list views are tested on their own: here they are stubs exposing their ref and callbacks.
 vi.mock('@/pages/bucket/BucketListView', () => ({
-  default: function BucketListViewStub({ profile, active, keyword, onSelectBucket, ref }: BucketStubProps) {
+  default: function BucketListViewStub({ tabId, profile, active, keyword, onSelectBucket, ref }: BucketStubProps) {
     useImperativeHandle(ref, () => ({ onRefresh: h.bucketRefresh }), []);
     return (
       <div>
         <span>{`bucket list profile=${profile?.id ?? 'none'} active=${active}`}</span>
         <span>{`bucket keyword=[${keyword}]`}</span>
+        <span>{`bucket tab=${tabId}`}</span>
         <button type="button" onClick={() => onSelectBucket('my-bucket')}>
           pick bucket
         </button>
@@ -58,8 +59,7 @@ vi.mock('@/components/layouts/tab/components/ObjectDetailDrawer', () => ({
     <div>{`drawer ${connectionId} ${bucket}`}</div>
   ),
 }));
-vi.mock('@/components/modals/lazyModals', () => ({ showConnectModal: vi.fn() }));
-vi.mock('@/components/modals/UploadPickerModal', () => ({ default: { show: vi.fn() } }));
+vi.mock('@/components/modals/lazyModals', () => ({ showConnectModal: vi.fn(), showUploadPickerModal: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn() }));
 vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
@@ -69,12 +69,19 @@ vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
 
 const TAB = 't1';
 const profile = (patch: Partial<ConnectionProfileOutput> = {}) =>
-  ({ id: 'p1', name: 'Prof', accessKey: 'ak', isConnected: false, ...patch }) as ConnectionProfileOutput;
+  ({
+    id: 'p1',
+    name: 'Prof',
+    accessKey: 'ak',
+    savedSecrets: ['secretKey'],
+    isConnected: false,
+    ...patch,
+  }) as ConnectionProfileOutput;
 const tabState = (patch: Record<string, unknown> = {}) => ({
   currentView: 'bucketList' as const,
   prefix: '',
-  selectionItem: [] as string[],
-  deletingItems: [] as string[],
+  selectionItem: {},
+  deletingItems: {},
   profileId: 'p1',
   ...patch,
 });
@@ -104,7 +111,7 @@ describe('TabDetail', () => {
 
   describe('header', () => {
     it('lists the profiles and updates the tab when one is chosen', async () => {
-      setTab({ profileId: null, selectionItem: ['x'], bucket: 'old', prefix: 'a/' });
+      setTab({ profileId: null, selectionItem: { x: true }, bucket: 'old', prefix: 'a/' });
       const user = setup();
       await user.click(profilePicker());
       await user.click(await screen.findByText('Prof'));
@@ -113,7 +120,7 @@ describe('TabDetail', () => {
         currentView: 'bucketList',
         bucket: undefined,
         prefix: '',
-        selectionItem: [],
+        selectionItem: {},
       });
     });
 
@@ -154,11 +161,39 @@ describe('TabDetail', () => {
       expect(callIPC).not.toHaveBeenCalled();
     });
 
+    it('opens the connect modal when the secret key is not saved', async () => {
+      setProfile({ savedSecrets: [] });
+      const user = setup();
+      await user.click(btn('Connect'));
+      expect(showConnectModal).toHaveBeenCalledExactlyOnceWith({
+        mode: 'manualconnect',
+        connectionProfile: profile({ savedSecrets: [] }),
+      });
+      expect(callIPC).not.toHaveBeenCalled();
+    });
+
+    it('opens the connect modal for an assume role profile with an MFA device', async () => {
+      setProfile({ authType: 'assumeRole', authConfig: { mfaSerial: 'arn:mfa' } as never });
+      const user = setup();
+      await user.click(btn('Connect'));
+      expect(showConnectModal).toHaveBeenCalledTimes(1);
+      expect(callIPC).not.toHaveBeenCalled();
+    });
+
+    it('connects directly a profile that needs no secret', async () => {
+      vi.mocked(callIPC).mockResolvedValue({ isConnected: true } as never);
+      setProfile({ authType: 'defaultChain', accessKey: '', savedSecrets: [] });
+      const user = setup();
+      await user.click(btn('Connect'));
+      expect(callIPC).toHaveBeenCalledExactlyOnceWith(ConnectS3ByProfile, ['p1'], { signal: expect.any(AbortSignal) });
+      expect(showConnectModal).not.toHaveBeenCalled();
+    });
+
     it('connects through the backend and marks the profile as connected', async () => {
       vi.mocked(callIPC).mockResolvedValue({ isConnected: true } as never);
       const user = setup();
       await user.click(btn('Connect'));
-      expect(callIPC).toHaveBeenCalledExactlyOnceWith(ConnectS3ByProfile, ['p1']);
+      expect(callIPC).toHaveBeenCalledExactlyOnceWith(ConnectS3ByProfile, ['p1'], { signal: expect.any(AbortSignal) });
       await waitFor(() => expect(useProfileStore.getState().connectionProfiles.p1?.isConnected).toBe(true));
       expect(btn('Connect')).toBeDisabled();
     });
@@ -224,12 +259,12 @@ describe('TabDetail', () => {
     });
 
     it('refreshes the object list and clears the selection', async () => {
-      setTab({ currentView: 'objectList', bucket: 'b', selectionItem: ['k'] });
+      setTab({ currentView: 'objectList', bucket: 'b', selectionItem: { k: true } });
       const user = setup();
       await user.click(btn('Refresh object list'));
       expect(h.objectRefresh).toHaveBeenCalledTimes(1);
       expect(h.bucketRefresh).not.toHaveBeenCalled();
-      expect(tab().selectionItem).toEqual([]);
+      expect(tab().selectionItem).toEqual({});
     });
 
     it('goes back to the bucket list from the bucket root', async () => {
@@ -293,18 +328,18 @@ describe('TabDetail', () => {
     });
 
     it('clears, downloads and deletes the selection', async () => {
-      setTab({ currentView: 'objectList', bucket: 'b', selectionItem: ['k1', 'k2'] });
+      setTab({ currentView: 'objectList', bucket: 'b', selectionItem: { k1: true, k2: true } });
       const user = setup();
       await user.click(btn('Download selected'));
       expect(h.menu).toHaveBeenLastCalledWith(['k1', 'k2'], 'download');
       await user.click(btn('Delete selected'));
       expect(h.menu).toHaveBeenLastCalledWith(['k1', 'k2'], 'delete');
       await user.click(btn('Clear selected'));
-      expect(tab().selectionItem).toEqual([]);
+      expect(tab().selectionItem).toEqual({});
     });
 
     it('disables clear and download while a selected item is being deleted', () => {
-      setTab({ currentView: 'objectList', bucket: 'b', selectionItem: ['k1'], deletingItems: ['k1'] });
+      setTab({ currentView: 'objectList', bucket: 'b', selectionItem: { k1: true }, deletingItems: { k1: true } });
       setup();
       expect(btn('Clear selected')).toBeDisabled();
       expect(btn('Download selected')).toBeDisabled();
@@ -312,7 +347,7 @@ describe('TabDetail', () => {
     });
 
     it('keeps the selection actions enabled when only other items are being deleted', () => {
-      setTab({ currentView: 'objectList', bucket: 'b', selectionItem: ['k1'], deletingItems: ['other'] });
+      setTab({ currentView: 'objectList', bucket: 'b', selectionItem: { k1: true }, deletingItems: { other: true } });
       setup();
       expect(btn('Clear selected')).toBeEnabled();
     });
@@ -361,7 +396,7 @@ describe('TabDetail', () => {
         const nameBox = () => screen.getByPlaceholderText('Search by name');
         beforeEach(() => {
           setProfile({ isConnected: true });
-          setTab({ selectionItem: ['k'] });
+          setTab({ selectionItem: { k: true } });
         });
 
         it('applies the keyword to the bucket list only, without touching the selection', async () => {
@@ -369,7 +404,7 @@ describe('TabDetail', () => {
           expect(screen.getByText('bucket keyword=[]')).toBeInTheDocument();
           await user.type(nameBox(), ' foo {Enter}');
           expect(screen.getByText('bucket keyword=[foo]')).toBeInTheDocument();
-          expect(tab().selectionItem).toEqual(['k']);
+          expect(tab().selectionItem).toEqual({ k: true });
         });
 
         it('refreshes the bucket list when the same keyword is submitted again', async () => {
@@ -388,7 +423,7 @@ describe('TabDetail', () => {
           await user.click(btn('Clear search'));
           expect(screen.getByText('bucket keyword=[]')).toBeInTheDocument();
           expect(nameBox()).toHaveValue('');
-          expect(tab().selectionItem).toEqual(['k']);
+          expect(tab().selectionItem).toEqual({ k: true });
         });
 
         it('gives the bucket list no keyword while the object list is shown, and drops it on return', async () => {
@@ -404,12 +439,12 @@ describe('TabDetail', () => {
       });
 
       it('applies the keyword to the object list and clears the selection', async () => {
-        objectTab({ selectionItem: ['k'] });
+        objectTab({ selectionItem: { k: true } });
         const user = setup();
         expect(screen.getByText('keyword=[]')).toBeInTheDocument();
         await user.type(searchBox(), ' foo {Enter}');
         expect(screen.getByText('keyword=[foo]')).toBeInTheDocument();
-        expect(tab().selectionItem).toEqual([]);
+        expect(tab().selectionItem).toEqual({});
       });
 
       it('searches with the search button', async () => {
@@ -436,33 +471,33 @@ describe('TabDetail', () => {
       });
 
       it('changes nothing when cleared without an applied keyword', async () => {
-        objectTab({ selectionItem: ['k'] });
+        objectTab({ selectionItem: { k: true } });
         const user = setup();
         await user.type(searchBox(), '{Enter}');
         await user.type(searchBox(), 'foo');
         await user.click(btn('Clear search'));
         expect(screen.getByText('keyword=[]')).toBeInTheDocument();
         expect(searchBox()).toHaveValue('');
-        expect(tab().selectionItem).toEqual(['k']);
+        expect(tab().selectionItem).toEqual({ k: true });
         expect(h.objectRefresh).not.toHaveBeenCalled();
       });
 
       it('clears the selection on clear only when a keyword is applied', async () => {
-        objectTab({ selectionItem: ['k'] });
+        objectTab({ selectionItem: { k: true } });
         const user = setup();
         // Empty Enter with no keyword: selection stays.
         await user.type(searchBox(), '{Enter}');
-        expect(tab().selectionItem).toEqual(['k']);
+        expect(tab().selectionItem).toEqual({ k: true });
         // Text typed but never applied, then cleared: selection stays.
         await user.type(searchBox(), 'foo');
         await user.click(btn('Clear search'));
-        expect(tab().selectionItem).toEqual(['k']);
+        expect(tab().selectionItem).toEqual({ k: true });
         // Applied keyword, then cleared: selection is cleared.
         await user.type(searchBox(), 'foo{Enter}');
-        useTabListStore.getState().addSelectItem(TAB, ['k2']);
-        expect(tab().selectionItem).toEqual(['k2']);
+        act(() => useTabListStore.getState().addSelectItem(TAB, ['k2']));
+        expect(tab().selectionItem).toEqual({ k2: true });
         await user.click(btn('Clear search'));
-        expect(tab().selectionItem).toEqual([]);
+        expect(tab().selectionItem).toEqual({});
       });
 
       it('searches again from the first page when the same keyword is submitted', async () => {
@@ -470,11 +505,11 @@ describe('TabDetail', () => {
         const user = setup();
         await user.type(searchBox(), 'foo{Enter}');
         expect(h.objectRefresh).not.toHaveBeenCalled();
-        useTabListStore.getState().addSelectItem(TAB, ['k']);
+        act(() => useTabListStore.getState().addSelectItem(TAB, ['k']));
         await user.click(btn('Search'));
         expect(h.objectRefresh).toHaveBeenCalledTimes(1);
         expect(screen.getByText('keyword=[foo]')).toBeInTheDocument();
-        expect(tab().selectionItem).toEqual([]);
+        expect(tab().selectionItem).toEqual({});
       });
 
       it('does not refresh when the keyword differs from the applied one', async () => {
@@ -524,10 +559,12 @@ describe('TabDetail', () => {
         objectTab();
         const user = setup();
         await user.type(searchBox(), 'foo{Enter}');
-        useProfileStore.setState({
-          connectionProfiles: { p1: profile({ isConnected: true }), p2: profile({ id: 'p2', isConnected: true }) },
+        act(() => {
+          useProfileStore.setState({
+            connectionProfiles: { p1: profile({ isConnected: true }), p2: profile({ id: 'p2', isConnected: true }) },
+          });
+          useTabListStore.getState().updateTab(TAB, { profileId: 'p2' });
         });
-        act(() => useTabListStore.getState().updateTab(TAB, { profileId: 'p2' }));
         await waitFor(() => expect(screen.getByText('keyword=[]')).toBeInTheDocument());
         expect(searchBox()).toHaveValue('');
       });
@@ -542,7 +579,7 @@ describe('TabDetail', () => {
   });
 
   describe('upload', () => {
-    const pickerMock = vi.mocked(UploadPickerModal.show);
+    const pickerMock = vi.mocked(showUploadPickerModal);
     const file = (name: string) => ({ path: `/local/${name}`, relKey: name, size: 1, isLarge: false });
     const picked = (bucket: string, names: string[] = ['a.txt']) => ({ bucket, files: names.map(file) });
     const uploadBtn = () => btn('Upload files');
@@ -623,6 +660,15 @@ describe('TabDetail', () => {
       pickerMock.mockResolvedValue(null as never);
       const user = setup();
       await user.click(uploadBtn());
+      expect(callIPC).not.toHaveBeenCalled();
+      expect(useTabListStore.getState().uploadingTabId).toBeNull();
+    });
+
+    it('does not upload when the picker chunk failed to load (undefined)', async () => {
+      pickerMock.mockResolvedValue(undefined);
+      const user = setup();
+      await user.click(uploadBtn());
+      await waitFor(() => expect(pickerMock).toHaveBeenCalledTimes(1));
       expect(callIPC).not.toHaveBeenCalled();
       expect(useTabListStore.getState().uploadingTabId).toBeNull();
     });
@@ -742,6 +788,71 @@ describe('TabDetail', () => {
       await waitFor(() => expect(toast.warning).toHaveBeenCalled());
       expect(callIPC).not.toHaveBeenCalled();
       expect(useTabListStore.getState().uploadingTabId).toBe('other');
+    });
+  });
+
+  it('passes its tab id to the bucket list', () => {
+    setup();
+    expect(screen.getByText(`bucket tab=${TAB}`)).toBeInTheDocument();
+  });
+
+  describe('scroll position when the tab is hidden (Activity)', () => {
+    // jsdom has no layout: back scrollTop with a variable and let the test play the browser (display none resets it).
+    const scroller = () => {
+      const el = document.querySelector<HTMLElement>(`[data-tab-id="${TAB}"]`)!;
+      const box = { top: 0, writes: [] as number[] };
+      Object.defineProperty(el, 'scrollTop', {
+        configurable: true,
+        get: () => box.top,
+        set: (value: number) => {
+          box.top = value;
+          box.writes.push(value);
+        },
+      });
+      return box;
+    };
+    const ui = (mode: 'visible' | 'hidden') => (
+      <Activity mode={mode}>
+        <TabDetail tabId={TAB} />
+      </Activity>
+    );
+
+    it('restores the scroll offset that the browser reset while the tab was hidden', () => {
+      const view = renderWithProviders(ui('visible'));
+      const box = scroller();
+      box.top = 240;
+
+      view.rerender(ui('hidden'));
+      box.top = 0;
+      view.rerender(ui('visible'));
+
+      expect(box.top).toBe(240);
+    });
+
+    it('does not touch the scroll offset when the tab was never scrolled', () => {
+      const view = renderWithProviders(ui('visible'));
+      const box = scroller();
+
+      view.rerender(ui('hidden'));
+      view.rerender(ui('visible'));
+
+      expect(box.writes).toEqual([]);
+    });
+
+    it('keeps the latest offset across several hide and show rounds', () => {
+      const view = renderWithProviders(ui('visible'));
+      const box = scroller();
+      box.top = 100;
+      view.rerender(ui('hidden'));
+      box.top = 0;
+      view.rerender(ui('visible'));
+      box.top = 300;
+
+      view.rerender(ui('hidden'));
+      box.top = 0;
+      view.rerender(ui('visible'));
+
+      expect(box.top).toBe(300);
     });
   });
 });

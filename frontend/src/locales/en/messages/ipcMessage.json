@@ -2,14 +2,21 @@
   "common": {
     "CME001": "Error while call IPC"
   },
+  "params": {
+    "secret": {
+      "mfaCode": "MFA code",
+      "secretKey": "Secret key",
+      "ldapPassword": "LDAP password",
+      "keyPassword": "Private key password",
+      "oidcSession": "Sign-in"
+    }
+  },
   "bucket": {
     "S3S001": "Test connection profile {name} to S3 success.",
     "S3S002": "Profile: {name} is connected.",
     "S3S003": "Profile: {name} disconnect success.",
     "S3S004": "Download file {object} success, destination {dest}.",
-    "S3S005": "Delete file {object} success.",
     "S3S006": "Upload file {name} success, key {key}.",
-    "S3S007": "Deleted {count} object(s) under folder {prefix}.",
     "S3E001": "Access key or secret key is not valid for this endpoint.",
     "S3E002": "The endpoint rejected.",
     "S3E003": "Timed out reaching the endpoint, check the address and whether the server is running.",
@@ -21,7 +28,6 @@
     "S3E009": "Destination {path} not exists.",
     "S3E011": "Get download history error.",
     "S3E012": "Download object: {object} error.",
-    "S3E013": "Delete object: {object} error.",
     "S3E014": "File {name} not exist.",
     "S3E015": "File {name} can't access.",
     "S3E016": "File {name} can't open.",
@@ -29,7 +35,6 @@
     "S3E018": "Folder {folder} has more than {max} files to upload.",
     "S3E019": "Invalid upload path for file {name}.",
     "S3E020": "Invalid folder {prefix}, it cannot be deleted.",
-    "S3E021": "Delete folder {prefix} error: {failed} object(s) failed, {deleted} deleted.",
     "S3E022": "Folder {folder} has more than {max} files over {size} GiB to upload.",
     "S3E023": "Upload at most {max} files at a time.",
     "S3E024": "Get object {key} detail error, profile: {name}, bucket: {bucket}.",
@@ -38,12 +43,35 @@
     "S3E027": "Search bucket error, profile: {name}.",
     "S3E028": "Search keyword must not be empty.",
     "S3E029": "Choose files error.",
+    "S3E030": "Credentials of profile {name} expired, please connect again.",
+    "S3E031": "Assume role {roleArn} failed: role not found or not allowed (sts:AssumeRole).",
+    "S3E032": "MFA code is invalid or expired.",
+    "S3E033": "AWS CLI profile {profile} not found or invalid.",
+    "S3E034": "SSO session of profile {profile} expired, run: aws sso login --profile {profile}",
+    "S3E035": "No credentials found in the environment (default chain).",
+    "S3E036": "credential_process of profile {profile} failed.",
+    "S3E045": "Read AWS config files error.",
     "S3W001": "Access bucket is limited.",
     "S3W002": "Download object: {object} is canceled.",
     "S3W004": "Upload file {name} is canceled.",
     "S3W005": "Another upload is running, please wait until it finishes.",
     "S3W006": "Skipped {count} item(s) that cannot be uploaded (unreadable, symbolic link or not a regular file).",
-    "S3W007": "The drop holds more than {max} files, the files after the first {max} are ignored."
+    "S3W007": "The drop holds more than {max} files, the files after the first {max} are ignored.",
+    "S3E037": "MinIO STS request failed.",
+    "S3E038": "LDAP username or password is incorrect.",
+    "S3E039": "OIDC login was canceled or timed out.",
+    "S3E040": "Callback port {port} is in use, choose another port.",
+    "S3E041": "OIDC login failed: {detail}.",
+    "S3E042": "Certificate or key file {path} not found, please choose it again.",
+    "S3E043": "Certificate or key is invalid or does not match. A password protected key must be PKCS#8 (convert it with: openssl pkcs8 -topk8).",
+    "S3E044": "None of the entered buckets can be accessed anonymously.",
+    "S3E046": "{secret} is required to renew the credentials of profile {name} (it is not saved).",
+    "S3E047": "OIDC sign-in session was not found or has expired, sign in again.",
+    "S3E048": "The private key {path} is password protected, enter its password.",
+    "S3E049": "CA certificate file {path} not found or has no valid certificate.",
+    "S3W008": "Credentials of profile {name} expire in {minutes} minute(s) and cannot be renewed automatically.",
+    "S3W009": "Bucket {bucket} cannot be accessed anonymously.",
+    "S3W010": "Credentials of profile {name} expire soon, enter a new MFA code to keep the connection."
   },
   "master": {
     "MTE001": "Error while loading master data."
@@ -55,6 +83,8 @@
     "PFE005": "Update profile [{name}] error.",
     "PFE006": "Delete profile [{name}] error.",
     "PFE007": "Profile [{name}] has uploads or downloads in progress, cannot delete.",
+    "PFE008": "Authentication method {authType} is not valid for provider {provider}.",
+    "PFE009": "Authentication settings are invalid.",
     "PFS001": "Add new profile [{name}] success.",
     "PFS002": "Update profile [{name}] success.",
     "PFS003": "Delete profile [{name}] success."

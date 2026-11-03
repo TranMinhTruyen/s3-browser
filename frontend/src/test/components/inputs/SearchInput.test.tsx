@@ -2,7 +2,7 @@ import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import SearchInput from '@/components/inputs/SearchInput';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 function setup(props: Partial<React.ComponentProps<typeof SearchInput>> = {}) {
   const onSearch = vi.fn();

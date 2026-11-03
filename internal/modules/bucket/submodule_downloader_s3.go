@@ -1,0 +1,105 @@
+package bucket
+
+import (
+	"S3Browser/internal/pkg/utils"
+	"S3Browser/models"
+	"context"
+	"errors"
+	"io"
+	"os"
+	"sync/atomic"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
+)
+
+// download saves the object to dest with the transfer manager, which fetches the object's
+// parts in parallel, retries a part whose body read fails, sends If-Match with the ETag of
+// the first part (so a file never mixes old and new content) and validates checksums.
+// Its progress is reported through tracker under id.
+// On failure or cancellation, no file is left at dest.
+func download(
+	ctx context.Context,
+	tm *transfermanager.Client,
+	bucket, key, dest string,
+	id string,
+	tracker *utils.BatchReporter[models.DownloadProgressOutput],
+) (int64, error) {
+	// Step 1: write to a temporary ".part" file and rename it at the end, so dest never ends
+	// up incomplete. Any failure or cancel removes the .part file.
+	part := dest + ".part"
+	f, err := os.Create(part)
+	if err != nil {
+		return 0, err
+	}
+	defer func() {
+		// if already closed at the end of the function, this just returns an ignored error
+		_ = f.Close()
+		if err != nil {
+			// failed or canceled: delete the temporary file
+			_ = os.Remove(part)
+		}
+	}()
+
+	w := &countingWriterAt{w: f}
+	var total atomic.Int64
+	total.Store(-1)
+	// The tracker samples the counter on a shared ticker instead of emitting an event per write,
+	// which would flood the frontend; done() emits the final value when the download returns.
+	done := tracker.Track(id, func() (models.DownloadProgressOutput, bool) {
+		t := total.Load()
+		if t < 0 { // size not known yet
+			return models.DownloadProgressOutput{}, false
+		}
+		return models.DownloadProgressOutput{DownloadId: id, Downloaded: min(w.n.Load(), t), Total: t}, true
+	})
+	defer done()
+
+	// Step 2: download the parts in parallel into the temporary file.
+	out, err := tm.DownloadObject(ctx, &transfermanager.DownloadObjectInput{
+		Bucket:   &bucket,
+		Key:      &key,
+		WriterAt: w,
+	}, func(o *transfermanager.Options) {
+		o.ObjectProgressListeners.Register(onTransferStart(func(size int64) { total.Store(size) }))
+	})
+	if err != nil {
+		if UnwrapAwsError(err) == "PreconditionFailed" {
+			err = errors.New("object has changed on server during download")
+		}
+		return 0, err
+	}
+
+	// Step 3: the file must be closed before renaming (Windows can't rename an open file).
+	if err = f.Close(); err != nil {
+		return 0, err
+	}
+
+	if err = os.Rename(part, dest); err != nil {
+		return 0, err
+	}
+
+	return aws.ToInt64(out.ContentLength), nil
+}
+
+// countingWriterAt writes to w and adds the number of written bytes to n (used for progress).
+type countingWriterAt struct {
+	w io.WriterAt
+	n atomic.Int64
+}
+
+// WriteAt implements io.WriterAt and counts the bytes written.
+func (c *countingWriterAt) WriteAt(p []byte, off int64) (int, error) {
+	n, err := c.w.WriteAt(p, off)
+	c.n.Add(int64(n))
+	return n, err
+}
+
+// onTransferStart is a transfer manager listener that receives the object size
+// once the first response arrives.
+type onTransferStart func(size int64)
+
+// OnObjectTransferStart implements the transfer manager listener and passes on the size.
+func (f onTransferStart) OnObjectTransferStart(_ context.Context, e *transfermanager.ObjectTransferStartEvent) {
+	f(e.TotalBytes)
+}

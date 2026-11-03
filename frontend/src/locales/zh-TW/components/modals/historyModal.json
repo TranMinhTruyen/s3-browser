@@ -1,0 +1,10 @@
+{
+  "title": "下載記錄",
+  "label": {
+    "emptyLbl": "空",
+    "sizeLbl": "大小",
+    "downloadAtLbl": "下載時間",
+    "statusLbl": "狀態",
+    "destPathLbl": "目的地路徑"
+  }
+}

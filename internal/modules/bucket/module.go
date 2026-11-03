@@ -30,14 +30,8 @@ var (
 	// Download file {object} success, destination {dest}
 	S3S004 = "S3S004"
 
-	// Delete file {object} success.
-	S3S005 = "S3S005"
-
 	// Upload file {name} success, key {key}.
 	S3S006 = "S3S006"
-
-	// Deleted {count} object(s) under folder {prefix}.
-	S3S007 = "S3S007"
 
 	// ---- Error ----
 
@@ -74,9 +68,6 @@ var (
 	// Download object: {object} error.
 	S3E012 = "S3E012"
 
-	// Delete object: {object} error.
-	S3E013 = "S3E013"
-
 	// File {name} not exist.
 	S3E014 = "S3E014"
 
@@ -97,9 +88,6 @@ var (
 
 	// Invalid folder {prefix}, it can't be deleted.
 	S3E020 = "S3E020"
-
-	// Delete folder {prefix} error: {failed} object(s) failed, {deleted} deleted.
-	S3E021 = "S3E021"
 
 	// Folder {folder} has more than {max} files over {size} GiB to upload.
 	S3E022 = "S3E022"
@@ -125,6 +113,67 @@ var (
 	// Choose files error.
 	S3E029 = "S3E029"
 
+	// Credentials of profile {name} expired, please connect again.
+	S3E030 = "S3E030"
+
+	// Assume role {roleArn} failed: role not found or not allowed (sts:AssumeRole).
+	S3E031 = "S3E031"
+
+	// MFA code is invalid or expired.
+	S3E032 = "S3E032"
+
+	// AWS CLI profile {profile} not found or invalid.
+	S3E033 = "S3E033"
+
+	// SSO session of profile {profile} expired, run: aws sso login --profile {profile}
+	S3E034 = "S3E034"
+
+	// No credentials found in the environment (default chain).
+	S3E035 = "S3E035"
+
+	// credential_process of profile {profile} failed.
+	S3E036 = "S3E036"
+
+	// MinIO STS request failed.
+	S3E037 = "S3E037"
+
+	// LDAP username or password is incorrect.
+	S3E038 = "S3E038"
+
+	// OIDC login was canceled or timed out.
+	S3E039 = "S3E039"
+
+	// Callback port {port} is in use, choose another port.
+	S3E040 = "S3E040"
+
+	// OIDC login failed: {detail}.
+	S3E041 = "S3E041"
+
+	// Certificate or key file {path} not found, please choose it again.
+	S3E042 = "S3E042"
+
+	// Certificate or key is invalid or does not match.
+	S3E043 = "S3E043"
+
+	// None of the entered buckets can be accessed anonymously.
+	S3E044 = "S3E044"
+
+	// Read AWS config files error.
+	S3E045 = "S3E045"
+
+	// {secret} is required to renew the credentials of profile {name} (it is not saved).
+	// Param secret is a stable key: mfaCode, secretKey, ldapPassword, oidcSession or keyPassword.
+	S3E046 = "S3E046"
+
+	// OIDC sign-in session was not found or has expired, sign in again.
+	S3E047 = "S3E047"
+
+	// The private key {path} is password protected, enter its password.
+	S3E048 = "S3E048"
+
+	// CA certificate file {path} not found or has no valid certificate.
+	S3E049 = "S3E049"
+
 	// ---- Warning ----
 
 	// Access bucket is limited.
@@ -146,6 +195,16 @@ var (
 	// Used by the frontend only.
 	// The drop holds more than {max} files, the files after the first {max} are ignored.
 	S3W007 = "S3W007"
+
+	// Credentials of profile {name} expire in {minutes} minute(s) and cannot be renewed automatically.
+	S3W008 = "S3W008"
+
+	// Bucket {bucket} cannot be accessed anonymously.
+	S3W009 = "S3W009"
+
+	// Used by the frontend only.
+	// Credentials of profile {name} expire soon, enter a new MFA code to keep the connection.
+	S3W010 = "S3W010"
 )
 
 // Module is the public API of the bucket module.
@@ -160,8 +219,11 @@ type Module struct {
 	submoduleBucketMng          *submoduleBucketMng
 	submoduleObjMng             *submoduleObjMng
 	submoduleSearchMng          *submoduleSearchMng
+	submoduleAwsProfilesMng     *submoduleAwsProfilesMng
 	submoduleDownloaderMng      *submoduleDownloaderMng
 	submoduleUploaderMng        *submoduleUploaderMng
+	submoduleOidcMng            *submoduleOidcMng
+	submoduleAuthFilesMng       *submoduleAuthFilesMng
 }
 
 // NewModule creates the bucket module and its submodules.
@@ -172,14 +234,17 @@ func NewModule(
 	db *sql.DB,
 	profileModule *profile.Module,
 ) *Module {
-	submoduleCfgMng := newSubmoduleCfgMng(logger)
+	submoduleOidcMng := newSubmoduleOidcMng(app, logger)
+	submoduleCfgMng := newSubmoduleCfgMng(logger, submoduleOidcMng)
 	submoduleDownloadHistoryMng := newSubmoduleDownloadHistoryMng(app, logger, db)
 	submoduleConnMng := newSubmoduleConnMng(app, logger, global, profileModule, submoduleCfgMng)
 	submoduleBucketMng := newSubmoduleBucketMng(app, logger, global)
 	submoduleObjMng := newSubmoduleObjMng(app, logger, global)
 	submoduleSearchMng := newSubmoduleSearchMng(app, logger, global)
+	submoduleAwsProfilesMng := newSubmoduleAwsProfilesMng(logger)
 	submoduleDownloaderMng := newSubmoduleDownloaderMng(app, logger, global, submoduleDownloadHistoryMng)
 	submoduleUploaderMng := newSubmoduleUploaderMng(app, logger, global)
+	submoduleAuthFilesMng := newSubmoduleAuthFilesMng(app, logger)
 
 	return &Module{
 		logger:  logger.With("modules", "bucket"),
@@ -192,8 +257,11 @@ func NewModule(
 		submoduleBucketMng:          submoduleBucketMng,
 		submoduleObjMng:             submoduleObjMng,
 		submoduleSearchMng:          submoduleSearchMng,
+		submoduleAwsProfilesMng:     submoduleAwsProfilesMng,
 		submoduleDownloaderMng:      submoduleDownloaderMng,
 		submoduleUploaderMng:        submoduleUploaderMng,
+		submoduleOidcMng:            submoduleOidcMng,
+		submoduleAuthFilesMng:       submoduleAuthFilesMng,
 	}
 }
 
@@ -203,27 +271,71 @@ func NewModule(
 // If false, input is a new connection: a profile is created from it, and if that fails
 // the connection is dropped.
 // On success, the connection is kept for subsequent bucket/object operations.
-func (m *Module) Connect(input models.ConnectionProfileInput, isExistingProfile bool,
+// ctx is the call context: canceling it aborts the connect without a message.
+func (m *Module) Connect(
+	ctx context.Context,
+	input models.ConnectionProfileInput,
+	isExistingProfile bool,
 ) models.Output[models.ConnectOutput] {
-	return m.submoduleConnMng.connectAction(input, isExistingProfile)
+	return m.submoduleConnMng.connectAction(ctx, input, isExistingProfile)
 }
 
 // TestConnection checks whether the given credentials and endpoint are valid
 // without keeping the connection open. Useful for validating a profile
-// before saving it.
-func (m *Module) TestConnection(input models.ConnectionProfileInput) models.Output[models.ConnectOutput] {
-	return m.submoduleConnMng.testAction(input)
+// before saving it. ctx is the call context: canceling it aborts the test without a message.
+func (m *Module) TestConnection(
+	ctx context.Context,
+	input models.ConnectionProfileInput,
+) models.Output[models.ConnectOutput] {
+	return m.submoduleConnMng.testAction(ctx, input)
 }
 
 // ConnectByProfile connects using a saved profile identified by connectionId,
-// loading its connection settings from the profile module.
-func (m *Module) ConnectByProfile(connectionId string) models.Output[models.ConnectOutput] {
-	return m.submoduleConnMng.profileConnectAction(connectionId)
+// loading its connection settings from the profile module. ctx is the call context: canceling it aborts the
+// connect without a message.
+func (m *Module) ConnectByProfile(ctx context.Context, connectionId string) models.Output[models.ConnectOutput] {
+	return m.submoduleConnMng.profileConnectAction(ctx, connectionId)
+}
+
+// ReauthConnection renews the credentials of the live connection connectionId without dropping it: running
+// transfers continue. The settings and saved secrets come from the saved profile (every connection has one), and
+// no secret is kept in memory. input must carry what the profile does not save: mfaCode (assumeRole with MFA),
+// secretKey (assumeRole with key source, minioAssumeRole) and authSecret.ldapPassword (minioLdap). A missing one
+// fails with S3E046 (params name, secret). sso needs nothing: run aws sso login first. Anonymous: nothing to renew.
+// ctx is the call context.
+func (m *Module) ReauthConnection(
+	ctx context.Context,
+	connectionId string,
+	input models.ConnectionProfileInput,
+) models.Output[models.ConnectOutput] {
+	return m.submoduleConnMng.reauthAction(ctx, connectionId, input)
+}
+
+// LoginMinioOidc signs the user in with the OpenID Connect settings in cfg: it opens the system browser, waits for
+// the redirect on 127.0.0.1:cfg.CallbackPort (48765 when 0) and returns the id of a session that holds the tokens in
+// memory. Pass that id as OidcSessionId to Connect, TestConnection or ReauthConnection. A session lasts until the
+// id_token expires or 10 minutes, and is dropped when a connect used it. Fails with S3E039 (timeout), S3E040
+// (port in use) or S3E041; canceling ctx aborts the sign-in without a message.
+func (m *Module) LoginMinioOidc(ctx context.Context, cfg models.AuthConfig) models.Output[models.OidcLoginOutput] {
+	return m.submoduleOidcMng.login(ctx, cfg)
+}
+
+// ChooseAuthFile opens the native dialog to choose a certificate (kind "cert"), private key ("key") or CA
+// certificate ("ca") file and returns its path. The body is empty if the user cancels.
+func (m *Module) ChooseAuthFile(kind string) models.Output[string] {
+	return m.submoduleAuthFilesMng.chooseAuthFile(kind)
+}
+
+// ListAwsProfiles returns the profiles of the AWS CLI config and credentials files (empty paths mean the standard
+// files). It only parses the files, so it never runs a credential_process. Missing files give an empty list;
+// an unreadable file gives S3E045.
+func (m *Module) ListAwsProfiles(configFile, credentialsFile string) models.Output[[]models.AwsProfileOutput] {
+	return m.submoduleAwsProfilesMng.list(configFile, credentialsFile)
 }
 
 // Disconnect closes the active connection identified by connectionId
 // and removes it from the shared connection store.
-// Returns true in if the disconnect succeeded.
+// Returns true if the disconnect succeeded.
 func (m *Module) Disconnect(connectionId string) models.Output[bool] {
 	return m.submoduleConnMng.disconnectAction(connectionId)
 }
@@ -232,8 +344,9 @@ func (m *Module) Disconnect(connectionId string) models.Output[bool] {
 // closes their idle HTTP connections. Intended to be called on application
 // shutdown to release network resources.
 func (m *Module) DisconnectAll() {
+	m.submoduleOidcMng.clear()
 	for _, conn := range m.global.RemoveAllConn() {
-		conn.Transport.CloseIdleConnections()
+		conn.Close()
 	}
 }
 
@@ -287,7 +400,7 @@ func (m *Module) GetObjectDetail(
 }
 
 // DownloadObject starts downloading input.Objects from input.Bucket; progress is reported
-// by EventDownloadObjectProgress and each file is saved to the download history.
+// by EventDownloadProgressBatch and each file is saved to the download history.
 func (m *Module) DownloadObject(input models.DownloadObjInput) models.Output[any] {
 	return m.submoduleDownloaderMng.downloadObject(input)
 }
@@ -313,14 +426,19 @@ func (m *Module) CancelAllUploads() models.Output[any] {
 	return m.submoduleUploaderMng.cancelAllUploads()
 }
 
-// DeleteObject deletes the objects in input.Objects. ctx is the call context.
-func (m *Module) DeleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
+// DeleteObject deletes the objects in input.Objects in batches. A key that fails is listed in the body
+// and doesn't make Result false. ctx is the call context.
+func (m *Module) DeleteObject(
+	ctx context.Context,
+	input models.DeleteObjInput,
+) models.Output[models.DeleteObjOutput] {
 	return m.submoduleObjMng.deleteObject(ctx, input)
 }
 
 // DeletePrefix deletes every object under input.Prefix (the folder, its sub folders
 // and the folder marker). Only current versions are deleted. An empty prefix or "/"
-// is rejected so a whole bucket can't be deleted. ctx is the call context.
+// is rejected so a whole bucket can't be deleted. A key that fails is counted and its detail kept (up to
+// maxFailureDetails); it doesn't make Result false. ctx is the call context.
 func (m *Module) DeletePrefix(
 	ctx context.Context,
 	input models.DeletePrefixInput,
@@ -339,7 +457,7 @@ func (m *Module) OpenDownloadDest(fileName, path string) models.Output[any] {
 }
 
 // UploadObject starts uploading input.ObjList into input.Prefix; progress is reported by
-// EventUploadObjectProgress.
+// EventUploadProgressBatch.
 func (m *Module) UploadObject(input models.UploadObjInput) models.Output[any] {
 	return m.submoduleUploaderMng.uploadObject(input)
 }

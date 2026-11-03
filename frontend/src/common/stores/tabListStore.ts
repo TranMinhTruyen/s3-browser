@@ -3,6 +3,9 @@ import type { TabState } from '@wails/S3Browser/models/setting';
 import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
 import { createUUID } from '@/common/utils/stringUtils';
+import { buildTabState } from '@/common/utils/tabState';
+
+type KeySet = Record<string, true>;
 
 /** State of one tab: profile, current view, folder, selection and detail drawer. */
 interface TabDetail {
@@ -12,8 +15,9 @@ interface TabDetail {
   bucket?: string;
   // Folder shown in the object list, e.g. "photos/2026/". Empty is the bucket root.
   prefix: string;
-  selectionItem: string[];
-  deletingItems: string[];
+  // Keys as a set (key -> true): O(1) lookup per row.
+  selectionItem: KeySet;
+  deletingItems: KeySet;
   // Object shown in the detail drawer. Unset when the drawer is closed.
   detailItem?: ObjectItem;
 }
@@ -61,7 +65,17 @@ interface TabListAction {
 const SCOPE = 'tabList';
 const initialId = createUUID();
 
-const newTab = (): TabDetail => ({ currentView: 'bucketList', prefix: '', selectionItem: [], deletingItems: [] });
+/** Back to the bucket list root: no bucket, folder, selection or detail. Call inside an immer `set`. */
+const resetTabView = (tab: TabDetail) => {
+  tab.currentView = 'bucketList';
+  tab.bucket = undefined;
+  tab.prefix = '';
+  tab.selectionItem = {};
+  tab.detailItem = undefined;
+};
+
+/** A tab with no profile, showing the bucket list. */
+const newTab = (): TabDetail => ({ currentView: 'bucketList', prefix: '', selectionItem: {}, deletingItems: {} });
 
 /** Open tabs, the active one and which tab is uploading. */
 export const useTabListStore = createAppStore<TabListState & TabListAction>(
@@ -107,7 +121,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       const { tabList, activeTab } = get();
 
       const keys = Object.keys(tabList);
-      if (keys.length <= 1 || !(tabId in tabList)) return;
+      if (keys.length <= 1 || !Object.hasOwn(tabList, tabId)) return;
 
       const index = keys.indexOf(tabId);
 
@@ -140,12 +154,10 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
         state => {
           const tab = state.tabList[tabId];
           if (tab) {
-            tab.currentView = currentView;
-            tab.bucket = currentView === 'objectList' ? bucket : undefined;
             // Opening or leaving a bucket always starts from its root.
-            tab.prefix = '';
-            tab.selectionItem = [];
-            tab.detailItem = undefined;
+            resetTabView(tab);
+            tab.currentView = currentView;
+            if (currentView === 'objectList') tab.bucket = bucket;
           }
         },
         undefined,
@@ -160,7 +172,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
           if (tab) {
             tab.prefix = prefix;
             // Selected keys belong to the previous folder and are no longer visible.
-            tab.selectionItem = [];
+            tab.selectionItem = {};
             tab.detailItem = undefined;
           }
         },
@@ -174,11 +186,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
         state => {
           Object.values(state.tabList).forEach(tab => {
             if (tab.profileId === profileId) {
-              tab.currentView = 'bucketList';
-              tab.bucket = undefined;
-              tab.prefix = '';
-              tab.selectionItem = [];
-              tab.detailItem = undefined;
+              resetTabView(tab);
             }
           });
         },
@@ -193,11 +201,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
           Object.values(state.tabList).forEach(tab => {
             if (tab.profileId === profileId) {
               tab.profileId = null;
-              tab.currentView = 'bucketList';
-              tab.bucket = undefined;
-              tab.prefix = '';
-              tab.selectionItem = [];
-              tab.detailItem = undefined;
+              resetTabView(tab);
             }
           });
         },
@@ -211,7 +215,9 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
         state => {
           const tab = state.tabList[tabId];
           if (tab) {
-            tab.selectionItem = [...new Set([...tab.selectionItem, ...items])];
+            items.forEach(item => {
+              tab.selectionItem[item] = true;
+            });
           }
         },
         undefined,
@@ -224,8 +230,9 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
         state => {
           const tab = state.tabList[tabId];
           if (tab) {
-            const removing = new Set(items);
-            tab.selectionItem = tab.selectionItem.filter(item => !removing.has(item));
+            items.forEach(item => {
+              delete tab.selectionItem[item];
+            });
           }
         },
         undefined,
@@ -237,7 +244,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       set(
         state => {
           const tab = state.tabList[tabId];
-          if (tab) tab.selectionItem = [];
+          if (tab) tab.selectionItem = {};
         },
         undefined,
         `${SCOPE}/clearSelectItem`
@@ -271,12 +278,10 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
         state => {
           const tab = state.tabList[tabId];
           if (!tab) return;
-          if (deleting) {
-            tab.deletingItems = [...new Set([...tab.deletingItems, ...items])];
-          } else {
-            const removing = new Set(items);
-            tab.deletingItems = tab.deletingItems.filter(item => !removing.has(item));
-          }
+          items.forEach(item => {
+            if (deleting) tab.deletingItems[item] = true;
+            else delete tab.deletingItems[item];
+          });
         },
         undefined,
         `${SCOPE}/setDeleting`
@@ -289,10 +294,10 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
 
     serializeTabs: () => {
       const { tabList, activeTab } = get();
-      return {
-        tabs: Object.entries(tabList).map(([id, tab]) => ({ id, profileId: tab.profileId ?? null })),
+      return buildTabState(
         activeTab,
-      };
+        Object.entries(tabList).map(([id, tab]) => [id, tab.profileId])
+      );
     },
 
     restoreTabs: saved => {
@@ -303,7 +308,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       tabs.forEach(tab => {
         tabList[tab.id] = { ...newTab(), profileId: tab.profileId };
       });
-      const activeTab = saved.activeTab in tabList ? saved.activeTab : tabs[0].id;
+      const activeTab = Object.hasOwn(tabList, saved.activeTab) ? saved.activeTab : tabs[0].id;
       set({ tabList, activeTab }, undefined, `${SCOPE}/restoreTabs`);
     },
 

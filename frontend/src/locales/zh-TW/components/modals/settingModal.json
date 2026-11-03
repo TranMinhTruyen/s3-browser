@@ -1,0 +1,38 @@
+{
+  "title": "設定",
+  "label": {
+    "theme": "佈景主題",
+    "font": "字型",
+    "language": "語言",
+    "launchOnStartup": "隨 Windows 啟動"
+  },
+  "option": {
+    "theme": {
+      "light": "淺色",
+      "dark": "深色",
+      "auto": "跟隨系統"
+    },
+    "font": {
+      "nunito": "Nunito",
+      "system-ui": "系統介面",
+      "segoe-ui": "Segoe UI",
+      "arial": "Arial",
+      "roboto": "Roboto",
+      "be-vietnam-pro": "Be Vietnam Pro",
+      "verdana": "Verdana",
+      "meiryo-ui": "Meiryo UI",
+      "monospace": "等寬",
+      "jetbrains-mono": "JetBrains Mono"
+    }
+  },
+  "button": {
+    "save": "儲存",
+    "cancel": "取消",
+    "apply": "套用",
+    "reset": "還原預設值"
+  },
+  "message": {
+    "saved": "設定已儲存。",
+    "applied": "設定已套用，關閉應用程式後失效。"
+  }
+}

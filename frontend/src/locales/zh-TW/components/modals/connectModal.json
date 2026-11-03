@@ -1,0 +1,137 @@
+{
+  "title": "連線設定檔",
+  "form": {
+    "label": {
+      "name": "設定檔名稱",
+      "color": "設定檔顏色",
+      "endpoint": "端點",
+      "authType": "驗證方式",
+      "accessKey": "存取金鑰",
+      "secretKey": "私密金鑰",
+      "sessionToken": "工作階段權杖（選填）",
+      "configFile": "AWS 組態檔（選填）",
+      "credentialsFile": "AWS 憑證檔案（選填）",
+      "sourceType": "用於擔任角色的憑證",
+      "roleArn": "角色 ARN",
+      "externalId": "外部 ID（選填）",
+      "sessionName": "工作階段名稱（選填）",
+      "durationSeconds": "持續時間（秒）",
+      "mfaSerial": "MFA 裝置序號（選填）",
+      "mfaCode": "MFA 代碼",
+      "pathStyle": "Path style",
+      "savePassword": "儲存金鑰",
+      "autoConnect": "自動連線",
+      "ldapUsername": "LDAP 使用者名稱",
+      "ldapPassword": "LDAP 密碼",
+      "policy": "內嵌政策（JSON，選填）",
+      "buckets": "儲存貯體",
+      "durationOptional": "持續時間（秒，選填）",
+      "roleArnOptional": "角色 ARN（選填）",
+      "clientId": "用戶端 ID",
+      "issuerUrl": "簽發者 URL",
+      "scope": "範圍（選填）",
+      "callbackPort": "回呼連接埠",
+      "redirectUri": "重新導向 URI",
+      "certFile": "用戶端憑證檔案",
+      "keyFile": "私密金鑰檔案",
+      "keyPassword": "私密金鑰密碼",
+      "keyEncrypted": "私密金鑰設有密碼",
+      "oidcSession": "登入",
+      "caFile": "CA 憑證檔案（選填）"
+    },
+    "placeholder": {
+      "saved": "已儲存，留空則保持不變",
+      "configFile": "預設：~/.aws/config",
+      "credentialsFile": "預設：~/.aws/credentials",
+      "roleArn": "arn:aws:iam::123456789012:role/RoleName",
+      "sessionName": "預設：s3browser-<user>",
+      "mfaSerial": "arn:aws:iam::123456789012:mfa/user",
+      "durationDefault": "預設：由伺服器設定",
+      "policy": "{\"Version\": \"2012-10-17\", \"Statement\": []}",
+      "buckets": "輸入儲存貯體名稱後按 Enter 鍵",
+      "issuerUrl": "https://idp.example.com/realms/main",
+      "scope": "預設：openid",
+      "certFile": "選擇憑證 (.pem, .crt)",
+      "keyFile": "選擇私密金鑰 (.pem, .key)",
+      "caFile": "預設：作業系統憑證"
+    },
+    "sourceType": {
+      "static": "存取金鑰",
+      "profile": "AWS CLI 設定檔"
+    },
+    "hint": {
+      "testNeedsSecrets": "儲存不需要金鑰，但測試連線需要：已儲存的金鑰不會被傳回，請重新輸入。",
+      "mfaCode": "僅使用一次，不會儲存",
+      "profilePlaceholder": "<profile>",
+      "ssoLogin": "請先登入：aws sso login --profile {{profile}}",
+      "anonymousBuckets": "匿名存取無法列出儲存貯體：請輸入要開啟的公開儲存貯體名稱。",
+      "redirectUri": "請在您的身分提供者中，將此位址註冊為用戶端的重新導向 URI。",
+      "oidcLogin": "將開啟瀏覽器進行登入。登入資訊僅使用一次，不會儲存。",
+      "certTls": "這些檔案會在連線時讀取，其內容不會被儲存。端點必須使用 https://。",
+      "keyNotStored": "支援有密碼的 PKCS#8 金鑰。只有勾選「儲存金鑰」時才會儲存密碼。",
+      "caFile": "為使用自簽或內部憑證的 MinIO 伺服器額外新增受信任的 CA。留空則使用作業系統憑證。"
+    },
+    "tooltip": {
+      "autoConnectLocked": "此驗證方式每次連線都需要輸入資訊，因此無法自動連線。"
+    },
+    "button": {
+      "testConnection": "測試連線",
+      "createProfile": "建立設定檔",
+      "editProfile": "更新設定檔",
+      "oidcLogin": "登入",
+      "oidcCancel": "取消登入",
+      "chooseFile": "選擇檔案...",
+      "clearFile": "清除檔案",
+      "copy": "複製",
+      "copied": "已複製"
+    },
+    "status": {
+      "oidcSignedIn": "已登入，有效期限至 {{time}}",
+      "oidcNotSignedIn": "未登入",
+      "oidcWaiting": "正在等待在瀏覽器中完成登入...",
+      "oidcExpired": "登入已過期，請重新登入"
+    }
+  },
+  "authType": {
+    "static": {
+      "label": "存取金鑰",
+      "description": "存取金鑰與私密金鑰，工作階段權杖為選填。"
+    },
+    "sharedProfile": {
+      "label": "AWS CLI 設定檔",
+      "description": "使用 AWS CLI 組態檔 (~/.aws) 中的設定檔。"
+    },
+    "assumeRole": {
+      "label": "擔任角色",
+      "description": "透過 STS 擔任 IAM 角色，可選擇使用 MFA 保護。"
+    },
+    "sso": {
+      "label": "AWS SSO",
+      "description": "使用已透過 AWS CLI 登入的設定檔 (aws sso login)。"
+    },
+    "defaultChain": {
+      "label": "預設憑證鏈",
+      "description": "使用環境中找到的憑證：環境變數、共用檔案或執行個體角色。"
+    },
+    "anonymous": {
+      "label": "匿名",
+      "description": "不需憑證即可存取公開儲存貯體。"
+    },
+    "minioAssumeRole": {
+      "label": "MinIO STS",
+      "description": "從 MinIO STS 取得暫時性憑證。"
+    },
+    "minioLdap": {
+      "label": "LDAP",
+      "description": "使用 LDAP 使用者登入。"
+    },
+    "minioOidc": {
+      "label": "OIDC",
+      "description": "使用 OpenID Connect 提供者登入。"
+    },
+    "minioCert": {
+      "label": "用戶端憑證",
+      "description": "使用 TLS 用戶端憑證登入。"
+    }
+  }
+}

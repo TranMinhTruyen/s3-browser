@@ -12,22 +12,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"golang.org/x/sync/errgroup"
 )
 
+// submoduleObjMng lists, deletes and reads the detail of objects.
 type submoduleObjMng struct {
 	logger *slog.Logger
+	app    *application.App
 	global *global.Module
-	// getDeleter returns the S3 client of a connection; ok is false if it isn't connected.
-	// It sits next to global as the seam tests replace with a fake client.
-	getDeleter func(connID string) (client s3Deleter, ok bool)
-	// getHeader returns the S3 client used to read object headers; ok is false if it isn't connected.
-	getHeader func(connID string) (client s3Header, ok bool)
-	// appContext returns the app lifetime context. Tests replace it so they don't need a running app.
-	appContext func() context.Context
 }
 
-// deleteConcurrency limits the objects deleted (or head-checked) at once.
+// deleteConcurrency limits the single-key deletes running at once (fallback without DeleteObjects).
 const deleteConcurrency = 6
 
 // newSubmoduleObjMng builds the object submodule on the shared connection store.
@@ -38,29 +32,9 @@ func newSubmoduleObjMng(
 ) *submoduleObjMng {
 	return &submoduleObjMng{
 		logger: logger.With("submodules", "object_mng"),
+		app:    app,
 		global: global,
-		getDeleter: func(connID string) (s3Deleter, bool) {
-			conn, ok := global.GetConnContainer(connID)
-			if !ok {
-				return nil, false
-			}
-			return conn.Client, true
-		},
-		getHeader: func(connID string) (s3Header, bool) {
-			conn, ok := global.GetConnContainer(connID)
-			if !ok {
-				return nil, false
-			}
-			return conn.Client, true
-		},
-		appContext: app.Context,
 	}
-}
-
-// deleteResult is the outcome of deleting one key.
-type deleteResult struct {
-	key string
-	err error
 }
 
 // listObject lists the objects under input.Prefix.
@@ -69,7 +43,7 @@ func (m *submoduleObjMng) listObject(
 	ctx context.Context,
 	input models.ListObjectInput,
 ) models.Output[models.ListObjectOutput] {
-	ctx, cancel := withCallContext(ctx, m.appContext(), 5*time.Minute)
+	ctx, cancel := withCallContext(ctx, m.app.Context(), 5*time.Minute)
 	defer cancel()
 
 	output := models.NewOutput[models.ListObjectOutput]()
@@ -94,24 +68,11 @@ func (m *submoduleObjMng) listObject(
 	objects, err := s3Conn.Client.ListObjectsV2(ctx, listObjectInput)
 
 	if err != nil {
-		// The frontend canceled the call; nobody is waiting for the result.
-		if isCallCanceled(ctx) {
-			output.Result = false
-			return output
-		}
-
-		return output.ThrowError(
-			models.NewParamsMessage(
-				cnst.MessageTypeError,
-				cnst.Bucket,
-				S3E008,
-				UnwrapAwsError(err),
-				map[string]any{
-					"name":   input.ProfileName,
-					"bucket": input.Bucket,
-				},
-			),
-		)
+		return failCall(ctx, output, input.ProfileName, err,
+			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E008, UnwrapAwsError(err), map[string]any{
+				"name":   input.ProfileName,
+				"bucket": input.Bucket,
+			}))
 	}
 
 	body := models.ListObjectOutput{
@@ -154,13 +115,16 @@ func (m *submoduleObjMng) listObject(
 	return output
 }
 
-// deleteObject deletes input.Objects one by one (up to deleteConcurrency at once) and
-// adds one message per key. Result is false if any key failed.
-func (m *submoduleObjMng) deleteObject(ctx context.Context, input models.DeleteObjInput) models.Output[any] {
-	ctx, cancel := withCallContext(ctx, m.appContext(), 5*time.Minute)
+// deleteObject deletes input.Objects in batches of deleteBatchSize. A key that is already gone counts as
+// deleted. A key that fails is listed in the body and doesn't make Result false.
+func (m *submoduleObjMng) deleteObject(
+	ctx context.Context,
+	input models.DeleteObjInput,
+) models.Output[models.DeleteObjOutput] {
+	ctx, cancel := withCallContext(ctx, m.app.Context(), deleteTimeout)
 	defer cancel()
 
-	output := models.NewOutput[any]()
+	output := models.NewOutput[models.DeleteObjOutput]()
 
 	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
 
@@ -168,71 +132,36 @@ func (m *submoduleObjMng) deleteObject(ctx context.Context, input models.DeleteO
 		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 
-	// Not errgroup.WithContext: failures go to the result channel and g.Go returns nil,
-	// so one failed key must not cancel the other deletes.
-	var g errgroup.Group
-	g.SetLimit(deleteConcurrency)
-	result := make(chan deleteResult, len(input.Objects))
-	for _, key := range input.Objects {
-		g.Go(func() error {
-			// S3 DeleteObject succeeds even when the key doesn't exist, so HeadObject first
-			// to report an error for a key that is already gone.
-			_, err := s3Conn.Client.HeadObject(ctx, &s3.HeadObjectInput{
-				Bucket: aws.String(input.Bucket),
-				Key:    aws.String(key),
-			})
-
-			if err != nil {
-				result <- deleteResult{
-					key: key,
-					err: err,
-				}
-				return nil
-			}
-
-			_, err = s3Conn.Client.DeleteObject(ctx, &s3.DeleteObjectInput{
-				Bucket: aws.String(input.Bucket),
-				Key:    aws.String(key),
-			})
-
-			result <- deleteResult{
-				key: key,
-				err: err,
-			}
-			return nil
-		})
+	d := &batchDeleter{
+		client:         s3Conn.Client,
+		bucket:         input.Bucket,
+		collectDeleted: true,
+		deletedKeys:    make([]string, 0, len(input.Objects)),
+		failures:       []models.DeleteFailure{},
+		maxDetails:     len(input.Objects),
 	}
-	_ = g.Wait()
-	close(result)
-
-	for item := range result {
-		if item.err != nil {
-			// Keep going so every key still gets its own message; Result stays false.
-			output.ThrowError(
-				models.NewParamsMessage(
-					cnst.MessageTypeError,
-					cnst.Bucket,
-					S3E013,
-					item.err.Error(),
-					map[string]any{
-						"object": item.key,
-					},
-				),
-			)
-		} else {
-			output.AddMessage(
-				models.NewParamsMessage(
-					cnst.MessageTypeSuccess,
-					cnst.Bucket,
-					S3S005,
-					"",
-					map[string]any{
-						"object": item.key,
-					},
-				),
-			)
+	for start := 0; start < len(input.Objects); start += deleteBatchSize {
+		end := min(start+deleteBatchSize, len(input.Objects))
+		if err := d.deleteBatch(ctx, input.Objects[start:end]); err != nil {
+			if isCallCanceled(ctx) {
+				m.logger.Info("delete object canceled", "bucket", input.Bucket, "deleted", d.deleted)
+				// Canceled by the frontend: fail silently, nobody waits for the result.
+				return output.ThrowError()
+			}
+			if d.deleted == 0 && isCredentialsExpired(err) {
+				return output.ThrowError(expiredMessage(input.ProfileName, err))
+			}
+			// Timeout: the keys not tried yet are failures.
+			for _, k := range input.Objects[start:] {
+				d.fail(k, UnwrapAwsError(err))
+			}
+			break
 		}
 	}
 
+	if d.failed > 0 {
+		m.logger.Error("delete object failed", "bucket", input.Bucket, "deleted", d.deleted, "failed", d.failed)
+	}
+	output.Body = models.DeleteObjOutput{Deleted: d.deletedKeys, Failed: d.failures}
 	return output
 }

@@ -1,0 +1,13 @@
+{
+  "title": "ダウンロード中",
+  "action": {
+    "cancelAll": "すべてキャンセル",
+    "cancel": "キャンセル",
+    "close": "閉じる"
+  },
+  "label": {
+    "objectLbl": "オブジェクト",
+    "downloadedLbl": "ダウンロード済み",
+    "remainingLbl": "残り"
+  }
+}

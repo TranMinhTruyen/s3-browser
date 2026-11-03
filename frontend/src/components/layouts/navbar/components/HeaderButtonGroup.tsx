@@ -1,4 +1,4 @@
-import { Group, Stack, Tooltip } from '@mantine/core';
+import { Group, Stack } from '@mantine/core';
 import { ListPlus, PlugZap, RefreshCw } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,23 +25,17 @@ function HeaderButtonGroup() {
   return (
     <Stack p="8px">
       <Group gap="xs">
-        <Tooltip label={t('tooltip.connect')}>
-          <ActionIcon onClick={onClickConnect} aria-label={t('tooltip.connect')}>
-            <PlugZap />
-          </ActionIcon>
-        </Tooltip>
+        <ActionIcon onClick={onClickConnect} tooltip={t('tooltip.connect')}>
+          <PlugZap />
+        </ActionIcon>
 
-        <Tooltip label={t('tooltip.createProfile')}>
-          <ActionIcon onClick={onClickCreateProfile} aria-label={t('tooltip.createProfile')}>
-            <ListPlus />
-          </ActionIcon>
-        </Tooltip>
+        <ActionIcon onClick={onClickCreateProfile} tooltip={t('tooltip.createProfile')}>
+          <ListPlus />
+        </ActionIcon>
 
-        <Tooltip label={t('tooltip.refresh')}>
-          <ActionIcon onClick={onClickRefresh} aria-label={t('tooltip.refresh')} ml="auto">
-            <RefreshCw />
-          </ActionIcon>
-        </Tooltip>
+        <ActionIcon onClick={onClickRefresh} tooltip={t('tooltip.refresh')} ml="auto">
+          <RefreshCw />
+        </ActionIcon>
       </Group>
     </Stack>
   );

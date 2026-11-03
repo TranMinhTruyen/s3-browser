@@ -1,6 +1,8 @@
 {
+  "empty": "Chưa có bucket",
   "tooltip": {
-    "bucketList": "danh sách bucket"
+    "bucketList": "danh sách bucket",
+    "inaccessible": "Không thể truy cập bucket này bằng chế độ ẩn danh."
   },
   "label": {
     "createDate": "Ngày tạo:"

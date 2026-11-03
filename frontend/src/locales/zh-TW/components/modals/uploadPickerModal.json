@@ -1,0 +1,17 @@
+{
+  "title": "上傳檔案",
+  "target": "上傳至：{target}",
+  "selectFiles": "選擇檔案",
+  "dropHint": "或將檔案和資料夾拖放到此處",
+  "dropHere": "將檔案拖放到此處",
+  "bucketRequired": "請選擇目標儲存貯體",
+  "emptyList": "尚未新增檔案",
+  "selectedCount": "{selected}/{max} 個檔案",
+  "selectedLarge": "{selected}/{max} 個大型檔案",
+  "autoUnselected": "部分檔案超出上傳限制，已取消勾選",
+  "upload": "上傳",
+  "large": "大型",
+  "rootFolder": "（所選檔案）",
+  "remove": "移除檔案",
+  "removeSelected": "移除所選項目"
+}

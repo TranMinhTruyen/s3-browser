@@ -3,10 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { GetListBucket, SearchBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { Bucket } from '@wails/S3Browser/models/bucket';
-import { createRef, RefObject } from 'react';
+import { Activity, createRef, type ReactElement, RefObject } from 'react';
+import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import BucketListView, { BucketListViewRef } from '@/pages/bucket/BucketListView';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 // jsdom has no layout, so render every row; `endIndex` is the last row the user "sees" (null = end of list).
 const virtual = vi.hoisted(() => ({ endIndex: null as number | null }));
@@ -54,6 +55,7 @@ function renderList({
   const onSelectBucket = vi.fn();
   const ui = (pr: ConnectionProfileOutput | null | undefined, kw = keyword) => (
     <BucketListView
+      tabId="tab-1"
       profile={pr}
       active={active}
       scrollRef={scrollRef}
@@ -86,7 +88,7 @@ describe('BucketListView', () => {
     expect(screen.getByText('beta')).toBeInTheDocument();
     expect(callIPCMock).toHaveBeenCalledExactlyOnceWith(
       GetListBucket,
-      [{ connectionId: 'conn', profileName: 'my-profile', nextCursor: '', limit: 10 }],
+      [{ connectionId: 'conn', profileName: 'my-profile', nextCursor: '', limit: 1000 }],
       { signal: expect.any(AbortSignal) }
     );
   });
@@ -130,7 +132,7 @@ describe('BucketListView', () => {
     expect(screen.getByText('alpha')).toBeInTheDocument();
     expect(callIPCMock).toHaveBeenCalledTimes(2);
     expect(callIPCMock.mock.calls[1][1]).toEqual([
-      { connectionId: 'conn', profileName: 'my-profile', nextCursor: 'c1', limit: 10 },
+      { connectionId: 'conn', profileName: 'my-profile', nextCursor: 'c1', limit: 1000 },
     ]);
   });
 
@@ -213,6 +215,20 @@ describe('BucketListView', () => {
     expect(await screen.findByText('alpha')).toBeInTheDocument();
   });
 
+  it('loads the first page again when the same profile is disconnected and connected again', async () => {
+    const { rerenderWith } = renderList();
+    await screen.findByText('alpha');
+    expect(callIPCMock).toHaveBeenCalledTimes(1);
+
+    rerenderWith(null);
+    expect(callIPCMock).toHaveBeenCalledTimes(1);
+    rerenderWith(profile);
+
+    await waitFor(() => expect(callIPCMock).toHaveBeenCalledTimes(2));
+    expect(callIPCMock.mock.calls[1][0]).toBe(GetListBucket);
+    expect(await screen.findByText('alpha')).toBeInTheDocument();
+  });
+
   it('cancels the running request when unmounted', async () => {
     let signal: AbortSignal | undefined;
     callIPCMock.mockImplementation((async (_f: unknown, _a: unknown, o: { signal: AbortSignal }) => {
@@ -257,6 +273,89 @@ describe('BucketListView', () => {
     await act(async () => pending[0](page([b('stale')])));
     expect(screen.getByText('fresh')).toBeInTheDocument();
     expect(screen.queryByText('stale')).not.toBeInTheDocument();
+  });
+
+  describe('empty state', () => {
+    const EMPTY = 'No buckets yet';
+    const NO_MATCH = 'No matching buckets';
+    const pending = () => new Promise(() => {}) as never;
+
+    it('shows the empty message once an empty list has loaded without a cursor', async () => {
+      queue = [page([])];
+      renderList();
+      expect(await screen.findByText(EMPTY)).toBeInTheDocument();
+      expect(screen.queryByText(NO_MATCH)).not.toBeInTheDocument();
+    });
+
+    it('shows the search message instead when a keyword is applied', async () => {
+      queue = [page([])];
+      renderList({ keyword: 'kw' });
+      expect(await screen.findByText(NO_MATCH)).toBeInTheDocument();
+      expect(screen.queryByText(EMPTY)).not.toBeInTheDocument();
+    });
+
+    it('does not show it while loading', async () => {
+      callIPCMock.mockImplementation(pending);
+      renderList();
+      await waitFor(() => expect(callIPCMock).toHaveBeenCalled());
+      expect(screen.queryByText(EMPTY)).not.toBeInTheDocument();
+    });
+
+    it('does not show it when the first page failed', async () => {
+      queue = [null];
+      renderList();
+      await waitFor(() => expect(callIPCMock).toHaveBeenCalled());
+      await act(async () => {});
+      expect(screen.queryByText(EMPTY)).not.toBeInTheDocument();
+    });
+
+    it('does not show it while a cursor is left', async () => {
+      callIPCMock.mockImplementationOnce((async () => page([], 'c1')) as never).mockImplementation(pending);
+      renderList();
+      await waitFor(() => expect(callIPCMock).toHaveBeenCalledTimes(2));
+      await act(async () => {});
+      expect(screen.queryByText(EMPTY)).not.toBeInTheDocument();
+    });
+
+    it('does not show it for the previous list right after the keyword changes', async () => {
+      queue = [page([])];
+      const { setKeyword } = renderList();
+      expect(await screen.findByText(EMPTY)).toBeInTheDocument();
+      callIPCMock.mockImplementation(pending);
+      setKeyword('kw');
+      await waitFor(() => expect(callIPCMock).toHaveBeenCalledTimes(2));
+      expect(screen.queryByText(EMPTY)).not.toBeInTheDocument();
+      expect(screen.queryByText(NO_MATCH)).not.toBeInTheDocument();
+    });
+
+    it('does not show it without a profile', () => {
+      renderList({ profile: null });
+      expect(screen.queryByText(EMPTY)).not.toBeInTheDocument();
+    });
+
+    it('shows it after a refresh finds no buckets, but not while the refresh is pending', async () => {
+      queue = [page([b('alpha')])];
+      const { ref } = renderList();
+      await screen.findByText('alpha');
+      let finish: (v: unknown) => void = () => {};
+      callIPCMock.mockImplementation((async () => new Promise(r => (finish = r))) as never);
+      act(() => {
+        ref.current?.onRefresh?.();
+      });
+      await waitFor(() => expect(callIPCMock).toHaveBeenCalledTimes(2));
+      expect(screen.queryByText(EMPTY)).not.toBeInTheDocument();
+      await act(async () => finish(page([])));
+      expect(await screen.findByText(EMPTY)).toBeInTheDocument();
+      expect(screen.queryByText('alpha')).not.toBeInTheDocument();
+    });
+
+    it('hides it when the connection is lost', async () => {
+      queue = [page([])];
+      const { rerenderWith } = renderList();
+      expect(await screen.findByText(EMPTY)).toBeInTheDocument();
+      rerenderWith(null);
+      expect(screen.queryByText(EMPTY)).not.toBeInTheDocument();
+    });
   });
 
   describe('search', () => {
@@ -393,7 +492,9 @@ describe('BucketListView', () => {
       await act(async () => {});
       const listCalls = callIPCMock.mock.calls.filter(c => c[0] === GetListBucket);
       expect(listCalls).toHaveLength(1);
-      expect(listCalls[0][1]).toEqual([{ connectionId: 'conn', profileName: 'my-profile', nextCursor: '', limit: 10 }]);
+      expect(listCalls[0][1]).toEqual([
+        { connectionId: 'conn', profileName: 'my-profile', nextCursor: '', limit: 1000 },
+      ]);
       expect(loader()).not.toBeInTheDocument();
     });
 
@@ -442,6 +543,91 @@ describe('BucketListView', () => {
     it('searches nothing without a connection', () => {
       renderList({ keyword: 'kw', profile: null });
       expect(callIPCMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('when the tab is only hidden (Activity)', () => {
+    const tabState = { currentView: 'bucketList' as const, prefix: '', selectionItem: {}, deletingItems: {} };
+    const scrollRef = { current: document.createElement('div') } as RefObject<HTMLElement | null>;
+    const ui = (mode: 'visible' | 'hidden') => (
+      <Activity mode={mode}>
+        <BucketListView tabId="tab-1" profile={profile} active scrollRef={scrollRef} />
+      </Activity>
+    );
+    type View = { rerender: (ui: ReactElement) => void };
+    const hide = (view: View) => {
+      useTabListStore.setState({ activeTab: 'tab-2' });
+      view.rerender(ui('hidden'));
+    };
+    const show = (view: View) => {
+      useTabListStore.setState({ activeTab: 'tab-1' });
+      view.rerender(ui('visible'));
+    };
+    // Captures the signal of the first request and never answers it.
+    const hangAndCapture = () => {
+      const captured: { signal?: AbortSignal } = {};
+      callIPCMock.mockImplementation((async (_f: unknown, _a: unknown, o: { signal: AbortSignal }) => {
+        captured.signal = o.signal;
+        return new Promise(() => {});
+      }) as never);
+      return captured;
+    };
+
+    beforeEach(() => {
+      useTabListStore.setState({ activeTab: 'tab-1', tabList: { 'tab-1': tabState, 'tab-2': tabState } });
+    });
+
+    it('does not abort the running request and does not load the first page again when shown', async () => {
+      const signals: AbortSignal[] = [];
+      let resolve: (v: unknown) => void = () => {};
+      callIPCMock.mockImplementation((async (_f: unknown, _a: unknown, o: { signal: AbortSignal }) => {
+        signals.push(o.signal);
+        return new Promise(r => (resolve = r));
+      }) as never);
+      const view = renderWithProviders(ui('visible'));
+      await waitFor(() => expect(signals).toHaveLength(1));
+
+      hide(view);
+      expect(signals[0].aborted).toBe(false);
+      await act(async () => resolve(page([b('alpha')])));
+
+      show(view);
+      expect(await screen.findByText('alpha')).toBeInTheDocument();
+      expect(callIPCMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the loaded buckets when hidden and shown again', async () => {
+      const view = renderWithProviders(ui('visible'));
+      await screen.findByText('alpha');
+
+      hide(view);
+      show(view);
+
+      expect(screen.getByText('alpha')).toBeInTheDocument();
+      expect(callIPCMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('aborts the running request when the view is unmounted for real', async () => {
+      const captured = hangAndCapture();
+      const { unmount } = renderWithProviders(ui('visible'));
+      await waitFor(() => expect(captured.signal).toBeDefined());
+
+      useTabListStore.setState({ tabList: { 'tab-2': tabState } });
+      unmount();
+
+      expect(captured.signal?.aborted).toBe(true);
+    });
+
+    it('aborts the running request when a hidden tab is closed', async () => {
+      const captured = hangAndCapture();
+      const view = renderWithProviders(ui('visible'));
+      await waitFor(() => expect(captured.signal).toBeDefined());
+
+      hide(view);
+      useTabListStore.setState({ tabList: { 'tab-2': tabState } });
+      view.unmount();
+
+      expect(captured.signal?.aborted).toBe(true);
     });
   });
 });

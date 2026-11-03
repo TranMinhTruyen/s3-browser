@@ -5,7 +5,7 @@ import (
 	"S3Browser/models"
 	"context"
 	"errors"
-	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -17,28 +17,15 @@ import (
 )
 
 const (
-	// deletePrefixTimeout bounds one deletePrefix call. A prefix can hold millions of keys and is
-	// deleted page by page, so it gets far more time than a single request (5 minutes).
-	deletePrefixTimeout = 30 * time.Minute
+	// deleteTimeout bounds one deleteObject or deletePrefix call. Both can cover many keys, deleted in
+	// batches, so they get far more time than a single request.
+	deleteTimeout = 30 * time.Minute
 	// deleteBatchSize is the S3 limit of keys in one DeleteObjects request. It is also the
 	// ListObjectsV2 page size, so memory stays bounded and one page maps to one delete request.
 	deleteBatchSize = 1000
+	// maxFailureDetails caps the failures kept for a folder, which can hold millions of keys.
+	maxFailureDetails = 1000
 )
-
-// s3Deleter is the part of *s3.Client the prefix delete code uses. It lets tests replace S3.
-type s3Deleter interface {
-	ListObjectsV2(
-		ctx context.Context, in *s3.ListObjectsV2Input, optFns ...func(*s3.Options),
-	) (*s3.ListObjectsV2Output, error)
-	DeleteObjects(
-		ctx context.Context, in *s3.DeleteObjectsInput, optFns ...func(*s3.Options),
-	) (*s3.DeleteObjectsOutput, error)
-	DeleteObject(
-		ctx context.Context, in *s3.DeleteObjectInput, optFns ...func(*s3.Options),
-	) (*s3.DeleteObjectOutput, error)
-}
-
-var _ s3Deleter = (*s3.Client)(nil)
 
 // validDeletePrefix reports whether prefix may be deleted: it must name a folder
 // (end with "/") and must not be empty or "/", so a whole bucket is never deleted.
@@ -59,29 +46,41 @@ func isDeleteObjectsUnsupported(err error) bool {
 	return false
 }
 
-// prefixDeleter holds the state of one deletePrefix call.
-type prefixDeleter struct {
-	client  s3Deleter
+// batchDeleter deletes keys in batches and records the outcome. It serves deleteObject and deletePrefix.
+type batchDeleter struct {
+	client  *s3.Client
 	bucket  string
 	deleted int
 	failed  int
-	// firstErr is the detail of the first failure.
-	firstErr string
+	// deletedKeys lists the deleted keys when collectDeleted is set.
+	deletedKeys    []string
+	collectDeleted bool
+	// failures keeps the detail of the first maxDetails failures; failed counts all of them.
+	failures   []models.DeleteFailure
+	maxDetails int
 	// single is set once the provider rejected DeleteObjects.
 	single bool
 }
 
-// fail counts one failed key and keeps the detail of the first one.
-func (d *prefixDeleter) fail(detail string) {
+// ok counts one deleted key.
+func (d *batchDeleter) ok(key string) {
+	d.deleted++
+	if d.collectDeleted {
+		d.deletedKeys = append(d.deletedKeys, key)
+	}
+}
+
+// fail counts one failed key and keeps its detail while under maxDetails.
+func (d *batchDeleter) fail(key, detail string) {
 	d.failed++
-	if d.firstErr == "" {
-		d.firstErr = detail
+	if len(d.failures) < d.maxDetails {
+		d.failures = append(d.failures, models.DeleteFailure{Key: key, Error: detail})
 	}
 }
 
 // deleteBatch deletes keys (at most deleteBatchSize). A returned error is a call level
-// error (for example canceled context); per key failures are counted in d.failed.
-func (d *prefixDeleter) deleteBatch(ctx context.Context, keys []string) error {
+// error (canceled context, or expired credentials before any key was deleted); per key failures are recorded by d.fail.
+func (d *batchDeleter) deleteBatch(ctx context.Context, keys []string) error {
 	if len(keys) == 0 {
 		return nil
 	}
@@ -97,19 +96,30 @@ func (d *prefixDeleter) deleteBatch(ctx context.Context, keys []string) error {
 		})
 		switch {
 		case err == nil:
+			// Quiet mode: out only lists the keys that failed.
+			bad := make(map[string]struct{}, len(out.Errors))
 			for _, e := range out.Errors {
-				d.fail(fmt.Sprintf("%s: %s %s", aws.ToString(e.Key), aws.ToString(e.Code), aws.ToString(e.Message)))
+				key := aws.ToString(e.Key)
+				bad[key] = struct{}{}
+				d.fail(key, strings.TrimSpace(aws.ToString(e.Code)+" "+aws.ToString(e.Message)))
 			}
-			d.deleted += len(keys) - len(out.Errors)
+			for _, k := range keys {
+				if _, failed := bad[k]; !failed {
+					d.ok(k)
+				}
+			}
 			return nil
 		case ctx.Err() != nil:
 			return ctx.Err()
 		case isDeleteObjectsUnsupported(err):
 			d.single = true
 		default:
+			if d.deleted == 0 && isCredentialsExpired(err) {
+				return err
+			}
 			// The request itself failed: none of the keys is known to be deleted.
-			for range keys {
-				d.fail(UnwrapAwsError(err))
+			for _, k := range keys {
+				d.fail(k, UnwrapAwsError(err))
 			}
 			return nil
 		}
@@ -119,7 +129,7 @@ func (d *prefixDeleter) deleteBatch(ctx context.Context, keys []string) error {
 }
 
 // deleteEach is the fallback for providers without DeleteObjects: one DeleteObject per key.
-func (d *prefixDeleter) deleteEach(ctx context.Context, keys []string) error {
+func (d *batchDeleter) deleteEach(ctx context.Context, keys []string) error {
 	errs := make([]error, len(keys))
 	var g errgroup.Group
 	// Not errgroup.WithContext: every failure is recorded per key in errs and g.Go returns nil,
@@ -139,11 +149,17 @@ func (d *prefixDeleter) deleteEach(ctx context.Context, keys []string) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
+	// Nothing deleted so far and every key of this batch failed: expired credentials is a call level error.
+	if d.deleted == 0 && !slices.Contains(errs, nil) {
+		if i := slices.IndexFunc(errs, isCredentialsExpired); i >= 0 {
+			return errs[i]
+		}
+	}
 	for i, err := range errs {
 		if err != nil {
-			d.fail(fmt.Sprintf("%s: %s", keys[i], UnwrapAwsError(err)))
+			d.fail(keys[i], UnwrapAwsError(err))
 		} else {
-			d.deleted++
+			d.ok(keys[i])
 		}
 	}
 	return nil
@@ -151,12 +167,12 @@ func (d *prefixDeleter) deleteEach(ctx context.Context, keys []string) error {
 
 // deletePrefix deletes every current object under input.Prefix, page by page.
 // ctx is the call context: it is canceled when the frontend cancels the call.
-// It returns one summary message, not one per key.
+// A key that fails doesn't make Result false: the body counts them and keeps the first maxFailureDetails.
 func (m *submoduleObjMng) deletePrefix(
 	ctx context.Context,
 	input models.DeletePrefixInput,
 ) models.Output[models.DeletePrefixOutput] {
-	ctx, cancel := withCallContext(ctx, m.appContext(), deletePrefixTimeout)
+	ctx, cancel := withCallContext(ctx, m.app.Context(), deleteTimeout)
 	defer cancel()
 
 	output := models.NewOutput[models.DeletePrefixOutput]()
@@ -169,12 +185,18 @@ func (m *submoduleObjMng) deletePrefix(
 		)
 	}
 
-	client, ok := m.getDeleter(input.ConnectionId)
+	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
 	if !ok {
 		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
+	client := s3Conn.Client
 
-	d := &prefixDeleter{client: client, bucket: input.Bucket}
+	d := &batchDeleter{
+		client:     client,
+		bucket:     input.Bucket,
+		maxDetails: maxFailureDetails,
+		failures:   []models.DeleteFailure{},
+	}
 	var callErr error
 	var token *string
 
@@ -207,38 +229,25 @@ func (m *submoduleObjMng) deletePrefix(
 		token = page.NextContinuationToken
 	}
 
-	output.Body = models.DeletePrefixOutput{Deleted: d.deleted, Failed: d.failed}
-
 	if callErr != nil {
-		// The frontend canceled the call; nobody is waiting for the result.
 		if isCallCanceled(ctx) {
 			m.logger.Info("delete prefix canceled",
 				"bucket", input.Bucket, "prefix", input.Prefix, "deleted", d.deleted)
-			output.Result = false
-			return output
+			// Canceled by the frontend: fail silently, nobody waits for the result.
+			return output.ThrowError()
 		}
-		d.fail(UnwrapAwsError(callErr))
-		output.Body.Failed = d.failed
+		if d.deleted == 0 && isCredentialsExpired(callErr) {
+			return output.ThrowError(expiredMessage(input.ProfileName, callErr))
+		}
+		d.fail(input.Prefix, UnwrapAwsError(callErr))
 	}
 
 	if d.failed > 0 {
 		m.logger.Error("delete prefix failed", "bucket", input.Bucket, "prefix", input.Prefix,
-			"deleted", d.deleted, "failed", d.failed, "error", d.firstErr)
-		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E021, d.firstErr, map[string]any{
-				"prefix":  input.Prefix,
-				"failed":  d.failed,
-				"deleted": d.deleted,
-			}),
-		)
+			"deleted", d.deleted, "failed", d.failed)
+	} else {
+		m.logger.Info("delete prefix done", "bucket", input.Bucket, "prefix", input.Prefix, "deleted", d.deleted)
 	}
-
-	m.logger.Info("delete prefix done", "bucket", input.Bucket, "prefix", input.Prefix, "deleted", d.deleted)
-	output.AddMessage(
-		models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Bucket, S3S007, "", map[string]any{
-			"prefix": input.Prefix,
-			"count":  d.deleted,
-		}),
-	)
+	output.Body = models.DeletePrefixOutput{Deleted: d.deleted, Failed: d.failed, Failures: d.failures}
 	return output
 }

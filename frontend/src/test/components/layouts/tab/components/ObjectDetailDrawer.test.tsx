@@ -1,10 +1,10 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ObjectDetailOutput, ObjectItem } from '@wails/S3Browser/models/bucket';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ObjectDetailDrawer from '@/components/layouts/tab/components/ObjectDetailDrawer';
-import { renderWithProviders } from '@/test/renderWithProviders';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({ GetObjectDetail: vi.fn() }));
 vi.mock('@/common/utils/ipcUtils', async importOriginal => ({
@@ -53,7 +53,7 @@ describe('ObjectDetailDrawer', () => {
   beforeEach(() => {
     callIPCMock.mockReset();
     useTabListStore.setState({
-      tabList: { [TAB_ID]: { currentView: 'objectList', prefix: '', selectionItem: [], deletingItems: [] } },
+      tabList: { [TAB_ID]: { currentView: 'objectList', prefix: '', selectionItem: {}, deletingItems: {} } },
     });
   });
 
@@ -176,13 +176,17 @@ describe('ObjectDetailDrawer', () => {
     const user = userEvent.setup();
 
     const copyButton = screen.getAllByRole('button', { name: 'Copy' })[0];
-    // The button sits next to the text holding the value.
-    const value = copyButton.parentElement!.textContent;
+    // The button sits in a span wrapper, next to the text holding the value.
+    const value = copyButton.parentElement!.parentElement!.textContent;
     await user.click(copyButton);
+
+    // Wait for it right after the click and unmount at once: the tooltip transition keeps updating on its own
+    // timers, and any await between the click and the unmount would let an update land outside act.
+    expect(await screen.findByText('Copied')).toBeInTheDocument();
+    cleanup();
 
     expect(value).toBeTruthy();
     expect(await navigator.clipboard.readText()).toBe(value);
-    expect(await screen.findByText('Copied')).toBeInTheDocument();
   });
 
   it('shows "-" for a metadata entry with an empty value', async () => {

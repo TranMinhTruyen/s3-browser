@@ -20,6 +20,7 @@ type submoduleBucketMng struct {
 	global *global.Module
 }
 
+// newSubmoduleBucketMng builds the bucket submodule on the shared connection store.
 func newSubmoduleBucketMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -48,6 +49,17 @@ func (m *submoduleBucketMng) listBucket(
 		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 
+	if s3Conn.AuthType == cnst.AuthAnonymous {
+		// Check again so a bucket whose policy changed since connecting gets the right flag.
+		checkAnonymousBuckets(ctx, s3Conn)
+		if isCallCanceled(ctx) {
+			// Canceled by the frontend: fail silently, nobody waits for the result.
+			return output.ThrowError()
+		}
+		output.Body.BucketList = anonymousBuckets(s3Conn, "")
+		return output
+	}
+
 	listBucketInput := &s3.ListBucketsInput{
 		MaxBuckets: aws.Int32(input.Limit),
 	}
@@ -58,16 +70,10 @@ func (m *submoduleBucketMng) listBucket(
 	result, err := s3Conn.Client.ListBuckets(ctx, listBucketInput)
 
 	if err != nil {
-		if isCallCanceled(ctx) {
-			output.Result = false
-			return output
-		}
-
-		return output.ThrowError(
+		return failCall(ctx, output, input.ProfileName, err,
 			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E007, err.Error(), map[string]any{
 				"name": input.ProfileName,
-			}),
-		)
+			}))
 	}
 
 	body := models.ListBucketOutput{
@@ -84,4 +90,18 @@ func (m *submoduleBucketMng) listBucket(
 
 	output.Body = body
 	return output
+}
+
+// anonymousBuckets returns the buckets the user entered for an anonymous connection (the API can't list them),
+// keeping those whose name contains lowerKeyword (already lower-cased; empty keeps all). Buckets that failed
+// the latest check are flagged Inaccessible.
+func anonymousBuckets(c *global.S3Conn, lowerKeyword string) []models.Bucket {
+	all := c.AnonymousBuckets()
+	buckets := make([]models.Bucket, 0, len(all))
+	for _, b := range all {
+		if containsFold(b.Name, lowerKeyword) {
+			buckets = append(buckets, models.Bucket{Name: b.Name, Inaccessible: !b.Accessible})
+		}
+	}
+	return buckets
 }

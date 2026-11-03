@@ -1,0 +1,8 @@
+{
+  "title": "刪除檔案",
+  "warning": "此操作無法復原。",
+  "rootFolder": "（所選檔案）",
+  "selectedCount": "{selected}/{total} 個檔案",
+  "selectAll": "全選",
+  "delete": "刪除"
+}

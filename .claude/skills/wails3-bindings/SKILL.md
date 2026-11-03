@@ -8,7 +8,7 @@ allowed-tools: Bash(go tool wails3 generate bindings *), Bash(go build *), Bash(
 
 Skill có hai phần. **Phần A** (sinh bindings) chỉ `go-backend` hoặc session chính được chạy. **Phần B** (kiểm tra) thì `verifier` cũng được chạy, nhưng **không được chạy Phần A**: nếu Phần B phát hiện bindings cũ, báo lại để `go-backend` sinh lại.
 
-Mọi lệnh chạy ở thư mục `App/S3Browser` (trừ `tsc` chạy trong `frontend/`). Không bao giờ sửa tay `frontend/bindings/**`.
+Mọi lệnh chạy ở gốc repo (trừ `tsc` chạy trong `frontend/`). Không bao giờ sửa tay `frontend/bindings/**`.
 
 > `frontend/bindings` nằm trong `.gitignore`, nên **không dùng `git status`/`git diff` để xem binding thay đổi**: git không thấy thư mục này. Skill so sánh với bản chụp tạm (snapshot) trước khi sinh.
 

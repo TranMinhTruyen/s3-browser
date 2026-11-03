@@ -32,20 +32,20 @@ const (
 // submoduleSearchMng searches objects and buckets by keyword, page by page.
 type submoduleSearchMng struct {
 	logger *slog.Logger
+	app    *application.App
 	global *global.Module
-	// appContext returns the app lifetime context. Tests replace it so they don't need a running app.
-	appContext func() context.Context
 }
 
+// newSubmoduleSearchMng builds the search submodule on the shared connection store.
 func newSubmoduleSearchMng(
 	app *application.App,
 	logger *slog.Logger,
 	global *global.Module,
 ) *submoduleSearchMng {
 	return &submoduleSearchMng{
-		logger:     logger.With("submodules", "search_mng"),
-		global:     global,
-		appContext: app.Context,
+		logger: logger.With("submodules", "search_mng"),
+		app:    app,
+		global: global,
 	}
 }
 
@@ -58,7 +58,7 @@ func (m *submoduleSearchMng) searchObject(
 	ctx context.Context,
 	input models.SearchObjectInput,
 ) models.Output[models.SearchObjectOutput] {
-	ctx, cancel := withCallContext(ctx, m.appContext(), 5*time.Minute)
+	ctx, cancel := withCallContext(ctx, m.app.Context(), 5*time.Minute)
 	defer cancel()
 
 	output := models.NewOutput[models.SearchObjectOutput]()
@@ -91,8 +91,8 @@ func (m *submoduleSearchMng) searchObject(
 		page, err := s3Conn.Client.ListObjectsV2(ctx, listInput)
 		if err != nil {
 			if isCallCanceled(ctx) {
-				output.Result = false
-				return output
+				// Canceled by the frontend: fail silently, nobody waits for the result.
+				return output.ThrowError()
 			}
 
 			return output.ThrowError(
@@ -267,7 +267,7 @@ func (m *submoduleSearchMng) searchBucket(
 	input models.SearchBucketInput,
 ) models.Output[models.SearchBucketOutput] {
 	// No overall timeout: each ListBuckets call has its own (searchBucketCallTimeout).
-	ctx, cancel := withCallContext(ctx, m.appContext(), 0)
+	ctx, cancel := withCallContext(ctx, m.app.Context(), 0)
 	defer cancel()
 
 	output := models.NewOutput[models.SearchBucketOutput]()
@@ -294,6 +294,12 @@ func (m *submoduleSearchMng) searchBucket(
 		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 
+	if s3Conn.AuthType == cnst.AuthAnonymous {
+		buckets := anonymousBuckets(s3Conn, keyword)
+		output.Body.BucketList = buckets[:min(len(buckets), searchMaxResults)]
+		return output
+	}
+
 	body := models.SearchBucketOutput{BucketList: make([]models.Bucket, 0, searchMaxResults)}
 
 	for range searchMaxPages {
@@ -307,8 +313,8 @@ func (m *submoduleSearchMng) searchBucket(
 		cancelCall()
 		if err != nil {
 			if isCallCanceled(ctx) {
-				output.Result = false
-				return output
+				// Canceled by the frontend: fail silently, nobody waits for the result.
+				return output.ThrowError()
 			}
 			return failure(UnwrapAwsError(err))
 		}

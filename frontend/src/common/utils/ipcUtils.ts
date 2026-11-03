@@ -1,4 +1,4 @@
-import { Output } from '@wails/S3Browser/models/common';
+import { type Message, Output } from '@wails/S3Browser/models/common';
 import { CancelError, CancellablePromise } from '@wailsio/runtime';
 import { toast } from 'sonner';
 import { createUUID, formatStringJson, isNullOrEmpty } from '@/common/utils/stringUtils';
@@ -98,11 +98,24 @@ export async function callIPC<A extends unknown[], T>(
   }
 }
 
+/** Message codes (of the `bucket` module) whose `secret` param is a technical name (e.g. `mfaCode`). */
+const SECRET_PARAM_CODES = new Set(['S3E046']);
+
+/** Replaces the technical `secret` param of {@link SECRET_PARAM_CODES} with its `ipcMessage:params.secret.*` label. */
+function translateParams({ moduleName, messageCode, params }: Message) {
+  if (moduleName !== 'bucket' || !SECRET_PARAM_CODES.has(messageCode ?? '')) return params;
+  const key = `ipcMessage:params.secret.${params?.secret}`;
+  return i18n.exists(key) ? { ...params, secret: i18n.t(key) } : params;
+}
+
 function showMessages<T>(output: Output<T>): void {
   [...(output.messageList ?? [])]
     .sort((a, b) => (a.order ?? '').localeCompare(b.order ?? ''))
     .forEach(item => {
-      const message = formatStringJson(i18n.t(`ipcMessage:${item.moduleName}.${item.messageCode}`), item?.params);
+      const message = formatStringJson(
+        i18n.t(`ipcMessage:${item.moduleName}.${item.messageCode}`),
+        translateParams(item)
+      );
       const description = !isNullOrEmpty(item.errorDetail) ? item.errorDetail : '';
       switch (item.messageType) {
         case 'E':
