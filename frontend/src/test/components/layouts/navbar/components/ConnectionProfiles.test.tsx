@@ -31,10 +31,9 @@ vi.mock('@tanstack/react-virtual', () => ({
         Array.from({ length: options.count }, (_, index) => ({
           key: options.getItemKey(index),
           index,
-          start: index * 72,
+          start: index * 76,
         })).filter(row => !virtual.hidden.has(String(row.key))),
-      getTotalSize: () => options.count * 72,
-      measureElement: () => {},
+      getTotalSize: () => options.count * 76,
     };
   },
 }));
@@ -153,23 +152,35 @@ describe('ConnectionProfiles', () => {
   });
 
   describe('virtualization', () => {
-    it('keys rows by profile id, estimates 64px, and attaches the scroll container', () => {
+    it('keys rows by profile id, uses a fixed 76px row, and attaches the scroll container', () => {
       renderProfiles({ a: profile('a'), b: profile('b') });
 
       const opts = virtual.options as {
         count: number;
-        gap: number;
         overscan: number;
         estimate: number;
+        gap?: number;
+        measureElement?: unknown;
         getScrollElement: () => HTMLElement;
         getItemKey: (i: number) => string;
       };
       expect(opts.count).toBe(2);
-      expect(opts.gap).toBe(8);
-      expect(opts.overscan).toBe(5);
-      expect(opts.estimate).toBe(64);
+      expect(opts.gap).toBeUndefined();
+      expect(opts.measureElement).toBeUndefined();
+      expect(opts.overscan).toBe(10);
+      expect(opts.estimate).toBe(76);
       expect(opts.getItemKey(1)).toBe('b');
       expect(opts.getScrollElement()).toContainElement(screen.getByText('a-name'));
+    });
+
+    it('sizes the list by rows x 76 and positions fixed-height rows without measuring them', () => {
+      renderProfiles({ a: profile('a'), b: profile('b'), c: profile('c') });
+
+      const row = (name: string) => card(name).parentElement as HTMLElement;
+      expect(row('b-name').parentElement).toHaveStyle({ height: '228px' });
+      expect(row('a-name')).toHaveStyle({ height: '68px', transform: 'translateY(0px)' });
+      expect(row('c-name')).toHaveStyle({ height: '68px', transform: 'translateY(152px)' });
+      expect(card('a-name')).not.toHaveAttribute('data-index');
     });
 
     it('only renders the rows the virtualizer returns', () => {
@@ -178,21 +189,6 @@ describe('ConnectionProfiles', () => {
 
       expect(screen.getByText('a-name')).toBeInTheDocument();
       expect(screen.queryByText('b-name')).not.toBeInTheDocument();
-    });
-
-    it('clears the opened menu when its item leaves the rendered rows, so it stays closed on return', async () => {
-      renderProfiles({ a: profile('a'), b: profile('b') });
-      fireEvent.contextMenu(card('a-name'));
-      expect(await screen.findAllByRole('menuitem')).not.toHaveLength(0);
-
-      virtual.hidden = new Set(['a']);
-      act(() => useProfileStore.getState().updateConnectionProfiles('b', profile('b', { name: 'Bee' })));
-      await waitFor(() => expect(screen.queryByText('a-name')).not.toBeInTheDocument());
-
-      virtual.hidden = new Set();
-      act(() => useProfileStore.getState().updateConnectionProfiles('b', profile('b', { name: 'Bee2' })));
-      expect(await screen.findByText('a-name')).toBeInTheDocument();
-      await waitFor(() => expect(screen.queryByRole('menuitem')).not.toBeInTheDocument());
     });
   });
 
@@ -441,17 +437,30 @@ describe('ConnectionProfiles', () => {
       expect(profiles().a?.isConnected).toBe(false);
     });
 
-    it('offers disconnect and delete for a connected profile, connect, edit and delete otherwise', async () => {
-      renderProfiles({ on: profile('on', { isConnected: true }), off: profile('off') });
-      const menuItems = async () => (await screen.findAllByRole('menuitem')).map(i => i.textContent);
+    it.each([
+      ['a connected profile', true, ['Disconnect', 'Delete']],
+      ['a disconnected profile', false, ['Connect', 'Edit', 'Delete']],
+    ])('offers the matching actions for %s', async (_n, isConnected, expected) => {
+      renderProfiles({ p: profile('p', { isConnected }) });
 
-      fireEvent.contextMenu(card('on-name'));
-      expect(await menuItems()).toEqual(['Disconnect', 'Delete']);
+      fireEvent.contextMenu(card('p-name'));
 
-      await userEvent.keyboard('{Escape}');
-      await waitFor(() => expect(screen.queryByRole('menuitem')).not.toBeInTheDocument());
-      fireEvent.contextMenu(card('off-name'));
-      expect(await menuItems()).toEqual(['Connect', 'Edit', 'Delete']);
+      expect((await screen.findAllByRole('menuitem')).map(i => i.textContent)).toEqual(expected);
+    });
+
+    it('switches the actions when the profile of the open menu connects', async () => {
+      renderProfiles({ p: profile('p') });
+      fireEvent.contextMenu(card('p-name'));
+      await screen.findAllByRole('menuitem');
+
+      act(() => useProfileStore.getState().updateConnectionProfiles('p', profile('p', { isConnected: true })));
+
+      await waitFor(() =>
+        expect(screen.getAllByRole('menuitem', { hidden: true }).map(i => i.textContent)).toEqual([
+          'Disconnect',
+          'Delete',
+        ])
+      );
     });
   });
 
@@ -588,17 +597,57 @@ describe('ConnectionProfiles', () => {
   });
 
   describe('context menus', () => {
-    it('keeps only the latest context menu open', async () => {
-      renderProfiles({ a: profile('a'), b: profile('b') });
-
-      fireEvent.contextMenu(card('a-name'));
-      expect(await screen.findAllByRole('menuitem', { name: 'Connect' })).toHaveLength(1);
+    it('opens the menu for the right-clicked row', async () => {
+      confirmMock.mockResolvedValue(false);
+      renderProfiles({ a: profile('a'), b: profile('b', { isConnected: true }) });
 
       fireEvent.contextMenu(card('b-name'));
-      await waitFor(() => expect(screen.getAllByRole('menuitem', { name: 'Connect', hidden: false })).toHaveLength(1));
+      const items = await screen.findAllByRole('menuitem');
+      expect(items.map(i => i.textContent)).toEqual(['Disconnect', 'Delete']);
+    });
 
-      await userEvent.keyboard('{Escape}');
-      await waitFor(() => expect(screen.queryByRole('menuitem', { name: 'Connect' })).not.toBeInTheDocument());
+    it('does not open a menu, and suppresses the native one, on the empty area of the list', async () => {
+      renderProfiles({ a: profile('a') });
+      const list = card('a-name').parentElement!.parentElement!;
+
+      const notPrevented = fireEvent.contextMenu(list);
+      await flush();
+
+      expect(notPrevented).toBe(false);
+      expect(screen.queryByRole('menuitem')).not.toBeInTheDocument();
+    });
+
+    it('closes the menu when its profile is deleted from the store', async () => {
+      renderProfiles({ a: profile('a'), b: profile('b') });
+      fireEvent.contextMenu(card('a-name'));
+      expect(await screen.findAllByRole('menuitem')).not.toHaveLength(0);
+
+      act(() => useProfileStore.getState().deleteConnectionProfiles('a'));
+
+      await waitFor(() => expect(screen.queryByRole('menuitem')).not.toBeInTheDocument());
+    });
+
+    it('does not mount a menu inside the rows', () => {
+      renderProfiles({ a: profile('a'), b: profile('b') });
+
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
+
+    it('keeps only the latest context menu open, with the actions of the latest row', async () => {
+      renderProfiles({ a: profile('a'), b: profile('b', { isConnected: true }) });
+
+      fireEvent.contextMenu(card('a-name'));
+      expect((await screen.findAllByRole('menuitem')).map(i => i.textContent)).toEqual(['Connect', 'Edit', 'Delete']);
+
+      fireEvent.contextMenu(card('b-name'));
+      // The dropdown is re-positioned for the new row, so it is not exposed to the accessibility tree meanwhile.
+      await waitFor(() =>
+        expect(screen.getAllByRole('menuitem', { hidden: true }).map(i => i.textContent)).toEqual([
+          'Disconnect',
+          'Delete',
+        ])
+      );
+      expect(document.querySelectorAll('[data-menu-dropdown]')).toHaveLength(1);
     });
   });
 });

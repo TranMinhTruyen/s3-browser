@@ -1,22 +1,26 @@
-import { Text } from '@mantine/core';
+import { Menu, Text } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Disconnect } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { DeleteProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
 import type { ConnectionProfileInput } from '@wails/S3Browser/models';
 import { Events } from '@wailsio/runtime';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { PlugZap, SquarePen, Trash, Unplug } from 'lucide-react';
+import type { MouseEvent } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 import { useConnectProfile } from '@/common/hooks/useConnectProfile';
 import { ConnectionProfile, useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { needsManualInput } from '@/common/utils/authUtils';
 import { callIPC } from '@/common/utils/ipcUtils';
-import ConnectionProfileItem from '@/components/layouts/navbar/components/ConnectionProfileItem';
+import ConnectionProfileItem, { CARD_HEIGHT } from '@/components/layouts/navbar/components/ConnectionProfileItem';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import { showConnectModal } from '@/components/modals/lazyModals';
 
-// Initial row height (2 text lines + card padding); the real height comes from measureElement.
-const ESTIMATED_ITEM_HEIGHT = 64;
+const ROW_GAP = 8;
+// Fixed row height (card + gap): the virtualizer never measures, so the scroll size stays stable while scrolling.
+const ITEM_HEIGHT = CARD_HEIGHT + ROW_GAP;
 
 // The delete only needs the identity of the profile.
 const toDeleteInput = ({ id, name, version, authConfig }: ConnectionProfile): ConnectionProfileInput => ({
@@ -30,9 +34,17 @@ const toDeleteInput = ({ id, name, version, authConfig }: ConnectionProfile): Co
 function ConnectionProfiles() {
   const { t } = useTranslation('connectionProfiles');
   const [connectingKeys, setConnectingKeys] = useState<Set<string>>(new Set());
-  const [openedMenuKey, setOpenedMenuKey] = useState<string | null>(null);
+  const [menuKey, setMenuKey] = useState<string | null>(null);
 
-  const connectionProfiles = useProfileStore(s => s.connectionProfiles);
+  const keys = useProfileStore(
+    useShallow(s =>
+      Object.entries(s.connectionProfiles)
+        .filter(e => e[1] !== undefined)
+        .map(e => e[0])
+    )
+  );
+  // Only the connected flag of the profile owning the shared menu is needed (undefined = no menu / deleted).
+  const menuConnected = useProfileStore(s => (menuKey ? s.connectionProfiles[menuKey]?.isConnected : undefined));
   const loaded = useProfileStore(s => s.loaded);
   const autoConnectDoneRef = useRef(false);
   const connectingRef = useRef(new Set<string>());
@@ -45,15 +57,6 @@ function ConnectionProfiles() {
   const connectProfile = useConnectProfile();
   const resetViewByProfile = useTabListStore(s => s.resetViewByProfile);
   const clearProfile = useTabListStore(s => s.clearProfile);
-
-  useEffect(() => {
-    // Events.On returns the unsubscribe function.
-    return Events.On('bucket:connect-save-profile', e => {
-      if (!e.data.id) return;
-      autoConnectDoneRef.current = false;
-      updateConnectionProfiles(e.data.id, { ...e.data });
-    });
-  }, [updateConnectionProfiles]);
 
   // Marks a profile as (not) connecting; the ref guards re-entry, the state drives the spinner.
   const setConnecting = useCallback((key: string, connecting: boolean) => {
@@ -151,86 +154,123 @@ function ConnectionProfiles() {
     [deleteConnectionProfiles, clearProfile, loadConnectionProfiles, getConnectionProfileById, resetViewByProfile]
   );
 
-  const onChangeMenu = useCallback((key: string, opened: boolean) => {
-    setOpenedMenuKey(prev => {
-      if (opened) return key;
-      return prev === key ? null : prev;
-    });
-  }, []);
-
-  useEffect(() => {
+  // Auto-connects once after the first profiles arrive (and again after a profile is saved).
+  const runAutoConnect = useCallback(() => {
     if (autoConnectDoneRef.current) return;
 
-    const keys = Object.keys(connectionProfiles);
-    if (keys.length === 0) return;
+    const profiles = useProfileStore.getState().connectionProfiles;
+    const all = Object.keys(profiles);
+    if (all.length === 0) return;
 
     autoConnectDoneRef.current = true;
-
-    keys.forEach(key => {
-      const value = connectionProfiles[key];
+    all.forEach(key => {
+      const value = profiles[key];
       if (!value?.autoConnect || value.isConnected) return;
       void onClickConnect(key);
     });
-    // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [connectionProfiles]);
+  }, [onClickConnect]);
 
-  const entries = useMemo(
-    () => Object.entries(connectionProfiles).filter((e): e is [string, ConnectionProfile] => e[1] !== undefined),
-    [connectionProfiles]
+  useEffect(() => {
+    // Events.On returns the unsubscribe function.
+    return Events.On('bucket:connect-save-profile', e => {
+      if (!e.data.id) return;
+      autoConnectDoneRef.current = false;
+      updateConnectionProfiles(e.data.id, { ...e.data });
+      runAutoConnect();
+    });
+  }, [updateConnectionProfiles, runAutoConnect]);
+
+  useEffect(runAutoConnect, [keys, runAutoConnect]);
+
+  // One shared context menu for all rows (a Menu per row is costly with hundreds of profiles).
+  // Right click resolves the row from the DOM; the menu is positioned by Mantine at the mouse.
+  const onContextMenuRows = useCallback((e: MouseEvent<HTMLElement>) => {
+    const key = (e.target as HTMLElement).closest<HTMLElement>('[data-profile-key]')?.dataset.profileKey;
+    if (key) setMenuKey(key);
+    else e.preventDefault();
+  }, []);
+
+  const onChangeMenu = useCallback((opened: boolean) => {
+    if (!opened) setMenuKey(null);
+  }, []);
+
+  const onClickMenuConnect = useCallback(() => menuKey && onClickConnect(menuKey), [menuKey, onClickConnect]);
+  const onClickMenuDisconnect = useCallback(() => menuKey && onClickDisconnect(menuKey), [menuKey, onClickDisconnect]);
+  const onClickMenuEdit = useCallback(() => menuKey && onClickEditProfile(menuKey), [menuKey, onClickEditProfile]);
+  const onClickMenuDelete = useCallback(
+    () => menuKey && onClickDeleteProfile(menuKey),
+    [menuKey, onClickDeleteProfile]
   );
 
   // React Compiler is disabled, so this compiler-only lint does not apply.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
-    count: entries.length,
+    count: keys.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ESTIMATED_ITEM_HEIGHT,
-    getItemKey: idx => entries[idx][0],
-    gap: 8,
-    overscan: 5,
+    estimateSize: () => ITEM_HEIGHT,
+    getItemKey: idx => keys[idx],
+    overscan: 10,
   });
 
   const virtualItems = virtualizer.getVirtualItems();
-
-  // An item scrolled out of the rendered range unmounts and closes its menu; clear the stale key.
-  useEffect(() => {
-    if (openedMenuKey && !virtualItems.some(row => entries[row.index]?.[0] === openedMenuKey)) {
-      setOpenedMenuKey(null);
-    }
-  }, [openedMenuKey, virtualItems, entries]);
+  const menuOpened = menuKey !== null && menuConnected !== undefined;
 
   return (
     <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px' }}>
-      {loaded && entries.length === 0 ? (
+      {loaded && keys.length === 0 ? (
         <Text c="dimmed" ta="center" p="md">
           {t('profile.empty')}
         </Text>
       ) : null}
-      <div style={{ position: 'relative', height: virtualizer.getTotalSize() }}>
-        {virtualItems.map(row => {
-          const [key, profile] = entries[row.index];
-          return (
-            <div
-              key={key}
-              data-index={row.index}
-              ref={virtualizer.measureElement}
-              style={{ position: 'absolute', width: '100%', transform: `translateY(${row.start}px)` }}
+      <Menu width={200} opened={menuOpened} onChange={onChangeMenu}>
+        <Menu.ContextMenu>
+          <div style={{ position: 'relative', height: virtualizer.getTotalSize() }} onContextMenu={onContextMenuRows}>
+            {virtualItems.map(row => (
+              <div
+                key={row.key}
+                style={{
+                  position: 'absolute',
+                  width: '100%',
+                  height: CARD_HEIGHT,
+                  transform: `translateY(${row.start}px)`,
+                }}
+              >
+                <ConnectionProfileItem
+                  profileKey={keys[row.index]}
+                  connecting={connectingKeys.has(keys[row.index])}
+                  onConnect={onClickConnect}
+                />
+              </div>
+            ))}
+          </div>
+        </Menu.ContextMenu>
+
+        <Menu.Dropdown>
+          {!menuConnected && (
+            <Menu.Item leftSection={<PlugZap size="16px" />} onClick={onClickMenuConnect}>
+              {t('contextMenu.connect')}
+            </Menu.Item>
+          )}
+          {menuConnected && (
+            <Menu.Item
+              leftSection={<Unplug size="16px" />}
+              color="var(--mantine-color-red-6)"
+              onClick={onClickMenuDisconnect}
             >
-              <ConnectionProfileItem
-                profileKey={key}
-                profile={profile}
-                connecting={connectingKeys.has(key)}
-                menuOpened={openedMenuKey === key}
-                onConnect={onClickConnect}
-                onDisconnect={onClickDisconnect}
-                onEdit={onClickEditProfile}
-                onDelete={onClickDeleteProfile}
-                onMenuChange={onChangeMenu}
-              />
-            </div>
-          );
-        })}
-      </div>
+              {t('contextMenu.disconnect')}
+            </Menu.Item>
+          )}
+          {!menuConnected && (
+            <Menu.Item leftSection={<SquarePen size="16px" />} onClick={onClickMenuEdit}>
+              {t('contextMenu.edit')}
+            </Menu.Item>
+          )}
+          <Menu.Divider />
+          <Menu.Item leftSection={<Trash size="16px" />} color="var(--mantine-color-red-6)" onClick={onClickMenuDelete}>
+            {t('contextMenu.delete')}
+          </Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
     </div>
   );
 }
