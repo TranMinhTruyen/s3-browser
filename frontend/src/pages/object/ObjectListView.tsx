@@ -4,7 +4,17 @@ import { DeleteObject, DeletePrefix, DownloadObject } from '@wails/S3Browser/int
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
 import { Output } from '@wails/S3Browser/models/common';
-import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
+import {
+  Ref,
+  RefObject,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFilesDroppedUpload } from '@/common/hooks/useFilesDroppedUpload';
 import { useObjectPaging } from '@/common/hooks/useObjectPaging';
@@ -13,15 +23,16 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { onTabGone } from '@/common/utils/tabUtils';
 import Button from '@/components/buttons/Button';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
-import ObjectItem from '@/pages/object/ObjectItem';
+import ObjectItem, { OBJECT_ROW_HEIGHT, ObjectItemLabels } from '@/pages/object/ObjectItem';
 
 // Download or delete is refused above this many objects at once.
 const MAX_OBJECTS_PER_ACTION = 5;
 // Backend message code of a key deleted successfully (its `params.object` is the key).
 const DELETE_OBJECT_SUCCESS_CODE = 'S3S005';
-// Row height before measuring, and the gap between rows.
-const ROW_ESTIMATE_SIZE = 104;
 const ROW_GAP = 8;
+// Load the next page once this many screens of rows are left below the viewport (at least PREFETCH_MIN_ROWS rows).
+const PREFETCH_SCREENS = 2;
+const PREFETCH_MIN_ROWS = 2;
 
 export type ObjectListViewRef = {
   onRefresh?: () => Promise<void>;
@@ -43,6 +54,16 @@ function ObjectListView(props: ObjectListViewProps) {
   const { tabId, bucket, profile, scrollRef, keyword = '', ref } = props;
 
   const { t } = useTranslation('object', { keyPrefix: 'page' });
+
+  // Rows get their texts from here, so they do not subscribe to i18n themselves.
+  const labels = useMemo<ObjectItemLabels>(
+    () => ({
+      moreActions: t('tooltip.moreActions'),
+      download: t('action.download'),
+      delete: t('action.delete'),
+    }),
+    [t]
+  );
 
   const [scrollMargin, setScrollMargin] = useState(0);
 
@@ -151,7 +172,7 @@ function ObjectListView(props: ObjectListViewProps) {
     async (folderKey: string, name: string) => {
       if (!connectionId || !bucket) return;
       // Already being deleted: ignore a repeated click.
-      if (useTabListStore.getState().tabList[tabId]?.deletingItems?.includes(folderKey)) return;
+      if (useTabListStore.getState().tabList[tabId]?.deletingItems[folderKey] === true) return;
       const confirmed = await ConfirmModal.show({
         type: 'warning',
         confirmCode: 'C000006',
@@ -211,7 +232,7 @@ function ObjectListView(props: ObjectListViewProps) {
   const virtualizer = useVirtualizer({
     count: objectList.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_ESTIMATE_SIZE,
+    estimateSize: () => OBJECT_ROW_HEIGHT,
     getItemKey: idx => objectList[idx].key,
     gap: ROW_GAP,
     overscan: 5,
@@ -220,18 +241,22 @@ function ObjectListView(props: ObjectListViewProps) {
 
   const virtualItems = virtualizer.getVirtualItems();
   const lastVisibleIndex = virtualizer.range?.endIndex ?? -1;
+  const prefetchRows = Math.max(
+    PREFETCH_MIN_ROWS,
+    Math.ceil((PREFETCH_SCREENS * (virtualizer.scrollRect?.height ?? 0)) / (OBJECT_ROW_HEIGHT + ROW_GAP))
+  );
 
   useEffect(() => {
     // After a failed page, wait for Refresh instead of retrying in a loop.
     if (!nextCursor || isLoadingMore || loadMoreError || cursorKey !== listKey) return;
     // An empty search has nothing to scroll: the user continues it with the "load more" button.
     if (keyword && objectList.length === 0) return;
-    // Load the next page once only 2 items are left below the viewport.
-    if (lastVisibleIndex >= objectList.length - 1 - 2) {
+    if (lastVisibleIndex >= objectList.length - 1 - prefetchRows) {
       loadNextPage();
     }
   }, [
     lastVisibleIndex,
+    prefetchRows,
     objectList.length,
     nextCursor,
     isLoadingMore,
@@ -255,8 +280,6 @@ function ObjectListView(props: ObjectListViewProps) {
       {virtualItems.map(row => (
         <div
           key={row.key}
-          data-index={row.index}
-          ref={virtualizer.measureElement}
           style={{
             position: 'absolute',
             width: '100%',
@@ -266,6 +289,7 @@ function ObjectListView(props: ObjectListViewProps) {
           <ObjectItem
             tabId={tabId}
             item={objectList[row.index]}
+            labels={labels}
             onOpenDetail={onOpenDetail}
             onToggleSelect={onToggleSelect}
             onClickMenuButton={onClickMenuButton}

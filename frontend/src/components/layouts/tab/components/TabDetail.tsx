@@ -117,7 +117,7 @@ function TabDetail(props: TabDetailProps) {
         currentView: 'bucketList',
         bucket: undefined,
         prefix: '',
-        selectionItem: [],
+        selectionItem: {},
       });
     },
     [tabId, updateTab]

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { isTabHidden, onTabGone } from '@/common/utils/tabUtils';
 
-const tabState = { currentView: 'bucketList' as const, prefix: '', selectionItem: [], deletingItems: [] };
+const tabState = { currentView: 'bucketList' as const, prefix: '', selectionItem: {}, deletingItems: {} };
 
 describe('isTabHidden', () => {
   beforeEach(() => {
