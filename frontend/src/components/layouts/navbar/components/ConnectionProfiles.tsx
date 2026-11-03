@@ -215,6 +215,15 @@ function ConnectionProfiles() {
   const virtualItems = virtualizer.getVirtualItems();
   const menuOpened = menuKey !== null && menuConnected !== undefined;
 
+  // The menu is anchored to the mouse point, so close it when the list scrolls (listener only while open).
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!menuOpened || !el) return;
+    const onScroll = () => setMenuKey(null);
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [menuOpened]);
+
   return (
     <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px' }}>
       {loaded && keys.length === 0 ? (

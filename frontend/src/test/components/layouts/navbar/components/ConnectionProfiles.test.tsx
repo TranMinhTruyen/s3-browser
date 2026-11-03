@@ -627,6 +627,41 @@ describe('ConnectionProfiles', () => {
       await waitFor(() => expect(screen.queryByRole('menuitem')).not.toBeInTheDocument());
     });
 
+    it('closes the open menu when the list scrolls', async () => {
+      renderProfiles({ a: profile('a') });
+      const scroller = card('a-name').parentElement!.parentElement!.parentElement!;
+      fireEvent.contextMenu(card('a-name'));
+      expect(await screen.findAllByRole('menuitem')).not.toHaveLength(0);
+
+      fireEvent.scroll(scroller);
+
+      await waitFor(() => expect(screen.queryByRole('menuitem')).not.toBeInTheDocument());
+    });
+
+    it('listens to scroll only while the menu is open and removes the listener when it closes', async () => {
+      renderProfiles({ a: profile('a') });
+      const scroller = card('a-name').parentElement!.parentElement!.parentElement!;
+      const add = vi.spyOn(scroller, 'addEventListener');
+      const remove = vi.spyOn(scroller, 'removeEventListener');
+      const scrollCalls = (spy: typeof add) => spy.mock.calls.filter(c => c[0] === 'scroll');
+
+      fireEvent.scroll(scroller);
+      expect(scrollCalls(add)).toHaveLength(0);
+
+      fireEvent.contextMenu(card('a-name'));
+      await screen.findAllByRole('menuitem');
+      // Floating UI also listens for scroll while the dropdown is open, so check passive listeners in general.
+      expect(scrollCalls(add).length).toBeGreaterThan(0);
+      expect(scrollCalls(add).some(c => (c[2] as AddEventListenerOptions | undefined)?.passive === true)).toBe(true);
+      expect(scrollCalls(remove)).toHaveLength(0);
+
+      await userEvent.keyboard('{Escape}');
+
+      // Every listener added while open is removed again on close.
+      await waitFor(() => expect(scrollCalls(remove)).toHaveLength(scrollCalls(add).length));
+      scrollCalls(add).forEach(c => expect(scrollCalls(remove).map(r => r[1])).toContain(c[1]));
+    });
+
     it('does not mount a menu inside the rows', () => {
       renderProfiles({ a: profile('a'), b: profile('b') });
 
