@@ -1,4 +1,6 @@
 .card {
+  overflow: hidden;
+  contain: content;
   cursor: pointer;
   transition:
     border-color 150ms ease,
