@@ -4,18 +4,39 @@ File này được Claude Code tự động load cho session chính và mọi su
 
 > Mở `claude` trong thư mục `App/S3Browser` (hoặc thư mục con) thì file này, các agent và skill mới được load, vì git root của repo là `kanban-board/`.
 
-Bộ nhớ giữa các session (trạng thái sprint, quyết định, lỗi đã gặp) được import từ file dưới đây, quy tắc ở mục **8. Memory**:
+Bộ nhớ giữa các session (trạng thái sprint, quyết định, lỗi đã gặp) được import từ file dưới đây, quy tắc ở mục **10. Memory**:
 
 @memory/MEMORY.md
 
-## 1. Tổng quan
+## 1. Suy nghĩ trước khi code
+
+**Đừng đưa ra các giả định. Đừng che giấu sự mơ hồ. Hãy làm rõ các đánh đổi.**
+Trước khi bắt tay vào triển khai:
+- Nêu rõ các giả định của bạn. Nếu không chắc chắn, hãy đặt câu hỏi.
+- Nếu có nhiều cách hiểu khác nhau, hãy trình bày tất cả – đừng tự ý chọn một cách mà không trao đổi.
+- Nếu có giải pháp đơn giản hơn, hãy đề xuất. Đừng ngần ngại phản biện khi cần thiết.
+- Nếu có điều gì đó chưa rõ ràng, hãy dừng lại. Chỉ ra điểm gây khó hiểu và đặt câu hỏi.
+
+## 2. Ưu tiên sự đơn giản
+
+**Viết lượng code tối thiểu đủ để giải quyết vấn đề. Không thêm thắt những thứ mang tính dự đoán tương lai.**
+
+- Không thêm tính năng ngoài phạm vi yêu cầu.
+- Không tạo các lớp trừu tượng (abstraction) cho những đoạn code chỉ dùng một lần.
+- Không thêm các tùy chọn "linh hoạt" hay "cấu hình" khi không được yêu cầu.
+- Không viết code xử lý lỗi cho những tình huống không bao giờ xảy ra.
+- Nếu bạn viết 200 dòng code trong khi chỉ cần 50 dòng là đủ, hãy viết lại.
+
+Hãy tự hỏi: "Liệu một kỹ sư cấp cao có cho rằng cách làm này quá phức tạp không?" Nếu có, hãy đơn giản hóa nó.
+
+## 3. Tổng quan
 
 - App desktop viết bằng **Wails v3** (Go backend + React TS frontend) để duyệt và thao tác bucket/object trên **AWS S3** và **MinIO**.
 - Repo: `TranMinhTruyen/kanban-board`, thư mục `App/S3Browser`, nhánh `master`.
 - Go module tên `S3Browser`, Go 1.27. Wails `v3.1.0`, `@wailsio/runtime`.
 - **Wails v3 đã stable**: luôn tra cứu https://v3.wails.io/ trước khi dùng API Wails, không dựa vào kiến thức có sẵn.
 
-## 2. Luật bắt buộc
+## 4. Luật bắt buộc
 
 1. Luôn trả lời bằng **tiếng Việt**; giữ nguyên tên định danh trong code bằng tiếng Anh.
 2. **Không bao giờ** chạy `git commit`, `git push`, `git switch`, `git reset`, `git checkout`, `git stash` hay lệnh nào thay đổi branch hoặc lịch sử git. **Ngoại lệ duy nhất**: agent `git-flow`, khi được `orchestrator` gọi trong quy trình sprint, được tách branch `SP-NN/<slug>` từ `origin/master`, commit local, và chỉ push + tạo PR vào `master` sau khi người dùng đồng ý. Không agent nào được push vào `master`, force push hay merge PR. Ngoài quy trình sprint, khi được yêu cầu chỉ soạn commit message cho các thay đổi đã stage (`git diff --cached`) bằng skill `/commit-message`.
@@ -28,7 +49,7 @@ Bộ nhớ giữa các session (trạng thái sprint, quyết định, lỗi đ�
 9. Luôn cố gắng tối ưu hiệu năng để tăng trải nghiệm người dùng.
 10. Code đơn giản, súc tích, dễ hiểu đừng quá dài dòng có comment cho code rõ ràng để dễ maintain sau này.
 
-## 3. Quy trình xử lý một task (B1–B5)
+## 5. Quy trình xử lý một task (B1–B5)
 
 | Bước | Nội dung                                                                                                                                                                                                                                                                      | Agent phụ trách                                                                         |
 | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
@@ -46,7 +67,7 @@ Bộ nhớ giữa các session (trạng thái sprint, quyết định, lỗi đ�
 - Không bao giờ chạy hai agent viết code song song.
 - Tạo PR cần `gh` CLI đã cài và đăng nhập (`gh auth login`) trên máy.
 
-## 4. Skill
+## 6. Skill
 
 Skill nằm trong `.claude/skills/<name>/SKILL.md` (bị chặn ghi, chỉ người dùng sửa).
 
@@ -56,7 +77,7 @@ Skill nằm trong `.claude/skills/<name>/SKILL.md` (bị chặn ghi, chỉ ngư�
 | `new-sprint`      | Chỉ người dùng: `/new-sprint <tên>`                                                               | Tạo `sprints/sprint-NN/requirement.md` từ `_template` với số NN kế tiếp                              |
 | `commit-message`  | Chỉ người dùng: `/commit-message [gợi ý]`                                                         | Soạn message tiếng Anh theo Conventional Commits từ `git diff --cached`, không commit/push           |
 
-## 5. Backend (Go)
+## 7. Backend (Go)
 
 ### Cấu trúc
 
@@ -108,7 +129,7 @@ Tất cả tool Go được khai báo trong `tool (...)` của `go.mod` (wails3,
 - Sinh sqlc: `go tool sqlc generate`.
 - Chạy dev: `go tool wails3 task dev`.
 
-## 6. Frontend (React 19 + TS)
+## 8. Frontend (React 19 + TS)
 
 ### Stack
 
@@ -135,6 +156,8 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 - Danh sách lớn phải virtualize.
 - Component Mantine được bọc lại trong `components/buttons|inputs|modals`.
 - Button: luôn dùng wrapper `components/buttons/Button` (không import thẳng `Button` từ `@mantine/core`). Wrapper tự co theo container, cắt chữ bằng ellipsis và hiện tooltip khi chữ bị cắt; không bọc thêm `Tooltip` chứa đúng label của nút, không ép width cố định.
+- ActionIcon: luôn dùng wrapper `components/buttons/ActionIcon` (không import thẳng `ActionIcon` từ `@mantine/core`), bắt buộc truyền prop `tooltip` (chuỗi đã dịch); wrapper tự bọc `Tooltip` và đặt `aria-label`, không bọc thêm `Tooltip` bên ngoài. Nút luôn nằm trong một span `inline-flex`: margin props (`m`, `ml`, `mr`...) và `style` áp lên span, các prop khác (kể cả `className`, `ref`) áp lên nút; tooltip tự tắt khi `aria-expanded` (ví dụ nút là `Menu.Target` đang mở).
+- Chữ một dòng có thể bị cắt: dùng `components/TruncatedText` (ellipsis, tooltip khi bị cắt, `label`/`alwaysTip` khi tooltip cần nội dung khác) thay cho `Text truncate`.
 - Màu: dùng biến theme `var(--mantine-color-*)` và `light-dark(<light>, <dark>)` để hỗ trợ cả light/dark theme; không hard-code hex/rgb/tên màu (ngoại lệ: màu lưu như dữ liệu, ví dụ màu profile do user chọn; prop `color="red"` của nút Huỷ trong footer modal). Component variant `light` (Badge, Button...) truyền màu gốc `var(--mantine-color-<c>-6)`; biến `-light-color` chỉ dùng cho chữ/viền.
 - **Console sạch**: code không được sinh warning hay error trong console của React (thiếu `key`, setState sau unmount, controlled/uncontrolled, DOM lồng sai, prop không hợp lệ truyền xuống DOM, i18next thiếu key, cảnh báo của Mantine...). Không để `console.log`/`console.warn`/`console.error` trong code production; lỗi cần báo cho người dùng thì đi qua `callIPC`/toast, cần ghi log thì đi qua backend.
 - Modal: footer đặt nút Huỷ (`color="red"`) bên **trái**, các nút hành động (Reset, Apply, Save, OK, Upload, ...) bên **phải**, dùng `<Group p="8px" justify="space-between" wrap="nowrap">` để không nhảy layout khi đổi ngôn ngữ/font. Phần thân modal có form/nội dung chính thì bọc trong `<Paper withBorder>` giống `UploadPickerModal`.
@@ -154,7 +177,7 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 - Lint: `npx oxlint <paths>` (theo `.oxlintrc.json`).
 - Type-check: Windows `node_modules/.bin/tsc.exe --noEmit`, macOS/Linux `node_modules/.bin/tsc --noEmit`. Không dùng `npx tsc` (không resolve được ở đây).
 
-## 7. Testing
+## 9. Testing
 
 ### Chung
 
@@ -173,7 +196,7 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 - Ngưỡng FE: **Branches (C1) ≥ 95%** và **Lines ≥ 95%** cho từng file.
 - **Console sạch khi chạy test**: output của `vitest run` không được có warning/error từ React hoặc thư viện (`Warning: ...`, `act(...)`, `console.error`, `console.warn`, `stderr |`). Test cố ý đi vào nhánh có ghi lỗi thì phải `vi.spyOn(console, 'error').mockImplementation(() => {})` và assert spy đã được gọi đúng, không để lọt ra output.
 
-## 8. Memory
+## 10. Memory
 
 - File `memory/MEMORY.md` lưu những gì session sau cần biết mà không suy ra được từ code: trạng thái sprint đang dở, quyết định đã chốt kèm lý do, lỗi và bẫy đã gặp. File được import ở đầu `CLAUDE.md` nên mọi session và subagent đều tự đọc.
 - **Chỉ `orchestrator` ghi**, ở B5 của mỗi sprint (và khi sprint dừng giữa chừng), commit cùng branch cuối. Agent khác và session thường chỉ đọc; thấy điều cần nhớ thì ghi vào kết quả trả về để orchestrator đưa vào memory.
