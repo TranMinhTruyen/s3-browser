@@ -1,11 +1,26 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { isTabRestoreFailed, saveTabState } from '@/common/utils/tabPersistence';
+import { buildTabState } from '@/common/utils/tabState';
 
 const SAVE_DELAY_MS = 500;
 
-/** Selector returning a stable string, so the hook only re-renders when the saved layout changes. */
-const selectPayload = (s: ReturnType<typeof useTabListStore.getState>) => JSON.stringify(s.serializeTabs());
+type TabListState = ReturnType<typeof useTabListStore.getState>;
+
+/** Flat list `[activeTab, id1, profileId1, id2, profileId2, ...]`: shallow-equal unless the saved layout changes. */
+const selectLayout = (s: TabListState): (string | null)[] => [
+  s.activeTab,
+  ...Object.entries(s.tabList).flatMap(([id, tab]) => [id, tab.profileId ?? null]),
+];
+
+/** Rebuilds the saved layout from the flat list and serializes it. */
+const toPayload = (layout: (string | null)[]): string => {
+  const [activeTab, ...rest] = layout as [string, ...(string | null)[]];
+  const tabs: [string, string | null][] = [];
+  for (let i = 0; i < rest.length; i += 2) tabs.push([rest[i] as string, rest[i + 1] ?? null]);
+  return JSON.stringify(buildTabState(activeTab, tabs));
+};
 
 /**
  * Saves the tab order, active tab and profiles 500ms after they stop changing, and right away on `pagehide`.
@@ -13,7 +28,8 @@ const selectPayload = (s: ReturnType<typeof useTabListStore.getState>) => JSON.s
  * Call after the saved layout was restored, otherwise tabs.json would be overwritten by the default tab.
  */
 export function useTabPersistence(): void {
-  const payload = useTabListStore(selectPayload);
+  const layout = useTabListStore(useShallow(selectLayout));
+  const payload = useMemo(() => toPayload(layout), [layout]);
   const lastSaved = useRef<string | null>(null);
   const pending = useRef<string | null>(null);
 
