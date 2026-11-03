@@ -1,4 +1,4 @@
-import { DownloadHistoryItem, DownloadProgressOutput } from '@wails/S3Browser/models';
+import { DownloadHistoryItem, DownloadProgressOutput } from '@wails/S3Browser/models/bucket';
 import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
 
@@ -7,6 +7,8 @@ export type DownloadItem = DownloadHistoryItem & DownloadProgressOutput;
 
 interface DownloaderState {
   downloadItems: Record<string, DownloadItem>;
+  /** Ids of items with status DOWNLOADING, kept in sync by `upsertDownloadItems`. */
+  downloadingIds: string[];
   windowVisible: boolean;
   /** Measured size of the visible downloader (window or button); 0 when not rendered. */
   windowSize: { width: number; height: number };
@@ -14,7 +16,7 @@ interface DownloaderState {
 
 interface DownloaderAction {
   upsertDownloadItems: (inputs: DownloadHistoryItem[]) => void;
-  setDownloadProgess: (input: DownloadProgressOutput) => void;
+  setDownloadProgressBatch: (items: DownloadProgressOutput[]) => void;
   openWindow: () => void;
   closeWindow: () => void;
   setWindowSize: (size: { width: number; height: number }) => void;
@@ -27,6 +29,7 @@ const SCOPE = 'downloader';
 export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAction>(
   (set, get) => ({
     downloadItems: {},
+    downloadingIds: [],
     windowVisible: false,
     windowSize: { width: 0, height: 0 },
 
@@ -58,6 +61,13 @@ export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAct
               downloaded: prev?.downloaded ?? 0,
               total: prev?.total ?? 0,
             };
+
+            const index = state.downloadingIds.indexOf(input.id);
+            if (input.status === 'DOWNLOADING') {
+              if (index < 0) state.downloadingIds.push(input.id);
+            } else if (index >= 0) {
+              state.downloadingIds.splice(index, 1);
+            }
           }
         },
         undefined,
@@ -65,17 +75,19 @@ export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAct
       );
     },
 
-    setDownloadProgess: (input: DownloadProgressOutput) => {
+    setDownloadProgressBatch: (items: DownloadProgressOutput[]) => {
       set(
         state => {
-          const item = state.downloadItems[input.downloadId];
-          if (item) {
-            item.downloaded = input.downloaded;
-            item.total = input.total;
+          for (const input of items) {
+            const item = state.downloadItems[input.downloadId];
+            if (!item) continue;
+            // Assign only on change so an unchanged batch keeps the same state.
+            if (item.downloaded !== input.downloaded) item.downloaded = input.downloaded;
+            if (item.total !== input.total) item.total = input.total;
           }
         },
         undefined,
-        `${SCOPE}/setDownloadProgess`
+        `${SCOPE}/setDownloadProgressBatch`
       );
     },
 
@@ -84,6 +96,7 @@ export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAct
       set(
         {
           downloadItems: {},
+          downloadingIds: [],
           windowVisible: false,
           windowSize: { width: 0, height: 0 },
         },
@@ -95,8 +108,5 @@ export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAct
   SCOPE
 );
 
-/** Ids of downloads in progress. Returns a new array: use with `useShallow`. */
-export const selectDownloadingIds = (s: DownloaderState) =>
-  Object.values(s.downloadItems)
-    .filter(item => item.status === 'DOWNLOADING')
-    .map(item => item.id);
+/** Ids of downloads in progress (same reference until the list changes). */
+export const selectDownloadingIds = (s: DownloaderState) => s.downloadingIds;

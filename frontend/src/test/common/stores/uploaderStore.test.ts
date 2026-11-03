@@ -22,17 +22,46 @@ describe('uploaderStore', () => {
     expect(state().uploadItems).toEqual({});
   });
 
-  it('setUploadProgress updates the total only when positive', () => {
+  it('setUploadProgressBatch overwrites the total only when positive', () => {
     state().startUpload(started('u1'));
-    state().setUploadProgress({ uploadId: 'u1', uploaded: 3, total: 20 } as never);
+    state().setUploadProgressBatch([{ uploadId: 'u1', uploaded: 3, total: 20 }] as never);
     expect(state().uploadItems.u1).toMatchObject({ uploaded: 3, total: 20 });
-    state().setUploadProgress({ uploadId: 'u1', uploaded: 4, total: 0 } as never);
+    state().setUploadProgressBatch([{ uploadId: 'u1', uploaded: 4, total: 0 }] as never);
     expect(state().uploadItems.u1).toMatchObject({ uploaded: 4, total: 20 });
   });
 
-  it('setUploadProgress ignores unknown items', () => {
-    state().setUploadProgress({ uploadId: 'ghost', uploaded: 1, total: 1 } as never);
+  it('setUploadProgressBatch ignores unknown items', () => {
+    state().setUploadProgressBatch([{ uploadId: 'ghost', uploaded: 1, total: 1 }] as never);
     expect(state().uploadItems).toEqual({});
+  });
+
+  it('setUploadProgressBatch applies many items with a single store write', () => {
+    state().startUpload(started('u1'));
+    state().startUpload(started('u2'));
+    const listener = vi.fn();
+    const stop = useUploaderStore.subscribe(listener);
+
+    state().setUploadProgressBatch([
+      { uploadId: 'u1', uploaded: 1, total: 10 },
+      { uploadId: 'ghost', uploaded: 9, total: 9 },
+      { uploadId: 'u2', uploaded: 2, total: 10 },
+    ] as never);
+    stop();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(state().uploadItems.u1.uploaded).toBe(1);
+    expect(state().uploadItems.u2.uploaded).toBe(2);
+  });
+
+  it('setUploadProgressBatch keeps the state reference when nothing changed', () => {
+    state().startUpload(started('u1'));
+    state().setUploadProgressBatch([{ uploadId: 'u1', uploaded: 3, total: 10 }] as never);
+    const before = state().uploadItems;
+
+    state().setUploadProgressBatch([{ uploadId: 'u1', uploaded: 3, total: 10 }] as never);
+    state().setUploadProgressBatch([{ uploadId: 'u1', uploaded: 3, total: 0 }] as never);
+
+    expect(state().uploadItems).toBe(before);
   });
 
   it('finishUpload bounds the finished ids', () => {

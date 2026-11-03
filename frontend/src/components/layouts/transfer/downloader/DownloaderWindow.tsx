@@ -1,11 +1,11 @@
 import { Affix, CloseButton, Divider, Group, Paper, Text } from '@mantine/core';
 import { useElementSize } from '@mantine/hooks';
+import * as AppEvents from '@wails/events';
 import { CancelAllDownloads } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Events } from '@wailsio/runtime';
 import { Download, X } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/shallow';
 import { selectDownloadingIds, useDownloaderStore } from '@/common/stores/downloaderStore';
 import { tintedColor } from '@/common/theme/tintedColor';
 import { callIPC } from '@/common/utils/ipcUtils';
@@ -28,10 +28,10 @@ function DownloaderWindow() {
   const setWindowSize = useDownloaderStore(s => s.setWindowSize);
   const { ref: sizeRef, width, height } = useElementSize();
 
-  const downloadItemIds = useDownloaderStore(useShallow(selectDownloadingIds));
+  const downloadItemIds = useDownloaderStore(selectDownloadingIds);
   const rendered = downloadItemIds.length > 0;
   const addDownloadItems = useDownloaderStore(s => s.upsertDownloadItems);
-  const setDownloadProgess = useDownloaderStore(s => s.setDownloadProgess);
+  const setDownloadProgressBatch = useDownloaderStore(s => s.setDownloadProgressBatch);
 
   useEffect(() => {
     const unsubscribe = Events.On('downloader:load-download-history', e => {
@@ -47,16 +47,16 @@ function DownloaderWindow() {
   }, [addDownloadItems, openWindow]);
 
   useEffect(() => {
-    const unsubscribe = Events.On('downloader:download-progress', e => {
+    const unsubscribe = Events.On(AppEvents.DownloaderDownloadProgressBatch, e => {
       if (e.data) {
-        setDownloadProgess(e.data);
+        setDownloadProgressBatch(e.data.items);
       }
     });
 
     return () => {
       unsubscribe();
     };
-  }, [setDownloadProgess]);
+  }, [setDownloadProgressBatch]);
 
   // Publish the measured size for UploaderWindow; reset to 0 when nothing is rendered.
   useEffect(() => {

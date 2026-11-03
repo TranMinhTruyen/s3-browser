@@ -1,4 +1,5 @@
-import { UploadFinishedOutput, UploadProgressOutput, UploadStartedOutput } from '@wails/S3Browser/models';
+import { UploadFinishedOutput, UploadStartedOutput } from '@wails/S3Browser/models';
+import { UploadProgressOutput } from '@wails/S3Browser/models/bucket';
 import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
 
@@ -15,7 +16,7 @@ interface UploaderState {
 
 interface UploaderAction {
   startUpload: (input: UploadStartedOutput) => void;
-  setUploadProgress: (input: UploadProgressOutput) => void;
+  setUploadProgressBatch: (items: UploadProgressOutput[]) => void;
   finishUpload: (input: UploadFinishedOutput) => void;
   reset: () => void;
 }
@@ -40,18 +41,20 @@ export const useUploaderStore = createAppStore<UploaderState & UploaderAction>(
       );
     },
 
-    setUploadProgress: (input: UploadProgressOutput) => {
+    setUploadProgressBatch: (items: UploadProgressOutput[]) => {
       set(
         state => {
-          const item = state.uploadItems[input.uploadId];
-          if (item) {
-            item.uploaded = input.uploaded;
+          for (const input of items) {
+            const item = state.uploadItems[input.uploadId];
+            if (!item) continue;
+            // Assign only on change so an unchanged batch keeps the same state.
+            if (item.uploaded !== input.uploaded) item.uploaded = input.uploaded;
             // Progress may carry a more accurate total than the started event.
-            if (input.total > 0) item.total = input.total;
+            if (input.total > 0 && item.total !== input.total) item.total = input.total;
           }
         },
         undefined,
-        `${SCOPE}/setUploadProgress`
+        `${SCOPE}/setUploadProgressBatch`
       );
     },
 

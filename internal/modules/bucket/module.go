@@ -412,7 +412,7 @@ func (m *Module) GetObjectDetail(
 }
 
 // DownloadObject starts downloading input.Objects from input.Bucket; progress is reported
-// by EventDownloadObjectProgress and each file is saved to the download history.
+// by EventDownloadProgressBatch and each file is saved to the download history.
 func (m *Module) DownloadObject(input models.DownloadObjInput) models.Output[any] {
 	return m.submoduleDownloaderMng.downloadObject(input)
 }
@@ -464,7 +464,7 @@ func (m *Module) OpenDownloadDest(fileName, path string) models.Output[any] {
 }
 
 // UploadObject starts uploading input.ObjList into input.Prefix; progress is reported by
-// EventUploadObjectProgress.
+// EventUploadProgressBatch.
 func (m *Module) UploadObject(input models.UploadObjInput) models.Output[any] {
 	return m.submoduleUploaderMng.uploadObject(input)
 }
