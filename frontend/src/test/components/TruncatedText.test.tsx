@@ -90,6 +90,12 @@ describe('TruncatedText', () => {
     await waitFor(() => expect(screen.getAllByText('some long name')).toHaveLength(1));
   });
 
+  it('renders without children', () => {
+    renderWithProviders(<TruncatedText data-testid="t" />);
+
+    expect(screen.getByTestId('t')).toBeEmptyDOMElement();
+  });
+
   it('passes text props through and truncates with an ellipsis', () => {
     renderWithProviders(
       <TruncatedText fw={700} data-testid="t">

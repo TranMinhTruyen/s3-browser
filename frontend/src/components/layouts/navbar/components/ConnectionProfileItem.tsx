@@ -1,10 +1,11 @@
-import { Badge, Box, Card, Group, isLightColor, Loader, Text } from '@mantine/core';
+import { Badge, Box, Card, Group, isLightColor, Loader } from '@mantine/core';
 import { Cable, Unplug } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { getAuthType } from '@/common/utils/authUtils';
 import classes from '@/components/layouts/navbar/components/ConnectionProfileItem.module.css';
+import TruncatedText from '@/components/TruncatedText';
 
 /** Fixed card height: rows never change size with content or font, so the virtual list can use it as-is. */
 export const CARD_HEIGHT = 68;
@@ -81,13 +82,11 @@ function ConnectionProfileItem({ profileKey, connecting, onConnect }: Connection
       >
         {/* miw=0 lets the flex item shrink below its content width so truncate can apply */}
         <Box flex={1} miw={0}>
-          <Text c="inherit" truncate="end" title={profile.name}>
-            {profile.name}
-          </Text>
+          <TruncatedText c="inherit">{profile.name}</TruncatedText>
           <Group gap="xs" wrap="nowrap">
-            <Text c="inherit" truncate="end" className={classes.provider}>
+            <TruncatedText c="inherit" className={classes.provider}>
               {profile.provider}
-            </Text>
+            </TruncatedText>
             <Badge size="xs" variant="outline" className={classes.badge} style={{ flexShrink: 0 }}>
               {t(`authType.${getAuthType(profile)}.label`)}
             </Badge>

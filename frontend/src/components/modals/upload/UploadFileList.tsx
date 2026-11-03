@@ -7,6 +7,7 @@ import { tintedColor } from '@/common/theme/tintedColor';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
+import TruncatedText from '@/components/TruncatedText';
 
 /** A group header or a file of a group, as shown in the upload file lists. */
 export type UploadRow = { kind: 'group'; index: number; group: DroppedGroup } | { kind: 'file'; file: DroppedFile };
@@ -55,9 +56,9 @@ export const GroupRow = memo(function GroupRow(props: GroupRowProps) {
   return (
     <Group style={style} gap="xs" wrap="nowrap" px="xs" bg="var(--mantine-color-default-hover)">
       <Folder size="16px" style={{ flexShrink: 0 }} />
-      <Text fw={600} truncate="end" style={{ flex: 1, minWidth: 0 }} title={group.name}>
+      <TruncatedText fw={600} style={{ flex: 1, minWidth: 0 }}>
         {group.name || rootLabel}
-      </Text>
+      </TruncatedText>
       {largeText && (
         <Text
           size="sm"
@@ -114,9 +115,9 @@ export const FileRow = memo(function FileRow(props: FileRowProps) {
         checked={checked}
         onChange={onChangeFile}
         label={
-          <Text span truncate="end" title={file[titleBy]} style={{ display: 'block' }}>
+          <TruncatedText span label={file[titleBy]} alwaysTip style={{ display: 'block' }}>
             {baseName(file.relKey)}
-          </Text>
+          </TruncatedText>
         }
         styles={{ root: { flex: 1, minWidth: 0 }, body: { minWidth: 0 }, labelWrapper: { minWidth: 0 } }}
       />

@@ -49,7 +49,7 @@ describe('DeleteConfirmModal', () => {
     expect(screen.getByText('This action cannot be undone.')).toBeInTheDocument();
     expect(screen.getByText('3/3 files')).toBeInTheDocument();
     expect(screen.getByText('(selected files)')).toBeInTheDocument();
-    for (const f of FILES) expect(screen.getByTitle(f.key)).toBeInTheDocument();
+    for (const f of FILES) expect(screen.getByText(f.key)).toBeInTheDocument();
     expect(checkboxes().every(c => c.checked)).toBe(true);
     expect(selectAll().indeterminate).toBe(false);
     expect(screen.getByRole('button', { name: 'Delete (3)' })).toBeEnabled();

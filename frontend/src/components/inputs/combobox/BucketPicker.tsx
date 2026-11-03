@@ -1,4 +1,4 @@
-import { Combobox, Group, Input, InputBase, Loader, Text, useCombobox } from '@mantine/core';
+import { Combobox, Group, Input, InputBase, Loader, useCombobox } from '@mantine/core';
 import { useDebouncedValue, useElementSize } from '@mantine/hooks';
 import { GetListBucket, SearchBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Bucket } from '@wails/S3Browser/models/bucket';
@@ -9,6 +9,7 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import Button from '@/components/buttons/Button';
 import ComboboxClearButton from '@/components/inputs/combobox/ComboboxClearButton';
 import ComboboxOptions from '@/components/inputs/combobox/ComboboxOptions';
+import TruncatedText from '@/components/TruncatedText';
 
 // Buckets fetched per page.
 const BUCKET_PAGE_SIZE = 20;
@@ -145,7 +146,7 @@ function BucketPicker(props: BucketPickerProps) {
           rightSectionPointerEvents={showClear ? 'all' : 'none'}
           onClick={onClickToggle}
         >
-          {value ? <Text truncate="end">{value}</Text> : <Input.Placeholder>{t('placeholder')}</Input.Placeholder>}
+          {value ? <TruncatedText>{value}</TruncatedText> : <Input.Placeholder>{t('placeholder')}</Input.Placeholder>}
         </InputBase>
       </Combobox.Target>
 
@@ -156,7 +157,7 @@ function BucketPicker(props: BucketPickerProps) {
             <Combobox.Option key={bucket.name} value={bucket.name as string} active={bucket.name === value}>
               <Group gap="xs" wrap="nowrap">
                 {bucket.name === value && <CheckIcon size={12} />}
-                <Text truncate="end">{bucket.name}</Text>
+                <TruncatedText>{bucket.name}</TruncatedText>
               </Group>
             </Combobox.Option>
           ))}

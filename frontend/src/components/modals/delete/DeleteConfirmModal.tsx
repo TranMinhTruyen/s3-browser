@@ -9,6 +9,7 @@ import Button from '@/components/buttons/Button';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import { WARNING_BG_COLOR, WARNING_COLOR } from '@/components/modals/modalColors';
 import { FileRow, UploadRow, VirtualRowList } from '@/components/modals/upload/UploadFileList';
+import TruncatedText from '@/components/TruncatedText';
 
 export type DeleteFile = { key: string; size: number };
 
@@ -119,9 +120,9 @@ export default createMantineModal<DeleteConfirmModalProps, string[] | null>(prop
                 aria-label={t('selectAll')}
               />
               <Folder size="16px" style={{ flexShrink: 0 }} />
-              <Text fw={600} truncate="end" style={{ flex: 1, minWidth: 0 }}>
+              <TruncatedText fw={600} style={{ flex: 1, minWidth: 0 }}>
                 {t('rootFolder')}
-              </Text>
+              </TruncatedText>
               <Text size="sm" c="dimmed" style={{ flexShrink: 0 }}>
                 {formatStringJson(t('selectedCount'), { selected: count, total })}
               </Text>

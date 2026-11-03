@@ -242,6 +242,30 @@ describe('ObjectItem', () => {
     expect(onOpenDetail).not.toHaveBeenCalled();
   });
 
+  it.each([true, false])('toggles once when the section is clicked (selected: %s)', async selected => {
+    if (selected) useTabListStore.getState().addSelectItem(TAB_ID, [fileItem.key]);
+    const { user, onOpenDetail, onToggleSelect } = setup(fileItem);
+    const section = screen.getByRole('checkbox').closest<HTMLElement>('.mantine-Card-section')!;
+    await user.click(section);
+    expect(onToggleSelect).toHaveBeenCalledExactlyOnceWith(fileItem.key, !selected);
+    expect(onOpenDetail).not.toHaveBeenCalled();
+  });
+
+  it('toggles once when the checkbox is clicked and not the card click', async () => {
+    const { user, onOpenDetail, onToggleSelect } = setup(fileItem);
+    await user.click(screen.getByRole('checkbox'));
+    expect(onToggleSelect).toHaveBeenCalledTimes(1);
+    expect(onOpenDetail).not.toHaveBeenCalled();
+  });
+
+  it('opens the folder when its section is clicked', async () => {
+    const { user, onOpenFolder, onToggleSelect } = setup(folderItem);
+    const section = document.querySelector<HTMLElement>('.mantine-Card-section')!;
+    await user.click(section);
+    expect(onOpenFolder).toHaveBeenCalledExactlyOnceWith(folderItem.key);
+    expect(onToggleSelect).not.toHaveBeenCalled();
+  });
+
   describe('deleting spinner', () => {
     it('disables the closed menu button while the key is being deleted', () => {
       useTabListStore.getState().setDeleting(TAB_ID, [fileItem.key], true);

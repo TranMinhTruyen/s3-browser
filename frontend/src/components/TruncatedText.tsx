@@ -2,7 +2,7 @@ import { Text, TextProps, Tooltip } from '@mantine/core';
 import { MouseEvent, memo, useCallback, useState } from 'react';
 
 type TruncatedTextProps = TextProps & {
-  children: string;
+  children?: string;
   /** Tooltip content; defaults to the text itself. */
   label?: string;
   /** Show the tooltip even when the text is not cut. */

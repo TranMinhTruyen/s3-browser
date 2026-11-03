@@ -15,6 +15,7 @@ import Button from '@/components/buttons/Button';
 import BucketPicker from '@/components/inputs/combobox/BucketPicker';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 import { FileRow, GroupRow, GroupStat, UploadRow, VirtualRowList } from '@/components/modals/upload/UploadFileList';
+import TruncatedText from '@/components/TruncatedText';
 import i18n from '@/locales/i18n';
 import classes from './UploadPickerModal.module.css';
 
@@ -259,9 +260,9 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
           <Paper withBorder style={{ overflow: 'hidden' }}>
             <Box p="8px">
               {bucket ? (
-                <Text size="sm" c="dimmed" truncate="end">
+                <TruncatedText size="sm" c="dimmed">
                   {formatStringJson(t('target'), { target })}
-                </Text>
+                </TruncatedText>
               ) : (
                 <BucketPicker
                   connectionId={connectionId}

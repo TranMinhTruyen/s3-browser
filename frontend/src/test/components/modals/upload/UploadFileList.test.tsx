@@ -81,10 +81,12 @@ describe('FileRow', () => {
   it.each([
     ['path', WIN_PATH],
     ['relKey', 'dir/a.bin'],
-  ] as const)('uses the %s as the tooltip', (titleBy, title) => {
+  ] as const)('uses the %s as the tooltip', async (titleBy, title) => {
     renderRow({ titleBy });
 
-    expect(screen.getByText('a.bin')).toHaveAttribute('title', title);
+    await userEvent.hover(screen.getByText('a.bin'));
+
+    expect(await screen.findByText(title)).toBeInTheDocument();
   });
 
   it('shows the large badge only for a large file', () => {

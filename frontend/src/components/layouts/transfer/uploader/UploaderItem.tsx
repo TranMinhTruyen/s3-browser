@@ -10,6 +10,7 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import { ITEM_HEIGHT } from '@/components/layouts/transfer/transferItem';
+import TruncatedText from '@/components/TruncatedText';
 
 type UploaderItemProps = {
   id: string;
@@ -65,9 +66,7 @@ function UploaderItem(props: UploaderItemProps) {
       </Card.Section>
 
       <Card.Section inheritPadding px="xs" style={{ flex: 1, minWidth: 0, padding: '8px' }}>
-        <Text truncate="end">
-          {t('label.objectLbl')}: {item.fileName}
-        </Text>
+        <TruncatedText>{`${t('label.objectLbl')}: ${item.fileName}`}</TruncatedText>
         {finalizing ? (
           <Group gap="xs">
             <Text c="var(--mantine-color-blue-filled)">{t('label.finalizingLbl')}</Text>
