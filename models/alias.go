@@ -54,6 +54,8 @@ type (
 	ObjectDetailInput = bucket.ObjectDetailInput
 	// ObjectDetailOutput re-exports bucket.ObjectDetailOutput.
 	ObjectDetailOutput = bucket.ObjectDetailOutput
+	// DownloadProgressBatchOutput re-exports bucket.DownloadProgressBatchOutput.
+	DownloadProgressBatchOutput = bucket.DownloadProgressBatchOutput
 	// DownloadProgressOutput re-exports bucket.DownloadProgressOutput.
 	DownloadProgressOutput = bucket.DownloadProgressOutput
 	// DownloadObjInput re-exports bucket.DownloadObjInput.
@@ -72,6 +74,8 @@ type (
 	DeletePrefixInput = bucket.DeletePrefixInput
 	// DeletePrefixOutput re-exports bucket.DeletePrefixOutput.
 	DeletePrefixOutput = bucket.DeletePrefixOutput
+	// UploadProgressBatchOutput re-exports bucket.UploadProgressBatchOutput.
+	UploadProgressBatchOutput = bucket.UploadProgressBatchOutput
 	// UploadProgressOutput re-exports bucket.UploadProgressOutput.
 	UploadProgressOutput = bucket.UploadProgressOutput
 	// FilesDroppedOutput re-exports bucket.FilesDroppedOutput.

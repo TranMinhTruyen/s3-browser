@@ -1,5 +1,6 @@
 import { Affix, CloseButton, Divider, Group, Paper, Text } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
+import * as AppEvents from '@wails/events';
 import { CancelAllUploads } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Events } from '@wailsio/runtime';
 import { Upload, X } from 'lucide-react';
@@ -29,7 +30,7 @@ function UploaderWindow() {
 
   const uploadItemIds = useUploaderStore(useShallow(selectUploadingIds));
   const startUpload = useUploaderStore(s => s.startUpload);
-  const setUploadProgress = useUploaderStore(s => s.setUploadProgress);
+  const setUploadProgressBatch = useUploaderStore(s => s.setUploadProgressBatch);
   const finishUpload = useUploaderStore(s => s.finishUpload);
 
   const downloaderWidth = useDownloaderStore(s => s.windowSize.width);
@@ -48,15 +49,15 @@ function UploaderWindow() {
   }, [openWindow, startUpload]);
 
   useEffect(() => {
-    const unsubscribe = Events.On('uploader:upload-progress', e => {
+    const unsubscribe = Events.On(AppEvents.UploaderUploadProgressBatch, e => {
       if (e.data) {
-        setUploadProgress(e.data);
+        setUploadProgressBatch(e.data.items);
       }
     });
     return () => {
       unsubscribe();
     };
-  }, [setUploadProgress]);
+  }, [setUploadProgressBatch]);
 
   useEffect(() => {
     const unsubscribe = Events.On('uploader:upload-finished', e => {

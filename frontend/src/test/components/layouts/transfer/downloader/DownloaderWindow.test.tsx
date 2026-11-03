@@ -108,15 +108,22 @@ describe('DownloaderWindow', () => {
     expect(screen.queryByText('Object: done.bin')).not.toBeInTheDocument();
   });
 
-  it('applies progress events to the matching item and ignores an empty one', () => {
+  it('applies a progress batch to the matching items and ignores an empty one', () => {
     renderWithProviders(<DownloaderWindow />);
     emit('downloader:load-download-history', downloading('d1'));
+    emit('downloader:load-download-history', downloading('d2', 'b.bin'));
 
-    emit('downloader:download-progress', { downloadId: 'd1', downloaded: 512, total: 2048 });
+    emit('downloader:download-progress-batch', {
+      items: [
+        { downloadId: 'd1', downloaded: 512, total: 2048 },
+        { downloadId: 'd2', downloaded: 1024, total: 2048 },
+      ],
+    });
     expect(state().downloadItems.d1).toMatchObject({ downloaded: 512, total: 2048 });
     expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(screen.getByText('50%')).toBeInTheDocument();
 
-    emit('downloader:download-progress', null);
+    emit('downloader:download-progress-batch', null);
     expect(state().downloadItems.d1).toMatchObject({ downloaded: 512, total: 2048 });
   });
 
@@ -148,6 +155,7 @@ describe('DownloaderWindow', () => {
 
     unmount();
 
+    expect(Object.keys(handlers)).toContain('downloader:download-progress-batch');
     expect(unsubscribe).toHaveBeenCalledTimes(2);
   });
 });

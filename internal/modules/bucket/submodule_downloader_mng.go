@@ -29,6 +29,7 @@ type submoduleDownloaderMng struct {
 	app                         *application.App
 	global                      *global.Module
 	submoduleDownloadHistoryMng *submoduleDownloadHistoryMng
+	progress                    *utils.BatchReporter[models.DownloadProgressOutput]
 	jobs                        sync.Map
 	destsMu                     sync.Mutex
 	dests                       map[string]struct{}
@@ -46,7 +47,10 @@ func newSubmoduleDownloaderMng(
 		app:                         app,
 		global:                      global,
 		submoduleDownloadHistoryMng: submoduleDownloadHistoryMng,
-		dests:                       make(map[string]struct{}),
+		progress: utils.NewBatchReporter(app.Context, func(items []models.DownloadProgressOutput) {
+			app.Event.Emit(EventDownloadProgressBatch, models.DownloadProgressBatchOutput{Items: items})
+		}),
+		dests: make(map[string]struct{}),
 	}
 }
 
@@ -314,12 +318,7 @@ func (m *submoduleDownloaderMng) downloadOne(
 	// Tell the frontend a new download has started.
 	m.app.Event.Emit(EventLoadDownloadHistory, saved)
 
-	size, err := download(ctx, tm, bucket, key, dest, func(done, total int64) {
-		m.app.Event.Emit(
-			EventDownloadObjectProgress,
-			models.DownloadProgressOutput{DownloadId: id, Downloaded: done, Total: total},
-		)
-	})
+	size, err := download(ctx, tm, bucket, key, dest, id, m.progress)
 
 	// Map the error to a history status. If the context was canceled, report
 	// context.Canceled instead of whatever error the S3 call returned.

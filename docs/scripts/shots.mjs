@@ -275,7 +275,7 @@ async function runLang(browser, lang, bigFilePath) {
       updatedAt: new Date().toISOString(),
       version: 1,
     });
-    await dispatchEvent('downloader:download-progress', { downloadId: id, downloaded, total: size });
+    await dispatchEvent('downloader:download-progress-batch', { items: [{ downloadId: id, downloaded, total: size }] });
   }
   await pause(800);
   await shot('19-download-progress');
