@@ -116,7 +116,7 @@ describe('UploaderWindow', () => {
     renderWithProviders(<UploaderWindow />);
 
     emit('uploader:upload-started', null);
-    emit('uploader:upload-progress', null);
+    emit('uploader:upload-progress-batch', null);
     emit('uploader:upload-finished', null);
 
     expect(useUploaderStore.getState().uploadItems).toEqual({});
@@ -129,7 +129,7 @@ describe('UploaderWindow', () => {
     emit('uploader:upload-started', started('u1', 'a.bin'));
     emit('uploader:upload-started', started('u2', 'b.bin'));
 
-    emit('uploader:upload-progress', { uploadId: 'u1', uploaded: 512, total: 2048 });
+    emit('uploader:upload-progress-batch', { items: [{ uploadId: 'u1', uploaded: 512, total: 2048 }] });
     expect(screen.getByText('25%')).toBeInTheDocument();
 
     emit('uploader:upload-finished', { uploadId: 'u1' });
@@ -139,6 +139,22 @@ describe('UploaderWindow', () => {
 
     emit('uploader:upload-finished', { uploadId: 'u2' });
     expect(screen.queryByText('Uploading')).not.toBeInTheDocument();
+  });
+
+  it('applies a batch to several items and shows finalizing at 100%', () => {
+    renderWithProviders(<UploaderWindow />);
+    emit('uploader:upload-started', started('u1', 'a.bin'));
+    emit('uploader:upload-started', started('u2', 'b.bin'));
+
+    emit('uploader:upload-progress-batch', {
+      items: [
+        { uploadId: 'u1', uploaded: 1024, total: 2048 },
+        { uploadId: 'u2', uploaded: 2048, total: 2048 },
+      ],
+    });
+
+    expect(screen.getByText('50%')).toBeInTheDocument();
+    expect(screen.getByText('Finalizing…')).toBeInTheDocument();
   });
 
   it('collapses to a button on close and reopens the window from it', async () => {
@@ -203,6 +219,7 @@ describe('UploaderWindow', () => {
 
     unmount();
 
+    expect(Object.keys(handlers)).toContain('uploader:upload-progress-batch');
     expect(unsubscribe).toHaveBeenCalledTimes(3);
   });
 });

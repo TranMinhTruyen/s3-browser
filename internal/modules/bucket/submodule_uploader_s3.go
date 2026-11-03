@@ -2,6 +2,7 @@ package bucket
 
 import (
 	"S3Browser/internal/pkg/utils"
+	"S3Browser/models"
 	"context"
 	"errors"
 	"fmt"
@@ -56,17 +57,15 @@ var _ s3Uploader = (*s3.Client)(nil)
 // uploadFile uploads the file at path to bucket/key and returns its size.
 // Files smaller than minUploadPartSize are sent with one PutObject; larger files are
 // sent as a multipart upload with uploadPartConcurrency parts in flight.
-// progress is called periodically with the bytes sent so far and the file size.
+// Its progress is reported through tracker under id.
 // On failure or cancellation, no object is created and no parts are left on the server.
 func uploadFile(
 	ctx context.Context,
 	client s3Uploader,
 	bucket, key, path string,
-	progress func(done, total int64),
+	id string,
+	tracker *utils.BatchReporter[models.UploadProgressOutput],
 ) (int64, error) {
-	if progress == nil {
-		progress = func(int64, int64) {} // allow callers that don't track progress
-	}
 	// Lstat first so a symlink is rejected instead of followed.
 	if info, err := os.Lstat(path); err != nil {
 		return 0, err
@@ -90,12 +89,12 @@ func uploadFile(
 	size := info.Size()
 
 	var sent atomic.Int64
-	// One goroutine samples the counter every 200ms instead of emitting an event per read,
-	// which would flood the frontend; stop() ends it when the upload returns.
-	stop := utils.ReportEvery(200*time.Millisecond, func() {
-		progress(min(sent.Load(), size), size)
+	// The tracker samples the counter on a shared ticker instead of emitting an event per read,
+	// which would flood the frontend; done() emits the final value when the upload returns.
+	done := tracker.Track(id, func() (models.UploadProgressOutput, bool) {
+		return models.UploadProgressOutput{UploadId: id, Uploaded: min(sent.Load(), size), Total: size}, true
 	})
-	defer stop()
+	defer done()
 
 	contentType := mime.TypeByExtension(filepath.Ext(path))
 	if size < minUploadPartSize {

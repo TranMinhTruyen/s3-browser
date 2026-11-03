@@ -79,7 +79,7 @@ return output.ThrowError(msg)      // Result = false + メッセージ
 
 ### 2.5 イベント
 
-バックエンドからフロントエンドへのイベントは `modules/<x>/events.go` の定数で、名前は `domain:kebab-name` 形式です (例: `uploader:upload-progress`、`downloader:download-progress`、`uploader:files-dropped`)。`init()` 内で `application.RegisterEvent[PayloadType](name)` により登録します。バインディング生成ツールがペイロード型を出力できるよう、`init` から直接呼ぶ必要があります。進捗イベントは `utils.ReportEvery` で 200 ms に間引かれます。ドロップされたファイルは `main.go` (`WindowFilesDropped` -> `BucketHandler.FilesDropped`) を経由し、`uploader:files-dropped` / `uploader:picker-files-dropped` として再送されます。
+バックエンドからフロントエンドへのイベントは `modules/<x>/events.go` の定数で、名前は `domain:kebab-name` 形式です (例: `uploader:upload-progress-batch`、`downloader:download-progress-batch`、`uploader:files-dropped`)。`init()` 内で `application.RegisterEvent[PayloadType](name)` により登録します。バインディング生成ツールがペイロード型を出力できるよう、`init` から直接呼ぶ必要があります。進捗イベントはバッチ化され、共通の 200 ms ティッカー (`utils.BatchReporter`) が実行中の全ジョブの進捗を 1 つのイベント (`{items: [...]}`) で送ります。ドロップされたファイルは `main.go` (`WindowFilesDropped` -> `BucketHandler.FilesDropped`) を経由し、`uploader:files-dropped` / `uploader:picker-files-dropped` として再送されます。
 
 ### 2.6 データベース
 

@@ -2,12 +2,12 @@ package bucket
 
 import (
 	"S3Browser/internal/pkg/utils"
+	"S3Browser/models"
 	"context"
 	"errors"
 	"io"
 	"os"
 	"sync/atomic"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
@@ -16,18 +16,15 @@ import (
 // download saves the object to dest with the transfer manager, which fetches the object's
 // parts in parallel, retries a part whose body read fails, sends If-Match with the ETag of
 // the first part (so a file never mixes old and new content) and validates checksums.
-// progress is called periodically with the bytes received so far and the total size.
+// Its progress is reported through tracker under id.
 // On failure or cancellation, no file is left at dest.
 func download(
 	ctx context.Context,
 	tm *transfermanager.Client,
 	bucket, key, dest string,
-	progress func(done, total int64),
+	id string,
+	tracker *utils.BatchReporter[models.DownloadProgressOutput],
 ) (int64, error) {
-	if progress == nil {
-		progress = func(int64, int64) {} // allow callers that don't track progress
-	}
-
 	// Step 1: write to a temporary ".part" file and rename it at the end, so dest never ends
 	// up incomplete. Any failure or cancel removes the .part file.
 	part := dest + ".part"
@@ -47,14 +44,16 @@ func download(
 	w := &countingWriterAt{w: f}
 	var total atomic.Int64
 	total.Store(-1)
-	// One goroutine samples the counter every 200ms instead of emitting an event per write,
-	// which would flood the frontend; stop() ends it when the download returns.
-	stop := utils.ReportEvery(200*time.Millisecond, func() {
-		if t := total.Load(); t >= 0 {
-			progress(min(w.n.Load(), t), t)
+	// The tracker samples the counter on a shared ticker instead of emitting an event per write,
+	// which would flood the frontend; done() emits the final value when the download returns.
+	done := tracker.Track(id, func() (models.DownloadProgressOutput, bool) {
+		t := total.Load()
+		if t < 0 { // size not known yet
+			return models.DownloadProgressOutput{}, false
 		}
+		return models.DownloadProgressOutput{DownloadId: id, Downloaded: min(w.n.Load(), t), Total: t}, true
 	})
-	defer stop()
+	defer done()
 
 	// Step 2: download the parts in parallel into the temporary file.
 	out, err := tm.DownloadObject(ctx, &transfermanager.DownloadObjectInput{

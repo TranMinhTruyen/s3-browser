@@ -36,7 +36,7 @@ describe('downloaderStore', () => {
 
   it('upsertDownloadItems keeps progress and skips older versions', () => {
     state().upsertDownloadItems([history({ version: 2 })]);
-    state().setDownloadProgess({ downloadId: 'd1', downloaded: 5, total: 10 } as never);
+    state().setDownloadProgressBatch([{ downloadId: 'd1', downloaded: 5, total: 10 }] as never);
     state().upsertDownloadItems([history({ version: 1, status: 'OLD' })]);
     expect(state().downloadItems.d1.status).toBe('PENDING');
 
@@ -54,9 +54,49 @@ describe('downloaderStore', () => {
     expect(state().downloadItems.d1.status).toBe('PENDING');
   });
 
-  it('setDownloadProgess ignores unknown items', () => {
-    state().setDownloadProgess({ downloadId: 'ghost', downloaded: 1, total: 2 } as never);
+  it('setDownloadProgressBatch ignores unknown items', () => {
+    const before = state().downloadItems;
+    state().setDownloadProgressBatch([{ downloadId: 'ghost', downloaded: 1, total: 2 }] as never);
     expect(state().downloadItems).toEqual({});
+    expect(state().downloadItems).toBe(before);
+  });
+
+  it('setDownloadProgressBatch applies many items with a single store write', () => {
+    state().upsertDownloadItems([history({ id: 'd1' }), history({ id: 'd2' })]);
+    const listener = vi.fn();
+    const stop = useDownloaderStore.subscribe(listener);
+
+    state().setDownloadProgressBatch([
+      { downloadId: 'd1', downloaded: 1, total: 10 },
+      { downloadId: 'ghost', downloaded: 9, total: 9 },
+      { downloadId: 'd2', downloaded: 2, total: 20 },
+    ] as never);
+    stop();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(state().downloadItems.d1).toMatchObject({ downloaded: 1, total: 10 });
+    expect(state().downloadItems.d2).toMatchObject({ downloaded: 2, total: 20 });
+  });
+
+  it('setDownloadProgressBatch keeps the state reference when nothing changed', () => {
+    state().upsertDownloadItems([history({})]);
+    state().setDownloadProgressBatch([{ downloadId: 'd1', downloaded: 5, total: 10 }] as never);
+    const before = state().downloadItems;
+    const item = state().downloadItems.d1;
+
+    state().setDownloadProgressBatch([{ downloadId: 'd1', downloaded: 5, total: 10 }] as never);
+
+    expect(state().downloadItems).toBe(before);
+    expect(state().downloadItems.d1).toBe(item);
+  });
+
+  it('setDownloadProgressBatch updates only the field that changed', () => {
+    state().upsertDownloadItems([history({})]);
+    state().setDownloadProgressBatch([{ downloadId: 'd1', downloaded: 5, total: 10 }] as never);
+    state().setDownloadProgressBatch([{ downloadId: 'd1', downloaded: 5, total: 12 }] as never);
+    expect(state().downloadItems.d1).toMatchObject({ downloaded: 5, total: 12 });
+    state().setDownloadProgressBatch([{ downloadId: 'd1', downloaded: 7, total: 12 }] as never);
+    expect(state().downloadItems.d1).toMatchObject({ downloaded: 7, total: 12 });
   });
 
   it('selectDownloadingIds returns only the downloading ones', () => {
@@ -64,10 +104,60 @@ describe('downloaderStore', () => {
     expect(selectDownloadingIds(state())).toEqual(['d2']);
   });
 
+  it('downloadingIds does not duplicate an id upserted twice', () => {
+    state().upsertDownloadItems([history({ status: 'DOWNLOADING', version: 1 })]);
+    state().upsertDownloadItems([history({ status: 'DOWNLOADING', version: 2 })]);
+    expect(state().downloadingIds).toEqual(['d1']);
+  });
+
+  it.each(['DONE', 'FAILED', 'CANCELLED'])('downloadingIds drops an id when the status becomes %s', status => {
+    state().upsertDownloadItems([history({ id: 'a', status: 'DOWNLOADING', version: 1 })]);
+    state().upsertDownloadItems([history({ id: 'b', status: 'DOWNLOADING', version: 1 })]);
+    state().upsertDownloadItems([history({ id: 'a', status, version: 2 })]);
+    expect(state().downloadingIds).toEqual(['b']);
+  });
+
+  it('downloadingIds drops every id when all downloads are cancelled', () => {
+    state().upsertDownloadItems([
+      history({ id: 'a', status: 'DOWNLOADING', version: 1 }),
+      history({ id: 'b', status: 'DOWNLOADING', version: 1 }),
+    ]);
+    state().upsertDownloadItems([
+      history({ id: 'a', status: 'CANCELLED', version: 2 }),
+      history({ id: 'b', status: 'CANCELLED', version: 2 }),
+    ]);
+    expect(state().downloadingIds).toEqual([]);
+  });
+
+  it('downloadingIds ignores an older version', () => {
+    state().upsertDownloadItems([history({ status: 'DOWNLOADING', version: 2 })]);
+    state().upsertDownloadItems([history({ status: 'DONE', version: 1 })]);
+    expect(state().downloadingIds).toEqual(['d1']);
+
+    state().upsertDownloadItems([history({ id: 'd2', status: 'DONE', version: 2 })]);
+    state().upsertDownloadItems([history({ id: 'd2', status: 'DOWNLOADING', version: 1 })]);
+    expect(state().downloadingIds).toEqual(['d1']);
+  });
+
+  it('selectDownloadingIds keeps the same reference until the list changes', () => {
+    state().upsertDownloadItems([history({ status: 'DOWNLOADING', version: 1 })]);
+    const before = selectDownloadingIds(state());
+
+    state().setDownloadProgressBatch([{ downloadId: 'd1', downloaded: 3, total: 9 }] as never);
+    state().upsertDownloadItems([history({ status: 'DOWNLOADING', version: 2 })]);
+    expect(selectDownloadingIds(state())).toBe(before);
+
+    state().upsertDownloadItems([history({ status: 'DONE', version: 3 })]);
+    expect(selectDownloadingIds(state())).not.toBe(before);
+  });
+
   it('reset restores the state and invalidates the scope', () => {
     state().openWindow();
+    state().upsertDownloadItems([history({ status: 'DOWNLOADING' })]);
     state().reset();
     expect(state().windowVisible).toBe(false);
+    expect(state().downloadingIds).toEqual([]);
+    expect(state().downloadItems).toEqual({});
     expect(invalidateLoads).toHaveBeenCalledWith('downloader');
   });
 });

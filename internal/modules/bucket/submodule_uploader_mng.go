@@ -40,6 +40,8 @@ func (h appHost) Emit(name string, data ...any) { h.app.Event.Emit(name, data...
 type submoduleUploaderMng struct {
 	logger *slog.Logger
 	host   uploadHost
+	// progress batches the progress of all running uploads into one event.
+	progress *utils.BatchReporter[models.UploadProgressOutput]
 	// getClient returns the S3 client and the connection (for its credential expiry; may be nil) and marks a
 	// transfer running on it until release is called; ok is false if it isn't connected.
 	getClient func(connID string) (client s3Uploader, conn *global.S3Conn, release func(), ok bool)
@@ -63,9 +65,13 @@ func newSubmoduleUploaderMng(
 	logger *slog.Logger,
 	globalModule *global.Module,
 ) *submoduleUploaderMng {
+	host := appHost{app: app}
 	return &submoduleUploaderMng{
 		logger: logger.With("submodules", "uploader_mng"),
-		host:   appHost{app: app},
+		host:   host,
+		progress: utils.NewBatchReporter(host.Context, func(items []models.UploadProgressOutput) {
+			host.Emit(EventUploadProgressBatch, models.UploadProgressBatchOutput{Items: items})
+		}),
 		getClient: func(connID string) (s3Uploader, *global.S3Conn, func(), bool) {
 			conn, release, ok := globalModule.AcquireConn(connID)
 			if !ok {
@@ -295,12 +301,7 @@ func (m *submoduleUploaderMng) uploadOne(
 	// A batch canceled before this file started (e.g. during the key check) sends nothing.
 	err := ctx.Err()
 	if err == nil {
-		_, err = uploadFile(ctx, client, bucket, item.Key, item.Path, func(done, total int64) {
-			m.host.Emit(
-				EventUploadObjectProgress,
-				models.UploadProgressOutput{UploadId: id, Uploaded: done, Total: total},
-			)
-		})
+		_, err = uploadFile(ctx, client, bucket, item.Key, item.Path, id, m.progress)
 	}
 
 	// If the context was canceled, report context.Canceled instead of whatever error
