@@ -65,6 +65,24 @@ func expiredMessage(profileName string, err error) models.Message {
 	})
 }
 
+// failCall ends a failed S3 call of the profile: silently if the frontend canceled it, with S3E030 if the
+// credentials expired, otherwise with the failed message.
+func failCall[T any](
+	ctx context.Context,
+	output models.Output[T],
+	profileName string,
+	err error,
+	failed models.Message,
+) models.Output[T] {
+	switch {
+	case isCallCanceled(ctx):
+		return output.ThrowError()
+	case isCredentialsExpired(err):
+		return output.ThrowError(expiredMessage(profileName, err))
+	}
+	return output.ThrowError(failed)
+}
+
 // transferExpiryWarning returns the S3W008 warning to show when a transfer starts on credentials that
 // can't be renewed and expire within transferExpiryWarn; nothing if they are fine or c is nil.
 func transferExpiryWarning(c *global.S3Conn, profileName string) []models.Message {

@@ -51,7 +51,7 @@ func (m *submoduleUploaderMng) dropFiles(event, tabID string, dropped []string) 
 	if tabID == "" {
 		return
 	}
-	m.host.Emit(event, buildFilesDropped(tabID, dropped))
+	m.app.Event.Emit(event, buildFilesDropped(tabID, dropped))
 }
 
 // buildFilesDropped expands paths (folders included) into groups of files, with the
@@ -78,8 +78,8 @@ func buildFilesDropped(tabID string, paths []string) models.FilesDroppedOutput {
 func (m *submoduleUploaderMng) pickFiles(ctx context.Context) models.Output[models.FilesDroppedOutput] {
 	output := models.NewOutput[models.FilesDroppedOutput]()
 	if ctx.Err() != nil {
-		output.Result = false
-		return output
+		// Canceled by the frontend: fail silently, nobody waits for the result.
+		return output.ThrowError()
 	}
 	paths, err := m.pickPaths()
 	if utils.IsDialogCancelled(err) {

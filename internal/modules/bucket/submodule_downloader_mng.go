@@ -30,7 +30,7 @@ type submoduleDownloaderMng struct {
 	global                      *global.Module
 	submoduleDownloadHistoryMng *submoduleDownloadHistoryMng
 	progress                    *utils.BatchReporter[models.DownloadProgressOutput]
-	jobs                        sync.Map
+	jobs                        jobRegistry
 	destsMu                     sync.Mutex
 	dests                       map[string]struct{}
 }
@@ -52,11 +52,6 @@ func newSubmoduleDownloaderMng(
 		}),
 		dests: make(map[string]struct{}),
 	}
-}
-
-// downloaderJob is a running single-object download that can be canceled.
-type downloaderJob struct {
-	cancel context.CancelFunc
 }
 
 // downloadResult is the outcome of one object, turned into a message after all finish.
@@ -208,8 +203,7 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 // cancelDownloadOne cancels the running download with the given ID.
 // Unknown or already finished IDs are ignored.
 func (m *submoduleDownloaderMng) cancelDownloadOne(id string) models.Output[any] {
-	if v, ok := m.jobs.LoadAndDelete(id); ok {
-		v.(downloaderJob).cancel()
+	if m.jobs.cancel(id) {
 		m.logger.Info(fmt.Sprintf("download %s is canceled", id))
 	}
 	return models.NewOutput[any]()
@@ -217,11 +211,7 @@ func (m *submoduleDownloaderMng) cancelDownloadOne(id string) models.Output[any]
 
 // cancelAllDownloads cancels every running download.
 func (m *submoduleDownloaderMng) cancelAllDownloads() models.Output[any] {
-	m.jobs.Range(func(k, v any) bool {
-		v.(downloaderJob).cancel()
-		m.logger.Info(fmt.Sprintf("download %s is canceled", k))
-		return true
-	})
+	m.jobs.cancelAll(func(id string) { m.logger.Info(fmt.Sprintf("download %s is canceled", id)) })
 	m.logger.Info("all downloads is canceled")
 	return models.NewOutput[any]()
 }
@@ -298,11 +288,9 @@ func (m *submoduleDownloaderMng) downloadOne(
 	tm *transfermanager.Client,
 	bucket, key, dest string,
 ) downloadResult {
-	ctx, cancel := context.WithCancel(parent)
-
 	// Register the job so it can be canceled; remove it when the download ends.
-	m.jobs.Store(id, downloaderJob{cancel: cancel})
-	defer func() { cancel(); m.jobs.Delete(id) }()
+	ctx, done := m.jobs.start(parent, id)
+	defer done()
 
 	saved, err := m.submoduleDownloadHistoryMng.createDownloadHistory(models.DownloadHistoryItem{
 		ID:       id,
