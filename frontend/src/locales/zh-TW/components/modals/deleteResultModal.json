@@ -4,7 +4,5 @@
   "failedCount": "失敗：{count}",
   "deletedSection": "成功 ({count})",
   "failedSection": "失敗 ({count})",
-  "truncated": "顯示 {shown}/{total} 個錯誤",
-  "fileName": "檔案名稱",
-  "reason": "原因"
+  "truncated": "顯示 {shown}/{total} 個錯誤"
 }

@@ -4,7 +4,5 @@
   "failedCount": "Thất bại: {count}",
   "deletedSection": "Thành công ({count})",
   "failedSection": "Thất bại ({count})",
-  "truncated": "Hiển thị {shown}/{total} lỗi",
-  "fileName": "Tên file",
-  "reason": "Lý do"
+  "truncated": "Hiển thị {shown}/{total} lỗi"
 }

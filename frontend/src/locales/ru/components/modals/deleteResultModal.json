@@ -4,7 +4,5 @@
   "failedCount": "Ошибок: {count}",
   "deletedSection": "Успешно ({count})",
   "failedSection": "Ошибки ({count})",
-  "truncated": "Показано {shown} из {total} ошибок",
-  "fileName": "Имя файла",
-  "reason": "Причина"
+  "truncated": "Показано {shown} из {total} ошибок"
 }

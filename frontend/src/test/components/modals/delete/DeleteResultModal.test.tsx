@@ -38,7 +38,24 @@ describe('DeleteResultModal', () => {
     expect(screen.getByText('Delete result')).toBeInTheDocument();
     expect(screen.getByText('Succeeded: 3')).toBeInTheDocument();
     expect(screen.getByText('Failed: 0')).toBeInTheDocument();
-    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^(Failed|Succeeded) \(/ })).not.toBeInTheDocument();
+  });
+
+  it('colours the failed badge red only when something failed', async () => {
+    await open({ deleted: 1, failed: 1, failures: [] });
+    const red = screen.getByText('Failed: 1').closest('.mantine-Badge-root') as HTMLElement;
+    expect(red.getAttribute('style')).toContain('--mantine-color-red-6');
+    expect(screen.getByText('Succeeded: 1').closest('.mantine-Badge-root')?.getAttribute('style')).toContain(
+      '--mantine-color-green-6'
+    );
+  });
+
+  it('greys the failed badge when nothing failed', async () => {
+    await open({ deleted: 1, failed: 0, failures: [] });
+
+    const grey = screen.getByText('Failed: 0').closest('.mantine-Badge-root') as HTMLElement;
+    expect(grey.getAttribute('style')).toContain('--mantine-color-gray-6');
+    expect(grey.getAttribute('style')).not.toContain('--mantine-color-red-6');
   });
 
   it('lists the failures with their reason, open by default', async () => {
@@ -52,7 +69,8 @@ describe('DeleteResultModal', () => {
     });
 
     expect(screen.getByRole('button', { name: 'Failed (2)' })).toBeInTheDocument();
-    expect(screen.getByText('Reason')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.getByText('a.txt')).toBeInTheDocument();
     expect(screen.getByText('denied')).toBeInTheDocument();
     expect(screen.getByText('locked')).toBeInTheDocument();
     expect(screen.queryByText(/Showing/)).not.toBeInTheDocument();
@@ -71,7 +89,7 @@ describe('DeleteResultModal', () => {
     expect(screen.getByRole('button', { name: 'Succeeded (2)' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText('a.txt')).toBeInTheDocument();
     expect(screen.getByText('b.txt')).toBeInTheDocument();
-    expect(screen.queryByText('Reason')).not.toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
   it('has both sections when some failed, and opens the deleted one on click', async () => {

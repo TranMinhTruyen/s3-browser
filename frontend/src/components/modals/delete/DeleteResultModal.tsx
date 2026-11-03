@@ -1,11 +1,11 @@
-import { Accordion, Divider, Group, Modal, Paper, Stack, Text, Title } from '@mantine/core';
+import { Accordion, Badge, Divider, Group, Modal, Paper, Stack, Text, Title } from '@mantine/core';
 import { Info } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import { formatStringJson } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
-import KeyTable, { KeyTableRow } from '@/components/modals/KeyTable';
+import DeleteKeyList, { DeleteKeyRow } from '@/components/modals/delete/DeleteKeyList';
 import { INFO_BG_COLOR, INFO_COLOR } from '@/components/modals/modalColors';
 
 type DeleteResultModalProps = ModalProps & {
@@ -24,8 +24,8 @@ export default createMantineModal<DeleteResultModalProps, void>(props => {
 
   const { t } = useTranslation('deleteResultModal');
 
-  const failureRows = useMemo<KeyTableRow[]>(() => failures.map(f => ({ key: f.key, error: f.error })), [failures]);
-  const deletedRows = useMemo<KeyTableRow[]>(() => (deletedKeys ?? []).map(key => ({ key })), [deletedKeys]);
+  const failureRows = useMemo<DeleteKeyRow[]>(() => failures.map(f => ({ key: f.key, error: f.error })), [failures]);
+  const deletedRows = useMemo<DeleteKeyRow[]>(() => (deletedKeys ?? []).map(key => ({ key })), [deletedKeys]);
 
   const hasFailures = failureRows.length > 0;
   const hasDeletedRows = deletedRows.length > 0;
@@ -59,13 +59,19 @@ export default createMantineModal<DeleteResultModalProps, void>(props => {
         <Modal.Body p="8px">
           <Paper withBorder p="8px">
             <Stack gap="8px">
-              <Text c="var(--mantine-color-green-filled)">
-                {formatStringJson(t('deletedCount'), { count: deleted })}
-              </Text>
-              <Text c={failed > 0 ? 'var(--mantine-color-red-filled)' : undefined}>
-                {formatStringJson(t('failedCount'), { count: failed })}
-              </Text>
-              {/* Panels are not kept mounted: a hidden one stops the virtualized table measuring, so it came back empty. */}
+              <Group gap="8px">
+                <Badge variant="light" color="var(--mantine-color-green-6)" size="lg">
+                  {formatStringJson(t('deletedCount'), { count: deleted })}
+                </Badge>
+                <Badge
+                  variant="light"
+                  color={failed > 0 ? 'var(--mantine-color-red-6)' : 'var(--mantine-color-gray-6)'}
+                  size="lg"
+                >
+                  {formatStringJson(t('failedCount'), { count: failed })}
+                </Badge>
+              </Group>
+              {/* Panels are not kept mounted: a hidden one stops the virtualized list measuring, so it came back empty. */}
               {(hasFailures || hasDeletedRows) && (
                 <Accordion
                   multiple
@@ -82,7 +88,7 @@ export default createMantineModal<DeleteResultModalProps, void>(props => {
                             {formatStringJson(t('truncated'), { shown: failures.length, total: failed })}
                           </Text>
                         )}
-                        <KeyTable rows={failureRows} keyLabel={t('fileName')} errorLabel={t('reason')} />
+                        <DeleteKeyList rows={failureRows} />
                       </Accordion.Panel>
                     </Accordion.Item>
                   )}
@@ -90,7 +96,7 @@ export default createMantineModal<DeleteResultModalProps, void>(props => {
                     <Accordion.Item value="deleted">
                       <Accordion.Control>{formatStringJson(t('deletedSection'), { count: deleted })}</Accordion.Control>
                       <Accordion.Panel>
-                        <KeyTable rows={deletedRows} keyLabel={t('fileName')} />
+                        <DeleteKeyList rows={deletedRows} />
                       </Accordion.Panel>
                     </Accordion.Item>
                   )}

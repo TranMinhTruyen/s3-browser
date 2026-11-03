@@ -4,7 +4,5 @@
   "failedCount": "失敗: {count}",
   "deletedSection": "成功 ({count})",
   "failedSection": "失敗 ({count})",
-  "truncated": "{total} 件中 {shown} 件のエラーを表示",
-  "fileName": "ファイル名",
-  "reason": "理由"
+  "truncated": "{total} 件中 {shown} 件のエラーを表示"
 }

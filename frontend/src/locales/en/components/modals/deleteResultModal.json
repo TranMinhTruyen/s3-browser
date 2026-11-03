@@ -4,7 +4,5 @@
   "failedCount": "Failed: {count}",
   "deletedSection": "Succeeded ({count})",
   "failedSection": "Failed ({count})",
-  "truncated": "Showing {shown}/{total} errors",
-  "fileName": "File name",
-  "reason": "Reason"
+  "truncated": "Showing {shown}/{total} errors"
 }
