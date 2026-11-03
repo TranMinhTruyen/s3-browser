@@ -30,30 +30,6 @@ const (
 	maxUploadParts = 10000
 )
 
-// s3Uploader is the part of *s3.Client the upload code uses. It lets tests replace S3.
-type s3Uploader interface {
-	PutObject(
-		ctx context.Context, in *s3.PutObjectInput, optFns ...func(*s3.Options),
-	) (*s3.PutObjectOutput, error)
-	CreateMultipartUpload(
-		ctx context.Context, in *s3.CreateMultipartUploadInput, optFns ...func(*s3.Options),
-	) (*s3.CreateMultipartUploadOutput, error)
-	UploadPart(
-		ctx context.Context, in *s3.UploadPartInput, optFns ...func(*s3.Options),
-	) (*s3.UploadPartOutput, error)
-	CompleteMultipartUpload(
-		ctx context.Context, in *s3.CompleteMultipartUploadInput, optFns ...func(*s3.Options),
-	) (*s3.CompleteMultipartUploadOutput, error)
-	AbortMultipartUpload(
-		ctx context.Context, in *s3.AbortMultipartUploadInput, optFns ...func(*s3.Options),
-	) (*s3.AbortMultipartUploadOutput, error)
-	HeadObject(
-		ctx context.Context, in *s3.HeadObjectInput, optFns ...func(*s3.Options),
-	) (*s3.HeadObjectOutput, error)
-}
-
-var _ s3Uploader = (*s3.Client)(nil)
-
 // uploadFile uploads the file at path to bucket/key and returns its size.
 // Files smaller than minUploadPartSize are sent with one PutObject; larger files are
 // sent as a multipart upload with uploadPartConcurrency parts in flight.
@@ -61,7 +37,7 @@ var _ s3Uploader = (*s3.Client)(nil)
 // On failure or cancellation, no object is created and no parts are left on the server.
 func uploadFile(
 	ctx context.Context,
-	client s3Uploader,
+	client *s3.Client,
 	bucket, key, path string,
 	id string,
 	tracker *utils.BatchReporter[models.UploadProgressOutput],
@@ -79,7 +55,7 @@ func uploadFile(
 	}
 	defer func() { _ = f.Close() }() // read-only file: close error is harmless
 
-	info, err := statFile(f)
+	info, err := f.Stat()
 	if err != nil {
 		return 0, err
 	}
@@ -111,7 +87,7 @@ func uploadFile(
 // putSingle uploads body as one object with a single PutObject request.
 func putSingle(
 	ctx context.Context,
-	client s3Uploader,
+	client *s3.Client,
 	bucket, key, contentType string,
 	body *io.SectionReader,
 	sent *atomic.Int64,
@@ -137,7 +113,7 @@ func putSingle(
 // already stored (they take space, and are billed, until then).
 func putMultipart(
 	ctx context.Context,
-	client s3Uploader,
+	client *s3.Client,
 	bucket, key, contentType string,
 	f *os.File,
 	size int64,
@@ -273,6 +249,3 @@ func nonEmpty(s string) *string {
 	}
 	return &s
 }
-
-// statFile returns the info of an open file. It is a variable so tests can make it fail.
-var statFile = func(f *os.File) (os.FileInfo, error) { return f.Stat() }

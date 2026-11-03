@@ -12,22 +12,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-// s3Header is the part of the S3 client used to read an object's headers.
-type s3Header interface {
-	HeadObject(
-		ctx context.Context, in *s3.HeadObjectInput, optFns ...func(*s3.Options),
-	) (*s3.HeadObjectOutput, error)
-}
-
-var _ s3Header = (*s3.Client)(nil)
-
 // getObjectDetail reads the content type, storage class and user metadata of one object
 // with HeadObject. ctx is the call context: it is canceled when the frontend cancels the call.
 func (m *submoduleObjMng) getObjectDetail(
 	ctx context.Context,
 	input models.ObjectDetailInput,
 ) models.Output[models.ObjectDetailOutput] {
-	ctx, cancel := withCallContext(ctx, m.appContext(), 5*time.Minute)
+	ctx, cancel := withCallContext(ctx, m.app.Context(), 5*time.Minute)
 	defer cancel()
 
 	output := models.NewOutput[models.ObjectDetailOutput]()
@@ -41,20 +32,19 @@ func (m *submoduleObjMng) getObjectDetail(
 		)
 	}
 
-	client, ok := m.getHeader(input.ConnectionId)
+	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
 	if !ok {
 		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 
-	head, err := client.HeadObject(ctx, &s3.HeadObjectInput{
+	head, err := s3Conn.Client.HeadObject(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(input.Bucket),
 		Key:    aws.String(input.Key),
 	})
 	if err != nil {
-		// The frontend canceled the call; nobody is waiting for the result.
 		if isCallCanceled(ctx) {
-			output.Result = false
-			return output
+			// Canceled by the frontend: fail silently, nobody waits for the result.
+			return output.ThrowError()
 		}
 
 		return output.ThrowError(

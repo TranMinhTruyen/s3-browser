@@ -25,21 +25,6 @@ const (
 	deleteBatchSize = 1000
 )
 
-// s3Deleter is the part of *s3.Client the prefix delete code uses. It lets tests replace S3.
-type s3Deleter interface {
-	ListObjectsV2(
-		ctx context.Context, in *s3.ListObjectsV2Input, optFns ...func(*s3.Options),
-	) (*s3.ListObjectsV2Output, error)
-	DeleteObjects(
-		ctx context.Context, in *s3.DeleteObjectsInput, optFns ...func(*s3.Options),
-	) (*s3.DeleteObjectsOutput, error)
-	DeleteObject(
-		ctx context.Context, in *s3.DeleteObjectInput, optFns ...func(*s3.Options),
-	) (*s3.DeleteObjectOutput, error)
-}
-
-var _ s3Deleter = (*s3.Client)(nil)
-
 // validDeletePrefix reports whether prefix may be deleted: it must name a folder
 // (end with "/") and must not be empty or "/", so a whole bucket is never deleted.
 func validDeletePrefix(prefix string) bool {
@@ -61,7 +46,7 @@ func isDeleteObjectsUnsupported(err error) bool {
 
 // prefixDeleter holds the state of one deletePrefix call.
 type prefixDeleter struct {
-	client  s3Deleter
+	client  *s3.Client
 	bucket  string
 	deleted int
 	failed  int
@@ -156,7 +141,7 @@ func (m *submoduleObjMng) deletePrefix(
 	ctx context.Context,
 	input models.DeletePrefixInput,
 ) models.Output[models.DeletePrefixOutput] {
-	ctx, cancel := withCallContext(ctx, m.appContext(), deletePrefixTimeout)
+	ctx, cancel := withCallContext(ctx, m.app.Context(), deletePrefixTimeout)
 	defer cancel()
 
 	output := models.NewOutput[models.DeletePrefixOutput]()
@@ -169,10 +154,11 @@ func (m *submoduleObjMng) deletePrefix(
 		)
 	}
 
-	client, ok := m.getDeleter(input.ConnectionId)
+	s3Conn, ok := m.global.GetConnContainer(input.ConnectionId)
 	if !ok {
 		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
+	client := s3Conn.Client
 
 	d := &prefixDeleter{client: client, bucket: input.Bucket}
 	var callErr error
@@ -210,12 +196,11 @@ func (m *submoduleObjMng) deletePrefix(
 	output.Body = models.DeletePrefixOutput{Deleted: d.deleted, Failed: d.failed}
 
 	if callErr != nil {
-		// The frontend canceled the call; nobody is waiting for the result.
 		if isCallCanceled(ctx) {
 			m.logger.Info("delete prefix canceled",
 				"bucket", input.Bucket, "prefix", input.Prefix, "deleted", d.deleted)
-			output.Result = false
-			return output
+			// Canceled by the frontend: fail silently, nobody waits for the result.
+			return output.ThrowError()
 		}
 		d.fail(UnwrapAwsError(callErr))
 		output.Body.Failed = d.failed

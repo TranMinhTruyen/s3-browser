@@ -114,8 +114,8 @@ func relKeyDir(relKey string) string {
 }
 
 // maxWalkEntries is the most entries (files, folders, symlinks, errors) visited in one
-// dropped folder. It is a variable so tests can lower it.
-var maxWalkEntries = 100_000
+// dropped folder.
+const maxWalkEntries = 100_000
 
 // isVolumeRoot reports whether p is a filesystem root such as "C:\" or "/": its base name
 // is a separator or empty, so there is no folder name for the RelKey.
@@ -123,10 +123,6 @@ func isVolumeRoot(p string) bool {
 	base := filepath.Base(filepath.Clean(p))
 	return base == "" || base == "." || os.IsPathSeparator(base[0])
 }
-
-// entryInfo reads the file info of a directory entry. It is a variable so tests can
-// make it fail, which only happens in real life when a file vanishes during the walk.
-var entryInfo = func(d fs.DirEntry) (fs.FileInfo, error) { return d.Info() }
 
 // dropWalker collects the regular files under one dropped folder.
 type dropWalker struct {
@@ -167,7 +163,7 @@ func (w *dropWalker) visit(path string, d fs.DirEntry, err error) error {
 		return nil
 	}
 
-	info, err := entryInfo(d)
+	info, err := d.Info()
 	if err != nil {
 		w.skipped++
 		return nil
