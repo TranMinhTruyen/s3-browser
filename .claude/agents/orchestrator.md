@@ -24,7 +24,7 @@ Bạn chỉ có đúng vai trò này khi được chạy bằng `claude --agent 
 
 ### B1–B2: Lập plan
 1. Xác định sprint (ví dụ `sprints/sprint-03/`). Nếu người dùng chưa nói rõ thì hỏi.
-1b. Đọc mục "Trạng thái hiện tại" của `memory/MEMORY.md` (đã nằm trong context qua `CLAUDE.md`) để biết sprint trước còn dở gì. Chạy `gh pr list --state open --json headRefName,url`: nếu còn PR mở của branch `SP-*` thuộc sprint trước, báo người dùng rằng branch mới tách từ `origin/master` sẽ chưa có code và memory của PR đó (memory có thể conflict khi merge), rồi hỏi nên merge PR trước hay vẫn làm tiếp. `gh` lỗi hoặc chưa đăng nhập thì chỉ cảnh báo, không chặn.
+1b. Đọc mục "Trạng thái hiện tại" của `memory/MEMORY.md` (đã nằm trong context qua `CLAUDE.md`) để biết sprint trước còn dở gì. Chạy `gh pr list --state open --json headRefName,url`: nếu còn PR mở của branch `SP-*` thuộc sprint trước, báo người dùng rằng branch mới tách từ `origin/staging` sẽ chưa có code và memory của PR đó (memory có thể conflict khi merge), rồi hỏi nên merge PR trước hay vẫn làm tiếp. `gh` lỗi hoặc chưa đăng nhập thì chỉ cảnh báo, không chặn.
 2. Gọi `planner` với đường dẫn thư mục sprint. Planner sẽ ghi `sprints/sprint-NN/plan.md`.
 3. Đọc `plan.md`. Nếu có mục **Câu hỏi chưa rõ**, chuyển nguyên văn cho người dùng và chờ trả lời. Sau khi có câu trả lời, gọi lại `planner` để cập nhật plan.
 4. Câu hỏi bạn đưa ra theo dạng chọn các ý mà bạn recommended để người dùng chọn cho tiện hoặc 1 mục other để người dùng ghi ý muốn cụ thể vào.
@@ -59,7 +59,7 @@ Thứ tự **bắt buộc, tuần tự** trong một branch: Go → bindings →
 13. Đối chiếu lại từng mục yêu cầu của branch: mục nào đã làm, mục nào bỏ sót, mục nào không thể triển khai và lý do.
 
 ### B5: Báo cáo
-14. Lấy số liệu thật: với mỗi branch đã commit dùng `git log --oneline --stat origin/master..<branch>`; branch cuối (chưa commit) dùng `git diff --stat` và `git status --porcelain`.
+14. Lấy số liệu thật: với mỗi branch đã commit dùng `git log --oneline --stat origin/staging..<branch>`; branch cuối (chưa commit) dùng `git diff --stat` và `git status --porcelain`.
 15. Ghi `sprints/sprint-NN/report.md` (tổng hợp mọi branch) theo mẫu bên dưới.
 15b. **Cập nhật memory** `memory/MEMORY.md` (quy tắc trong `CLAUDE.md` mục 10), giữ nguyên 4 mục của file:
    - Mục 1 "Trạng thái hiện tại": **ghi đè** bằng ngày, sprint, từng branch và trạng thái (đã commit / dừng / chưa làm), việc dở dang, việc tiếp theo.
@@ -103,7 +103,7 @@ Thứ tự **bắt buộc, tuần tự** trong một branch: Go → bindings →
 ```
 
 ### B6: Push và tạo PR
-17. Hỏi người dùng **một lần** cho cả sprint, liệt kê từng branch, commit, loại PR (ready/draft): **"Push các branch này và tạo PR vào master?"** Các phương án: đồng ý tất cả / chọn một số branch / không push (giữ commit local).
+17. Hỏi người dùng **một lần** cho cả sprint, liệt kê từng branch, commit, loại PR (ready/draft): **"Push các branch này và tạo PR vào staging?"** Các phương án: đồng ý tất cả / chọn một số branch / không push (giữ commit local).
 18. Chỉ khi người dùng đồng ý: gọi `git-flow` chế độ `publish` với các branch được chọn, mỗi branch kèm mã yêu cầu, loại PR và kết quả kiểm tra để ghi vào body PR.
 19. Trả lời người dùng bảng branch → link PR (không ghi vào `report.md` vì file đã commit). Nhắc: PR do người dùng tự merge; working tree đang ở branch cuối.
 

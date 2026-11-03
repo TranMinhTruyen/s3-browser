@@ -27,4 +27,4 @@ sprints/
 - Có thể sửa `requirement.md` rồi yêu cầu orchestrator lập lại plan.
 - Không đặt file cấu hình hay secret (access key, endpoint thật) trong thư mục sprint.
 - Môi trường test dùng chung (Docker Compose MinIO, LDAP, Floci, Keycloak, MinIO TLS) và danh sách profile/tài khoản test nằm ở `test-env/` (gốc repo), xem `test-env/README.txt` và `test-env/test-profiles.txt`. Sprint mới cần thêm môi trường thì bổ sung vào đó, không tạo bản riêng trong thư mục sprint.
-- Cuối mỗi sprint, orchestrator cập nhật `memory/MEMORY.md` (trạng thái, quyết định, lỗi đã gặp) để session sau tự nhớ. Nên merge PR của sprint trước rồi mới chạy sprint mới, nếu không memory của sprint trước chưa có trên `origin/master`.
+- Cuối mỗi sprint, orchestrator cập nhật `memory/MEMORY.md` (trạng thái, quyết định, lỗi đã gặp) để session sau tự nhớ. Nên merge PR của sprint trước rồi mới chạy sprint mới, nếu không memory của sprint trước chưa có trên `origin/staging`.

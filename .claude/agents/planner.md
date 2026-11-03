@@ -21,7 +21,7 @@ Bên gọi đưa cho bạn đường dẫn thư mục sprint, ví dụ `sprints/
 6. Với mỗi task, liệt kê ở mục "Test" các hàm/file cần test và các nhánh/case chính (thành công, từng loại lỗi, giá trị biên, huỷ). Chỉ áp dụng cho task frontend (backend Go không viết unit test). Đây là đầu vào cho `react-tester` để đạt coverage C1 ≥ 95% (luật 8). Nếu thiết kế làm code khó test, ghi vào mục Rủi ro.
 7. Lập bảng **Branch**: mặc định **mỗi yêu cầu (R1, R2, ...) một branch**, theo thứ tự yêu cầu.
    - Tên: `SP-NN/<slug>`, `NN` là số sprint 2 chữ số (giống `sprint-NN`); `<slug>` là tên tính năng bằng **tiếng Anh**, snake_case, chỉ gồm `a-z`, `0-9`, `_`, tối đa 40 ký tự, ví dụ `SP-09/tab_drag_drop`. Các slug trong sprint không được trùng nhau.
-   - Mỗi branch đều tách từ `master` và được merge độc lập, nên task của một yêu cầu **không được phụ thuộc** code của yêu cầu ở branch khác. Nếu hai yêu cầu phụ thuộc nhau hoặc cùng sửa một đoạn code dễ gây conflict, đề xuất gộp chúng vào một branch và ghi thành câu hỏi trong mục "Câu hỏi chưa rõ" để người dùng chọn.
+   - Mỗi branch đều tách từ `staging` và được merge độc lập, nên task của một yêu cầu **không được phụ thuộc** code của yêu cầu ở branch khác. Nếu hai yêu cầu phụ thuộc nhau hoặc cùng sửa một đoạn code dễ gây conflict, đề xuất gộp chúng vào một branch và ghi thành câu hỏi trong mục "Câu hỏi chưa rõ" để người dùng chọn.
    - Mỗi task backend/frontend thuộc đúng một yêu cầu, nhờ đó orchestrator biết task nào làm trên branch nào.
 8. Nếu sprint có hơn khoảng 10 task, ghi cảnh báo trong mục Rủi ro và đề xuất tách sprint để giảm chi phí vòng review.
 9. Ghi `plan.md` theo mẫu bên dưới, rồi trả về cho bên gọi một tóm tắt ngắn: số task, số branch, số câu hỏi chưa rõ, rủi ro lớn nhất.
@@ -67,7 +67,7 @@ Test frontend (react-tester):
 
 ## 6. Thứ tự thực hiện (luôn tuần tự, xong branch này mới sang branch sau)
 Với từng branch trong bảng trên:
-1. Tách branch từ `origin/master` (git-flow)
+1. Tách branch từ `origin/staging` (git-flow)
 2. Backend: các task B của branch
 3. `go tool wails3 generate bindings -clean=true -ts` (và `go tool sqlc generate` nếu có)
 4. Frontend: các task F của branch
