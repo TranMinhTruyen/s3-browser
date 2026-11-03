@@ -1,5 +1,5 @@
 import { Divider, Group, Paper, Stack } from '@mantine/core';
-import { memo, useCallback, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useConnectProfile } from '@/common/hooks/useConnectProfile';
 import { useProfileStore } from '@/common/stores/profileStore';
@@ -173,10 +173,21 @@ function TabDetail(props: TabDetailProps) {
     );
   }, [selectedProfile, currentView, selectedBucket, prefix, tabId]);
 
+  // Activity hides the tab with display none, which resets the scroll offset: save it on hide, restore on show.
+  const savedScrollTop = useRef(0);
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (el && savedScrollTop.current) el.scrollTop = savedScrollTop.current;
+    return () => {
+      if (el) savedScrollTop.current = el.scrollTop;
+    };
+  }, []);
+
   const viewContent = (
     <>
       <Stack gap="8px" display={currentView === 'bucketList' ? undefined : 'none'}>
         <BucketListView
+          tabId={tabId}
           profile={isConnected ? selectedProfile : null}
           active={currentView === 'bucketList'}
           scrollRef={scrollRef}

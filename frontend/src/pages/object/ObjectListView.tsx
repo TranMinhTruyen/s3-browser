@@ -10,6 +10,7 @@ import { useFilesDroppedUpload } from '@/common/hooks/useFilesDroppedUpload';
 import { useObjectPaging } from '@/common/hooks/useObjectPaging';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
+import { onTabGone } from '@/common/utils/tabUtils';
 import Button from '@/components/buttons/Button';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import ObjectItem from '@/pages/object/ObjectItem';
@@ -62,7 +63,7 @@ function ObjectListView(props: ObjectListViewProps) {
     loadNextPage,
     onRefresh,
     onClickLoadMore,
-  } = useObjectPaging({ connectionId, profileName, bucket, prefix, keyword, listKey, scrollRef });
+  } = useObjectPaging({ tabId, connectionId, profileName, bucket, prefix, keyword, listKey, scrollRef });
   const changePrefix = useTabListStore(s => s.changePrefix);
   const addSelectItem = useTabListStore(s => s.addSelectItem);
   const removeSelectItem = useTabListStore(s => s.removeSelectItem);
@@ -95,8 +96,8 @@ function ObjectListView(props: ObjectListViewProps) {
     [closeDetailIfDeleted]
   );
 
-  // The selection does not outlive the view.
-  useEffect(() => () => clearSelectItem(tabId), [clearSelectItem, tabId]);
+  // The selection does not outlive the view, but survives the tab being hidden (Activity).
+  useEffect(() => onTabGone(tabId, () => clearSelectItem(tabId)), [clearSelectItem, tabId]);
 
   const onClickMenuButton = useCallback(
     async (keys: string[], action: 'download' | 'delete') => {

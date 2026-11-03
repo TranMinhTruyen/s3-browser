@@ -1,8 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
 import { Events } from '@wailsio/runtime';
+import { Activity, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useFilesDroppedUpload } from '@/common/hooks/useFilesDroppedUpload';
+import { useTabListStore } from '@/common/stores/tabListStore';
 import { ensureUploadIdle, runUpload } from '@/common/utils/uploadUtils';
 import { showUploadLimitModal } from '@/components/modals/lazyModals';
 import i18n from '@/locales/i18n';
@@ -184,6 +186,76 @@ describe('useFilesDroppedUpload', () => {
       unmount();
       await done();
       expect(onRefresh).not.toHaveBeenCalled();
+    });
+
+    describe('when the tab is only hidden', () => {
+      const tabState = { currentView: 'objectList' as const, prefix: '', selectionItem: [], deletingItems: [] };
+      let mode: 'visible' | 'hidden' = 'visible';
+      const wrapper = ({ children }: { children: ReactNode }) => <Activity mode={mode}>{children}</Activity>;
+
+      beforeEach(() => {
+        mode = 'visible';
+        useTabListStore.setState({ activeTab: 'tab-1', tabList: { 'tab-1': tabState, 'tab-2': tabState } });
+      });
+
+      const hide = (rerender: (p: Params) => void) => {
+        useTabListStore.setState({ activeTab: 'tab-2' });
+        mode = 'hidden';
+        rerender(baseParams());
+      };
+
+      it('still refreshes the list when the upload ends while the tab is hidden', async () => {
+        const { rerender } = renderHook(p => useFilesDroppedUpload(p), { initialProps: baseParams(), wrapper });
+        const done = await runDone();
+        hide(rerender);
+        await done();
+        expect(onRefresh).toHaveBeenCalledTimes(1);
+      });
+
+      it('stops listening to drops while hidden and listens again when shown', () => {
+        const { rerender } = renderHook(p => useFilesDroppedUpload(p), { initialProps: baseParams(), wrapper });
+        expect(Events.On).toHaveBeenCalledTimes(1);
+        hide(rerender);
+        expect(unsubscribe).toHaveBeenCalledTimes(1);
+
+        useTabListStore.setState({ activeTab: 'tab-1' });
+        mode = 'visible';
+        rerender(baseParams());
+        expect(Events.On).toHaveBeenCalledTimes(2);
+      });
+
+      it('does not refresh when a hidden tab is closed during the upload', async () => {
+        const { rerender, unmount } = renderHook(p => useFilesDroppedUpload(p), {
+          initialProps: baseParams(),
+          wrapper,
+        });
+        const done = await runDone();
+        hide(rerender);
+        useTabListStore.setState({ tabList: { 'tab-2': tabState } });
+        unmount();
+        await done();
+        expect(onRefresh).not.toHaveBeenCalled();
+      });
+
+      it('does not refresh when the tab was closed and the view unmounted during the upload', async () => {
+        const { unmount } = renderHook(p => useFilesDroppedUpload(p), { initialProps: baseParams(), wrapper });
+        const done = await runDone();
+        useTabListStore.setState({ tabList: { 'tab-2': tabState } });
+        unmount();
+        await done();
+        expect(onRefresh).not.toHaveBeenCalled();
+      });
+
+      it('refreshes again after the tab is shown and hidden once more', async () => {
+        const { rerender } = renderHook(p => useFilesDroppedUpload(p), { initialProps: baseParams(), wrapper });
+        const done = await runDone();
+        hide(rerender);
+        useTabListStore.setState({ activeTab: 'tab-1' });
+        mode = 'visible';
+        rerender(baseParams());
+        await done();
+        expect(onRefresh).toHaveBeenCalledTimes(1);
+      });
     });
   });
 });

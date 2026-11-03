@@ -90,6 +90,60 @@ describe('applySettings', () => {
     expect(document.documentElement.lang).toBe(language);
   });
 
+  describe('font variables', () => {
+    const style = () => document.documentElement.style;
+    const family = () => style().getPropertyValue('--mantine-font-family');
+
+    afterEach(() => {
+      vi.mocked(style().setProperty).mockRestore();
+    });
+
+    it('writes both variables once and not again while the family stays the same', () => {
+      applySettings({ ...DEFAULT_SETTINGS, font: 'arial', language: 'en' });
+      const setProperty = vi.spyOn(style(), 'setProperty');
+
+      applySettings({ ...DEFAULT_SETTINGS, font: 'arial', language: 'en', theme: 'dark' });
+      expect(setProperty).not.toHaveBeenCalled();
+
+      applySettings({ ...DEFAULT_SETTINGS, font: 'arial', language: 'en', launchOnStartup: true });
+      expect(setProperty).not.toHaveBeenCalled();
+    });
+
+    it('writes the font and headings variables together when the font changes', () => {
+      applySettings({ ...DEFAULT_SETTINGS, font: 'arial', language: 'en' });
+      const setProperty = vi.spyOn(style(), 'setProperty');
+
+      applySettings({ ...DEFAULT_SETTINGS, font: 'monospace', language: 'en' });
+
+      expect(setProperty).toHaveBeenCalledTimes(2);
+      expect(setProperty).toHaveBeenCalledWith('--mantine-font-family', getFontFamily('monospace', 'en'));
+      expect(setProperty).toHaveBeenCalledWith('--mantine-font-family-headings', getFontFamily('monospace', 'en'));
+    });
+
+    it('rewrites the family when only the language changes its CJK fallback', () => {
+      applySettings({ ...DEFAULT_SETTINGS, font: 'arial', language: 'zh-CN' });
+      expect(family()).toContain('Microsoft YaHei UI');
+      const setProperty = vi.spyOn(style(), 'setProperty');
+
+      applySettings({ ...DEFAULT_SETTINGS, font: 'arial', language: 'zh-TW' });
+
+      expect(setProperty).toHaveBeenCalledTimes(2);
+      expect(family()).toBe(getFontFamily('arial', 'zh-TW'));
+      expect(style().getPropertyValue('--mantine-font-family-headings')).toBe(family());
+    });
+
+    it('does not rewrite when two languages share the same fallback', () => {
+      applySettings({ ...DEFAULT_SETTINGS, font: 'arial', language: 'ru' });
+      const setProperty = vi.spyOn(style(), 'setProperty');
+
+      applySettings({ ...DEFAULT_SETTINGS, font: 'arial', language: 'de' });
+
+      expect(getFontFamily('arial', 'ru')).toBe(getFontFamily('arial', 'de'));
+      expect(setProperty).not.toHaveBeenCalled();
+      expect(document.documentElement.lang).toBe('de');
+    });
+  });
+
   it('changes the language only when it differs from the current one', () => {
     applySettings({ ...DEFAULT_SETTINGS, language: i18n.language as 'en' });
     expect(i18n.changeLanguage).not.toHaveBeenCalled();
