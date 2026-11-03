@@ -3,6 +3,7 @@ import type { TabState } from '@wails/S3Browser/models/setting';
 import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
 import { createUUID } from '@/common/utils/stringUtils';
+import { buildTabState } from '@/common/utils/tabState';
 
 /** State of one tab: profile, current view, folder, selection and detail drawer. */
 interface TabDetail {
@@ -289,10 +290,10 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
 
     serializeTabs: () => {
       const { tabList, activeTab } = get();
-      return {
-        tabs: Object.entries(tabList).map(([id, tab]) => ({ id, profileId: tab.profileId ?? null })),
+      return buildTabState(
         activeTab,
-      };
+        Object.entries(tabList).map(([id, tab]) => [id, tab.profileId])
+      );
     },
 
     restoreTabs: saved => {
