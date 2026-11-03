@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DeleteKeyList from '@/components/modals/delete/DeleteKeyList';
@@ -65,14 +65,34 @@ describe('DeleteKeyList', () => {
     expect(screen.getByText('denied')).toBeInTheDocument();
   });
 
-  it('shows the full key in a tooltip only when the name differs from it', async () => {
+  it('shows the full key in a tooltip when the name differs from it', async () => {
     renderWithProviders(<DeleteKeyList rows={[{ key: 'dir/long-name.txt' }, { key: 'plain.txt' }]} />);
 
-    await userEvent.hover(screen.getByText('plain.txt'));
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
-
     await userEvent.hover(screen.getByText('long-name.txt'));
+
     expect(await screen.findByText('dir/long-name.txt')).toBeInTheDocument();
+  });
+
+  it('shows no tooltip when the name equals the key and is not cut', async () => {
+    renderWithProviders(<DeleteKeyList rows={[{ key: 'dir/long-name.txt' }, { key: 'plain.txt' }]} />);
+    const name = screen.getByText('plain.txt');
+    Object.defineProperty(name, 'scrollWidth', { configurable: true, value: 50 });
+    Object.defineProperty(name, 'clientWidth', { configurable: true, value: 100 });
+
+    await userEvent.hover(name);
+
+    expect(screen.getAllByText('plain.txt')).toHaveLength(1);
+  });
+
+  it('shows the key in a tooltip when the name equals the key but is cut', async () => {
+    renderWithProviders(<DeleteKeyList rows={[{ key: 'plain.txt' }]} />);
+    const name = screen.getByText('plain.txt');
+    Object.defineProperty(name, 'scrollWidth', { configurable: true, value: 200 });
+    Object.defineProperty(name, 'clientWidth', { configurable: true, value: 100 });
+
+    await userEvent.hover(name);
+
+    await waitFor(() => expect(screen.getAllByText('plain.txt')).toHaveLength(2));
   });
 
   it('gives the virtualizer the scroll element, a fixed estimate and the row count', async () => {

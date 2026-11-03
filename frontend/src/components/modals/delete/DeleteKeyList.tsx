@@ -1,10 +1,11 @@
-import { Card, Text, Tooltip } from '@mantine/core';
+import { Card, Text } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { File, Folder } from 'lucide-react';
 import { CSSProperties, memo, useCallback, useState } from 'react';
+import TruncatedText from '@/components/TruncatedText';
 
 const LIST_MAX_HEIGHT = 320;
-// One-line card plus its gap; the real height is measured, as names and reasons may wrap.
+// One-line card plus its gap; the real height is measured, as error reasons may wrap.
 const ROW_ESTIMATE_HEIGHT = 56;
 const ROW_GAP = 8;
 // Same border as the cards of the object list.
@@ -21,7 +22,7 @@ type DeleteKeyListProps = {
   maxHeight?: number;
 };
 
-// Long S3 keys have no spaces, so text breaks anywhere; nothing may widen the list (no horizontal scroll).
+// Error reasons wrap anywhere (no spaces in keys); nothing may widen the list (no horizontal scroll).
 const wrapStyle: CSSProperties = { overflowWrap: 'anywhere', wordBreak: 'break-word' };
 const ICON_SECTION_STYLE: CSSProperties = {
   flexShrink: 0,
@@ -84,11 +85,9 @@ const DeleteKeyList = memo(function DeleteKeyList(props: DeleteKeyListProps) {
                 </Card.Section>
                 <Card.Section inheritPadding px="md" py="xs" style={NAME_SECTION_STYLE}>
                   {/* The full key is the hint when the name alone does not tell it. */}
-                  <Tooltip label={row.key} disabled={name === row.key} openDelay={400}>
-                    <Text fw={500} style={wrapStyle}>
-                      {name}
-                    </Text>
-                  </Tooltip>
+                  <TruncatedText fw={500} label={row.key} alwaysTip={name !== row.key}>
+                    {name}
+                  </TruncatedText>
                   {row.error !== undefined && (
                     <Text
                       size="sm"

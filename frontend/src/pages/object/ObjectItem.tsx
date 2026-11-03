@@ -1,10 +1,11 @@
-import { Card, Menu, Text } from '@mantine/core';
+import { Card, Menu } from '@mantine/core';
 import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
 import { Download, Ellipsis, Folder, Trash } from 'lucide-react';
 import { ChangeEvent, MouseEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
+import TruncatedText from '@/components/TruncatedText';
 import classes from '@/pages/object/page.module.css';
 
 // Fixed row height: the virtualizer knows every row's position without measuring.
@@ -84,9 +85,9 @@ const ObjectRow = memo(function ObjectRow(props: ObjectRowProps) {
         )}
       </Card.Section>
       <Card.Section inheritPadding px="md" py="md" style={NAME_SECTION_STYLE}>
-        <Text size="xl" truncate="end" fw={500}>
+        <TruncatedText size="xl" fw={500}>
           {name}
-        </Text>
+        </TruncatedText>
       </Card.Section>
       {/* The menu area must not trigger the row click. */}
       <Card.Section ref={menuSectionRef} onClick={stopPropagation} style={MENU_SECTION_STYLE}>

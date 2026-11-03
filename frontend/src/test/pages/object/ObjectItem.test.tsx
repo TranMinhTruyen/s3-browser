@@ -87,6 +87,24 @@ describe('ObjectItem', () => {
     expect(screen.queryByText('Last Modified')).not.toBeInTheDocument();
   });
 
+  it.each([
+    ['file', fileItem, 'cat.png'],
+    ['folder', folderItem, 'photos'],
+  ])('shows the %s name in a tooltip only when it is cut', async (_kind, item, name) => {
+    const { user } = setup(item);
+    const text = screen.getByText(name);
+
+    Object.defineProperty(text, 'scrollWidth', { configurable: true, value: 50 });
+    Object.defineProperty(text, 'clientWidth', { configurable: true, value: 100 });
+    await user.hover(text);
+    expect(screen.getAllByText(name)).toHaveLength(1);
+    await user.unhover(text);
+
+    Object.defineProperty(text, 'scrollWidth', { configurable: true, value: 200 });
+    await user.hover(text);
+    await waitFor(() => expect(screen.getAllByText(name)).toHaveLength(2));
+  });
+
   it('opens the detail when the card body is clicked', async () => {
     const { user, onOpenDetail, onToggleSelect } = setup(fileItem);
     await user.click(screen.getByText('cat.png'));
