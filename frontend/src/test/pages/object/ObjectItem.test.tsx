@@ -12,7 +12,7 @@ const rowRenders = vi.hoisted(() => new Map<string, number>());
 vi.mock('@/components/buttons/ActionIcon', async importOriginal => {
   const Original = (await importOriginal<{ default: ComponentType<Record<string, unknown>> }>()).default;
   const Counted = (props: Record<string, unknown>) => {
-    const label = String(props['aria-label']);
+    const label = String(props.tooltip);
     rowRenders.set(label, (rowRenders.get(label) ?? 0) + 1);
     return <Original {...props} />;
   };

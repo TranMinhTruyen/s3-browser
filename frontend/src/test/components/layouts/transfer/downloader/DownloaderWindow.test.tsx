@@ -145,7 +145,7 @@ describe('DownloaderWindow', () => {
     renderWithProviders(<DownloaderWindow />);
     emit('downloader:load-download-history', downloading('d1'));
 
-    await userEvent.click(screen.getByTitle('Cancel all'));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel all' }));
 
     expect(callIPCMock).toHaveBeenCalledWith(CancelAllDownloads, []);
   });

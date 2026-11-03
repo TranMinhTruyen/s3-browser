@@ -64,7 +64,7 @@ function FilePathField({
           size="lg"
           color="red"
           disabled={!path}
-          aria-label={t('form.button.clearFile')}
+          tooltip={t('form.button.clearFile')}
           onClick={onClickClearFile}
         >
           <X size="16px" />

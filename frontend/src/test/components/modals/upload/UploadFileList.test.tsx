@@ -126,6 +126,12 @@ describe('FileRow', () => {
     expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
   });
 
+  it('has no remove button without removeLabel', () => {
+    renderRow({ onRemoveFile });
+
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
   it('removes the file by path when the remove button is clicked', async () => {
     renderRow({ onRemoveFile, removeLabel: 'Remove' });
 

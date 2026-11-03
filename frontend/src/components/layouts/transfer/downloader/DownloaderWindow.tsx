@@ -73,7 +73,7 @@ function DownloaderWindow() {
     <>
       {!visible ? (
         <Affix ref={sizeRef} style={{ bottom: '16px', right: '16px' }}>
-          <ActionIcon onClick={openWindow} size="xl" aria-label={t('title')}>
+          <ActionIcon onClick={openWindow} size="xl" tooltip={t('title')}>
             <Download />
           </ActionIcon>
         </Affix>
@@ -88,8 +88,7 @@ function DownloaderWindow() {
                   {...tintedColor('red', 'ai')}
                   size="md"
                   onClick={onClickCancelAll}
-                  title={t('action.cancelAll')}
-                  aria-label={t('action.cancelAll')}
+                  tooltip={t('action.cancelAll')}
                 >
                   <X />
                 </ActionIcon>

@@ -92,7 +92,7 @@ type FileRowProps = {
   // Which path is shown as the tooltip of the file name.
   titleBy: 'path' | 'relKey';
   onToggleFile: (path: string, checked: boolean) => void;
-  // Shows a remove button when set.
+  // Shows a remove button when set (needs removeLabel for its tooltip).
   onRemoveFile?: (path: string) => void;
   removeLabel?: string;
 };
@@ -129,14 +129,8 @@ export const FileRow = memo(function FileRow(props: FileRowProps) {
       <Text size="sm" c="dimmed" style={{ flexShrink: 0 }}>
         {formatFileSize(file.size)}
       </Text>
-      {onRemoveFile && (
-        <ActionIcon
-          size="sm"
-          {...tintedColor('red', 'ai')}
-          onClick={onClickRemove}
-          aria-label={removeLabel}
-          title={removeLabel}
-        >
+      {onRemoveFile && removeLabel && (
+        <ActionIcon size="sm" {...tintedColor('red', 'ai')} onClick={onClickRemove} tooltip={removeLabel}>
           <Trash2 size="14px" />
         </ActionIcon>
       )}

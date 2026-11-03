@@ -173,7 +173,7 @@ function TabLayout() {
             )}
           </DndContext>
         </TabScroller>
-        <ActionIcon style={{ flexShrink: 0, marginLeft: '2px' }} onClick={addTab} aria-label={t('tooltip.addTab')}>
+        <ActionIcon style={{ flexShrink: 0, marginLeft: '2px' }} onClick={addTab} tooltip={t('tooltip.addTab')}>
           <Plus />
         </ActionIcon>
       </Tabs.List>

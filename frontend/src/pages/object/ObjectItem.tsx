@@ -100,7 +100,7 @@ const ObjectRow = memo(function ObjectRow(props: ObjectRowProps) {
         {menuOpened ? (
           <Menu width={200} opened onChange={setMenuOpened}>
             <Menu.Target>
-              <ActionIcon key="menu" loading={isDeleting} aria-label={labels.moreActions}>
+              <ActionIcon key="menu" loading={isDeleting} tooltip={labels.moreActions}>
                 <Ellipsis />
               </ActionIcon>
             </Menu.Target>
@@ -117,7 +117,7 @@ const ObjectRow = memo(function ObjectRow(props: ObjectRowProps) {
             </Menu.Dropdown>
           </Menu>
         ) : (
-          <ActionIcon key="button" loading={isDeleting} aria-label={labels.moreActions} onClick={onClickMoreActions}>
+          <ActionIcon key="button" loading={isDeleting} tooltip={labels.moreActions} onClick={onClickMoreActions}>
             <Ellipsis />
           </ActionIcon>
         )}

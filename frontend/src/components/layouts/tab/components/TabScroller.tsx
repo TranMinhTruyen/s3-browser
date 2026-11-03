@@ -176,7 +176,7 @@ function TabScroller({ ref, children }: TabScrollerProps) {
             whileTap={{ scale: 0.9 }}
             style={{ flexShrink: 0, alignSelf: 'center' }}
           >
-            <ActionIcon variant="subtle" onClick={onClickScrollLeft} aria-label={t('tooltip.scrollLeft')}>
+            <ActionIcon variant="subtle" onClick={onClickScrollLeft} tooltip={t('tooltip.scrollLeft')}>
               <ChevronLeft />
             </ActionIcon>
           </m.div>
@@ -201,7 +201,7 @@ function TabScroller({ ref, children }: TabScrollerProps) {
             whileTap={{ scale: 0.9 }}
             style={{ flexShrink: 0, alignSelf: 'center' }}
           >
-            <ActionIcon variant="subtle" onClick={onClickScrollRight} aria-label={t('tooltip.scrollRight')}>
+            <ActionIcon variant="subtle" onClick={onClickScrollRight} tooltip={t('tooltip.scrollRight')}>
               <ChevronRight />
             </ActionIcon>
           </m.div>

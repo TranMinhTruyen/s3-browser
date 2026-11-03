@@ -1,4 +1,4 @@
-import { Group, Tooltip } from '@mantine/core';
+import { Group } from '@mantine/core';
 import { Events, Window } from '@wailsio/runtime';
 import { Copy, Minus, Square, X } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
@@ -47,28 +47,22 @@ function WindowControls() {
 
   return (
     <Group gap="xs" wrap="nowrap">
-      <Tooltip label={t('window.minimise')}>
-        <ActionIcon aria-label={t('window.minimise')} {...tintedColor('yellow', 'ai')} onClick={onClickMinimise}>
-          <Minus size={16} />
-        </ActionIcon>
-      </Tooltip>
+      <ActionIcon tooltip={t('window.minimise')} {...tintedColor('yellow', 'ai')} onClick={onClickMinimise}>
+        <Minus size={16} />
+      </ActionIcon>
 
-      <Tooltip label={maximiseLabel}>
-        <ActionIcon aria-label={maximiseLabel} {...tintedColor('green', 'ai')} onClick={onClickMaximise}>
-          {isMaximised ? <Copy size={14} /> : <Square size={14} />}
-        </ActionIcon>
-      </Tooltip>
+      <ActionIcon tooltip={maximiseLabel} {...tintedColor('green', 'ai')} onClick={onClickMaximise}>
+        {isMaximised ? <Copy size={14} /> : <Square size={14} />}
+      </ActionIcon>
 
-      <Tooltip label={t('window.close')}>
-        <ActionIcon
-          aria-label={t('window.close')}
-          {...tintedColor('red', 'ai')}
-          className={classes.closeButton}
-          onClick={onClickClose}
-        >
-          <X size={16} />
-        </ActionIcon>
-      </Tooltip>
+      <ActionIcon
+        tooltip={t('window.close')}
+        {...tintedColor('red', 'ai')}
+        className={classes.closeButton}
+        onClick={onClickClose}
+      >
+        <X size={16} />
+      </ActionIcon>
     </Group>
   );
 }
