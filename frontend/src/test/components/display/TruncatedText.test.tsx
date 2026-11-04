@@ -1,7 +1,7 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import TruncatedText from '@/components/TruncatedText';
+import TruncatedText from '@/components/display/TruncatedText';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 /** jsdom has no layout: fake the measured widths of the text element. */

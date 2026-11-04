@@ -10,9 +10,9 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal } from '@/common/utils/modalUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
+import TruncatedText from '@/components/display/TruncatedText';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 import { MODAL_CHROME_HEIGHT } from '@/components/modals/modalLayout';
-import TruncatedText from '@/components/TruncatedText';
 
 const PAGE_SIZE = 10;
 

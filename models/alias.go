@@ -38,6 +38,10 @@ type (
 	ListBucketInput = bucket.ListBucketInput
 	// ListBucketOutput re-exports bucket.ListBucketOutput.
 	ListBucketOutput = bucket.ListBucketOutput
+	// CheckBucketAccessInput re-exports bucket.CheckBucketAccessInput.
+	CheckBucketAccessInput = bucket.CheckBucketAccessInput
+	// CheckBucketAccessOutput re-exports bucket.CheckBucketAccessOutput.
+	CheckBucketAccessOutput = bucket.CheckBucketAccessOutput
 	// ListObjectInput re-exports bucket.ListObjectInput.
 	ListObjectInput = bucket.ListObjectInput
 	// ListObjectOutput re-exports bucket.ListObjectOutput.

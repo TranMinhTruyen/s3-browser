@@ -359,6 +359,16 @@ func (m *Module) GetListBucket(
 	return m.submoduleBucketMng.listBucket(ctx, input)
 }
 
+// CheckBucketAccess returns the Inaccessible / ReadOnly flags of input.BucketNames, probing the buckets whose
+// access is not cached. A bucket the probe could not settle in time comes back with AccessPending. ctx is the call
+// context.
+func (m *Module) CheckBucketAccess(
+	ctx context.Context,
+	input models.CheckBucketAccessInput,
+) models.Output[models.CheckBucketAccessOutput] {
+	return m.submoduleBucketMng.checkBucketAccess(ctx, input)
+}
+
 // GetListObject returns the objects in the bucket specified in input,
 // using an already-established connection.
 func (m *Module) GetListObject(

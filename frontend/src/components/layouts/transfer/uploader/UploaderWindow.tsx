@@ -1,24 +1,21 @@
-import { Affix, CloseButton, Divider, Group, Paper, Text } from '@mantine/core';
+import { Affix } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import * as AppEvents from '@wails/events';
 import { CancelAllUploads } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Events } from '@wailsio/runtime';
-import { Upload, X } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/shallow';
 import { useDownloaderStore } from '@/common/stores/downloaderStore';
 import { selectUploadingIds, useUploaderStore } from '@/common/stores/uploaderStore';
-import { tintedColor } from '@/common/theme/tintedColor';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
-import { ITEM_HEIGHT } from '@/components/layouts/transfer/transferItem';
+import TransferPanel from '@/components/layouts/transfer/TransferPanel';
 import UploaderItem from '@/components/layouts/transfer/uploader/UploaderItem';
-import VirtualItemList from '@/components/layouts/transfer/VirtualItemList';
 
 const EDGE = 16;
 const GAP = 16;
-const WINDOW_WIDTH = 400;
 const ITEM_GAP = 8;
 
 /** Floating upload progress window (or a button when closed), placed next to the downloader. */
@@ -97,26 +94,16 @@ function UploaderWindow() {
 
   return (
     <Affix position={{ bottom: EDGE, right }}>
-      <Paper w={`${WINDOW_WIDTH}px`} withBorder style={{ overflow: 'hidden' }}>
-        <Group p="xs" justify="space-between">
-          <Text>{t('title')}</Text>
-          <Group gap="xs">
-            <ActionIcon
-              {...tintedColor('red', 'ai')}
-              size="md"
-              onClick={onClickCancelAll}
-              tooltip={t('action.cancelAll')}
-            >
-              <X />
-            </ActionIcon>
-            <CloseButton onClick={handlers.close} aria-label={t('action.close')} />
-          </Group>
-        </Group>
-
-        <Divider />
-
-        <VirtualItemList ids={uploadItemIds} gap={ITEM_GAP} itemHeight={ITEM_HEIGHT} renderItem={renderItem} />
-      </Paper>
+      <TransferPanel
+        title={t('title')}
+        cancelAllTooltip={t('action.cancelAll')}
+        closeLabel={t('action.close')}
+        ids={uploadItemIds}
+        gap={ITEM_GAP}
+        renderItem={renderItem}
+        onCancelAll={onClickCancelAll}
+        onClose={handlers.close}
+      />
     </Affix>
   );
 }

@@ -2,7 +2,7 @@
   "empty": "暂无存储桶",
   "tooltip": {
     "bucketList": "存储桶列表",
-    "inaccessible": "此存储桶无法匿名访问。"
+    "inaccessible": "无法访问此存储桶（无权限或存储桶不存在）。"
   },
   "label": {
     "createDate": "创建日期："

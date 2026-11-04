@@ -1,10 +1,11 @@
 import { Center, Loader, Text } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { GetListBucket, SearchBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
+import { CheckBucketAccess, GetListBucket, SearchBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { Bucket } from '@wails/S3Browser/models/bucket';
 import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LIST_ROW_GAP, LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { onTabGone } from '@/common/utils/tabUtils';
 import Button from '@/components/buttons/Button';
@@ -12,9 +13,8 @@ import BucketItem from '@/pages/bucket/BucketItem';
 
 // Buckets fetched per page.
 const BUCKET_PAGE_SIZE = 1000;
-// Row height before measuring, and the gap between rows.
-const ROW_ESTIMATE_SIZE = 88;
-const ROW_GAP = 8;
+// Wait for the visible range to settle before checking access of the buckets on screen.
+const ACCESS_CHECK_DELAY_MS = 150;
 
 export type BucketListViewRef = {
   onRefresh?: () => Promise<void>;
@@ -56,6 +56,15 @@ function BucketListView(props: BucketListViewProps) {
   // The loadFirstPage the list was last loaded for: showing a hidden tab again must not reload it.
   const loadedFor = useRef<unknown>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  // Access check of the visible buckets: own controller, and names already sent for the current list.
+  const checkCtrl = useRef<AbortController>(null);
+  const checkedNames = useRef(new Set<string>());
+
+  const resetAccessCheck = useCallback(() => {
+    checkCtrl.current?.abort();
+    checkCtrl.current = null;
+    checkedNames.current.clear();
+  }, []);
 
   const startRequest = useCallback(() => {
     requestCtrl.current?.abort();
@@ -69,17 +78,22 @@ function BucketListView(props: BucketListViewProps) {
     (cursor: string, signal?: AbortSignal) => {
       if (!connectionId) return Promise.resolve(undefined);
       if (keyword) {
-        return callIPC(SearchBucket, [{ connectionId, profileName, keyword, nextCursor: cursor }], { signal });
+        return callIPC(SearchBucket, [{ connectionId, profileName, keyword, nextCursor: cursor, lazyAccess: true }], {
+          signal,
+        });
       }
-      return callIPC(GetListBucket, [{ connectionId, profileName, nextCursor: cursor, limit: BUCKET_PAGE_SIZE }], {
-        signal,
-      });
+      return callIPC(
+        GetListBucket,
+        [{ connectionId, profileName, nextCursor: cursor, limit: BUCKET_PAGE_SIZE, lazyAccess: true }],
+        { signal }
+      );
     },
     [profileName, connectionId, keyword]
   );
 
   const loadFirstPage = useCallback(async () => {
     const ctrl = startRequest();
+    resetAccessCheck();
     setNextCursor('');
     setIsLoadingMore(false);
     setLoadMoreError(false);
@@ -95,7 +109,7 @@ function BucketListView(props: BucketListViewProps) {
       setIsLoaded(true);
     }
     setIsLoadingFirst(false);
-  }, [handleGetListBucket, startRequest, listKey]);
+  }, [handleGetListBucket, startRequest, resetAccessCheck, listKey]);
 
   const loadNextPage = useCallback(async () => {
     if (!nextCursor) return;
@@ -137,9 +151,10 @@ function BucketListView(props: BucketListViewProps) {
     () =>
       onTabGone(tabId, () => {
         requestCtrl.current?.abort();
+        resetAccessCheck();
         loadedFor.current = null;
       }),
-    [tabId]
+    [tabId, resetAccessCheck]
   );
 
   const onRefresh = useCallback(async () => {
@@ -168,9 +183,9 @@ function BucketListView(props: BucketListViewProps) {
   const virtualizer = useVirtualizer({
     count: bucketList.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_ESTIMATE_SIZE,
+    estimateSize: () => LIST_ROW_HEIGHT,
     getItemKey: idx => bucketList[idx].name ?? idx,
-    gap: ROW_GAP,
+    gap: LIST_ROW_GAP,
     overscan: 5,
     scrollMargin,
     enabled: active,
@@ -178,6 +193,45 @@ function BucketListView(props: BucketListViewProps) {
 
   const virtualItems = virtualizer.getVirtualItems();
   const lastVisibleIndex = virtualizer.range?.endIndex ?? -1;
+  const firstVisibleIndex = virtualizer.range?.startIndex ?? 0;
+
+  // Merges checked buckets by name; untouched buckets keep their reference so memoized rows do not re-render.
+  const mergeAccess = useCallback((checked: Bucket[]) => {
+    const byName = new Map(checked.map(item => [item.name ?? '', item]));
+    setBucketDatas(prev => {
+      let changed = false;
+      const next = prev.map(item => {
+        const result = byName.get(item.name ?? '');
+        if (!result) return item;
+        changed = true;
+        return {
+          ...item,
+          inaccessible: result.inaccessible,
+          readOnly: result.readOnly,
+          accessPending: result.accessPending,
+        };
+      });
+      return changed ? next : prev;
+    });
+  }, []);
+
+  // Checks access of the visible buckets still pending, once the range stops moving. Each name is sent once per list.
+  useEffect(() => {
+    if (!active || !connectionId) return;
+    const timer = setTimeout(async () => {
+      const names = bucketDatas
+        .slice(firstVisibleIndex, lastVisibleIndex + 1)
+        .flatMap(item => (item.accessPending && item.name && !checkedNames.current.has(item.name) ? [item.name] : []));
+      if (names.length === 0) return;
+      names.forEach(name => checkedNames.current.add(name));
+      checkCtrl.current ??= new AbortController();
+      const { signal } = checkCtrl.current;
+      const output = await callIPC(CheckBucketAccess, [{ connectionId, profileName, bucketNames: names }], { signal });
+      if (signal.aborted) return;
+      if (output?.bucketList) mergeAccess(output.bucketList);
+    }, ACCESS_CHECK_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [active, connectionId, profileName, bucketDatas, firstVisibleIndex, lastVisibleIndex, mergeAccess]);
 
   useEffect(() => {
     // After a failed page, wait for Refresh instead of retrying in a loop.
@@ -214,8 +268,6 @@ function BucketListView(props: BucketListViewProps) {
       {virtualItems.map(row => (
         <div
           key={row.key}
-          data-index={row.index}
-          ref={virtualizer.measureElement}
           style={{
             position: 'absolute',
             width: '100%',

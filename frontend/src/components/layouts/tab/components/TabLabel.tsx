@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
-import TruncatedText from '@/components/TruncatedText';
+import TruncatedText from '@/components/display/TruncatedText';
 
 /** Tab title: the connected profile's name, or the default name. Subscribes only to its own tab/profile. */
 function TabLabel({ tabId }: { tabId: string }) {

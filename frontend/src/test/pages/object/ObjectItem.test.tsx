@@ -3,8 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
 import type { ComponentType } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
 import { useTabListStore } from '@/common/stores/tabListStore';
-import ObjectItem, { OBJECT_ROW_HEIGHT, type ObjectItemLabels } from '@/pages/object/ObjectItem';
+import ObjectItem, { type ObjectItemLabels } from '@/pages/object/ObjectItem';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 // Every ObjectRow renders exactly one ActionIcon, labelled per row below: counting its renders counts row renders.
@@ -70,7 +71,7 @@ describe('ObjectItem', () => {
   });
 
   it('uses a fixed row height', () => {
-    expect(OBJECT_ROW_HEIGHT).toBe(88);
+    expect(LIST_ROW_HEIGHT).toBe(88);
   });
 
   it.each(['constructor', 'toString'])('does not treat the inherited key "%s" as selected or deleting', key => {

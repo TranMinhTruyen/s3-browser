@@ -15,6 +15,7 @@ import {
   useState,
 } from 'react';
 import { useTranslation } from 'react-i18next';
+import { LIST_ROW_GAP, LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
 import { useFilesDroppedUpload } from '@/common/hooks/useFilesDroppedUpload';
 import { useObjectPaging } from '@/common/hooks/useObjectPaging';
 import { useTabListStore } from '@/common/stores/tabListStore';
@@ -23,11 +24,10 @@ import { onTabGone } from '@/common/utils/tabUtils';
 import Button from '@/components/buttons/Button';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import { showDeleteConfirmModal, showDeleteResultModal } from '@/components/modals/lazyModals';
-import ObjectItem, { OBJECT_ROW_HEIGHT, ObjectItemLabels } from '@/pages/object/ObjectItem';
+import ObjectItem, { ObjectItemLabels } from '@/pages/object/ObjectItem';
 
 // Download is refused above this many objects at once (delete has no limit).
 const MAX_DOWNLOAD_OBJECTS = 5;
-const ROW_GAP = 8;
 // Load the next page once this many screens of rows are left below the viewport (at least PREFETCH_MIN_ROWS rows).
 const PREFETCH_SCREENS = 2;
 const PREFETCH_MIN_ROWS = 2;
@@ -230,9 +230,9 @@ function ObjectListView(props: ObjectListViewProps) {
   const virtualizer = useVirtualizer({
     count: objectList.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => OBJECT_ROW_HEIGHT,
+    estimateSize: () => LIST_ROW_HEIGHT,
     getItemKey: idx => objectList[idx].key,
-    gap: ROW_GAP,
+    gap: LIST_ROW_GAP,
     overscan: 5,
     scrollMargin,
   });
@@ -241,7 +241,7 @@ function ObjectListView(props: ObjectListViewProps) {
   const lastVisibleIndex = virtualizer.range?.endIndex ?? -1;
   const prefetchRows = Math.max(
     PREFETCH_MIN_ROWS,
-    Math.ceil((PREFETCH_SCREENS * (virtualizer.scrollRect?.height ?? 0)) / (OBJECT_ROW_HEIGHT + ROW_GAP))
+    Math.ceil((PREFETCH_SCREENS * (virtualizer.scrollRect?.height ?? 0)) / (LIST_ROW_HEIGHT + LIST_ROW_GAP))
   );
 
   useEffect(() => {

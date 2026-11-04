@@ -13,12 +13,12 @@ import { ObjectItem } from '@wails/S3Browser/models/bucket';
 import { Events } from '@wailsio/runtime';
 import { Activity, createRef, RefObject } from 'react';
 import { toast } from 'sonner';
+import { LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import { showDeleteConfirmModal, showDeleteResultModal } from '@/components/modals/lazyModals';
 import UploadLimitModal from '@/components/modals/upload/UploadLimitModal';
-import { OBJECT_ROW_HEIGHT } from '@/pages/object/ObjectItem';
 import ObjectListView, { ObjectListViewRef } from '@/pages/object/ObjectListView';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
@@ -170,8 +170,8 @@ describe('ObjectListView', () => {
     const { scrollRef } = renderList();
     await screen.findByText('a.txt');
     expect(virtual.scrollElement).toBe(scrollRef.current);
-    expect(virtual.estimate).toBe(OBJECT_ROW_HEIGHT);
-    expect(OBJECT_ROW_HEIGHT).toBe(88);
+    expect(virtual.estimate).toBe(LIST_ROW_HEIGHT);
+    expect(LIST_ROW_HEIGHT).toBe(88);
   });
 
   it('loads the next page when the end of the list is reached', async () => {

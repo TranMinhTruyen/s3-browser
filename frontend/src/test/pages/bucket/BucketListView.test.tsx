@@ -1,16 +1,17 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { GetListBucket, SearchBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
+import { CheckBucketAccess, GetListBucket, SearchBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { Bucket } from '@wails/S3Browser/models/bucket';
 import { Activity, createRef, type ReactElement, RefObject } from 'react';
+import { LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import BucketListView, { BucketListViewRef } from '@/pages/bucket/BucketListView';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 // jsdom has no layout, so render every row; `endIndex` is the last row the user "sees" (null = end of list).
-const virtual = vi.hoisted(() => ({ endIndex: null as number | null }));
+const virtual = vi.hoisted(() => ({ endIndex: null as number | null, estimate: 0 }));
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: ({
     count,
@@ -24,12 +25,15 @@ vi.mock('@tanstack/react-virtual', () => ({
     estimateSize: () => number;
   }) => ({
     getVirtualItems: () => Array.from({ length: count }, (_, index) => ({ key: getItemKey(index), index, start: 0 })),
-    getTotalSize: () => (getScrollElement(), count * estimateSize()),
-    measureElement: () => {},
+    getTotalSize: () => (getScrollElement(), (virtual.estimate = estimateSize()), count * virtual.estimate),
     range: count === 0 ? null : { startIndex: 0, endIndex: virtual.endIndex ?? count - 1 },
   }),
 }));
-vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({ GetListBucket: vi.fn(), SearchBucket: vi.fn() }));
+vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
+  GetListBucket: vi.fn(),
+  SearchBucket: vi.fn(),
+  CheckBucketAccess: vi.fn(),
+}));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn() }));
 
 const profile = { id: 'conn', name: 'my-profile' } as ConnectionProfileOutput;
@@ -88,9 +92,15 @@ describe('BucketListView', () => {
     expect(screen.getByText('beta')).toBeInTheDocument();
     expect(callIPCMock).toHaveBeenCalledExactlyOnceWith(
       GetListBucket,
-      [{ connectionId: 'conn', profileName: 'my-profile', nextCursor: '', limit: 1000 }],
+      [{ connectionId: 'conn', profileName: 'my-profile', nextCursor: '', limit: 1000, lazyAccess: true }],
       { signal: expect.any(AbortSignal) }
     );
+  });
+
+  it('estimates each row with the object row height', async () => {
+    renderList();
+    await screen.findByText('alpha');
+    expect(virtual.estimate).toBe(LIST_ROW_HEIGHT);
   });
 
   it('does not request anything without a connected profile', () => {
@@ -122,7 +132,7 @@ describe('BucketListView', () => {
   it('renders a bucket without a name', async () => {
     queue = [page([b(undefined)])];
     renderList();
-    await waitFor(() => expect(document.querySelectorAll('[data-index]')).toHaveLength(1));
+    await waitFor(() => expect(document.querySelectorAll('.mantine-Card-root')).toHaveLength(1));
   });
 
   it('loads the next page with the cursor and appends it', async () => {
@@ -132,7 +142,7 @@ describe('BucketListView', () => {
     expect(screen.getByText('alpha')).toBeInTheDocument();
     expect(callIPCMock).toHaveBeenCalledTimes(2);
     expect(callIPCMock.mock.calls[1][1]).toEqual([
-      { connectionId: 'conn', profileName: 'my-profile', nextCursor: 'c1', limit: 1000 },
+      { connectionId: 'conn', profileName: 'my-profile', nextCursor: 'c1', limit: 1000, lazyAccess: true },
     ]);
   });
 
@@ -359,7 +369,9 @@ describe('BucketListView', () => {
   });
 
   describe('search', () => {
-    const args = (nextCursor = '') => [{ connectionId: 'conn', profileName: 'my-profile', keyword: 'kw', nextCursor }];
+    const args = (nextCursor = '') => [
+      { connectionId: 'conn', profileName: 'my-profile', keyword: 'kw', nextCursor, lazyAccess: true },
+    ];
     const searchCalls = () => callIPCMock.mock.calls.filter(c => c[0] === SearchBucket);
     const noMoreButton = () => expect(screen.queryByRole('button', { name: 'Search more' })).not.toBeInTheDocument();
     const loader = () => document.querySelector('.mantine-Loader-root');
@@ -493,7 +505,7 @@ describe('BucketListView', () => {
       const listCalls = callIPCMock.mock.calls.filter(c => c[0] === GetListBucket);
       expect(listCalls).toHaveLength(1);
       expect(listCalls[0][1]).toEqual([
-        { connectionId: 'conn', profileName: 'my-profile', nextCursor: '', limit: 1000 },
+        { connectionId: 'conn', profileName: 'my-profile', nextCursor: '', limit: 1000, lazyAccess: true },
       ]);
       expect(loader()).not.toBeInTheDocument();
     });
@@ -543,6 +555,212 @@ describe('BucketListView', () => {
     it('searches nothing without a connection', () => {
       renderList({ keyword: 'kw', profile: null });
       expect(callIPCMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('lazy access check', () => {
+    const WARNING = /Cannot access this bucket/;
+    const pb = (name?: string) => new Bucket({ name, accessPending: true });
+    const checked = (name: string, inaccessible = false) =>
+      new Bucket({ name, accessPending: false, inaccessible, readOnly: false });
+    const checkCalls = () => callIPCMock.mock.calls.filter(c => c[0] === CheckBucketAccess);
+    const settle = () => act(async () => {});
+    const tick = (ms = 150) =>
+      act(async () => {
+        vi.advanceTimersByTime(ms);
+      });
+    let listed: Bucket[] = [];
+    let checkImpl: () => Promise<unknown> = async () => ({ bucketList: [] });
+
+    // Renders and lets the first page land.
+    async function renderLoaded(opts: Parameters<typeof renderList>[0] = {}) {
+      const view = renderList(opts);
+      await settle();
+      return view;
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+      listed = ['a', 'b', 'c', 'd'].map(pb);
+      checkImpl = async () => ({ bucketList: [] });
+      callIPCMock.mockImplementation((async (f: unknown) =>
+        f === CheckBucketAccess ? checkImpl() : page(listed)) as never);
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('sends the pending buckets of the visible range with the connection after the debounce', async () => {
+      virtual.endIndex = 1;
+      await renderLoaded();
+      await tick();
+      expect(checkCalls()).toHaveLength(1);
+      expect(checkCalls()[0]).toEqual([
+        CheckBucketAccess,
+        [{ connectionId: 'conn', profileName: 'my-profile', bucketNames: ['a', 'b'] }],
+        { signal: expect.any(AbortSignal) },
+      ]);
+    });
+
+    it('waits for the debounce before checking', async () => {
+      await renderLoaded();
+      await tick(149);
+      expect(checkCalls()).toHaveLength(0);
+      await tick(1);
+      expect(checkCalls()).toHaveLength(1);
+    });
+
+    it('restarts the debounce and uses the new range when the range moves', async () => {
+      virtual.endIndex = 0;
+      const { rerenderWith } = await renderLoaded();
+      await tick(100);
+      virtual.endIndex = 2;
+      rerenderWith(profile);
+      await tick(100);
+      expect(checkCalls()).toHaveLength(0);
+      await tick(50);
+      expect(checkCalls()).toHaveLength(1);
+      expect(checkCalls()[0][1]).toEqual([
+        { connectionId: 'conn', profileName: 'my-profile', bucketNames: ['a', 'b', 'c'] },
+      ]);
+    });
+
+    it('does not check buckets outside the visible range', async () => {
+      virtual.endIndex = 0;
+      await renderLoaded();
+      await tick();
+      expect(checkCalls()[0][1]).toEqual([{ connectionId: 'conn', profileName: 'my-profile', bucketNames: ['a'] }]);
+    });
+
+    it('does not check when no bucket is pending', async () => {
+      listed = [b('a'), b('b')];
+      await renderLoaded();
+      await tick();
+      expect(checkCalls()).toHaveLength(0);
+    });
+
+    it('does not check a pending bucket without a name', async () => {
+      listed = [pb(undefined), pb('')];
+      await renderLoaded();
+      await tick();
+      expect(checkCalls()).toHaveLength(0);
+    });
+
+    it('does not check while the view is inactive', async () => {
+      await renderLoaded({ active: false });
+      await tick();
+      expect(checkCalls()).toHaveLength(0);
+    });
+
+    it('does not check without a connection', async () => {
+      await renderLoaded({ profile: null });
+      await tick();
+      expect(callIPCMock).not.toHaveBeenCalled();
+    });
+
+    it('applies the result: shows the warning of an inaccessible bucket and keeps the others', async () => {
+      checkImpl = async () => ({ bucketList: [checked('a', true), checked('b')] });
+      await renderLoaded();
+      expect(screen.queryByLabelText(WARNING)).not.toBeInTheDocument();
+      await tick();
+      expect(screen.getAllByLabelText(WARNING)).toHaveLength(1);
+      expect(screen.getByText('c')).toBeInTheDocument();
+      expect(screen.getByText('d')).toBeInTheDocument();
+    });
+
+    it('sends each name once even when the backend still reports it pending', async () => {
+      checkImpl = async () => ({ bucketList: [pb('a'), pb('b'), pb('c'), pb('d')] });
+      await renderLoaded();
+      await tick();
+      await tick();
+      await tick();
+      expect(checkCalls()).toHaveLength(1);
+    });
+
+    it('sends only names not sent before when the range grows', async () => {
+      virtual.endIndex = 1;
+      const { rerenderWith } = await renderLoaded();
+      await tick();
+      virtual.endIndex = 3;
+      rerenderWith(profile);
+      await tick();
+      expect(checkCalls()).toHaveLength(2);
+      expect(checkCalls()[1][1]).toEqual([
+        { connectionId: 'conn', profileName: 'my-profile', bucketNames: ['c', 'd'] },
+      ]);
+    });
+
+    it('ignores a result whose names are not in the list', async () => {
+      checkImpl = async () => ({ bucketList: [checked('zzz', true)] });
+      await renderLoaded();
+      await tick();
+      await tick();
+      expect(checkCalls()).toHaveLength(1);
+      expect(screen.queryByLabelText(WARNING)).not.toBeInTheDocument();
+      expect(screen.getByText('a')).toBeInTheDocument();
+    });
+
+    it('matches a nameless result bucket only to nameless list buckets', async () => {
+      checkImpl = async () => ({ bucketList: [new Bucket({ accessPending: false, inaccessible: true })] });
+      listed = [pb('a'), new Bucket({ accessPending: true })];
+      await renderLoaded();
+      await tick();
+      // Only the nameless row receives it; the named bucket 'a' stays untouched.
+      expect(screen.getAllByLabelText(WARNING)).toHaveLength(1);
+      expect(checkCalls()).toHaveLength(1);
+    });
+
+    it.each([
+      ['a failed request', null],
+      ['an output without a bucket list', {}],
+    ])('does not change the list on %s', async (_label, output) => {
+      checkImpl = async () => output;
+      await renderLoaded();
+      await tick();
+      await tick();
+      expect(checkCalls()).toHaveLength(1);
+      expect(screen.queryByLabelText(WARNING)).not.toBeInTheDocument();
+      expect(screen.getAllByText(/^[abcd]$/)).toHaveLength(4);
+    });
+
+    it('drops the result of a check cancelled by a refresh, then checks the same buckets again', async () => {
+      const resolvers: ((v: unknown) => void)[] = [];
+      const signals: AbortSignal[] = [];
+      callIPCMock.mockImplementation((async (f: unknown, _a: unknown, o: { signal: AbortSignal }) => {
+        if (f !== CheckBucketAccess) return page([...listed]);
+        signals.push(o.signal);
+        return new Promise(r => resolvers.push(r));
+      }) as never);
+      const { ref } = await renderLoaded();
+      await tick();
+      expect(signals).toHaveLength(1);
+
+      await act(async () => ref.current?.onRefresh?.());
+      expect(signals[0].aborted).toBe(true);
+      await act(async () => resolvers[0]({ bucketList: [checked('a', true)] }));
+      expect(screen.queryByLabelText(WARNING)).not.toBeInTheDocument();
+
+      await tick();
+      expect(signals).toHaveLength(2);
+      expect(signals[1].aborted).toBe(false);
+      expect(checkCalls()[1][1]).toEqual([
+        { connectionId: 'conn', profileName: 'my-profile', bucketNames: ['a', 'b', 'c', 'd'] },
+      ]);
+    });
+
+    it('cancels a running check when the tab is gone', async () => {
+      let signal: AbortSignal | undefined;
+      callIPCMock.mockImplementation((async (f: unknown, _a: unknown, o: { signal: AbortSignal }) => {
+        if (f !== CheckBucketAccess) return page(listed);
+        signal = o.signal;
+        return new Promise(() => {});
+      }) as never);
+      const { unmount } = await renderLoaded();
+      await tick();
+      expect(signal?.aborted).toBe(false);
+      unmount();
+      expect(signal?.aborted).toBe(true);
     });
   });
 
