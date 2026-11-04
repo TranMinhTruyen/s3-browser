@@ -1,5 +1,5 @@
 ## Kết quả sprint-12
-- Trạng thái: Hoàn thành (R5, R6, R4, R1, R2, R3, R7a, R7b, R9, R8c, R8d đã merge vào `staging`; R8e đã commit local, chưa push)
+- Trạng thái: **DONE** (2026-11-04). Mọi yêu cầu đã merge vào `staging`, R8e qua PR #5. Người dùng đã đo và kiểm tay theo nhóm, xác nhận đạt tiêu chí (số liệu đo tay không ghi trong report).
 - Tổng thay đổi: số liệu theo từng PR ở bảng dưới (git log --shortstat). R8e: commit `d0ae1b5` +84 / -58 dòng (12 file, gồm 1 file test mới), cộng phần chỉnh UI và tách trang tab ở mục "R8e: chỉnh UI và tách trang tab" (+219 / -201, 73 file, chủ yếu là di chuyển file).
 - Ghi chú repo: ngày 2026-11-03 repo tách khỏi monorepo `kanban-board`. PR #25-#33 thuộc repo cũ; PR #2, #3, #4 thuộc `TranMinhTruyen/s3-browser`.
 
@@ -17,7 +17,7 @@
 | SP-12/refactor_be_rest | R7b | #2 | +25 / -86 (9 file) | Đã merge |
 | SP-12/refactor_fe_common | R8c | #3 | +64 / -103 (8 file) | Đã merge |
 | SP-12/refactor_fe_components | R8d | #4 | +1779 / -841 (86 file, gồm 3 commit ngoài plan) | Đã merge |
-| SP-12/refactor_fe_pages | R8e | chưa tạo | d0ae1b5 +84 / -58 (12 file); chỉnh UI +219 / -201 (73 file) | Đạt sau 2/3 vòng, commit local, chưa push |
+| SP-12/refactor_fe_pages | R8e | #5 | d0ae1b5 +84 / -58 (12 file); chỉnh UI +219 / -201 (73 file) | Đã merge |
 
 PR #4 có thêm 3 commit ngoài plan R8d: `feat(bucket): flag inaccessible and read-only buckets with cheaper access checks`, `docs(test-env): rewrite test profiles as method and field tables`, `chore(agents): run planner on opus and orchestrator on sonnet`.
 
@@ -83,4 +83,3 @@ PR #4 có thêm 3 commit ngoài plan R8d: `feat(bucket): flag inaccessible and r
 - Đề xuất bổ sung `CLAUDE.md`: "Padding layout chính (pane, header navbar, khung trang tab) là `4px`; item và modal giữ padding riêng."
 - Skill `wails3-bindings` phần B bước 4 dùng `find -newer frontend/bindings` (so mtime thư mục) nên báo nhầm "bindings cũ". Người dùng có thể sửa skill.
 - `plan.md` mục 5-6 còn ghi `origin/master` (lỗi thời; nay tách từ `origin/staging`).
-- Chờ người dùng đo tay nhóm R8c/d/e rồi mới push R8e.

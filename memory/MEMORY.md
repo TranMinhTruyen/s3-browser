@@ -5,11 +5,9 @@
 ## 1. Trạng thái hiện tại
 
 - Cập nhật: 2026-11-04.
-- Sprint gần nhất: sprint-12 (hiệu năng UI, refactor, xoá object theo lô).
-  - Đã merge vào `staging`: R5, R6, R4, R1, R2, R3, R7a, R7b, R9, R8c, R8d (PR repo cũ #25-#33; repo mới #2, #3, #4).
-  - R8e `SP-12/refactor_fe_pages` (dọn pages, connectSchema, xoá key locale chết, tách trang tab, chỉnh UI): commit local `d0ae1b5` + commit docs/UI, chưa push.
+- Sprint gần nhất: sprint-12 (hiệu năng UI, refactor, xoá object theo lô): **DONE** 2026-11-04, mọi PR đã merge vào `staging` (repo cũ #25-#33; repo mới #2-#5).
 - Repo đã tách khỏi monorepo ngày 2026-11-03 (`TranMinhTruyen/s3-browser`); sprint branch tách từ `origin/staging`.
-- Việc tiếp theo: người dùng đo tay nhóm R8c/d/e, rồi push `git push -u origin SP-12/refactor_fe_pages` và tạo PR vào `staging`. Sau đó cập nhật docs ARCHITECTURE và user guide (còn nợ từ sprint-11).
+- Việc tiếp theo: cập nhật docs ARCHITECTURE và user guide (còn nợ từ sprint-11); sprint mới tạo bằng `/new-sprint`.
 
 ## 2. Quyết định
 
@@ -56,6 +54,8 @@
 - 2026-11-04 [test] Báo cáo coverage `text` của vitest ẩn file đạt 100% — chỉ liệt kê file chưa đủ — thêm `--coverage.reporter=json-summary` để lấy số từng file.
 - 2026-11-04 [git] Branch tách bằng `git switch -c ... origin/staging` có upstream trỏ origin/staging — push phải ghi rõ `git push -u origin <branch>`.
 - 2026-11-04 [quy trình] Subagent bị harness chặn ghi `report.md` và `MEMORY.md` — session chính ghi từ nội dung orchestrator soạn.
+- 2026-11-04 [quy trình] Orchestrator không nhận lời đồng ý push/PR do session chính chuyển lại — B6 chạy qua `claude --agent orchestrator` hoặc gọi thẳng `git-flow` publish.
+- 2026-11-04 [git] `gh pr create` có thể lỗi HTTP 502 tạm thời — kiểm `gh pr list --head <branch> --state all` rồi mới tạo lại để tránh trùng.
 - 2026-11-04 [vite] Ghi đè file bằng `git show > file` khi dev server đang chạy làm Vite cache module rỗng (lỗi "does not provide an export named ...") — ghi ra file tạm rồi move, hoặc touch lại từng file.
 
 ## 4. Tóm tắt cũ
