@@ -2,7 +2,7 @@ import { Card, Group, Stack, Text } from '@mantine/core';
 import { Bucket } from '@wails/S3Browser/models/bucket';
 import dayjs from 'dayjs';
 import { Folder } from 'lucide-react';
-import { memo, useCallback } from 'react';
+import { type CSSProperties, memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FULL_DATE_TIME_FORMAT, LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
 import TruncatedText from '@/components/display/TruncatedText';
@@ -15,7 +15,19 @@ type BucketItemProps = {
   onSelectBucket?: (bucketName: string | undefined) => void;
 };
 
-/** One row of the bucket list: name, creation date (unknown for anonymous buckets) and a warning when the bucket cannot be accessed; clicking it opens the bucket, after a confirmation when it may be inaccessible. */
+const ICON_SECTION_STYLE: CSSProperties = {
+  flexShrink: 0,
+  display: 'flex',
+  alignItems: 'center',
+  minWidth: '56px',
+  justifyContent: 'center',
+};
+const CONTENT_SECTION_STYLE: CSSProperties = { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' };
+
+/**
+ * One row of the bucket list: name, creation date (unknown for anonymous buckets) and a warning when the bucket
+ * cannot be accessed. Clicking it opens the bucket, after a confirmation when it may be inaccessible.
+ */
 function BucketItem(props: BucketItemProps) {
   const { item, onSelectBucket } = props;
   const { t } = useTranslation('bucket', { keyPrefix: 'page' });
@@ -37,31 +49,10 @@ function BucketItem(props: BucketItemProps) {
 
   return (
     <Card padding="sm" orientation="horizontal" h={LIST_ROW_HEIGHT} onClick={onClickBucket} className={classes.card}>
-      <Card.Section
-        inheritPadding
-        px="xs"
-        withBorder
-        className={classes.iconSection}
-        style={{
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-          minWidth: '56px',
-          justifyContent: 'center',
-        }}
-      >
+      <Card.Section inheritPadding px="xs" withBorder className={classes.iconSection} style={ICON_SECTION_STYLE}>
         <Folder />
       </Card.Section>
-      <Card.Section
-        inheritPadding
-        px="xs"
-        style={{
-          flex: 1,
-          minWidth: 0,
-          display: 'flex',
-          alignItems: 'center',
-        }}
-      >
+      <Card.Section inheritPadding px="xs" style={CONTENT_SECTION_STYLE}>
         {/* miw=0 lets the flex item shrink, so a long bucket name is truncated instead of overflowing. */}
         <Stack miw={0} gap="4px">
           <Group gap="xs" wrap="nowrap">

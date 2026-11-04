@@ -1,8 +1,5 @@
 {
   "button": {
-    "create": "Erstellen",
-    "update": "Aktualisieren",
-    "refresh": "Neu laden",
     "connect": "Verbinden",
     "cancel": "Abbrechen",
     "OK": "OK",

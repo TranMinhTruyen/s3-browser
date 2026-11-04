@@ -15,6 +15,8 @@ import BucketItem from '@/pages/bucket/BucketItem';
 const BUCKET_PAGE_SIZE = 1000;
 // Wait for the visible range to settle before checking access of the buckets on screen.
 const ACCESS_CHECK_DELAY_MS = 150;
+// Load the next page once only this many rows are left below the viewport.
+const PREFETCH_ROWS = 2;
 
 export type BucketListViewRef = {
   onRefresh?: () => Promise<void>;
@@ -238,8 +240,7 @@ function BucketListView(props: BucketListViewProps) {
     if (!active || !nextCursor || isLoadingMore || loadMoreError || cursorKey !== listKey) return;
     // An empty search has nothing to scroll: the user continues it with the "load more" button.
     if (keyword && bucketList.length === 0) return;
-    // Load the next page once only 2 items are left below the viewport.
-    if (lastVisibleIndex >= bucketList.length - 1 - 2) {
+    if (lastVisibleIndex >= bucketList.length - 1 - PREFETCH_ROWS) {
       loadNextPage();
     }
   }, [

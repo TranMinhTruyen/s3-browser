@@ -124,7 +124,7 @@ function ObjectListView(props: ObjectListViewProps) {
       }
       switch (action) {
         case 'download':
-          await callIPC(DownloadObject, [{ connectionId: connectionId, profileName, bucket, objects }]);
+          await callIPC(DownloadObject, [{ connectionId, profileName, bucket, objects }]);
           break;
         case 'delete': {
           // Sizes are looked up only for the picked keys, from the list as it is now.
