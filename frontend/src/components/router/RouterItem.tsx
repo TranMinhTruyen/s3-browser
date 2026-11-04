@@ -1,7 +1,7 @@
 import { lazy, ReactNode } from 'react';
 import { RouteObject } from 'react-router-dom';
 
-const TabLayout = lazy(() => import('@/components/layouts/tab/TabLayout'));
+const TabPage = lazy(() => import('@/pages/tab/TabPage'));
 
 type IRouterItem = RouteObject & {
   page: ReactNode;
@@ -10,7 +10,7 @@ type IRouterItem = RouteObject & {
 };
 const RouterItems: Array<IRouterItem> = [
   {
-    page: <TabLayout />,
+    page: <TabPage />,
     prefix: '',
     path: '/',
   },

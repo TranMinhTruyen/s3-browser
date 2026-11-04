@@ -280,7 +280,8 @@ describe('ConnectModal authentication methods', () => {
 
       const body = field('Authentication method').closest<HTMLElement>('[style*="overflow"]');
       expect(body).toHaveStyle({ overflow: 'auto' });
-      expect(body?.style.height).toContain('100dvh');
+      expect(body?.style.maxHeight).toContain('100dvh');
+      expect(body?.style.height).toBe('');
       expect(body).not.toContainElement(screen.getByRole('button', { name: 'Close' }));
       expect(body).not.toContainElement(button('Connect'));
     });

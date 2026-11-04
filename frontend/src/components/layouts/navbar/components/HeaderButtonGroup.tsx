@@ -23,7 +23,7 @@ function HeaderButtonGroup() {
   }, [loadConnectionProfiles]);
 
   return (
-    <Stack p="8px">
+    <Stack p="4px">
       <Group gap="xs">
         <ActionIcon onClick={onClickConnect} tooltip={t('tooltip.connect')}>
           <PlugZap />

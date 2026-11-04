@@ -3,8 +3,6 @@ import common from '@/locales/ja/common.json';
 import bucketPicker from '@/locales/ja/components/inputs/bucketPicker.json';
 import inputs from '@/locales/ja/components/inputs/inputs.json';
 import connectionProfiles from '@/locales/ja/components/layouts/navbar/connectionProfiles.json';
-import objectDetailDrawer from '@/locales/ja/components/layouts/tab/objectDetailDrawer.json';
-import tabLayout from '@/locales/ja/components/layouts/tab/tabLayout.json';
 import downloaderWindow from '@/locales/ja/components/layouts/transfer/downloaderWindow.json';
 import uploaderWindow from '@/locales/ja/components/layouts/transfer/uploaderWindow.json';
 import confirmModal from '@/locales/ja/components/modals/confirmModal.json';
@@ -18,8 +16,10 @@ import uploadLimitModal from '@/locales/ja/components/modals/uploadLimitModal.js
 import uploadPickerModal from '@/locales/ja/components/modals/uploadPickerModal.json';
 import ipcMessage from '@/locales/ja/messages/ipcMessage.json';
 import validateMessage from '@/locales/ja/messages/validateMessage.json';
-import bucketPage from '@/locales/ja/pages/bucket/page.json';
-import objectPage from '@/locales/ja/pages/object/page.json';
+import bucketPage from '@/locales/ja/pages/tab/bucket/page.json';
+import objectPage from '@/locales/ja/pages/tab/object/page.json';
+import objectDetailDrawer from '@/locales/ja/pages/tab/objectDetailDrawer.json';
+import tabLayout from '@/locales/ja/pages/tab/tabLayout.json';
 
 const japaneseResource: ResourceLanguage = {
   common: common,

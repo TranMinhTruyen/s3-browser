@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import RouterItems from '@/components/router/RouterItem';
 
-vi.mock('@/components/layouts/tab/TabLayout', () => ({ default: () => <div>tab layout</div> }));
+vi.mock('@/pages/tab/TabPage', () => ({ default: () => <div>tab layout</div> }));
 
 describe('RouterItems', () => {
   it('declares a single root route with an empty prefix', () => {

@@ -3,8 +3,6 @@ import common from '@/locales/zh-TW/common.json';
 import bucketPicker from '@/locales/zh-TW/components/inputs/bucketPicker.json';
 import inputs from '@/locales/zh-TW/components/inputs/inputs.json';
 import connectionProfiles from '@/locales/zh-TW/components/layouts/navbar/connectionProfiles.json';
-import objectDetailDrawer from '@/locales/zh-TW/components/layouts/tab/objectDetailDrawer.json';
-import tabLayout from '@/locales/zh-TW/components/layouts/tab/tabLayout.json';
 import downloaderWindow from '@/locales/zh-TW/components/layouts/transfer/downloaderWindow.json';
 import uploaderWindow from '@/locales/zh-TW/components/layouts/transfer/uploaderWindow.json';
 import confirmModal from '@/locales/zh-TW/components/modals/confirmModal.json';
@@ -18,8 +16,10 @@ import uploadLimitModal from '@/locales/zh-TW/components/modals/uploadLimitModal
 import uploadPickerModal from '@/locales/zh-TW/components/modals/uploadPickerModal.json';
 import ipcMessage from '@/locales/zh-TW/messages/ipcMessage.json';
 import validateMessage from '@/locales/zh-TW/messages/validateMessage.json';
-import bucketPage from '@/locales/zh-TW/pages/bucket/page.json';
-import objectPage from '@/locales/zh-TW/pages/object/page.json';
+import bucketPage from '@/locales/zh-TW/pages/tab/bucket/page.json';
+import objectPage from '@/locales/zh-TW/pages/tab/object/page.json';
+import objectDetailDrawer from '@/locales/zh-TW/pages/tab/objectDetailDrawer.json';
+import tabLayout from '@/locales/zh-TW/pages/tab/tabLayout.json';
 
 const traditionalChineseResource: ResourceLanguage = {
   common: common,
