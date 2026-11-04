@@ -6,7 +6,7 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import i18n from '@/locales/i18n';
 
 /** A local file to upload and its object key relative to the target prefix. */
-export type UploadFile = { path: string; relKey: string };
+type UploadFile = { path: string; relKey: string };
 
 export type RunUploadParams = {
   tabId: string;

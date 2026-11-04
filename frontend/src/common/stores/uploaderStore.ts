@@ -4,7 +4,7 @@ import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
 
 /** Running upload and the bytes sent so far. */
-export type UploadItem = UploadStartedOutput & {
+type UploadItem = UploadStartedOutput & {
   uploaded: number;
 };
 

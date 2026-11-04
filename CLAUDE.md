@@ -175,6 +175,7 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 - Format/check: Windows `node_modules/.bin/biome.exe check <paths>`, macOS/Linux `node_modules/.bin/biome check <paths>`. Không dùng `npx biome` (resolve nhầm sang package `biome@0.3.3`). File luôn lưu LF (theo `.gitattributes` và `biome.json`).
 - Quy tắc format biome: (2 spaces, single quotes, semicolons, width 120, trailingCommas es5, arrowParens asNeeded, import groups).
 - Lint: `npx oxlint <paths>` (theo `.oxlintrc.json`).
+- Tìm code chết: Windows `node_modules/.bin/knip.exe`, macOS/Linux `node_modules/.bin/knip` (theo `knip.json`). Thêm `--production` để tìm export chỉ có test dùng; export vẫn được dùng trong chính file của nó và chỉ export cho test thì không coi là code chết.
 - Type-check: Windows `node_modules/.bin/tsc.exe --noEmit`, macOS/Linux `node_modules/.bin/tsc --noEmit`. Không dùng `npx tsc` (không resolve được ở đây).
 
 ## 9. Testing

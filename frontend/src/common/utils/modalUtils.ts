@@ -23,7 +23,7 @@ export type ModalComponent<P, R> = FC<P & NiceModalHocProps> & {
 };
 
 /** A nice-modal handler whose `resolve` is typed with the modal's result. */
-export type ModalHandler<R> = Omit<NiceModalHandler, 'resolve'> & {
+type ModalHandler<R> = Omit<NiceModalHandler, 'resolve'> & {
   resolve: (value: R) => void;
 };
 

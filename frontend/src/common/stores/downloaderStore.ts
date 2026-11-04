@@ -3,7 +3,7 @@ import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
 
 /** Download history row merged with its live progress. */
-export type DownloadItem = DownloadHistoryItem & DownloadProgressOutput;
+type DownloadItem = DownloadHistoryItem & DownloadProgressOutput;
 
 interface DownloaderState {
   downloadItems: Record<string, DownloadItem>;
