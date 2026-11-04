@@ -11,7 +11,7 @@ import { WARNING_BG_COLOR, WARNING_COLOR } from '@/components/modals/modalColors
 import { FileRow, UploadRow, VirtualRowList } from '@/components/modals/upload/UploadFileList';
 import TruncatedText from '@/components/TruncatedText';
 
-export type DeleteFile = { key: string; size: number };
+type DeleteFile = { key: string; size: number };
 
 type DeleteConfirmModalProps = ModalProps & {
   files: DeleteFile[];

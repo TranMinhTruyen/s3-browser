@@ -62,4 +62,13 @@ describe('DownloaderItem', () => {
 
     expect(screen.getByText('Object: b.bin')).toBeInTheDocument();
   });
+
+  it('renders nothing when the id is not in the store', () => {
+    setItem(1, 10);
+    renderWithProviders(<DownloaderItem id="missing" />);
+
+    expect(screen.queryByRole('button', { name: 'Cancel', hidden: true })).not.toBeInTheDocument();
+    expect(screen.queryByText(/%$/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Object: b.bin')).not.toBeInTheDocument();
+  });
 });

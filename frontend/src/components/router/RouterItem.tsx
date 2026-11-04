@@ -3,7 +3,7 @@ import { RouteObject } from 'react-router-dom';
 
 const TabLayout = lazy(() => import('@/components/layouts/tab/TabLayout'));
 
-export type IRouterItem = RouteObject & {
+type IRouterItem = RouteObject & {
   page: ReactNode;
   prefix: string;
   path: string;

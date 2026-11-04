@@ -95,7 +95,7 @@ export type ConnectionInfo = z.infer<typeof formSchema>;
  * Schema per authentication method. `requireSecret` is true to connect/test (secrets and the MFA code are
  * mandatory) and false to only save a profile.
  */
-export const buildConnectSchema = (requireSecret: boolean) => {
+const buildConnectSchema = (requireSecret: boolean) => {
   const secret = requireSecret ? required : text;
   const withConfig = <T extends z.ZodRawShape>(shape: T) =>
     common.extend({ authConfig: authConfigSchema.extend(shape) });
