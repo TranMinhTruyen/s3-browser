@@ -3,8 +3,6 @@ import common from '@/locales/ru/common.json';
 import bucketPicker from '@/locales/ru/components/inputs/bucketPicker.json';
 import inputs from '@/locales/ru/components/inputs/inputs.json';
 import connectionProfiles from '@/locales/ru/components/layouts/navbar/connectionProfiles.json';
-import objectDetailDrawer from '@/locales/ru/components/layouts/tab/objectDetailDrawer.json';
-import tabLayout from '@/locales/ru/components/layouts/tab/tabLayout.json';
 import downloaderWindow from '@/locales/ru/components/layouts/transfer/downloaderWindow.json';
 import uploaderWindow from '@/locales/ru/components/layouts/transfer/uploaderWindow.json';
 import confirmModal from '@/locales/ru/components/modals/confirmModal.json';
@@ -18,8 +16,10 @@ import uploadLimitModal from '@/locales/ru/components/modals/uploadLimitModal.js
 import uploadPickerModal from '@/locales/ru/components/modals/uploadPickerModal.json';
 import ipcMessage from '@/locales/ru/messages/ipcMessage.json';
 import validateMessage from '@/locales/ru/messages/validateMessage.json';
-import bucketPage from '@/locales/ru/pages/bucket/page.json';
-import objectPage from '@/locales/ru/pages/object/page.json';
+import bucketPage from '@/locales/ru/pages/tab/bucket/page.json';
+import objectPage from '@/locales/ru/pages/tab/object/page.json';
+import objectDetailDrawer from '@/locales/ru/pages/tab/objectDetailDrawer.json';
+import tabLayout from '@/locales/ru/pages/tab/tabLayout.json';
 
 const russianResource: ResourceLanguage = {
   common: common,

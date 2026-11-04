@@ -1,8 +1,5 @@
 {
   "button": {
-    "create": "Create",
-    "update": "Update",
-    "refresh": "Refresh",
     "connect": "Connect",
     "cancel": "Cancel",
     "OK": "OK",

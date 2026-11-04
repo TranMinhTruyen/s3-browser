@@ -3,8 +3,6 @@ import common from '@/locales/vi/common.json';
 import bucketPicker from '@/locales/vi/components/inputs/bucketPicker.json';
 import inputs from '@/locales/vi/components/inputs/inputs.json';
 import connectionProfiles from '@/locales/vi/components/layouts/navbar/connectionProfiles.json';
-import objectDetailDrawer from '@/locales/vi/components/layouts/tab/objectDetailDrawer.json';
-import tabLayout from '@/locales/vi/components/layouts/tab/tabLayout.json';
 import downloaderWindow from '@/locales/vi/components/layouts/transfer/downloaderWindow.json';
 import uploaderWindow from '@/locales/vi/components/layouts/transfer/uploaderWindow.json';
 import confirmModal from '@/locales/vi/components/modals/confirmModal.json';
@@ -18,8 +16,10 @@ import uploadLimitModal from '@/locales/vi/components/modals/uploadLimitModal.js
 import uploadPickerModal from '@/locales/vi/components/modals/uploadPickerModal.json';
 import ipcMessage from '@/locales/vi/messages/ipcMessage.json';
 import validateMessage from '@/locales/vi/messages/validateMessage.json';
-import bucketPage from '@/locales/vi/pages/bucket/page.json';
-import objectPage from '@/locales/vi/pages/object/page.json';
+import bucketPage from '@/locales/vi/pages/tab/bucket/page.json';
+import objectPage from '@/locales/vi/pages/tab/object/page.json';
+import objectDetailDrawer from '@/locales/vi/pages/tab/objectDetailDrawer.json';
+import tabLayout from '@/locales/vi/pages/tab/tabLayout.json';
 
 const vietnameseResource: ResourceLanguage = {
   common: common,

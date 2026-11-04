@@ -12,7 +12,12 @@ const DURATION_ERROR = `V000003:${MIN_DURATION_SECONDS},${MAX_DURATION_SECONDS}`
 const ROLE_ARN_REGEX = /^arn:aws[\w-]*:iam::\d{12}:role\/\S+$/;
 const LOOPBACK_HOST_REGEX = /^(localhost|127(\.\d{1,3}){3}|\[::1\])$/i;
 
-/** Khớp backend `utils.IsSecureUrl`: https với host bất kỳ, http chỉ cho host loopback. */
+export const DEFAULT_CALLBACK_PORT = 48765;
+const MIN_CALLBACK_PORT = 1024;
+const MAX_CALLBACK_PORT = 65535;
+const PORT_ERROR = `V000003:${MIN_CALLBACK_PORT},${MAX_CALLBACK_PORT}`;
+
+/** Mirrors backend `utils.IsSecureUrl`: https with any host, http only for a loopback host. */
 export const isSecureIssuerUrl = (value: string): boolean => {
   try {
     const { protocol, hostname } = new URL(value);
@@ -21,16 +26,14 @@ export const isSecureIssuerUrl = (value: string): boolean => {
     return false;
   }
 };
-export const DEFAULT_CALLBACK_PORT = 48765;
-const MIN_CALLBACK_PORT = 1024;
-const MAX_CALLBACK_PORT = 65535;
-const PORT_ERROR = `V000003:${MIN_CALLBACK_PORT},${MAX_CALLBACK_PORT}`;
 
 /** Methods with a session duration: required for `assumeRole`, optional for the MinIO ones. */
 const DURATION_TYPES: AuthType[] = ['assumeRole', 'minioAssumeRole', 'minioLdap'];
 
 const text = z.string().trim();
 const required = text.nonempty('V000001');
+// A NumberInput gives '' (or a partial string) while the user is typing.
+const numberInput = z.union([z.number(), z.string()]);
 
 const authConfigSchema = z.object({
   profileName: text,
@@ -40,16 +43,14 @@ const authConfigSchema = z.object({
   roleArn: text,
   externalId: text,
   sessionName: text,
-  // A NumberInput gives '' (or a partial string) while the user is typing.
-  durationSeconds: z.union([z.number(), z.string()]),
+  durationSeconds: numberInput,
   mfaSerial: text,
   policy: text,
   ldapUsername: text,
   clientId: text,
   issuerUrl: text,
   scope: text,
-  // A NumberInput gives '' (or a partial string) while the user is typing.
-  callbackPort: z.union([z.number(), z.string()]),
+  callbackPort: numberInput,
   certFile: text,
   keyFile: text,
   keyEncrypted: z.boolean(),

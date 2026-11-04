@@ -1,8 +1,5 @@
 {
   "button": {
-    "create": "Tạo mới",
-    "update": "Cập nhật",
-    "refresh": "Làm mới",
     "connect": "Kết nối",
     "cancel": "Hủy",
     "OK": "OK",

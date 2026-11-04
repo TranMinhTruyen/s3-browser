@@ -1,8 +1,5 @@
 {
   "button": {
-    "create": "建立",
-    "update": "更新",
-    "refresh": "重新整理",
     "connect": "連線",
     "cancel": "取消",
     "OK": "確定",

@@ -4,14 +4,12 @@
 
 ## 1. Trạng thái hiện tại
 
-<!-- Ghi đè mỗi lần cập nhật. Ngắn gọn: sprint gần nhất, branch/PR, việc dở dang, việc tiếp theo. -->
-
-- Cập nhật: 2026-11-02.
-- Sprint gần nhất: sprint-11 (nhiều phương thức xác thực, AWS + MinIO).
-  - GĐ1 `SP-11/auth_core` (PR #21) và GĐ2 `SP-11/auth_minio_anonymous` (PR #23): đã merge.
-  - GĐ3 `SP-11/auth_minio_oidc_cert` (R3 OIDC, mTLS, CA file, dọn Low GĐ2): đã commit local, chưa push.
-- 2026-11-02 người dùng chấp nhận test tay GĐ3 (bug phát sinh sửa ở sprint sau).
-- Việc tiếp theo: push với `git push -u origin SP-11/auth_minio_oidc_cert` (upstream đang trỏ origin/master) và tạo PR. Sau đó cập nhật docs ARCHITECTURE và user guide.
+- Cập nhật: 2026-11-04.
+- Sprint gần nhất: sprint-12 (hiệu năng UI, refactor, xoá object theo lô).
+  - Đã merge vào `staging`: R5, R6, R4, R1, R2, R3, R7a, R7b, R9, R8c, R8d (PR repo cũ #25-#33; repo mới #2, #3, #4).
+  - R8e `SP-12/refactor_fe_pages` (dọn pages, connectSchema, xoá key locale chết, tách trang tab, chỉnh UI): commit local `d0ae1b5` + commit docs/UI, chưa push.
+- Repo đã tách khỏi monorepo ngày 2026-11-03 (`TranMinhTruyen/s3-browser`); sprint branch tách từ `origin/staging`.
+- Việc tiếp theo: người dùng đo tay nhóm R8c/d/e, rồi push `git push -u origin SP-12/refactor_fe_pages` và tạo PR vào `staging`. Sau đó cập nhật docs ARCHITECTURE và user guide (còn nợ từ sprint-11).
 
 ## 2. Quyết định
 
@@ -32,6 +30,12 @@
 - 2026-11-02 [sprint-11] madmin đọc credential qua provider từ SwapCreds — Reauth có hiệu lực ngay.
 - 2026-11-02 [quy trình] Môi trường test (`test-env/` ở gốc repo, gồm `test-profiles.txt`) dùng chung cho mọi sprint — chuyển ra khỏi `sprints/sprint-11/` để sprint sau dùng lại tài khoản test.
 - 2026-11-02 [sprint-11] Badge/Button variant light truyền màu gốc `var(--mantine-color-<c>-6)`; `-light-color` chỉ cho chữ/viền.
+- 2026-11-04 [quy trình] Branch sprint tách từ `origin/staging`, `master` chỉ qua PR staging -> master do người dùng tạo — repo tách khỏi monorepo, master là branch release.
+- 2026-11-04 [sprint-12] Sprint dừng đo tay theo nhóm: (R5,R6,R1), (R2,R4,R3), (R7a,R7b), (R8c,R8d,R8e) — người dùng kiểm hiệu năng thủ công trước khi sang nhóm sau.
+- 2026-11-04 [sprint-12] Key i18n chỉ xoá khi grep toàn FE không còn dùng, kể cả key động (`authType.*`, `form.button.${mode}`, `confirmCode.*`) — tránh hiện key thô.
+- 2026-11-04 [sprint-12] Export chỉ test dùng (knip --production báo) không coi là code chết — CLAUDE.md mục 8.
+- 2026-11-04 [sprint-12] Tab là page riêng `pages/tab/TabPage.tsx`, bucket/object nằm dưới `pages/tab/` — tab chứa hai view nên không còn là layout; namespace i18n vẫn tên `tabLayout`.
+- 2026-11-04 [sprint-12] Padding 4px chỉ cho layout app (pane MainLayout, header navbar, khung TabPage); item và modal giữ padding riêng — người dùng thử padding 4px toàn app rồi bỏ.
 
 ## 3. Lỗi và bẫy đã gặp
 
@@ -48,6 +52,11 @@
 - 2026-11-02 [test-env] MinIO TLS chờ OpenID — phải chạy Keycloak trước, nếu không thì `docker restart s3b-test-minio-tls`.
 - 2026-11-02 [wails] Huỷ dialog chọn file hiện toast lỗi trên Windows — Wails trả lỗi "cancelled by user" (sentinel ở package internal) thay vì path rỗng — kiểm tra bằng `utils.IsDialogCancelled`.
 - 2026-11-02 [git] Branch SP-11/auth_minio_oidc_cert có upstream trỏ origin/master — push phải ghi rõ `-u origin <branch>`.
+- 2026-11-04 [bindings] Bước 4 phần B skill `wails3-bindings` báo nhầm "bindings cũ" — `find -newer frontend/bindings` so với mtime thư mục, mà mtime không đổi khi sinh lại file bên trong — so với file mới nhất trong thư mục bindings.
+- 2026-11-04 [test] Báo cáo coverage `text` của vitest ẩn file đạt 100% — chỉ liệt kê file chưa đủ — thêm `--coverage.reporter=json-summary` để lấy số từng file.
+- 2026-11-04 [git] Branch tách bằng `git switch -c ... origin/staging` có upstream trỏ origin/staging — push phải ghi rõ `git push -u origin <branch>`.
+- 2026-11-04 [quy trình] Subagent bị harness chặn ghi `report.md` và `MEMORY.md` — session chính ghi từ nội dung orchestrator soạn.
+- 2026-11-04 [vite] Ghi đè file bằng `git show > file` khi dev server đang chạy làm Vite cache module rỗng (lỗi "does not provide an export named ...") — ghi ra file tạm rồi move, hoặc touch lại từng file.
 
 ## 4. Tóm tắt cũ
 
