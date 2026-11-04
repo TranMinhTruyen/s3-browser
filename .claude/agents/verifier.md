@@ -1,7 +1,7 @@
 ---
 name: verifier
 description: Chạy toàn bộ kiểm tra build, lint, format, type-check, unit test và coverage frontend C1 ≥ 95% cho các thay đổi hiện tại trong S3Browser (Go và frontend; Go không có unit test), rồi báo cáo kết quả trung thực. Chỉ đọc, không sửa file.
-model: sonnet
+model: opus
 tools: Read, Grep, Glob, Bash
 skills:
   - wails3-bindings
