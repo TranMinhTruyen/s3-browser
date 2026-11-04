@@ -15,13 +15,13 @@ import (
 )
 
 var (
-	// PFE001 - Error while save profile
+	// PFE001 - Error while saving profile
 	PFE001 = "PFE001"
 
 	// PFE002 - Encrypted SecretKey failed
 	PFE002 = "PFE002"
 
-	// PFE003 - Error get all connnection profile
+	// PFE003 - Error while getting connection profiles
 	PFE003 = "PFE003"
 
 	// PFE005 - Update profile [{name}] error
@@ -158,9 +158,7 @@ func (m *Module) CreateProfile(
 		// The profile is saved: report a warning, not a failure.
 		output.AddMessage(warnMessage(err))
 	}
-	output.AddMessage(models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Profile, PFS001, "", map[string]any{
-		"name": result.Name.String,
-	}))
+	output.AddMessage(nameMessage(cnst.MessageTypeSuccess, PFS001, result.Name.String, ""))
 
 	return output
 }
@@ -213,18 +211,19 @@ func (m *Module) UpdateProfileById(input models.ConnectionProfileInput) models.O
 		m.logger.Error("read saved profile failed", "connectionId", result.ID, "error", err)
 		output.AddMessage(warnMessage(err))
 	}
-	output.AddMessage(models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Profile, PFS002, "", map[string]any{
-		"name": result.Name.String,
-	}))
+	output.AddMessage(nameMessage(cnst.MessageTypeSuccess, PFS002, result.Name.String, ""))
 
 	return output
 }
 
+// nameMessage is a profile message whose text takes the profile name as {name}.
+func nameMessage(msgType, code, name, errorDetail string) models.Message {
+	return models.NewParamsMessage(msgType, cnst.Profile, code, errorDetail, map[string]any{"name": name})
+}
+
 // updateError is the PFE005 message of a failed update of profile name.
 func updateError(name string, err error) models.Message {
-	return models.NewParamsMessage(cnst.MessageTypeError, cnst.Profile, PFE005, err.Error(), map[string]any{
-		"name": name,
-	})
+	return nameMessage(cnst.MessageTypeError, PFE005, name, err.Error())
 }
 
 // DeleteProfileById closes the profile's active connection (if any), then deletes the profile.
@@ -236,9 +235,7 @@ func (m *Module) DeleteProfileById(input models.ConnectionProfileInput) models.O
 	if busy {
 		m.logger.Warn("delete profile refused, transfers in progress", "connectionId", input.Id)
 		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Profile, PFE007, "", map[string]any{
-				"name": input.Name,
-			}),
+			nameMessage(cnst.MessageTypeError, PFE007, input.Name, ""),
 		)
 	}
 	if removed {
@@ -249,16 +246,12 @@ func (m *Module) DeleteProfileById(input models.ConnectionProfileInput) models.O
 	if err := m.q.DeleteConnectionProfileById(m.app.Context(), input.Id); err != nil {
 		m.logger.Error("delete connection profile failed", "connectionId", input.Id, "error", err)
 		return output.ThrowError(
-			models.NewParamsMessage(cnst.MessageTypeError, cnst.Profile, PFE006, err.Error(), map[string]any{
-				"name": input.Name,
-			}),
+			nameMessage(cnst.MessageTypeError, PFE006, input.Name, err.Error()),
 		)
 	}
 
 	output.Body = true
-	output.AddMessage(models.NewParamsMessage(cnst.MessageTypeSuccess, cnst.Profile, PFS003, "", map[string]any{
-		"name": input.Name,
-	}))
+	output.AddMessage(nameMessage(cnst.MessageTypeSuccess, PFS003, input.Name, ""))
 
 	return output
 }

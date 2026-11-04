@@ -77,9 +77,9 @@
     "MTE001": "Error while loading master data."
   },
   "profile": {
-    "PFE001": "Error while save profile.",
+    "PFE001": "Error while saving profile.",
     "PFE002": "Encrypted SecretKey failed.",
-    "PFE003": "Error get all connnection profile.",
+    "PFE003": "Error while getting connection profiles.",
     "PFE005": "Update profile [{name}] error.",
     "PFE006": "Delete profile [{name}] error.",
     "PFE007": "Profile [{name}] has uploads or downloads in progress, cannot delete.",

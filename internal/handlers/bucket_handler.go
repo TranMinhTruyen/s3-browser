@@ -4,23 +4,18 @@ import (
 	"S3Browser/internal/modules/bucket"
 	"S3Browser/models"
 	"context"
-	"log/slog"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // BucketHandler is the Wails service for connections, buckets, objects, uploads and downloads.
 type BucketHandler struct {
-	logger *slog.Logger
-	app    *application.App
 	bucket *bucket.Module
 }
 
 // NewBucketHandler creates the bucket handler.
-func NewBucketHandler(app *application.App, logger *slog.Logger, bucket *bucket.Module) *BucketHandler {
+func NewBucketHandler(bucket *bucket.Module) *BucketHandler {
 	return &BucketHandler{
-		logger: logger.With("component", "bucket_handler"),
-		app:    app,
 		bucket: bucket,
 	}
 }
