@@ -5,8 +5,6 @@ import (
 	"S3Browser/internal/pkg/cnst"
 	"S3Browser/models"
 	"log/slog"
-
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 var (
@@ -35,16 +33,14 @@ var (
 // Module reads and writes the app settings file.
 type Module struct {
 	logger  *slog.Logger
-	app     *application.App
 	setting *submoduleSettingMng
 	tab     *submoduleTabMng
 }
 
 // NewModule creates the setting module; appName selects the data dir and names the autostart entry.
-func NewModule(app *application.App, logger *slog.Logger, appName string) *Module {
+func NewModule(logger *slog.Logger, appName string) *Module {
 	return &Module{
 		logger:  logger.With("component", "setting_module"),
-		app:     app,
 		setting: newSubmoduleSettingMng(logger, appName),
 		tab:     newSubmoduleTabMng(logger, appName),
 	}
