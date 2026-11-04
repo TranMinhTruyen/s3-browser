@@ -35,6 +35,8 @@ type S3Conn struct {
 	AuthType    string
 	// AwsProfile is the AWS CLI profile name (sharedProfile, sso, assumeRole); "default" when none is set.
 	AwsProfile string
+	// CustomEndpoint is true when the profile sets an endpoint, i.e. the server is not AWS itself.
+	CustomEndpoint bool
 
 	Client  *s3.Client
 	Presign *s3.PresignClient
@@ -46,6 +48,9 @@ type S3Conn struct {
 	// Creds is what Client signs with; nil for anonymous connections.
 	Creds    *SwapCreds
 	CredInfo CredInfo
+
+	// Access caches the bucket access checks. Reset it when the credentials change.
+	Access AccessCache
 
 	// anonymousBuckets are the buckets of an anonymous connection (the API can't list them). The list is fixed
 	// after the connection is built; only the Accessible flags change, under anonymousMu.

@@ -1,6 +1,7 @@
 import { GetListObject, SearchObject } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
 import { RefObject, useCallback, useEffect, useRef, useState } from 'react';
+import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { onTabGone } from '@/common/utils/tabUtils';
 
@@ -38,6 +39,7 @@ export function useObjectPaging(params: UseObjectPagingParams) {
   const [isLoadingFirst, setIsLoadingFirst] = useState(false);
   // True once the first page of the current list has loaded, so an empty search result can be told from loading.
   const [isLoaded, setIsLoaded] = useState(false);
+  const changeCurrentView = useTabListStore(s => s.changeCurrentView);
   const requestCtrl = useRef<AbortController>(null);
   // The loadFirstPage the list was last loaded for: showing a hidden tab again must not reload it.
   const loadedFor = useRef<unknown>(null);
@@ -51,7 +53,7 @@ export function useObjectPaging(params: UseObjectPagingParams) {
 
   // Lists the folder, or searches it when a keyword is applied. Both return the same shape.
   const handleGetListObject = useCallback(
-    (cursor: string, signal?: AbortSignal) => {
+    (cursor: string, signal?: AbortSignal, onAccessDenied?: () => void) => {
       const limit = cursor ? NEXT_PAGE_SIZE : FIRST_PAGE_SIZE;
       if (!connectionId || !bucket) return Promise.resolve(undefined);
       if (keyword) {
@@ -61,6 +63,9 @@ export function useObjectPaging(params: UseObjectPagingParams) {
       }
       return callIPC(GetListObject, [{ connectionId, profileName, bucket, prefix, nextCursor: cursor, limit }], {
         signal,
+        rejectAction: output => {
+          if (output?.body?.accessDenied && !signal?.aborted) onAccessDenied?.();
+        },
       });
     },
     [bucket, prefix, profileName, connectionId, keyword]
@@ -74,7 +79,8 @@ export function useObjectPaging(params: UseObjectPagingParams) {
     setIsLoaded(false);
     setIsLoadingFirst(true);
     // Aborting cancels the request on the Go side too, not only the state update.
-    const output = await handleGetListObject('', ctrl.signal);
+    // Access denied: go back to the bucket list instead of staying in an unreadable bucket.
+    const output = await handleGetListObject('', ctrl.signal, () => changeCurrentView(tabId, 'bucketList'));
     if (ctrl.signal.aborted) return;
     if (output) {
       setObjectDatas(output.objectList);
@@ -83,7 +89,7 @@ export function useObjectPaging(params: UseObjectPagingParams) {
       setIsLoaded(true);
     }
     setIsLoadingFirst(false);
-  }, [handleGetListObject, startRequest, listKey]);
+  }, [handleGetListObject, startRequest, listKey, changeCurrentView, tabId]);
 
   const loadNextPage = useCallback(async () => {
     if (!nextCursor) return;

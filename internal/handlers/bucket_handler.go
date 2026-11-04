@@ -86,6 +86,14 @@ func (h *BucketHandler) GetListBucket(
 	return h.bucket.GetListBucket(ctx, input)
 }
 
+// CheckBucketAccess returns the access flags of the given buckets.
+func (h *BucketHandler) CheckBucketAccess(
+	ctx context.Context,
+	input models.CheckBucketAccessInput,
+) models.Output[models.CheckBucketAccessOutput] {
+	return h.bucket.CheckBucketAccess(ctx, input)
+}
+
 // GetListObject lists one page of objects under a prefix.
 func (h *BucketHandler) GetListObject(
 	ctx context.Context,

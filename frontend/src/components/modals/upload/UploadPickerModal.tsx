@@ -12,10 +12,10 @@ import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import { formatStringJson } from '@/common/utils/stringUtils';
 import { mergePickedFiles, PickerLimits, PickerList, removePickedFiles } from '@/common/utils/uploadUtils';
 import Button from '@/components/buttons/Button';
+import TruncatedText from '@/components/display/TruncatedText';
 import BucketPicker from '@/components/inputs/combobox/BucketPicker';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 import { FileRow, GroupRow, GroupStat, UploadRow, VirtualRowList } from '@/components/modals/upload/UploadFileList';
-import TruncatedText from '@/components/TruncatedText';
 import i18n from '@/locales/i18n';
 import classes from './UploadPickerModal.module.css';
 

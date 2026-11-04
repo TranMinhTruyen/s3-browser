@@ -4,8 +4,8 @@ import { X } from 'lucide-react';
 import { ReactNode } from 'react';
 import { tintedColor } from '@/common/theme/tintedColor';
 import ActionIcon from '@/components/buttons/ActionIcon';
+import TruncatedText from '@/components/display/TruncatedText';
 import { ITEM_HEIGHT } from '@/components/layouts/transfer/transferItem';
-import TruncatedText from '@/components/TruncatedText';
 
 type TransferRowProps = {
   title: string;

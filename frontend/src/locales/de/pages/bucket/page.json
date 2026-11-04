@@ -2,7 +2,7 @@
   "empty": "Noch keine Buckets",
   "tooltip": {
     "bucketList": "Bucket-Liste",
-    "inaccessible": "Auf diesen Bucket kann nicht anonym zugegriffen werden."
+    "inaccessible": "Kein Zugriff auf diesen Bucket (keine Berechtigung oder er existiert nicht)."
   },
   "label": {
     "createDate": "Erstellt am:"

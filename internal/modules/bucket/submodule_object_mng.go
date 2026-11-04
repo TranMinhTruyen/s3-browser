@@ -6,6 +6,7 @@ import (
 	"S3Browser/models"
 	"context"
 	"log/slog"
+	"net/http"
 	"strings"
 	"time"
 
@@ -68,6 +69,13 @@ func (m *submoduleObjMng) listObject(
 	objects, err := s3Conn.Client.ListObjectsV2(ctx, listObjectInput)
 
 	if err != nil {
+		if statusCode(err) == http.StatusForbidden {
+			output.Body.AccessDenied = true
+			// Only the bucket root: a sub-prefix may be blocked by a prefix policy alone.
+			if input.Prefix == "" {
+				s3Conn.Access.Set(global.AccessRead, input.Bucket, true, s3Conn.Access.Generation())
+			}
+		}
 		return failCall(ctx, output, input.ProfileName, err,
 			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E008, UnwrapAwsError(err), map[string]any{
 				"name":   input.ProfileName,

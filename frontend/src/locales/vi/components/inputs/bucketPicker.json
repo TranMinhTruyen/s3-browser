@@ -2,5 +2,7 @@
   "placeholder": "Chọn bucket",
   "searchPlaceholder": "Tìm bucket",
   "loadMore": "Tải thêm",
-  "empty": "Không tìm thấy bucket"
+  "empty": "Không tìm thấy bucket",
+  "inaccessible": "Không truy cập được bucket này (không có quyền hoặc bucket không tồn tại).",
+  "readOnly": "Có thể bạn không có quyền upload vào bucket này."
 }

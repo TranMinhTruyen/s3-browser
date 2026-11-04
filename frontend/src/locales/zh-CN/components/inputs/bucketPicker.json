@@ -2,5 +2,7 @@
   "placeholder": "选择存储桶",
   "searchPlaceholder": "搜索存储桶",
   "loadMore": "加载更多",
-  "empty": "未找到存储桶"
+  "empty": "未找到存储桶",
+  "inaccessible": "无法访问此存储桶（无权限或存储桶不存在）。",
+  "readOnly": "您可能无权上传到此存储桶。"
 }

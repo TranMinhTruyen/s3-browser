@@ -2,7 +2,7 @@
   "empty": "尚無儲存貯體",
   "tooltip": {
     "bucketList": "儲存貯體清單",
-    "inaccessible": "此儲存貯體無法匿名存取。"
+    "inaccessible": "無法存取此儲存貯體（沒有權限或儲存貯體不存在）。"
   },
   "label": {
     "createDate": "建立日期："

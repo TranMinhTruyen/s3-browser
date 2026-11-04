@@ -280,6 +280,7 @@ func (m *submoduleConnMng) reauthAction(
 	}
 
 	conn.Creds.Store(creds.AWS)
+	conn.Access.Reset() // the new credentials may have other permissions
 	m.submoduleCfgMng.oidc.remove(fresh.OidcSessionId)
 	// The new credentials are cached by buildCredentials: this only reads their expiry into conn.Creds.
 	_, _ = conn.Creds.Retrieve(ctx)

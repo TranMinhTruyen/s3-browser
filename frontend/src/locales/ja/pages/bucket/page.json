@@ -2,7 +2,7 @@
   "empty": "バケットがありません",
   "tooltip": {
     "bucketList": "バケット一覧",
-    "inaccessible": "このバケットには匿名でアクセスできません。"
+    "inaccessible": "このバケットにアクセスできません（権限がないか、バケットが存在しません）。"
   },
   "label": {
     "createDate": "作成日:"

@@ -6,10 +6,10 @@ import { useTranslation } from 'react-i18next';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import { formatStringJson } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
+import TruncatedText from '@/components/display/TruncatedText';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import { WARNING_BG_COLOR, WARNING_COLOR } from '@/components/modals/modalColors';
 import { FileRow, UploadRow, VirtualRowList } from '@/components/modals/upload/UploadFileList';
-import TruncatedText from '@/components/TruncatedText';
 
 type DeleteFile = { key: string; size: number };
 

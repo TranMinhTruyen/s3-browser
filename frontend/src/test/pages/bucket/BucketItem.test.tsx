@@ -1,8 +1,12 @@
-import { screen } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Bucket } from '@wails/S3Browser/models/bucket';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import BucketItem from '@/pages/bucket/BucketItem';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
+
+vi.mock('@/components/modals/confirm/ConfirmModal', () => ({ default: { show: vi.fn() } }));
 
 const bucket = new Bucket({ name: 'my-bucket', creationDate: '2026-01-02T03:04:05' });
 
@@ -29,7 +33,7 @@ describe('BucketItem', () => {
 });
 
 describe('BucketItem anonymous buckets', () => {
-  const MESSAGE = 'This bucket cannot be accessed anonymously.';
+  const MESSAGE = 'Cannot access this bucket (no permission or it does not exist).';
 
   it('shows no warning for an accessible bucket', () => {
     renderWithProviders(<BucketItem item={bucket} />);
@@ -65,5 +69,51 @@ describe('BucketItem anonymous buckets', () => {
     expect(screen.getByText('Create date:')).toBeInTheDocument();
     expect(screen.getByText(/02-01-2026 03:04:05/)).toBeInTheDocument();
     expect(screen.getByLabelText(MESSAGE)).toBeInTheDocument();
+  });
+});
+
+describe('BucketItem inaccessible click', () => {
+  beforeEach(() => {
+    vi.mocked(ConfirmModal.show).mockClear();
+  });
+
+  it.each([
+    ['opens', true, 1],
+    ['does not open', false, 0],
+  ])('%s an inaccessible bucket when the confirmation resolves %s', async (_name, confirmed, calls) => {
+    vi.mocked(ConfirmModal.show).mockResolvedValue(confirmed);
+    const onSelectBucket = vi.fn();
+    renderWithProviders(
+      <BucketItem item={new Bucket({ name: 'private', inaccessible: true })} onSelectBucket={onSelectBucket} />
+    );
+
+    await userEvent.click(screen.getByText('private'));
+
+    expect(ConfirmModal.show).toHaveBeenCalledExactlyOnceWith({
+      type: 'warning',
+      confirmCode: 'C000007',
+      params: { bucket: 'private' },
+    });
+    await waitFor(() => expect(ConfirmModal.show).toHaveBeenCalled());
+    await act(async () => {});
+    if (calls) expect(onSelectBucket).toHaveBeenCalledExactlyOnceWith('private');
+    else expect(onSelectBucket).not.toHaveBeenCalled();
+  });
+
+  it('does nothing after confirming an inaccessible bucket without a handler', async () => {
+    vi.mocked(ConfirmModal.show).mockResolvedValue(true);
+    renderWithProviders(<BucketItem item={new Bucket({ name: 'private', inaccessible: true })} />);
+    await userEvent.click(screen.getByText('private'));
+    await waitFor(() => expect(ConfirmModal.show).toHaveBeenCalledTimes(1));
+  });
+
+  it('opens an accessible bucket without showing the modal', async () => {
+    const onSelectBucket = vi.fn();
+    renderWithProviders(<BucketItem item={bucket} onSelectBucket={onSelectBucket} />);
+
+    await userEvent.click(screen.getByText('my-bucket'));
+
+    expect(onSelectBucket).toHaveBeenCalledExactlyOnceWith('my-bucket');
+    expect(ConfirmModal.show).not.toHaveBeenCalled();
   });
 });

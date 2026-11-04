@@ -2,14 +2,12 @@ import { Card, Menu } from '@mantine/core';
 import { ObjectItem as ObjectItemData } from '@wails/S3Browser/models/bucket';
 import { Download, Ellipsis, Folder, Trash } from 'lucide-react';
 import { MouseEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
+import { LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import ActionIcon from '@/components/buttons/ActionIcon';
+import TruncatedText from '@/components/display/TruncatedText';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
-import TruncatedText from '@/components/TruncatedText';
 import classes from '@/pages/object/page.module.css';
-
-// Fixed row height: the virtualizer knows every row's position without measuring.
-export const OBJECT_ROW_HEIGHT = 88;
 
 // Section layouts shared by the folder and file rows.
 const ICON_SECTION_STYLE = { flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } as const;
@@ -79,7 +77,7 @@ const ObjectRow = memo(function ObjectRow(props: ObjectRowProps) {
   }, [menuOpened]);
 
   return (
-    <Card padding="8px" orientation="horizontal" onClick={onClick} className={classes.card} h={OBJECT_ROW_HEIGHT}>
+    <Card padding="8px" orientation="horizontal" onClick={onClick} className={classes.card} h={LIST_ROW_HEIGHT}>
       <Card.Section
         inheritPadding
         px="8px"

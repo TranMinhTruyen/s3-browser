@@ -17,6 +17,12 @@ vi.mock('@/common/utils/authUtils', async importActual => {
   };
 });
 
+const scheme = vi.hoisted(() => ({ value: 'light' as 'light' | 'dark' }));
+vi.mock('@mantine/core', async importActual => {
+  const actual = await importActual<typeof import('@mantine/core')>();
+  return { ...actual, useComputedColorScheme: () => scheme.value };
+});
+
 const onConnect = vi.fn();
 
 const baseProfile = { id: 'p1', name: 'My S3', provider: 'aws', color: '#d0ebff', isConnected: false };
@@ -36,6 +42,7 @@ const section = () => card().querySelector<HTMLElement>('.mantine-Card-section')
 describe('ConnectionProfileItem', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    scheme.value = 'light';
     useProfileStore.setState({ connectionProfiles: {} });
   });
 
@@ -104,6 +111,43 @@ describe('ConnectionProfileItem', () => {
 
       renderItem({ color: undefined });
       expect(bg()).toBe('var(--mantine-color-body)');
+    });
+
+    it('draws a default border on the right of the status cell', () => {
+      renderItem();
+
+      expect(section().style.borderRight).toContain('1px solid');
+      expect(section().getAttribute('style')).toContain('var(--mantine-color-default-border)');
+    });
+
+    describe('dark mode', () => {
+      const nameSection = () => card().querySelectorAll<HTMLElement>('.mantine-Card-section')[1];
+
+      it.each([
+        ['light color', '#ffffff'],
+        ['dark color', '#000000'],
+        ['no color', undefined],
+      ])('uses the theme text color for %s', (_n, color) => {
+        scheme.value = 'dark';
+        renderItem({ color });
+
+        expect(card()).toHaveStyle({ color: 'var(--mantine-color-text)' });
+      });
+
+      it('mixes the profile color into the body color for the name background', () => {
+        scheme.value = 'dark';
+        renderItem({ color: '#ff0000' });
+
+        const style = nameSection().getAttribute('style') ?? '';
+        expect(style).toContain('color-mix(in srgb, #ff0000 35%, var(--mantine-color-body))');
+      });
+
+      it('keeps the body color for the name background when there is no color', () => {
+        scheme.value = 'dark';
+        renderItem({ color: undefined });
+
+        expect(nameSection().style.backgroundColor).toBe('var(--mantine-color-body)');
+      });
     });
 
     it('shows a green cable when connected and a red unplug when not', () => {

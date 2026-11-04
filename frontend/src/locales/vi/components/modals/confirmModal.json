@@ -8,6 +8,8 @@
     "C000002": "Bạn có chắc chắn muốn xóa hồ sơ kết nối này không?",
     "C000003": "Vui lòng ngắt kết nối trước khi thực hiện!",
     "C000005": "Chỉ được chọn tối đa 5 mục!",
-    "C000006": "Bạn có chắc chắn muốn xóa thư mục [{object}] và TOÀN BỘ nội dung bên trong không? Thao tác này không thể hoàn tác."
+    "C000006": "Bạn có chắc chắn muốn xóa thư mục [{object}] và TOÀN BỘ nội dung bên trong không? Thao tác này không thể hoàn tác.",
+    "C000007": "Có thể bạn không truy cập được bucket [{bucket}] (không có quyền hoặc bucket không tồn tại). Vẫn tiếp tục?",
+    "C000008": "Có thể bạn không có quyền upload vào bucket [{bucket}]. Vẫn tiếp tục?"
   }
 }

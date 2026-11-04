@@ -38,6 +38,15 @@ func isCallCanceled(ctx context.Context) bool {
 	return errors.Is(ctx.Err(), context.Canceled)
 }
 
+// statusCode returns the HTTP status of the server answer in err, or 0 if err has none (network, timeout).
+func statusCode(err error) int {
+	var httpErr interface{ HTTPStatusCode() int }
+	if errors.As(err, &httpErr) {
+		return httpErr.HTTPStatusCode()
+	}
+	return 0
+}
+
 // notConnectedMessage is the S3E006 message for a connection id that is not in the shared store.
 func notConnectedMessage(profileName string) models.Message {
 	return models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E006, "", map[string]any{
