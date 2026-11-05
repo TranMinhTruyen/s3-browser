@@ -1,13 +1,13 @@
 ## Kết quả sprint-13
-- Trạng thái: Hoàn thành (R1–R6), chưa test tay trên MinIO/AWS thật
+- Trạng thái: **DONE** (2026-11-05). R1–R6 đã merge vào `staging` qua PR #6 (merge commit `47286aa`).
 - Tổng thay đổi 3 commit code: +5909 / -255 dòng (185 lượt file; một số file sửa ở nhiều commit)
 
 ### Branch
 | Branch | Yêu cầu | Số vòng review | Commit | Trạng thái |
 |---|---|---|---|---|
-| SP-13/bucket_create_policy_detail | R1, R2, R3, R4 | 2/3 | 9ab7dd2 | Đạt |
-| SP-13/bucket_create_policy_detail | R5 | 1/3 | deabc60 | Đạt |
-| SP-13/bucket_create_policy_detail | R6 | 1/3 | 862a657 | Đạt |
+| SP-13/bucket_create_policy_detail | R1, R2, R3, R4 | 2/3 | 9ab7dd2 | Đã merge (#6) |
+| SP-13/bucket_create_policy_detail | R5 | 1/3 | deabc60 | Đã merge (#6) |
+| SP-13/bucket_create_policy_detail | R6 | 1/3 | 862a657 | Đã merge (#6) |
 
 Một branch, mỗi yêu cầu một commit riêng (người dùng chốt), không amend. Commit docs kèm theo gồm `report.md`, `plan.md`, `requirement.md`, `memory/MEMORY.md` và thay đổi ngoài sprint: toast tự ẩn sau 10 giây (`frontend/src/App.tsx`, `duration={10000}`).
 
