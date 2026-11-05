@@ -1,7 +1,7 @@
 import { Card, Group, Menu, Stack, Text } from '@mantine/core';
 import { Bucket } from '@wails/S3Browser/models/bucket';
 import dayjs from 'dayjs';
-import { Ellipsis, Folder, Info, ShieldCheck } from 'lucide-react';
+import { Ellipsis, Folder, Info, ShieldCheck, Trash2 } from 'lucide-react';
 import { type CSSProperties, type MouseEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FULL_DATE_TIME_FORMAT, LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
@@ -18,6 +18,7 @@ type BucketItemProps = {
   onSelectBucket?: (bucketName: string | undefined) => void;
   onOpenDetail?: (item: Bucket) => void;
   onEditPolicy?: (bucketName: string | undefined) => void;
+  onDeleteBucket?: (bucketName: string | undefined) => void;
 };
 
 // Same icon section as ObjectItem's folder row.
@@ -38,7 +39,7 @@ const stopPropagation = (e: MouseEvent) => e.stopPropagation();
  * after a confirmation when it may be inaccessible.
  */
 function BucketItem(props: BucketItemProps) {
-  const { item, canEdit, onSelectBucket, onOpenDetail, onEditPolicy } = props;
+  const { item, canEdit, onSelectBucket, onOpenDetail, onEditPolicy, onDeleteBucket } = props;
   const { t } = useTranslation('bucket', { keyPrefix: 'page' });
   // An anonymous connection cannot read the creation date, so the backend sends the zero date (year 1).
   const hasCreationDate = dayjs(item.creationDate).year() > 1;
@@ -58,6 +59,8 @@ function BucketItem(props: BucketItemProps) {
     if (wasOpened.current && !menuOpened) menuSectionRef.current?.querySelector('button')?.focus();
     wasOpened.current = menuOpened;
   }, [menuOpened]);
+
+  const onClickDelete = useCallback(() => onDeleteBucket?.(item.name), [onDeleteBucket, item.name]);
 
   const onClickBucket = useCallback(async () => {
     // The access probe can be wrong (e.g. prefix-scoped policies), so warn and let the user decide.
@@ -113,6 +116,14 @@ function BucketItem(props: BucketItemProps) {
                 <Menu.Item leftSection={<ShieldCheck size="16px" />} onClick={onClickEditPolicy}>
                   {t('menu.editPolicy')}
                 </Menu.Item>
+              ) : null}
+              {canEdit && !item.deleteDenied ? (
+                <>
+                  <Menu.Divider />
+                  <Menu.Item color="red" leftSection={<Trash2 size="16px" />} onClick={onClickDelete}>
+                    {t('menu.delete')}
+                  </Menu.Item>
+                </>
               ) : null}
             </Menu.Dropdown>
           </Menu>

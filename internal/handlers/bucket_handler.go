@@ -123,6 +123,22 @@ func (h *BucketHandler) GetBucketDetail(
 	return h.bucket.GetBucketDetail(ctx, input)
 }
 
+// GetBucketDeleteInfo returns whether a bucket is empty, its versioning and Object Lock.
+func (h *BucketHandler) GetBucketDeleteInfo(
+	ctx context.Context,
+	input models.DeleteBucketInput,
+) models.Output[models.DeleteBucketInfoOutput] {
+	return h.bucket.GetBucketDeleteInfo(ctx, input)
+}
+
+// DeleteBucket deletes a bucket with everything in it.
+func (h *BucketHandler) DeleteBucket(
+	ctx context.Context,
+	input models.DeleteBucketInput,
+) models.Output[models.DeleteBucketOutput] {
+	return h.bucket.DeleteBucket(ctx, input)
+}
+
 // GetListObject lists one page of objects under a prefix.
 func (h *BucketHandler) GetListObject(
 	ctx context.Context,

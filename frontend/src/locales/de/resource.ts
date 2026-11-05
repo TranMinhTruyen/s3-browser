@@ -10,6 +10,7 @@ import confirmModal from '@/locales/de/components/modals/confirmModal.json';
 import connectModal from '@/locales/de/components/modals/connectModal.json';
 import createBucketModal from '@/locales/de/components/modals/createBucketModal.json';
 import credentialExpiring from '@/locales/de/components/modals/credentialExpiring.json';
+import deleteBucketModal from '@/locales/de/components/modals/deleteBucketModal.json';
 import deleteConfirmModal from '@/locales/de/components/modals/deleteConfirmModal.json';
 import deleteResultModal from '@/locales/de/components/modals/deleteResultModal.json';
 import historyModal from '@/locales/de/components/modals/historyModal.json';
@@ -33,6 +34,7 @@ const germanResource: ResourceLanguage = {
   confirmModal: confirmModal,
   bucketPolicyModal: bucketPolicyModal,
   createBucketModal: createBucketModal,
+  deleteBucketModal: deleteBucketModal,
   deleteConfirmModal: deleteConfirmModal,
   deleteResultModal: deleteResultModal,
   historyModal: historyModal,

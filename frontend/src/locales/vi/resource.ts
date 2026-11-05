@@ -10,6 +10,7 @@ import confirmModal from '@/locales/vi/components/modals/confirmModal.json';
 import connectModal from '@/locales/vi/components/modals/connectModal.json';
 import createBucketModal from '@/locales/vi/components/modals/createBucketModal.json';
 import credentialExpiring from '@/locales/vi/components/modals/credentialExpiring.json';
+import deleteBucketModal from '@/locales/vi/components/modals/deleteBucketModal.json';
 import deleteConfirmModal from '@/locales/vi/components/modals/deleteConfirmModal.json';
 import deleteResultModal from '@/locales/vi/components/modals/deleteResultModal.json';
 import historyModal from '@/locales/vi/components/modals/historyModal.json';
@@ -33,6 +34,7 @@ const vietnameseResource: ResourceLanguage = {
   confirmModal: confirmModal,
   bucketPolicyModal: bucketPolicyModal,
   createBucketModal: createBucketModal,
+  deleteBucketModal: deleteBucketModal,
   deleteConfirmModal: deleteConfirmModal,
   deleteResultModal: deleteResultModal,
   historyModal: historyModal,

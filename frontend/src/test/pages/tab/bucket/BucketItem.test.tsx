@@ -138,8 +138,31 @@ describe('BucketItem menu', () => {
     expect((await screen.findAllByRole('menuitem', { hidden: true })).map(i => i.textContent)).toEqual([
       'Details',
       'Access permission',
+      'Delete',
     ]);
     expect(onSelectBucket).not.toHaveBeenCalled();
+  });
+
+  it('deletes the bucket by name from "Delete" and closes the menu', async () => {
+    const onDeleteBucket = vi.fn();
+    renderWithProviders(<BucketItem item={bucket} canEdit onDeleteBucket={onDeleteBucket} />);
+
+    await userEvent.click(moreActions());
+    await userEvent.click(await screen.findByRole('menuitem', { hidden: true, name: 'Delete' }));
+
+    expect(onDeleteBucket).toHaveBeenCalledExactlyOnceWith('my-bucket');
+    await waitFor(() => expect(screen.queryByRole('menu', { hidden: true })).not.toBeInTheDocument());
+  });
+
+  it('hides "Delete" when the account may not delete the bucket', async () => {
+    renderWithProviders(<BucketItem item={{ ...bucket, deleteDenied: true } as never} canEdit />);
+
+    await userEvent.click(moreActions());
+
+    expect((await screen.findAllByRole('menuitem', { hidden: true })).map(i => i.textContent)).toEqual([
+      'Details',
+      'Access permission',
+    ]);
   });
 
   it('opens the detail of the bucket from "Details" and closes the menu', async () => {
@@ -172,6 +195,9 @@ describe('BucketItem menu', () => {
     await waitFor(() => expect(screen.queryByRole('menu', { hidden: true })).not.toBeInTheDocument());
     await userEvent.click(moreActions());
     await userEvent.click(await screen.findByRole('menuitem', { hidden: true, name: 'Access permission' }));
+    await waitFor(() => expect(screen.queryByRole('menu', { hidden: true })).not.toBeInTheDocument());
+    await userEvent.click(moreActions());
+    await userEvent.click(await screen.findByRole('menuitem', { hidden: true, name: 'Delete' }));
 
     await waitFor(() => expect(screen.queryByRole('menu', { hidden: true })).not.toBeInTheDocument());
   });
@@ -194,5 +220,6 @@ describe('BucketItem menu', () => {
 
     expect(await screen.findByRole('menuitem', { hidden: true, name: 'Details' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { hidden: true, name: 'Access permission' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { hidden: true, name: 'Delete' })).not.toBeInTheDocument();
   });
 });

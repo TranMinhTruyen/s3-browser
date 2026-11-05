@@ -1,0 +1,20 @@
+{
+  "title": "Bucket löschen",
+  "checking": "Bucket wird geprüft...",
+  "deleting": "Wird gelöscht...",
+  "warning": {
+    "irreversible": "Dies kann nicht rückgängig gemacht werden. Der Bucket wird dauerhaft gelöscht.",
+    "notEmpty": "Der Bucket ist nicht leer. Alle Objekte darin werden gelöscht.",
+    "unknown": "Es konnte nicht geprüft werden, ob der Bucket leer ist. Falls er Objekte enthält, werden alle gelöscht.",
+    "versioned": "Versionierung ist aktiv oder war aktiv: Alle Versionen und Löschmarkierungen werden dauerhaft gelöscht.",
+    "objectLockBlocked": "Der Bucket {{bucket}} hat Object Lock und ist nicht leer, daher kann er nicht gelöscht werden.",
+    "objectLockUnknown": "Der Bucket hat Object Lock. Falls er Objekte enthält, kann er nicht gelöscht werden."
+  },
+  "label": {
+    "confirmName": "Geben Sie {{bucket}} zur Bestätigung ein"
+  },
+  "placeholder": {
+    "confirmName": "Bucket-Name"
+  },
+  "delete": "Löschen"
+}

@@ -10,6 +10,7 @@ import confirmModal from '@/locales/zh-TW/components/modals/confirmModal.json';
 import connectModal from '@/locales/zh-TW/components/modals/connectModal.json';
 import createBucketModal from '@/locales/zh-TW/components/modals/createBucketModal.json';
 import credentialExpiring from '@/locales/zh-TW/components/modals/credentialExpiring.json';
+import deleteBucketModal from '@/locales/zh-TW/components/modals/deleteBucketModal.json';
 import deleteConfirmModal from '@/locales/zh-TW/components/modals/deleteConfirmModal.json';
 import deleteResultModal from '@/locales/zh-TW/components/modals/deleteResultModal.json';
 import historyModal from '@/locales/zh-TW/components/modals/historyModal.json';
@@ -33,6 +34,7 @@ const traditionalChineseResource: ResourceLanguage = {
   confirmModal: confirmModal,
   bucketPolicyModal: bucketPolicyModal,
   createBucketModal: createBucketModal,
+  deleteBucketModal: deleteBucketModal,
   deleteConfirmModal: deleteConfirmModal,
   deleteResultModal: deleteResultModal,
   historyModal: historyModal,

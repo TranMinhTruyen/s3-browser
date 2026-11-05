@@ -106,6 +106,12 @@ type (
 	BucketDetailInput = bucket.BucketDetailInput
 	// BucketDetailOutput re-exports bucket.BucketDetailOutput.
 	BucketDetailOutput = bucket.BucketDetailOutput
+	// DeleteBucketInput re-exports bucket.DeleteBucketInput.
+	DeleteBucketInput = bucket.DeleteBucketInput
+	// DeleteBucketInfoOutput re-exports bucket.DeleteBucketInfoOutput.
+	DeleteBucketInfoOutput = bucket.DeleteBucketInfoOutput
+	// DeleteBucketOutput re-exports bucket.DeleteBucketOutput.
+	DeleteBucketOutput = bucket.DeleteBucketOutput
 )
 
 const (

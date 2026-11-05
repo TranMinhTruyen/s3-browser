@@ -39,6 +39,9 @@ var (
 	// Permission of bucket {bucket} saved.
 	S3S008 = "S3S008"
 
+	// Bucket {bucket} deleted.
+	S3S009 = "S3S009"
+
 	// ---- Error ----
 
 	// Access key or secret key is not valid for this endpoint.
@@ -192,7 +195,7 @@ var (
 	// Create bucket {bucket} error.
 	S3E053 = "S3E053"
 
-	// An anonymous connection can't create or change buckets.
+	// An anonymous connection can't create, change or delete buckets.
 	S3E054 = "S3E054"
 
 	// Get permission of bucket {bucket} error.
@@ -209,6 +212,18 @@ var (
 
 	// Bucket {bucket} does not exist.
 	S3E059 = "S3E059"
+
+	// Delete bucket {bucket} error.
+	S3E060 = "S3E060"
+
+	// Bucket {bucket} is not empty (new objects were added), it was not deleted.
+	S3E061 = "S3E061"
+
+	// Bucket {bucket} was not deleted: {failed} object(s) could not be deleted.
+	S3E062 = "S3E062"
+
+	// Bucket {bucket} has Object Lock and is not empty, it can't be deleted.
+	S3E063 = "S3E063"
 
 	// ---- Warning ----
 
@@ -446,6 +461,30 @@ func (m *Module) GetBucketDetail(
 	input models.BucketDetailInput,
 ) models.Output[models.BucketDetailOutput] {
 	return m.submoduleBucketEditMng.getBucketDetail(ctx, input)
+}
+
+// GetBucketDeleteInfo returns what the delete dialog needs: whether the bucket is empty (nil when unknown), its
+// versioning ("Enabled", "Suspended", "Off", empty when unknown) and whether Object Lock is enabled. Fails with
+// S3E006, S3E030, S3E054 (anonymous) or S3E059. ctx is the call context.
+func (m *Module) GetBucketDeleteInfo(
+	ctx context.Context,
+	input models.DeleteBucketInput,
+) models.Output[models.DeleteBucketInfoOutput] {
+	return m.submoduleBucketEditMng.getBucketDeleteInfo(ctx, input)
+}
+
+// DeleteBucket deletes every object, version and delete marker of the bucket, then the bucket itself. It can't be
+// undone. A bucket that is not empty and has Object Lock is refused before any object is deleted (S3E063); so is
+// one whose Object Lock can't be read (S3E060). It stops at the first batch with a failed key (S3E062, the body lists
+// the failures) without deleting the bucket. The body counts what was deleted even when Result is false. Other
+// failures: S3E054 (anonymous), S3E052 (denied), S3E059 (not found), S3E061 (new objects arrived), S3E060 (also a
+// timeout of 30 minutes). Closing the app stops it without a message. The access cache is reset on success.
+// ctx is the call context.
+func (m *Module) DeleteBucket(
+	ctx context.Context,
+	input models.DeleteBucketInput,
+) models.Output[models.DeleteBucketOutput] {
+	return m.submoduleBucketEditMng.deleteBucket(ctx, input)
 }
 
 // GetListObject returns the objects in the bucket specified in input,

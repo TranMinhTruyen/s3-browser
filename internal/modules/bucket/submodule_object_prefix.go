@@ -46,7 +46,8 @@ func isDeleteObjectsUnsupported(err error) bool {
 	return false
 }
 
-// batchDeleter deletes keys in batches and records the outcome. It serves deleteObject and deletePrefix.
+// batchDeleter deletes keys in batches and records the outcome. It serves deleteObject, deletePrefix and
+// deleteBucket (which deletes by version).
 type batchDeleter struct {
 	client  *s3.Client
 	bucket  string
@@ -60,6 +61,8 @@ type batchDeleter struct {
 	maxDetails int
 	// single is set once the provider rejected DeleteObjects.
 	single bool
+	// optFns are passed to every request, e.g. to set the region of the bucket.
+	optFns []func(*s3.Options)
 }
 
 // ok counts one deleted key.
@@ -78,34 +81,52 @@ func (d *batchDeleter) fail(key, detail string) {
 	}
 }
 
-// deleteBatch deletes keys (at most deleteBatchSize). A returned error is a call level
+// failID is fail for an object identifier: the version id, if any, is added to the detail.
+func (d *batchDeleter) failID(id types.ObjectIdentifier, detail string) {
+	if id.VersionId != nil {
+		detail += " (versionId " + *id.VersionId + ")"
+	}
+	d.fail(aws.ToString(id.Key), detail)
+}
+
+// idKey identifies an object version in a map.
+func idKey(id types.ObjectIdentifier) string {
+	return aws.ToString(id.Key) + "\x00" + aws.ToString(id.VersionId)
+}
+
+// deleteBatch deletes the current version of keys (at most deleteBatchSize). A returned error is a call level
 // error (canceled context, or expired credentials before any key was deleted); per key failures are recorded by d.fail.
 func (d *batchDeleter) deleteBatch(ctx context.Context, keys []string) error {
-	if len(keys) == 0 {
+	ids := make([]types.ObjectIdentifier, len(keys))
+	for i, k := range keys {
+		ids[i] = types.ObjectIdentifier{Key: aws.String(k)}
+	}
+	return d.deleteIDs(ctx, ids)
+}
+
+// deleteIDs is deleteBatch for object identifiers, which may carry a version id.
+func (d *batchDeleter) deleteIDs(ctx context.Context, ids []types.ObjectIdentifier) error {
+	if len(ids) == 0 {
 		return nil
 	}
 
 	if !d.single {
-		ids := make([]types.ObjectIdentifier, len(keys))
-		for i, k := range keys {
-			ids[i] = types.ObjectIdentifier{Key: aws.String(k)}
-		}
 		out, err := d.client.DeleteObjects(ctx, &s3.DeleteObjectsInput{
 			Bucket: aws.String(d.bucket),
 			Delete: &types.Delete{Objects: ids, Quiet: aws.Bool(true)},
-		})
+		}, d.optFns...)
 		switch {
 		case err == nil:
-			// Quiet mode: out only lists the keys that failed.
+			// Quiet mode: out only lists the objects that failed.
 			bad := make(map[string]struct{}, len(out.Errors))
 			for _, e := range out.Errors {
-				key := aws.ToString(e.Key)
-				bad[key] = struct{}{}
-				d.fail(key, strings.TrimSpace(aws.ToString(e.Code)+" "+aws.ToString(e.Message)))
+				id := types.ObjectIdentifier{Key: e.Key, VersionId: e.VersionId}
+				bad[idKey(id)] = struct{}{}
+				d.failID(id, strings.TrimSpace(aws.ToString(e.Code)+" "+aws.ToString(e.Message)))
 			}
-			for _, k := range keys {
-				if _, failed := bad[k]; !failed {
-					d.ok(k)
+			for _, id := range ids {
+				if _, failed := bad[idKey(id)]; !failed {
+					d.ok(aws.ToString(id.Key))
 				}
 			}
 			return nil
@@ -117,30 +138,31 @@ func (d *batchDeleter) deleteBatch(ctx context.Context, keys []string) error {
 			if d.deleted == 0 && isCredentialsExpired(err) {
 				return err
 			}
-			// The request itself failed: none of the keys is known to be deleted.
-			for _, k := range keys {
-				d.fail(k, UnwrapAwsError(err))
+			// The request itself failed: none of the objects is known to be deleted.
+			for _, id := range ids {
+				d.failID(id, UnwrapAwsError(err))
 			}
 			return nil
 		}
 	}
 
-	return d.deleteEach(ctx, keys)
+	return d.deleteEach(ctx, ids)
 }
 
-// deleteEach is the fallback for providers without DeleteObjects: one DeleteObject per key.
-func (d *batchDeleter) deleteEach(ctx context.Context, keys []string) error {
-	errs := make([]error, len(keys))
+// deleteEach is the fallback for providers without DeleteObjects: one DeleteObject per object.
+func (d *batchDeleter) deleteEach(ctx context.Context, ids []types.ObjectIdentifier) error {
+	errs := make([]error, len(ids))
 	var g errgroup.Group
-	// Not errgroup.WithContext: every failure is recorded per key in errs and g.Go returns nil,
-	// so one failed key must not cancel the other deletes in the batch.
+	// Not errgroup.WithContext: every failure is recorded per object in errs and g.Go returns nil,
+	// so one failed object must not cancel the other deletes in the batch.
 	g.SetLimit(deleteConcurrency)
-	for i, k := range keys {
+	for i, id := range ids {
 		g.Go(func() error {
 			_, errs[i] = d.client.DeleteObject(ctx, &s3.DeleteObjectInput{
-				Bucket: aws.String(d.bucket),
-				Key:    aws.String(k),
-			})
+				Bucket:    aws.String(d.bucket),
+				Key:       id.Key,
+				VersionId: id.VersionId,
+			}, d.optFns...)
 			return nil
 		})
 	}
@@ -149,7 +171,7 @@ func (d *batchDeleter) deleteEach(ctx context.Context, keys []string) error {
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
-	// Nothing deleted so far and every key of this batch failed: expired credentials is a call level error.
+	// Nothing deleted so far and every object of this batch failed: expired credentials is a call level error.
 	if d.deleted == 0 && !slices.Contains(errs, nil) {
 		if i := slices.IndexFunc(errs, isCredentialsExpired); i >= 0 {
 			return errs[i]
@@ -157,9 +179,9 @@ func (d *batchDeleter) deleteEach(ctx context.Context, keys []string) error {
 	}
 	for i, err := range errs {
 		if err != nil {
-			d.fail(keys[i], UnwrapAwsError(err))
+			d.failID(ids[i], UnwrapAwsError(err))
 		} else {
-			d.ok(keys[i])
+			d.ok(aws.ToString(ids[i].Key))
 		}
 	}
 	return nil

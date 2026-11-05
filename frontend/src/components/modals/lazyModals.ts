@@ -73,3 +73,7 @@ export const showCreateBucketModal = async (
 export const showBucketPolicyModal = async (
   props: Parameters<typeof import('@/components/modals/bucket/BucketPolicyModal')['default']['show']>[0]
 ) => (await loadModal(() => import('@/components/modals/bucket/BucketPolicyModal')))?.default.show(props);
+
+export const showDeleteBucketModal = async (
+  props: Parameters<typeof import('@/components/modals/bucket/DeleteBucketModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/components/modals/bucket/DeleteBucketModal')))?.default.show(props);

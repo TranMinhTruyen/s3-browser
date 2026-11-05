@@ -12,6 +12,7 @@ import {
   showBucketPolicyModal,
   showConnectModal,
   showCreateBucketModal,
+  showDeleteBucketModal,
   showUploadPickerModal,
 } from '@/components/modals/lazyModals';
 import TabDetail from '@/pages/tab/components/TabDetail';
@@ -24,6 +25,7 @@ type BucketStubProps = {
   active: boolean;
   onSelectBucket: (bucket?: string) => void;
   onEditPolicy: (bucket?: string) => void;
+  onDeleteBucket: (bucket?: string) => void;
   ref: Ref<unknown>;
 };
 type ObjectStubProps = { bucket?: string; keyword?: string; ref: Ref<unknown> };
@@ -39,6 +41,7 @@ vi.mock('@/pages/tab/bucket/BucketListView', () => ({
     keyword,
     onSelectBucket,
     onEditPolicy,
+    onDeleteBucket,
     ref,
   }: BucketStubProps) {
     useImperativeHandle(ref, () => ({ onRefresh: h.bucketRefresh }), []);
@@ -58,6 +61,12 @@ vi.mock('@/pages/tab/bucket/BucketListView', () => ({
         </button>
         <button type="button" onClick={() => onEditPolicy(undefined)}>
           edit nothing
+        </button>
+        <button type="button" onClick={() => onDeleteBucket('my-bucket')}>
+          delete bucket
+        </button>
+        <button type="button" onClick={() => onDeleteBucket(undefined)}>
+          delete nothing
         </button>
       </div>
     );
@@ -89,6 +98,7 @@ vi.mock('@/components/modals/lazyModals', () => ({
   showUploadPickerModal: vi.fn(),
   showCreateBucketModal: vi.fn(),
   showBucketPolicyModal: vi.fn(),
+  showDeleteBucketModal: vi.fn(),
 }));
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn() }));
@@ -416,6 +426,83 @@ describe('TabDetail', () => {
       await user.click(screen.getByText('edit policy'));
 
       expect(showBucketPolicyModal).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('delete bucket', () => {
+    const deleted = { bucketDeleted: true, deleted: 2, failed: 0, failures: [] };
+    const original = useTabListStore.getState().removeBucket;
+
+    beforeEach(() => {
+      vi.mocked(showDeleteBucketModal).mockReset();
+      h.bucketRefresh.mockReset();
+      h.bucketRefresh.mockResolvedValue(undefined);
+      setProfile({ isConnected: true });
+    });
+
+    afterEach(() => {
+      useTabListStore.setState({ removeBucket: original });
+    });
+
+    it('opens the modal with the connection, then removes the bucket from the tabs and refreshes', async () => {
+      vi.mocked(showDeleteBucketModal).mockResolvedValue(deleted as never);
+      const removeBucket = vi.fn();
+      useTabListStore.setState({ removeBucket });
+      const user = setup();
+
+      await user.click(screen.getByText('delete bucket'));
+
+      expect(showDeleteBucketModal).toHaveBeenCalledExactlyOnceWith({
+        connectionId: 'p1',
+        profileName: 'Prof',
+        bucket: 'my-bucket',
+      });
+      await waitFor(() => expect(h.bucketRefresh).toHaveBeenCalledTimes(1));
+      expect(removeBucket).toHaveBeenCalledExactlyOnceWith('p1', 'my-bucket');
+    });
+
+    it('only refreshes when the bucket itself was not deleted', async () => {
+      vi.mocked(showDeleteBucketModal).mockResolvedValue({ ...deleted, bucketDeleted: false, failed: 1 } as never);
+      const removeBucket = vi.fn();
+      useTabListStore.setState({ removeBucket });
+      const user = setup();
+
+      await user.click(screen.getByText('delete bucket'));
+
+      await waitFor(() => expect(h.bucketRefresh).toHaveBeenCalledTimes(1));
+      expect(removeBucket).not.toHaveBeenCalled();
+    });
+
+    it.each([[null], [undefined]])('does nothing when the modal resolves %s', async result => {
+      vi.mocked(showDeleteBucketModal).mockResolvedValue(result as never);
+      const removeBucket = vi.fn();
+      useTabListStore.setState({ removeBucket });
+      const user = setup();
+
+      await user.click(screen.getByText('delete bucket'));
+      await act(async () => {});
+
+      expect(showDeleteBucketModal).toHaveBeenCalledTimes(1);
+      expect(removeBucket).not.toHaveBeenCalled();
+      expect(h.bucketRefresh).not.toHaveBeenCalled();
+    });
+
+    it('ignores a request without a bucket name', async () => {
+      const user = setup();
+
+      await user.click(screen.getByText('delete nothing'));
+
+      expect(showDeleteBucketModal).not.toHaveBeenCalled();
+    });
+
+    it('ignores a request without a profile', async () => {
+      setTab({ profileId: null });
+      useProfileStore.setState({ connectionProfiles: {} });
+      const user = setup();
+
+      await user.click(screen.getByText('delete bucket'));
+
+      expect(showDeleteBucketModal).not.toHaveBeenCalled();
     });
   });
 

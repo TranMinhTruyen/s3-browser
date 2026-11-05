@@ -14,6 +14,7 @@
   },
   "menu": {
     "detail": "详情",
-    "editPolicy": "访问权限"
+    "editPolicy": "访问权限",
+    "delete": "删除"
   }
 }

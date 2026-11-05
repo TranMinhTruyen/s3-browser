@@ -58,6 +58,7 @@ function renderList({
   const ref = createRef<BucketListViewRef>();
   const onSelectBucket = vi.fn();
   const onEditPolicy = vi.fn();
+  const onDeleteBucket = vi.fn();
   const ui = (pr: ConnectionProfileOutput | null | undefined, kw = keyword) => (
     <BucketListView
       tabId="tab-1"
@@ -67,6 +68,7 @@ function renderList({
       keyword={kw}
       onSelectBucket={onSelectBucket}
       onEditPolicy={onEditPolicy}
+      onDeleteBucket={onDeleteBucket}
       ref={ref}
     />
   );
@@ -77,6 +79,7 @@ function renderList({
     scrollRef,
     onSelectBucket,
     onEditPolicy,
+    onDeleteBucket,
     rerenderWith: (pr: ConnectionProfileOutput | null) => view.rerender(ui(pr)),
     setKeyword: (kw?: string) => view.rerender(ui(p, kw)),
   };
@@ -880,10 +883,21 @@ describe('BucketListView row menu', () => {
     await screen.findByText('alpha');
 
     await userEvent.click(moreActions(0));
-    expect(await items()).toEqual(['Details', 'Access permission']);
+    expect(await items()).toEqual(['Details', 'Access permission', 'Delete']);
     await userEvent.click(screen.getByRole('menuitem', { name: 'Access permission', hidden: true }));
 
     expect(onEditPolicy).toHaveBeenCalledExactlyOnceWith('alpha');
+    expect(onSelectBucket).not.toHaveBeenCalled();
+  });
+
+  it('reports the bucket to delete', async () => {
+    const { onDeleteBucket, onSelectBucket } = renderList();
+    await screen.findByText('alpha');
+
+    await userEvent.click(moreActions(0));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Delete', hidden: true }));
+
+    expect(onDeleteBucket).toHaveBeenCalledExactlyOnceWith('alpha');
     expect(onSelectBucket).not.toHaveBeenCalled();
   });
 

@@ -11,6 +11,7 @@ import {
   showBucketPolicyModal,
   showConnectModal,
   showCreateBucketModal,
+  showDeleteBucketModal,
   showUploadPickerModal,
 } from '@/components/modals/lazyModals';
 import BucketListView, { BucketListViewRef } from '@/pages/tab/bucket/BucketListView';
@@ -62,6 +63,7 @@ function TabDetail(props: TabDetailProps) {
   const changeCurrentView = useTabListStore(s => s.changeCurrentView);
   const changePrefix = useTabListStore(s => s.changePrefix);
   const clearSelectItem = useTabListStore(s => s.clearSelectItem);
+  const removeBucket = useTabListStore(s => s.removeBucket);
 
   const onClickConnect = useCallback(async () => {
     if (isNullOrEmpty(selectedProfileId)) return;
@@ -202,6 +204,22 @@ function TabDetail(props: TabDetailProps) {
     [selectedProfile]
   );
 
+  const onDeleteBucket = useCallback(
+    async (bucket: string | undefined) => {
+      if (!selectedProfile?.id || !bucket) return;
+      const result = await showDeleteBucketModal({
+        connectionId: selectedProfile.id,
+        profileName: selectedProfile.name,
+        bucket,
+      });
+      if (!result) return;
+      if (result.bucketDeleted) removeBucket(selectedProfile.id, bucket);
+      // Only this tab's list is refreshed; other tabs show the bucket until they are refreshed.
+      await bucketListRef.current?.onRefresh?.();
+    },
+    [selectedProfile, removeBucket]
+  );
+
   // Activity hides the tab with display none, which resets the scroll offset: save it on hide, restore on show.
   const savedScrollTop = useRef(0);
   useLayoutEffect(() => {
@@ -223,6 +241,7 @@ function TabDetail(props: TabDetailProps) {
           keyword={currentView === 'bucketList' ? keyword : ''}
           onSelectBucket={onChangeSelectBucket}
           onEditPolicy={onEditBucketPolicy}
+          onDeleteBucket={onDeleteBucket}
           ref={bucketListRef}
         />
       </Stack>

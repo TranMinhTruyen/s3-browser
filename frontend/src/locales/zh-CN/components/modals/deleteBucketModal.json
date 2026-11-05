@@ -1,0 +1,20 @@
+{
+  "title": "删除存储桶",
+  "checking": "正在检查存储桶...",
+  "deleting": "正在删除...",
+  "warning": {
+    "irreversible": "此操作无法撤销，存储桶将被永久删除。",
+    "notEmpty": "存储桶不为空，其中的所有对象都将被删除。",
+    "unknown": "无法检查存储桶是否为空。如果其中有对象，将全部被删除。",
+    "versioned": "已启用或曾启用版本控制：所有版本和删除标记都将被永久删除。",
+    "objectLockBlocked": "存储桶 {{bucket}} 启用了对象锁定且不为空，无法删除。",
+    "objectLockUnknown": "存储桶启用了对象锁定。如果其中有对象，则无法删除。"
+  },
+  "label": {
+    "confirmName": "输入 {{bucket}} 以确认"
+  },
+  "placeholder": {
+    "confirmName": "存储桶名称"
+  },
+  "delete": "删除"
+}

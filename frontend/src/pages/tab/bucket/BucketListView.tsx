@@ -33,12 +33,13 @@ type BucketListViewProps = {
   keyword?: string;
   onSelectBucket?: (bucketName: string | undefined) => void;
   onEditPolicy?: (bucketName: string | undefined) => void;
+  onDeleteBucket?: (bucketName: string | undefined) => void;
   ref?: Ref<BucketListViewRef>;
 };
 
 /** Virtualized bucket list of the active connection; exposes imperative actions via `BucketListViewRef`. */
 function BucketListView(props: BucketListViewProps) {
-  const { tabId, profile, active, scrollRef, keyword = '', onSelectBucket, onEditPolicy, ref } = props;
+  const { tabId, profile, active, scrollRef, keyword = '', onSelectBucket, onEditPolicy, onDeleteBucket, ref } = props;
 
   const { t } = useTranslation('bucket', { keyPrefix: 'page' });
 
@@ -218,6 +219,7 @@ function BucketListView(props: BucketListViewProps) {
           ...item,
           inaccessible: result.inaccessible,
           readOnly: result.readOnly,
+          deleteDenied: result.deleteDenied,
           accessPending: result.accessPending,
         };
       });
@@ -289,6 +291,7 @@ function BucketListView(props: BucketListViewProps) {
             onSelectBucket={onSelectBucket}
             onOpenDetail={onOpenDetail}
             onEditPolicy={onEditPolicy}
+            onDeleteBucket={onDeleteBucket}
           />
         </div>
       ))}
