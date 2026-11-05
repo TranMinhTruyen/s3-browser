@@ -6,6 +6,8 @@ import { Bucket } from '@wails/S3Browser/models/bucket';
 import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LIST_ROW_GAP, LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
+import { useTabListStore } from '@/common/stores/tabListStore';
+import { isAnonymous } from '@/common/utils/authUtils';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { onTabGone } from '@/common/utils/tabUtils';
 import Button from '@/components/buttons/Button';
@@ -30,12 +32,13 @@ type BucketListViewProps = {
   // Applied search keyword; empty means the normal lazy-loaded list.
   keyword?: string;
   onSelectBucket?: (bucketName: string | undefined) => void;
+  onEditPolicy?: (bucketName: string | undefined) => void;
   ref?: Ref<BucketListViewRef>;
 };
 
 /** Virtualized bucket list of the active connection; exposes imperative actions via `BucketListViewRef`. */
 function BucketListView(props: BucketListViewProps) {
-  const { tabId, profile, active, scrollRef, keyword = '', onSelectBucket, ref } = props;
+  const { tabId, profile, active, scrollRef, keyword = '', onSelectBucket, onEditPolicy, ref } = props;
 
   const { t } = useTranslation('bucket', { keyPrefix: 'page' });
 
@@ -51,7 +54,10 @@ function BucketListView(props: BucketListViewProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [scrollMargin, setScrollMargin] = useState(0);
 
+  const openBucketDetail = useTabListStore(s => s.openBucketDetail);
+
   const connectionId = profile?.id;
+  const canEdit = !!profile && !isAnonymous(profile);
   const profileName = profile?.name;
   const listKey = `${connectionId}|${keyword}`;
   const requestCtrl = useRef<AbortController>(null);
@@ -165,6 +171,8 @@ function BucketListView(props: BucketListViewProps) {
     scrollRef.current?.scrollTo({ top: 0 });
   }, [scrollRef, loadFirstPage]);
 
+  const onOpenDetail = useCallback((item: Bucket) => openBucketDetail(tabId, item), [openBucketDetail, tabId]);
+
   const onClickLoadMore = useCallback(() => {
     setLoadMoreError(false);
     return loadNextPage();
@@ -275,7 +283,13 @@ function BucketListView(props: BucketListViewProps) {
             transform: `translateY(${row.start - scrollMargin}px)`,
           }}
         >
-          <BucketItem item={bucketList[row.index]} onSelectBucket={onSelectBucket} />
+          <BucketItem
+            item={bucketList[row.index]}
+            canEdit={canEdit}
+            onSelectBucket={onSelectBucket}
+            onOpenDetail={onOpenDetail}
+            onEditPolicy={onEditPolicy}
+          />
         </div>
       ))}
       {isLoadingMore || (isLoadingFirst && keyword && connectionId) ? (

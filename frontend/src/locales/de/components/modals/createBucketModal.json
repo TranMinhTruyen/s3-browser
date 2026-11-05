@@ -1,0 +1,13 @@
+{
+  "title": "Bucket erstellen",
+  "label": {
+    "name": "Bucket-Name"
+  },
+  "placeholder": {
+    "name": "my-bucket"
+  },
+  "hint": {
+    "name": "3–63 Zeichen: Kleinbuchstaben, Ziffern, Punkte und Bindestriche."
+  },
+  "create": "Erstellen"
+}

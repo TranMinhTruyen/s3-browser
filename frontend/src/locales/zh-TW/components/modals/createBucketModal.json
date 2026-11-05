@@ -1,0 +1,13 @@
+{
+  "title": "建立儲存貯體",
+  "label": {
+    "name": "儲存貯體名稱"
+  },
+  "placeholder": {
+    "name": "my-bucket"
+  },
+  "hint": {
+    "name": "3-63 個字元：小寫字母、數字、句點和連字號。"
+  },
+  "create": "建立"
+}

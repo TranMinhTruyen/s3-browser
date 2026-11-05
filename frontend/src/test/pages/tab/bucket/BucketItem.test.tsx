@@ -117,3 +117,82 @@ describe('BucketItem inaccessible click', () => {
     expect(ConfirmModal.show).not.toHaveBeenCalled();
   });
 });
+
+describe('BucketItem menu', () => {
+  // jsdom has no layout, so Mantine marks the dropdown as clipped (display: none): query it with hidden: true.
+  const moreActions = () => screen.getByRole('button', { name: 'More actions' });
+
+  it('does not mount the menu until the button is clicked', () => {
+    renderWithProviders(<BucketItem item={bucket} canEdit />);
+
+    expect(screen.queryByRole('menu', { hidden: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { hidden: true, name: 'Details' })).not.toBeInTheDocument();
+  });
+
+  it('opens the menu from the button without selecting the bucket', async () => {
+    const onSelectBucket = vi.fn();
+    renderWithProviders(<BucketItem item={bucket} canEdit onSelectBucket={onSelectBucket} />);
+
+    await userEvent.click(moreActions());
+
+    expect((await screen.findAllByRole('menuitem', { hidden: true })).map(i => i.textContent)).toEqual([
+      'Details',
+      'Access permission',
+    ]);
+    expect(onSelectBucket).not.toHaveBeenCalled();
+  });
+
+  it('opens the detail of the bucket from "Details" and closes the menu', async () => {
+    const onOpenDetail = vi.fn();
+    renderWithProviders(<BucketItem item={bucket} canEdit onOpenDetail={onOpenDetail} />);
+
+    await userEvent.click(moreActions());
+    await userEvent.click(await screen.findByRole('menuitem', { hidden: true, name: 'Details' }));
+
+    expect(onOpenDetail).toHaveBeenCalledExactlyOnceWith(bucket);
+    await waitFor(() => expect(screen.queryByRole('menu', { hidden: true })).not.toBeInTheDocument());
+  });
+
+  it('edits the policy of the bucket by name from "Access permission" and closes the menu', async () => {
+    const onEditPolicy = vi.fn();
+    renderWithProviders(<BucketItem item={bucket} canEdit onEditPolicy={onEditPolicy} />);
+
+    await userEvent.click(moreActions());
+    await userEvent.click(await screen.findByRole('menuitem', { hidden: true, name: 'Access permission' }));
+
+    expect(onEditPolicy).toHaveBeenCalledExactlyOnceWith('my-bucket');
+    await waitFor(() => expect(screen.queryByRole('menu', { hidden: true })).not.toBeInTheDocument());
+  });
+
+  it('does nothing when an item is chosen without a handler', async () => {
+    renderWithProviders(<BucketItem item={bucket} canEdit />);
+
+    await userEvent.click(moreActions());
+    await userEvent.click(await screen.findByRole('menuitem', { hidden: true, name: 'Details' }));
+    await waitFor(() => expect(screen.queryByRole('menu', { hidden: true })).not.toBeInTheDocument());
+    await userEvent.click(moreActions());
+    await userEvent.click(await screen.findByRole('menuitem', { hidden: true, name: 'Access permission' }));
+
+    await waitFor(() => expect(screen.queryByRole('menu', { hidden: true })).not.toBeInTheDocument());
+  });
+
+  it('gives the focus back to the button when the menu closes', async () => {
+    renderWithProviders(<BucketItem item={bucket} canEdit />);
+
+    await userEvent.click(moreActions());
+    await screen.findByRole('menu', { hidden: true });
+    await userEvent.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.queryByRole('menu', { hidden: true })).not.toBeInTheDocument());
+    await waitFor(() => expect(moreActions()).toHaveFocus());
+  });
+
+  it('only has "Details" without edit permission (anonymous connection)', async () => {
+    renderWithProviders(<BucketItem item={bucket} />);
+
+    await userEvent.click(moreActions());
+
+    expect(await screen.findByRole('menuitem', { hidden: true, name: 'Details' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { hidden: true, name: 'Access permission' })).not.toBeInTheDocument();
+  });
+});

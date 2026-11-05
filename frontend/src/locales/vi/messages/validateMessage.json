@@ -2,5 +2,11 @@
   "V000001": "{0} là bắt buộc",
   "V000002": "{0} không được vượt quá {1} ký tự",
   "V000003": "{0} phải nằm trong khoảng {1} đến {2}",
-  "V000004": "{0} không hợp lệ"
+  "V000004": "{0} không hợp lệ",
+  "V000005": "{0} chỉ được chứa chữ thường, số, dấu chấm và dấu gạch ngang",
+  "V000006": "{0} phải bắt đầu và kết thúc bằng chữ cái hoặc số",
+  "V000007": "{0} không được chứa hai dấu chấm liền nhau",
+  "V000008": "{0} không được có dạng địa chỉ IP",
+  "V000009": "{0} không được bắt đầu bằng tiền tố dành riêng",
+  "V000010": "{0} không được kết thúc bằng hậu tố dành riêng"
 }

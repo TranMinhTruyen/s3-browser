@@ -1,0 +1,53 @@
+{
+  "title": "Bucket-Details",
+  "tooltip": {
+    "close": "Schließen"
+  },
+  "status": {
+    "loadError": "Details konnten nicht geladen werden",
+    "retry": "Erneut versuchen"
+  },
+  "section": {
+    "basic": "Allgemein",
+    "access": "Zugriff",
+    "config": "Konfiguration"
+  },
+  "label": {
+    "name": "Name",
+    "createDate": "Erstellungsdatum",
+    "region": "Region",
+    "arn": "ARN",
+    "endpointUrl": "Endpunkt-URL",
+    "policy": "Richtlinie",
+    "publicBlock": "Öffentlichen Zugriff blockieren",
+    "versioning": "Versionierung",
+    "encryption": "Standardverschlüsselung",
+    "objectLock": "Objektsperre",
+    "tags": "Tags",
+    "rootCount": "Objekte im Stammverzeichnis"
+  },
+  "value": {
+    "policy": {
+      "private": "Privat",
+      "public": "Öffentlich (nur Lesen)",
+      "custom": "Benutzerdefiniert"
+    },
+    "versioning": {
+      "enabled": "Aktiviert",
+      "suspended": "Ausgesetzt",
+      "off": "Aus"
+    },
+    "encryption": {
+      "none": "Keine"
+    },
+    "objectLock": {
+      "enabled": "Aktiviert",
+      "disabled": "Deaktiviert"
+    },
+    "publicBlock": {
+      "on": "Ein",
+      "off": "Aus"
+    },
+    "rootCountCapped": "{{count}}+"
+  }
+}

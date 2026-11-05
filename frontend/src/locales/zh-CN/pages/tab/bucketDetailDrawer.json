@@ -1,0 +1,53 @@
+{
+  "title": "存储桶详情",
+  "tooltip": {
+    "close": "关闭"
+  },
+  "status": {
+    "loadError": "无法加载详情",
+    "retry": "重试"
+  },
+  "section": {
+    "basic": "基本信息",
+    "access": "访问",
+    "config": "配置"
+  },
+  "label": {
+    "name": "名称",
+    "createDate": "创建日期",
+    "region": "区域",
+    "arn": "ARN",
+    "endpointUrl": "终端节点 URL",
+    "policy": "策略",
+    "publicBlock": "阻止公有访问",
+    "versioning": "版本控制",
+    "encryption": "默认加密",
+    "objectLock": "对象锁定",
+    "tags": "标签",
+    "rootCount": "根目录对象数"
+  },
+  "value": {
+    "policy": {
+      "private": "私有",
+      "public": "公开（只读）",
+      "custom": "自定义"
+    },
+    "versioning": {
+      "enabled": "已启用",
+      "suspended": "已暂停",
+      "off": "关闭"
+    },
+    "encryption": {
+      "none": "无"
+    },
+    "objectLock": {
+      "enabled": "已启用",
+      "disabled": "已禁用"
+    },
+    "publicBlock": {
+      "on": "开启",
+      "off": "关闭"
+    },
+    "rootCountCapped": "{{count}}+"
+  }
+}

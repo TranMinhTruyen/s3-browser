@@ -215,7 +215,7 @@ func loadAccountAccess(ctx context.Context, conn *global.S3Conn) bool {
 	}
 	pol, parseErr := policy.ParseConfig(bytes.NewReader(info.Policy))
 	// IsAllowed is evaluated without request conditions, so a "no" is only trusted for a simple policy.
-	simple := !bytes.Contains(info.Policy, []byte(`"Condition"`)) && !bytes.Contains(info.Policy, []byte("${"))
+	simple := isSimplePolicy(info.Policy)
 	for _, b := range info.Buckets {
 		conn.Access.Set(global.AccessWrite, b.Name, !b.Access.Write, gen)
 		canList := parseErr == nil && pol.IsAllowed(policy.Args{
@@ -234,6 +234,12 @@ func loadAccountAccess(ctx context.Context, conn *global.S3Conn) bool {
 	}
 	conn.Access.MarkAccount(gen)
 	return true
+}
+
+// isSimplePolicy reports whether the policy has no Condition nor variable, so IsAllowed (evaluated without request
+// conditions) can be trusted when it says "no".
+func isSimplePolicy(raw []byte) bool {
+	return !bytes.Contains(raw, []byte(`"Condition"`)) && !bytes.Contains(raw, []byte("${"))
 }
 
 // checkDenied sets the flag of each bucket (skipping the Inaccessible ones) from the cache, and runs probe in

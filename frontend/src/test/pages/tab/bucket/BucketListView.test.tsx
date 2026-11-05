@@ -57,6 +57,7 @@ function renderList({
   const scrollRef = { current: document.createElement('div') } as RefObject<HTMLElement | null>;
   const ref = createRef<BucketListViewRef>();
   const onSelectBucket = vi.fn();
+  const onEditPolicy = vi.fn();
   const ui = (pr: ConnectionProfileOutput | null | undefined, kw = keyword) => (
     <BucketListView
       tabId="tab-1"
@@ -65,6 +66,7 @@ function renderList({
       scrollRef={scrollRef}
       keyword={kw}
       onSelectBucket={onSelectBucket}
+      onEditPolicy={onEditPolicy}
       ref={ref}
     />
   );
@@ -74,6 +76,7 @@ function renderList({
     ref,
     scrollRef,
     onSelectBucket,
+    onEditPolicy,
     rerenderWith: (pr: ConnectionProfileOutput | null) => view.rerender(ui(pr)),
     setKeyword: (kw?: string) => view.rerender(ui(p, kw)),
   };
@@ -847,5 +850,49 @@ describe('BucketListView', () => {
 
       expect(captured.signal?.aborted).toBe(true);
     });
+  });
+});
+
+describe('BucketListView row menu', () => {
+  const moreActions = (index = 0) => screen.getAllByRole('button', { name: 'More actions' })[index];
+  const items = async () => (await screen.findAllByRole('menuitem', { hidden: true })).map(i => i.textContent);
+
+  beforeEach(() => {
+    virtual.endIndex = null;
+    queue = [page([b('alpha'), b('beta')])];
+    callIPCMock.mockImplementation((async () => (queue.length > 1 ? queue.shift() : queue[0])) as never);
+    useTabListStore.setState({ tabList: {} });
+  });
+
+  it('opens the detail of the clicked bucket in the store of its tab', async () => {
+    useTabListStore.setState({ tabList: { 'tab-1': { currentView: 'bucketList' } as never } });
+    renderList();
+    await screen.findByText('beta');
+
+    await userEvent.click(moreActions(1));
+    await userEvent.click((await screen.findAllByRole('menuitem', { hidden: true }))[0]);
+
+    expect(useTabListStore.getState().tabList['tab-1'].detailBucket).toMatchObject({ name: 'beta' });
+  });
+
+  it('offers "Details" and "Access permission" with credentials and reports the bucket to edit', async () => {
+    const { onEditPolicy, onSelectBucket } = renderList();
+    await screen.findByText('alpha');
+
+    await userEvent.click(moreActions(0));
+    expect(await items()).toEqual(['Details', 'Access permission']);
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Access permission', hidden: true }));
+
+    expect(onEditPolicy).toHaveBeenCalledExactlyOnceWith('alpha');
+    expect(onSelectBucket).not.toHaveBeenCalled();
+  });
+
+  it('offers only "Details" on an anonymous connection', async () => {
+    renderList({ profile: { ...profile, authType: 'anonymous' } as ConnectionProfileOutput });
+    await screen.findByText('alpha');
+
+    await userEvent.click(moreActions(0));
+
+    expect(await items()).toEqual(['Details']);
   });
 });

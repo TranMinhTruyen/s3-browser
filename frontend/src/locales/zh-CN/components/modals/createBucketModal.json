@@ -1,0 +1,13 @@
+{
+  "title": "创建存储桶",
+  "label": {
+    "name": "存储桶名称"
+  },
+  "placeholder": {
+    "name": "my-bucket"
+  },
+  "hint": {
+    "name": "3-63 个字符：小写字母、数字、点和连字符。"
+  },
+  "create": "创建"
+}

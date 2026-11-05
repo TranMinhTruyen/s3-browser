@@ -94,6 +94,18 @@ type (
 	UploadFinishedOutput = bucket.UploadFinishedOutput
 	// UploadStatus re-exports bucket.UploadStatus.
 	UploadStatus = bucket.UploadStatus
+	// CreateBucketInput re-exports bucket.CreateBucketInput.
+	CreateBucketInput = bucket.CreateBucketInput
+	// BucketPolicyInput re-exports bucket.BucketPolicyInput.
+	BucketPolicyInput = bucket.BucketPolicyInput
+	// BucketPolicyOutput re-exports bucket.BucketPolicyOutput.
+	BucketPolicyOutput = bucket.BucketPolicyOutput
+	// PutBucketPolicyInput re-exports bucket.PutBucketPolicyInput.
+	PutBucketPolicyInput = bucket.PutBucketPolicyInput
+	// BucketDetailInput re-exports bucket.BucketDetailInput.
+	BucketDetailInput = bucket.BucketDetailInput
+	// BucketDetailOutput re-exports bucket.BucketDetailOutput.
+	BucketDetailOutput = bucket.BucketDetailOutput
 )
 
 const (

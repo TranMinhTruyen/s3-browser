@@ -344,3 +344,52 @@ describe('tabListStore', () => {
     });
   });
 });
+
+describe('tabListStore bucket detail', () => {
+  const bucket = { name: 'bkt', creationDate: '2026-01-02T03:04:05' } as never;
+
+  beforeEach(() => {
+    state().reset();
+    vi.clearAllMocks();
+  });
+
+  it('openBucketDetail and closeBucketDetail set and clear the bucket of the tab', () => {
+    const id = activeId();
+    state().openBucketDetail(id, bucket);
+    expect(state().tabList[id].detailBucket).toEqual(bucket);
+    state().closeBucketDetail(id);
+    expect(state().tabList[id].detailBucket).toBeUndefined();
+  });
+
+  it('ignores an unknown tab', () => {
+    state().openBucketDetail('ghost', bucket);
+    state().closeBucketDetail('ghost');
+    expect(state().tabList.ghost).toBeUndefined();
+  });
+
+  it('changeCurrentView clears the bucket detail', () => {
+    const id = activeId();
+    state().openBucketDetail(id, bucket);
+    state().changeCurrentView(id, 'objectList', 'bkt');
+    expect(state().tabList[id].detailBucket).toBeUndefined();
+  });
+
+  it('resetViewByProfile and clearProfile clear the bucket detail of that profile only', () => {
+    const mine = activeId();
+    state().updateTab(mine, { profileId: 'p1' });
+    state().addTab();
+    const other = activeId();
+    state().updateTab(other, { profileId: 'p2' });
+    state().openBucketDetail(mine, bucket);
+    state().openBucketDetail(other, bucket);
+
+    state().resetViewByProfile('p1');
+    expect(state().tabList[mine].detailBucket).toBeUndefined();
+    expect(state().tabList[other].detailBucket).toEqual(bucket);
+
+    state().openBucketDetail(mine, bucket);
+    state().clearProfile('p1');
+    expect(state().tabList[mine].detailBucket).toBeUndefined();
+    expect(state().tabList[other].detailBucket).toEqual(bucket);
+  });
+});

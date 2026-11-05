@@ -2,7 +2,8 @@
   "empty": "尚無儲存貯體",
   "tooltip": {
     "bucketList": "儲存貯體清單",
-    "inaccessible": "無法存取此儲存貯體（沒有權限或儲存貯體不存在）。"
+    "inaccessible": "無法存取此儲存貯體（沒有權限或儲存貯體不存在）。",
+    "moreActions": "更多操作"
   },
   "label": {
     "createDate": "建立日期："
@@ -10,5 +11,9 @@
   "search": {
     "empty": "沒有符合的儲存貯體",
     "loadMore": "搜尋更多"
+  },
+  "menu": {
+    "detail": "詳細資料",
+    "editPolicy": "存取權限"
   }
 }

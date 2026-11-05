@@ -33,6 +33,12 @@ var (
 	// Upload file {name} success, key {key}.
 	S3S006 = "S3S006"
 
+	// Bucket {bucket} created.
+	S3S007 = "S3S007"
+
+	// Permission of bucket {bucket} saved.
+	S3S008 = "S3S008"
+
 	// ---- Error ----
 
 	// Access key or secret key is not valid for this endpoint.
@@ -174,6 +180,36 @@ var (
 	// CA certificate file {path} not found or has no valid certificate.
 	S3E049 = "S3E049"
 
+	// Bucket name {bucket} is already taken.
+	S3E050 = "S3E050"
+
+	// Bucket name {bucket} is invalid.
+	S3E051 = "S3E051"
+
+	// You do not have permission to change bucket {bucket}.
+	S3E052 = "S3E052"
+
+	// Create bucket {bucket} error.
+	S3E053 = "S3E053"
+
+	// An anonymous connection can't create or change buckets.
+	S3E054 = "S3E054"
+
+	// Get permission of bucket {bucket} error.
+	S3E055 = "S3E055"
+
+	// Save permission of bucket {bucket} error.
+	S3E056 = "S3E056"
+
+	// The bucket policy is invalid.
+	S3E057 = "S3E057"
+
+	// Block Public Access of bucket {bucket} does not allow a public policy.
+	S3E058 = "S3E058"
+
+	// Bucket {bucket} does not exist.
+	S3E059 = "S3E059"
+
 	// ---- Warning ----
 
 	// Access bucket is limited.
@@ -217,6 +253,7 @@ type Module struct {
 	submoduleDownloadHistoryMng *submoduleDownloadHistoryMng
 	submoduleConnMng            *submoduleConnMng
 	submoduleBucketMng          *submoduleBucketMng
+	submoduleBucketEditMng      *submoduleBucketEditMng
 	submoduleObjMng             *submoduleObjMng
 	submoduleSearchMng          *submoduleSearchMng
 	submoduleAwsProfilesMng     *submoduleAwsProfilesMng
@@ -239,6 +276,7 @@ func NewModule(
 	submoduleDownloadHistoryMng := newSubmoduleDownloadHistoryMng(app, logger, db)
 	submoduleConnMng := newSubmoduleConnMng(app, logger, global, profileModule, submoduleCfgMng)
 	submoduleBucketMng := newSubmoduleBucketMng(app, logger, global)
+	submoduleBucketEditMng := newSubmoduleBucketEditMng(app, logger, global)
 	submoduleObjMng := newSubmoduleObjMng(app, logger, global)
 	submoduleSearchMng := newSubmoduleSearchMng(app, logger, global)
 	submoduleAwsProfilesMng := newSubmoduleAwsProfilesMng(logger)
@@ -255,6 +293,7 @@ func NewModule(
 		submoduleDownloadHistoryMng: submoduleDownloadHistoryMng,
 		submoduleConnMng:            submoduleConnMng,
 		submoduleBucketMng:          submoduleBucketMng,
+		submoduleBucketEditMng:      submoduleBucketEditMng,
 		submoduleObjMng:             submoduleObjMng,
 		submoduleSearchMng:          submoduleSearchMng,
 		submoduleAwsProfilesMng:     submoduleAwsProfilesMng,
@@ -367,6 +406,46 @@ func (m *Module) CheckBucketAccess(
 	input models.CheckBucketAccessInput,
 ) models.Output[models.CheckBucketAccessOutput] {
 	return m.submoduleBucketMng.checkBucketAccess(ctx, input)
+}
+
+// CreateBucket creates the bucket input.Bucket. On real AWS the region is input.Region, else the profile region,
+// else us-east-1; the request goes to that region and a region other than us-east-1 is sent as the
+// LocationConstraint. MinIO and custom endpoints ignore input.Region. Fails with S3E054 (anonymous), S3E050 (name
+// taken), S3E051 (name invalid), S3E052 (denied) or S3E053. The access cache is reset on success. ctx is the call
+// context.
+func (m *Module) CreateBucket(ctx context.Context, input models.CreateBucketInput) models.Output[any] {
+	return m.submoduleBucketEditMng.createBucket(ctx, input)
+}
+
+// GetBucketPolicy returns the access mode of the bucket (private, public read-only or custom), its policy JSON,
+// whether Block Public Access forbids a public policy (real AWS) and whether the account is known not to be allowed
+// to change the policy (MinIO with credentials). Fails with S3E054 (anonymous), S3E052 (denied) or S3E055. ctx is
+// the call context.
+func (m *Module) GetBucketPolicy(
+	ctx context.Context,
+	input models.BucketPolicyInput,
+) models.Output[models.BucketPolicyOutput] {
+	return m.submoduleBucketEditMng.getBucketPolicy(ctx, input)
+}
+
+// PutBucketPolicy sets the access mode of the bucket: private deletes the policy, public puts a read-only public
+// policy, custom puts input.Policy. It returns the state read back after saving. Fails with S3E054 (anonymous),
+// S3E057 (invalid policy), S3E058 (Block Public Access), S3E052 (denied) or S3E056. ctx is the call context.
+func (m *Module) PutBucketPolicy(
+	ctx context.Context,
+	input models.PutBucketPolicyInput,
+) models.Output[models.BucketPolicyOutput] {
+	return m.submoduleBucketEditMng.putBucketPolicy(ctx, input)
+}
+
+// GetBucketDetail returns the read-only detail of the bucket. An item that can't be read (denied, not supported,
+// timeout) is nil in the body. It works for anonymous connections too. Fails with S3E006, S3E030 or S3E059.
+// ctx is the call context: canceling it aborts the call without a message.
+func (m *Module) GetBucketDetail(
+	ctx context.Context,
+	input models.BucketDetailInput,
+) models.Output[models.BucketDetailOutput] {
+	return m.submoduleBucketEditMng.getBucketDetail(ctx, input)
 }
 
 // GetListObject returns the objects in the bucket specified in input,

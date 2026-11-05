@@ -12,7 +12,8 @@
     "scrollRight": "Прокрутить вправо",
     "search": "Поиск",
     "clearSearch": "Очистить поиск",
-    "upload": "Загрузить файлы"
+    "upload": "Загрузить файлы",
+    "createBucket": "Создать бакет"
   },
   "search": {
     "placeholderProfile": "Поиск профиля",

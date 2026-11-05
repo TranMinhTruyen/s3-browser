@@ -12,7 +12,8 @@
     "scrollRight": "Nach rechts scrollen",
     "search": "Suchen",
     "clearSearch": "Suche leeren",
-    "upload": "Dateien hochladen"
+    "upload": "Dateien hochladen",
+    "createBucket": "Bucket erstellen"
   },
   "search": {
     "placeholderProfile": "Profil suchen",

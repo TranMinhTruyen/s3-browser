@@ -1,8 +1,8 @@
-import { Box, CopyButton, DataList, Divider, Group, Loader, ScrollArea, Stack, Text } from '@mantine/core';
+import { Box, DataList, Divider, Group, Loader, ScrollArea, Stack, Text } from '@mantine/core';
 import { GetObjectDetail } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ObjectDetailOutput } from '@wails/S3Browser/models/bucket';
 import dayjs from 'dayjs';
-import { Check, Copy, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
@@ -11,8 +11,7 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import Button from '@/components/buttons/Button';
-
-const EMPTY_VALUE = '-';
+import DetailRow, { EMPTY_VALUE } from '@/components/display/DetailRow';
 
 // Go's zero time (0001-01-01) means the backend has no date.
 const formatDate = (value: string) => {
@@ -31,41 +30,6 @@ type ObjectDetailDrawerProps = {
 type DetailState =
   | { key: string; status: 'loading' | 'error' }
   | { key: string; status: 'done'; detail: ObjectDetailOutput };
-
-type DetailRowProps = {
-  label: string;
-  value?: string;
-  copyable?: boolean;
-};
-
-function DetailRow(props: DetailRowProps) {
-  const { label, value, copyable } = props;
-
-  const { t } = useTranslation('objectDetailDrawer', { keyPrefix: 'tooltip' });
-
-  return (
-    <DataList.Item>
-      <DataList.ItemLabel>{label}</DataList.ItemLabel>
-      {/* Full width so the copy button always sits at the right edge, not right after the text. */}
-      <DataList.ItemValue w="100%">
-        <Group gap="xs" wrap="nowrap" align="flex-start">
-          <Text inherit style={{ overflowWrap: 'anywhere', flex: 1 }}>
-            {value || EMPTY_VALUE}
-          </Text>
-          {copyable && value ? (
-            <CopyButton value={value}>
-              {({ copied, copy }) => (
-                <ActionIcon size="sm" onClick={copy} tooltip={copied ? t('copied') : t('copy')}>
-                  {copied ? <Check size="14px" /> : <Copy size="14px" />}
-                </ActionIcon>
-              )}
-            </CopyButton>
-          ) : null}
-        </Group>
-      </DataList.ItemValue>
-    </DataList.Item>
-  );
-}
 
 /** Right-side drawer showing metadata of the selected object (loaded lazily, cancelable). */
 function ObjectDetailDrawer(props: ObjectDetailDrawerProps) {

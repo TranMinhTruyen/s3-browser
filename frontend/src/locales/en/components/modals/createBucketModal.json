@@ -1,0 +1,13 @@
+{
+  "title": "Create bucket",
+  "label": {
+    "name": "Bucket name"
+  },
+  "placeholder": {
+    "name": "my-bucket"
+  },
+  "hint": {
+    "name": "3-63 characters: lowercase letters, numbers, dots and hyphens."
+  },
+  "create": "Create"
+}

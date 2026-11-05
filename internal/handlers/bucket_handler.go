@@ -94,6 +94,35 @@ func (h *BucketHandler) CheckBucketAccess(
 	return h.bucket.CheckBucketAccess(ctx, input)
 }
 
+// CreateBucket creates a bucket.
+func (h *BucketHandler) CreateBucket(ctx context.Context, input models.CreateBucketInput) models.Output[any] {
+	return h.bucket.CreateBucket(ctx, input)
+}
+
+// GetBucketPolicy returns the access mode and policy of a bucket.
+func (h *BucketHandler) GetBucketPolicy(
+	ctx context.Context,
+	input models.BucketPolicyInput,
+) models.Output[models.BucketPolicyOutput] {
+	return h.bucket.GetBucketPolicy(ctx, input)
+}
+
+// PutBucketPolicy sets the access mode of a bucket.
+func (h *BucketHandler) PutBucketPolicy(
+	ctx context.Context,
+	input models.PutBucketPolicyInput,
+) models.Output[models.BucketPolicyOutput] {
+	return h.bucket.PutBucketPolicy(ctx, input)
+}
+
+// GetBucketDetail returns the read-only detail of a bucket.
+func (h *BucketHandler) GetBucketDetail(
+	ctx context.Context,
+	input models.BucketDetailInput,
+) models.Output[models.BucketDetailOutput] {
+	return h.bucket.GetBucketDetail(ctx, input)
+}
+
 // GetListObject lists one page of objects under a prefix.
 func (h *BucketHandler) GetListObject(
 	ctx context.Context,

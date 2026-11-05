@@ -1,0 +1,13 @@
+{
+  "title": "Tạo bucket",
+  "label": {
+    "name": "Tên bucket"
+  },
+  "placeholder": {
+    "name": "my-bucket"
+  },
+  "hint": {
+    "name": "3-63 ký tự: chữ thường, số, dấu chấm và dấu gạch ngang."
+  },
+  "create": "Tạo"
+}

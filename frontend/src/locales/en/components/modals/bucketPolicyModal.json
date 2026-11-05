@@ -1,0 +1,23 @@
+{
+  "title": "Bucket permission",
+  "label": {
+    "bucket": "Bucket",
+    "policy": "Policy (JSON)"
+  },
+  "mode": {
+    "private": "Private",
+    "public": "Public (read-only)",
+    "custom": "Custom"
+  },
+  "hint": {
+    "private": "No bucket policy. Only authorized users can access this bucket.",
+    "public": "Anyone can list and read the objects of this bucket. Make sure it holds no private data.",
+    "custom": "Edit the bucket policy as JSON."
+  },
+  "warning": {
+    "publicBlocked": "Block Public Access is on for this bucket, so a public policy will be rejected.",
+    "editDenied": "Your account is not allowed to change the permission of this bucket.",
+    "loadError": "Could not load the permission of this bucket."
+  },
+  "save": "Save"
+}

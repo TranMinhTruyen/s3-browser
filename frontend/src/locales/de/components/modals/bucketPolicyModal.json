@@ -1,0 +1,23 @@
+{
+  "title": "Bucket-Berechtigung",
+  "label": {
+    "bucket": "Bucket",
+    "policy": "Richtlinie (JSON)"
+  },
+  "mode": {
+    "private": "Privat",
+    "public": "Öffentlich (nur Lesen)",
+    "custom": "Benutzerdefiniert"
+  },
+  "hint": {
+    "private": "Keine Bucket-Richtlinie. Nur autorisierte Benutzer können auf diesen Bucket zugreifen.",
+    "public": "Jeder kann die Objekte dieses Buckets auflisten und lesen. Stellen Sie sicher, dass er keine privaten Daten enthält.",
+    "custom": "Die Bucket-Richtlinie als JSON bearbeiten."
+  },
+  "warning": {
+    "publicBlocked": "Für diesen Bucket ist „Öffentlichen Zugriff blockieren“ aktiv, daher wird eine öffentliche Richtlinie abgelehnt.",
+    "editDenied": "Ihr Konto darf die Berechtigung dieses Buckets nicht ändern.",
+    "loadError": "Die Berechtigung dieses Buckets konnte nicht geladen werden."
+  },
+  "save": "Speichern"
+}

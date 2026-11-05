@@ -1,0 +1,53 @@
+{
+  "title": "儲存貯體詳細資料",
+  "tooltip": {
+    "close": "關閉"
+  },
+  "status": {
+    "loadError": "無法載入詳細資料",
+    "retry": "重試"
+  },
+  "section": {
+    "basic": "基本",
+    "access": "存取",
+    "config": "組態"
+  },
+  "label": {
+    "name": "名稱",
+    "createDate": "建立日期",
+    "region": "區域",
+    "arn": "ARN",
+    "endpointUrl": "端點 URL",
+    "policy": "政策",
+    "publicBlock": "封鎖公開存取",
+    "versioning": "版本控制",
+    "encryption": "預設加密",
+    "objectLock": "物件鎖定",
+    "tags": "標籤",
+    "rootCount": "根目錄物件數"
+  },
+  "value": {
+    "policy": {
+      "private": "私有",
+      "public": "公開（唯讀）",
+      "custom": "自訂"
+    },
+    "versioning": {
+      "enabled": "已啟用",
+      "suspended": "已暫停",
+      "off": "關閉"
+    },
+    "encryption": {
+      "none": "無"
+    },
+    "objectLock": {
+      "enabled": "已啟用",
+      "disabled": "已停用"
+    },
+    "publicBlock": {
+      "on": "開啟",
+      "off": "關閉"
+    },
+    "rootCountCapped": "{{count}}+"
+  }
+}

@@ -14,9 +14,7 @@
     "bytes": "{{size}} Bytes"
   },
   "tooltip": {
-    "close": "Schließen",
-    "copy": "Kopieren",
-    "copied": "Kopiert"
+    "close": "Schließen"
   },
   "status": {
     "loadError": "Details konnten nicht geladen werden",

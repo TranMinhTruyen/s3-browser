@@ -14,9 +14,7 @@
     "bytes": "{{size}} バイト"
   },
   "tooltip": {
-    "close": "閉じる",
-    "copy": "コピー",
-    "copied": "コピーしました"
+    "close": "閉じる"
   },
   "status": {
     "loadError": "詳細を読み込めませんでした",

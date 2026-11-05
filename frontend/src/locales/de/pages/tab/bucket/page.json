@@ -2,7 +2,8 @@
   "empty": "Noch keine Buckets",
   "tooltip": {
     "bucketList": "Bucket-Liste",
-    "inaccessible": "Kein Zugriff auf diesen Bucket (keine Berechtigung oder er existiert nicht)."
+    "inaccessible": "Kein Zugriff auf diesen Bucket (keine Berechtigung oder er existiert nicht).",
+    "moreActions": "Weitere Aktionen"
   },
   "label": {
     "createDate": "Erstellt am:"
@@ -10,5 +11,9 @@
   "search": {
     "empty": "Keine passenden Buckets",
     "loadMore": "Weiter suchen"
+  },
+  "menu": {
+    "detail": "Details",
+    "editPolicy": "Zugriffsberechtigung"
   }
 }

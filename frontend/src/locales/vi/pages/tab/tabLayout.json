@@ -12,7 +12,8 @@
     "scrollRight": "Cuộn sang phải",
     "search": "Tìm kiếm",
     "clearSearch": "Xoá tìm kiếm",
-    "upload": "Tải file lên"
+    "upload": "Tải file lên",
+    "createBucket": "Tạo bucket"
   },
   "search": {
     "placeholderProfile": "Tìm profile",

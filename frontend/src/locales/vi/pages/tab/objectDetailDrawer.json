@@ -14,9 +14,7 @@
     "bytes": "{{size}} byte"
   },
   "tooltip": {
-    "close": "Đóng",
-    "copy": "Sao chép",
-    "copied": "Đã sao chép"
+    "close": "Đóng"
   },
   "status": {
     "loadError": "Không tải được chi tiết",

@@ -1,0 +1,13 @@
+{
+  "title": "バケットを作成",
+  "label": {
+    "name": "バケット名"
+  },
+  "placeholder": {
+    "name": "my-bucket"
+  },
+  "hint": {
+    "name": "3〜63文字: 小文字、数字、ドット、ハイフン。"
+  },
+  "create": "作成"
+}

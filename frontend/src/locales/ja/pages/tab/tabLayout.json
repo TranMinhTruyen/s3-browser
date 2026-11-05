@@ -12,7 +12,8 @@
     "scrollRight": "右へスクロール",
     "search": "検索",
     "clearSearch": "検索をクリア",
-    "upload": "ファイルをアップロード"
+    "upload": "ファイルをアップロード",
+    "createBucket": "バケットを作成"
   },
   "search": {
     "placeholderProfile": "プロファイルを検索",

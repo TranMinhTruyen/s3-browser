@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { canAutoConnect, getAuthType, getRequiredSecrets, needsManualInput, needsMfa } from '@/common/utils/authUtils';
+import {
+  canAutoConnect,
+  getAuthType,
+  getRequiredSecrets,
+  isAnonymous,
+  needsManualInput,
+  needsMfa,
+} from '@/common/utils/authUtils';
 
 const mfa = { mfaSerial: 'arn:mfa' };
 
@@ -10,6 +17,14 @@ describe('authUtils', () => {
     [{ authType: 'sso' }, 'sso'],
   ])('getAuthType(%j) is %s', (profile, expected) => {
     expect(getAuthType(profile)).toBe(expected);
+  });
+
+  it.each([
+    [{ authType: 'anonymous' }, true],
+    [{}, false],
+    [{ authType: 'static' }, false],
+  ])('isAnonymous(%j) is %s', (profile, expected) => {
+    expect(isAnonymous(profile)).toBe(expected);
   });
 
   it.each([

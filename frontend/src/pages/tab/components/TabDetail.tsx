@@ -4,11 +4,17 @@ import { useShallow } from 'zustand/react/shallow';
 import { useConnectProfile } from '@/common/hooks/useConnectProfile';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
-import { needsManualInput } from '@/common/utils/authUtils';
+import { isAnonymous, needsManualInput } from '@/common/utils/authUtils';
 import { isNullOrEmpty } from '@/common/utils/stringUtils';
 import { ensureUploadIdle, runUpload } from '@/common/utils/uploadUtils';
-import { showConnectModal, showUploadPickerModal } from '@/components/modals/lazyModals';
+import {
+  showBucketPolicyModal,
+  showConnectModal,
+  showCreateBucketModal,
+  showUploadPickerModal,
+} from '@/components/modals/lazyModals';
 import BucketListView, { BucketListViewRef } from '@/pages/tab/bucket/BucketListView';
+import BucketDetailDrawer from '@/pages/tab/components/BucketDetailDrawer';
 import ObjectDetailDrawer from '@/pages/tab/components/ObjectDetailDrawer';
 import TabActionBar from '@/pages/tab/components/TabActionBar';
 import TabBreadcrumb from '@/pages/tab/components/TabBreadcrumb';
@@ -19,7 +25,7 @@ type TabDetailProps = {
   tabId: string;
 };
 
-/** Content of one tab: toolbar, breadcrumb, the bucket or object list and the object detail drawer. */
+/** Content of one tab: toolbar, breadcrumb, the bucket or object list and the detail drawer. */
 function TabDetail(props: TabDetailProps) {
   const { tabId } = props;
 
@@ -37,6 +43,7 @@ function TabDetail(props: TabDetailProps) {
     selectedProfileId ? s.connectionProfiles[selectedProfileId] : undefined
   );
   const hasDetail = useTabListStore(s => !!s.tabList[tabId]?.detailItem);
+  const hasBucketDetail = useTabListStore(s => !!s.tabList[tabId]?.detailBucket);
   const bucketListRef = useRef<BucketListViewRef>(null);
   const objectListRef = useRef<ObjectListViewRef>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -118,6 +125,7 @@ function TabDetail(props: TabDetailProps) {
         bucket: undefined,
         prefix: '',
         selectionItem: {},
+        detailBucket: undefined,
       });
     },
     [tabId, updateTab]
@@ -173,6 +181,27 @@ function TabDetail(props: TabDetailProps) {
     );
   }, [selectedProfile, currentView, selectedBucket, prefix, tabId]);
 
+  const onClickCreateBucket = useCallback(async () => {
+    if (!selectedProfile?.id) return;
+    // Only real AWS (no custom endpoint) lets the user choose the region of the new bucket.
+    const withRegion = selectedProfile.provider === 'aws' && !selectedProfile.endpoint;
+    const created = await showCreateBucketModal({
+      connectionId: selectedProfile.id,
+      profileName: selectedProfile.name,
+      withRegion,
+      defaultRegion: withRegion ? selectedProfile.region : undefined,
+    });
+    if (created) await bucketListRef.current?.onRefresh?.();
+  }, [selectedProfile]);
+
+  const onEditBucketPolicy = useCallback(
+    (bucket: string | undefined) => {
+      if (!selectedProfile?.id || !bucket) return;
+      return showBucketPolicyModal({ connectionId: selectedProfile.id, profileName: selectedProfile.name, bucket });
+    },
+    [selectedProfile]
+  );
+
   // Activity hides the tab with display none, which resets the scroll offset: save it on hide, restore on show.
   const savedScrollTop = useRef(0);
   useLayoutEffect(() => {
@@ -193,6 +222,7 @@ function TabDetail(props: TabDetailProps) {
           scrollRef={scrollRef}
           keyword={currentView === 'bucketList' ? keyword : ''}
           onSelectBucket={onChangeSelectBucket}
+          onEditPolicy={onEditBucketPolicy}
           ref={bucketListRef}
         />
       </Stack>
@@ -217,6 +247,7 @@ function TabDetail(props: TabDetailProps) {
         tabId={tabId}
         currentView={currentView}
         isConnected={isConnected}
+        isAnonymous={!!selectedProfile && isAnonymous(selectedProfile)}
         selectedProfileId={selectedProfileId}
         profileOptions={optionsData}
         prefix={prefix}
@@ -229,6 +260,7 @@ function TabDetail(props: TabDetailProps) {
         onSearch={onSearch}
         onClearSearch={onClearSearch}
         onClickUpload={onClickUpload}
+        onClickCreateBucket={onClickCreateBucket}
         onClickBack={onClickBack}
       />
 
@@ -260,6 +292,9 @@ function TabDetail(props: TabDetailProps) {
             profileName={selectedProfile.name}
             bucket={selectedBucket}
           />
+        ) : null}
+        {currentView === 'bucketList' && hasBucketDetail && selectedProfile?.id ? (
+          <BucketDetailDrawer tabId={tabId} connectionId={selectedProfile.id} profileName={selectedProfile.name} />
         ) : null}
       </Group>
     </Paper>

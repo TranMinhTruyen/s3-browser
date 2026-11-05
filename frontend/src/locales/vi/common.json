@@ -6,6 +6,10 @@
     "clear": "Xoá",
     "close": "Đóng"
   },
+  "tooltip": {
+    "copy": "Sao chép",
+    "copied": "Đã sao chép"
+  },
   "appName": "S3Browser",
   "window": {
     "minimise": "Thu nhỏ",

@@ -1,0 +1,53 @@
+{
+  "title": "Bucket details",
+  "tooltip": {
+    "close": "Close"
+  },
+  "status": {
+    "loadError": "Could not load details",
+    "retry": "Retry"
+  },
+  "section": {
+    "basic": "Basic",
+    "access": "Access",
+    "config": "Configuration"
+  },
+  "label": {
+    "name": "Name",
+    "createDate": "Create date",
+    "region": "Region",
+    "arn": "ARN",
+    "endpointUrl": "Endpoint URL",
+    "policy": "Policy",
+    "publicBlock": "Block Public Access",
+    "versioning": "Versioning",
+    "encryption": "Default encryption",
+    "objectLock": "Object lock",
+    "tags": "Tags",
+    "rootCount": "Objects at root"
+  },
+  "value": {
+    "policy": {
+      "private": "Private",
+      "public": "Public (read-only)",
+      "custom": "Custom"
+    },
+    "versioning": {
+      "enabled": "Enabled",
+      "suspended": "Suspended",
+      "off": "Off"
+    },
+    "encryption": {
+      "none": "None"
+    },
+    "objectLock": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "publicBlock": {
+      "on": "On",
+      "off": "Off"
+    },
+    "rootCountCapped": "{{count}}+"
+  }
+}

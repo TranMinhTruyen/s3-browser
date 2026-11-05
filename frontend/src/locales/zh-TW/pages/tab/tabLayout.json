@@ -12,7 +12,8 @@
     "scrollRight": "向右捲動",
     "search": "搜尋",
     "clearSearch": "清除搜尋",
-    "upload": "上傳檔案"
+    "upload": "上傳檔案",
+    "createBucket": "建立儲存貯體"
   },
   "search": {
     "placeholderProfile": "搜尋設定檔",
