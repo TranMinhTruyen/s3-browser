@@ -1,0 +1,20 @@
+{
+  "title": "Xoá bucket",
+  "checking": "Đang kiểm tra bucket...",
+  "deleting": "Đang xoá...",
+  "warning": {
+    "irreversible": "Không thể hoàn tác. Bucket sẽ bị xoá vĩnh viễn.",
+    "notEmpty": "Bucket không rỗng. Toàn bộ object trong bucket sẽ bị xoá.",
+    "unknown": "Không kiểm tra được bucket có rỗng hay không. Nếu còn object thì tất cả sẽ bị xoá.",
+    "versioned": "Versioning đang bật hoặc đã từng bật: mọi version và delete marker sẽ bị xoá vĩnh viễn.",
+    "objectLockBlocked": "Bucket {{bucket}} có Object Lock và không rỗng nên không thể xoá.",
+    "objectLockUnknown": "Bucket có Object Lock. Nếu còn object thì không thể xoá."
+  },
+  "label": {
+    "confirmName": "Nhập {{bucket}} để xác nhận"
+  },
+  "placeholder": {
+    "confirmName": "Tên bucket"
+  },
+  "delete": "Xoá"
+}

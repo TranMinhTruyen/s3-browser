@@ -1,0 +1,23 @@
+{
+  "title": "Quyền của bucket",
+  "label": {
+    "bucket": "Bucket",
+    "policy": "Policy (JSON)"
+  },
+  "mode": {
+    "private": "Riêng tư",
+    "public": "Công khai (chỉ đọc)",
+    "custom": "Tuỳ chỉnh"
+  },
+  "hint": {
+    "private": "Không có bucket policy. Chỉ người dùng được cấp quyền mới truy cập được bucket này.",
+    "public": "Bất kỳ ai cũng có thể liệt kê và đọc các object của bucket này. Hãy chắc chắn bucket không chứa dữ liệu riêng tư.",
+    "custom": "Chỉnh sửa bucket policy dạng JSON."
+  },
+  "warning": {
+    "publicBlocked": "Block Public Access đang bật cho bucket này nên policy công khai sẽ bị từ chối.",
+    "editDenied": "Tài khoản của bạn không được phép đổi quyền của bucket này.",
+    "loadError": "Không tải được quyền của bucket này."
+  },
+  "save": "Lưu"
+}

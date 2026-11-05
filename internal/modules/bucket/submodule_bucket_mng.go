@@ -154,8 +154,9 @@ func (m *submoduleBucketMng) checkBucketAccess(
 	return output
 }
 
-// flagBucketAccess flags Inaccessible and, when checkWrite is set, ReadOnly on the buckets. An anonymous
-// connection is already flagged Inaccessible by its own check. When lazy is set, a bucket that needs a probe and
+// flagBucketAccess flags Inaccessible, DeleteDenied (MinIO with credentials) and, when checkWrite is set, ReadOnly
+// on the buckets. An anonymous connection
+// is already flagged Inaccessible by its own check. When lazy is set, a bucket that needs a probe and
 // has no cached result is not probed but flagged AccessPending. It returns false when the frontend canceled the call.
 func flagBucketAccess(
 	ctx context.Context,
@@ -169,6 +170,11 @@ func flagBucketAccess(
 			loadAccountAccess(ctx, conn)
 		}
 		markInaccessibleBuckets(ctx, conn, buckets, lazy)
+		if conn.MinioAdmin != nil {
+			for i := range buckets {
+				buckets[i].DeleteDenied = isDenied(conn, global.AccessDelete, buckets[i].Name)
+			}
+		}
 	}
 	if checkWrite {
 		markReadOnlyBuckets(ctx, conn, buckets, lazy)
@@ -215,9 +221,16 @@ func loadAccountAccess(ctx context.Context, conn *global.S3Conn) bool {
 	}
 	pol, parseErr := policy.ParseConfig(bytes.NewReader(info.Policy))
 	// IsAllowed is evaluated without request conditions, so a "no" is only trusted for a simple policy.
-	simple := !bytes.Contains(info.Policy, []byte(`"Condition"`)) && !bytes.Contains(info.Policy, []byte("${"))
+	simple := isSimplePolicy(info.Policy)
 	for _, b := range info.Buckets {
 		conn.Access.Set(global.AccessWrite, b.Name, !b.Access.Write, gen)
+		// Unlike read, a "no" for delete is only trusted for a simple policy; otherwise it stays "allowed".
+		canDelete := parseErr != nil || !simple || pol.IsAllowed(policy.Args{
+			Action:          policy.DeleteBucketAction,
+			BucketName:      b.Name,
+			ConditionValues: map[string][]string{},
+		})
+		conn.Access.Set(global.AccessDelete, b.Name, !canDelete, gen)
 		canList := parseErr == nil && pol.IsAllowed(policy.Args{
 			Action:          policy.ListBucketAction,
 			BucketName:      b.Name,
@@ -234,6 +247,12 @@ func loadAccountAccess(ctx context.Context, conn *global.S3Conn) bool {
 	}
 	conn.Access.MarkAccount(gen)
 	return true
+}
+
+// isSimplePolicy reports whether the policy has no Condition nor variable, so IsAllowed (evaluated without request
+// conditions) can be trusted when it says "no".
+func isSimplePolicy(raw []byte) bool {
+	return !bytes.Contains(raw, []byte(`"Condition"`)) && !bytes.Contains(raw, []byte("${"))
 }
 
 // checkDenied sets the flag of each bucket (skipping the Inaccessible ones) from the cache, and runs probe in

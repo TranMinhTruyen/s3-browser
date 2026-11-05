@@ -2,7 +2,8 @@
   "empty": "Chưa có bucket",
   "tooltip": {
     "bucketList": "danh sách bucket",
-    "inaccessible": "Không truy cập được bucket này (không có quyền hoặc bucket không tồn tại)."
+    "inaccessible": "Không truy cập được bucket này (không có quyền hoặc bucket không tồn tại).",
+    "moreActions": "Thao tác khác"
   },
   "label": {
     "createDate": "Ngày tạo:"
@@ -10,5 +11,10 @@
   "search": {
     "empty": "Không có bucket phù hợp",
     "loadMore": "Tìm tiếp"
+  },
+  "menu": {
+    "detail": "Chi tiết",
+    "editPolicy": "Quyền truy cập",
+    "delete": "Xoá"
   }
 }

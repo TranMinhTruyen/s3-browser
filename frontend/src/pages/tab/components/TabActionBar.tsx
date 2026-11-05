@@ -1,5 +1,5 @@
 import { Group } from '@mantine/core';
-import { ArrowLeft, BroomSparkles, Download, PlugZap, RefreshCw, Trash, Upload } from 'lucide-react';
+import { ArrowLeft, BroomSparkles, Download, FolderPlus, PlugZap, RefreshCw, Trash, Upload } from 'lucide-react';
 import { memo, RefObject, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTabListStore } from '@/common/stores/tabListStore';
@@ -17,6 +17,8 @@ type TabActionBarProps = {
   tabId: string;
   currentView: 'bucketList' | 'objectList';
   isConnected: boolean;
+  // An anonymous connection cannot create buckets, so the button is hidden.
+  isAnonymous: boolean;
   selectedProfileId: string | null;
   profileOptions: { name: string; value: string }[];
   prefix: string;
@@ -30,6 +32,7 @@ type TabActionBarProps = {
   onSearch: (value: string) => void;
   onClearSearch: () => void;
   onClickUpload: () => void;
+  onClickCreateBucket: () => void;
   onClickBack: () => void;
 };
 
@@ -39,6 +42,7 @@ function TabActionBar(props: TabActionBarProps) {
     tabId,
     currentView,
     isConnected,
+    isAnonymous,
     selectedProfileId,
     profileOptions,
     prefix,
@@ -51,6 +55,7 @@ function TabActionBar(props: TabActionBarProps) {
     onSearch,
     onClearSearch,
     onClickUpload,
+    onClickCreateBucket,
     onClickBack,
   } = props;
 
@@ -121,6 +126,12 @@ function TabActionBar(props: TabActionBarProps) {
         <ActionIcon onClick={onClickUpload} tooltip={t('tooltip.upload')} disabled={!isConnected}>
           <Upload />
         </ActionIcon>
+
+        {currentView === 'bucketList' && !isAnonymous ? (
+          <ActionIcon onClick={onClickCreateBucket} tooltip={t('tooltip.createBucket')} disabled={!isConnected}>
+            <FolderPlus />
+          </ActionIcon>
+        ) : null}
 
         {currentView === 'objectList' ? (
           <>

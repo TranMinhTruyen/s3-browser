@@ -8,7 +8,13 @@ import { toast } from 'sonner';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
-import { showConnectModal, showUploadPickerModal } from '@/components/modals/lazyModals';
+import {
+  showBucketPolicyModal,
+  showConnectModal,
+  showCreateBucketModal,
+  showDeleteBucketModal,
+  showUploadPickerModal,
+} from '@/components/modals/lazyModals';
 import TabDetail from '@/pages/tab/components/TabDetail';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
@@ -18,6 +24,8 @@ type BucketStubProps = {
   profile?: { id?: string } | null;
   active: boolean;
   onSelectBucket: (bucket?: string) => void;
+  onEditPolicy: (bucket?: string) => void;
+  onDeleteBucket: (bucket?: string) => void;
   ref: Ref<unknown>;
 };
 type ObjectStubProps = { bucket?: string; keyword?: string; ref: Ref<unknown> };
@@ -26,7 +34,16 @@ const h = vi.hoisted(() => ({ bucketRefresh: vi.fn(), objectRefresh: vi.fn(), me
 
 // The two list views are tested on their own: here they are stubs exposing their ref and callbacks.
 vi.mock('@/pages/tab/bucket/BucketListView', () => ({
-  default: function BucketListViewStub({ tabId, profile, active, keyword, onSelectBucket, ref }: BucketStubProps) {
+  default: function BucketListViewStub({
+    tabId,
+    profile,
+    active,
+    keyword,
+    onSelectBucket,
+    onEditPolicy,
+    onDeleteBucket,
+    ref,
+  }: BucketStubProps) {
     useImperativeHandle(ref, () => ({ onRefresh: h.bucketRefresh }), []);
     return (
       <div>
@@ -38,6 +55,18 @@ vi.mock('@/pages/tab/bucket/BucketListView', () => ({
         </button>
         <button type="button" onClick={() => onSelectBucket(undefined)}>
           pick nothing
+        </button>
+        <button type="button" onClick={() => onEditPolicy('my-bucket')}>
+          edit policy
+        </button>
+        <button type="button" onClick={() => onEditPolicy(undefined)}>
+          edit nothing
+        </button>
+        <button type="button" onClick={() => onDeleteBucket('my-bucket')}>
+          delete bucket
+        </button>
+        <button type="button" onClick={() => onDeleteBucket(undefined)}>
+          delete nothing
         </button>
       </div>
     );
@@ -59,7 +88,18 @@ vi.mock('@/pages/tab/components/ObjectDetailDrawer', () => ({
     <div>{`drawer ${connectionId} ${bucket}`}</div>
   ),
 }));
-vi.mock('@/components/modals/lazyModals', () => ({ showConnectModal: vi.fn(), showUploadPickerModal: vi.fn() }));
+vi.mock('@/pages/tab/components/BucketDetailDrawer', () => ({
+  default: ({ tabId, connectionId, profileName }: { tabId: string; connectionId: string; profileName?: string }) => (
+    <div>{`bucket drawer ${tabId} ${connectionId} ${profileName}`}</div>
+  ),
+}));
+vi.mock('@/components/modals/lazyModals', () => ({
+  showConnectModal: vi.fn(),
+  showUploadPickerModal: vi.fn(),
+  showCreateBucketModal: vi.fn(),
+  showBucketPolicyModal: vi.fn(),
+  showDeleteBucketModal: vi.fn(),
+}));
 vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn() }));
 vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
@@ -121,7 +161,20 @@ describe('TabDetail', () => {
         bucket: undefined,
         prefix: '',
         selectionItem: {},
+        detailBucket: undefined,
       });
+    });
+
+    it('closes the bucket drawer when another profile is chosen', async () => {
+      useProfileStore.setState({
+        connectionProfiles: { p1: profile(), p2: profile({ id: 'p2', name: 'Other' }) },
+      });
+      setTab({ detailBucket: { name: 'my-bucket' } as never });
+      const user = setup();
+      await user.click(profilePicker());
+      await user.click(await screen.findByText('Other'));
+      expect(tab().detailBucket).toBeUndefined();
+      expect(tab().profileId).toBe('p2');
     });
 
     it('treats a profile entry without data as an unnamed option', async () => {
@@ -250,6 +303,241 @@ describe('TabDetail', () => {
       setup();
       expect(screen.queryByText(/object list bucket/)).not.toBeInTheDocument();
       expect(screen.getByText(/bucket list profile/)).toBeInTheDocument();
+    });
+  });
+
+  describe('create bucket', () => {
+    const createBtn = () => btn('Create bucket');
+
+    beforeEach(() => {
+      vi.mocked(showCreateBucketModal).mockReset();
+      h.bucketRefresh.mockReset();
+    });
+
+    it('is disabled until connected', () => {
+      setup();
+      expect(createBtn()).toBeDisabled();
+    });
+
+    it('is not offered to an anonymous connection', () => {
+      setProfile({ isConnected: true, authType: 'anonymous' });
+      setup();
+      expect(screen.queryByRole('button', { name: 'Create bucket' })).not.toBeInTheDocument();
+    });
+
+    it('is not offered in the object list', () => {
+      setProfile({ isConnected: true });
+      setTab({ currentView: 'objectList', bucket: 'b' });
+      setup();
+      expect(screen.queryByRole('button', { name: 'Create bucket' })).not.toBeInTheDocument();
+    });
+
+    it('asks for the region on AWS without endpoint (default: profile region) and refreshes when created', async () => {
+      vi.mocked(showCreateBucketModal).mockResolvedValue(true as never);
+      setProfile({ isConnected: true, provider: 'aws', endpoint: '', region: 'eu-west-1' });
+      const user = setup();
+
+      await user.click(createBtn());
+
+      expect(showCreateBucketModal).toHaveBeenCalledExactlyOnceWith({
+        connectionId: 'p1',
+        profileName: 'Prof',
+        withRegion: true,
+        defaultRegion: 'eu-west-1',
+      });
+      await waitFor(() => expect(h.bucketRefresh).toHaveBeenCalledTimes(1));
+    });
+
+    it.each([
+      ['MinIO', { provider: 'minio', endpoint: '', region: 'us-east-1' }],
+      ['AWS with a custom endpoint', { provider: 'aws', endpoint: 'https://s3.example.com', region: 'us-east-1' }],
+    ])('does not ask for the region on %s', async (_name, patch) => {
+      vi.mocked(showCreateBucketModal).mockResolvedValue(true as never);
+      setProfile({ isConnected: true, ...patch } as Partial<ConnectionProfileOutput>);
+      const user = setup();
+
+      await user.click(createBtn());
+
+      expect(showCreateBucketModal).toHaveBeenCalledExactlyOnceWith({
+        connectionId: 'p1',
+        profileName: 'Prof',
+        withRegion: false,
+        defaultRegion: undefined,
+      });
+    });
+
+    it.each([
+      ['false (canceled)', false],
+      ['undefined (chunk failed)', undefined],
+    ])('does not refresh when the modal resolves %s', async (_name, value) => {
+      vi.mocked(showCreateBucketModal).mockResolvedValue(value as never);
+      setProfile({ isConnected: true });
+      const user = setup();
+
+      await user.click(createBtn());
+
+      await waitFor(() => expect(showCreateBucketModal).toHaveBeenCalledTimes(1));
+      await act(async () => {});
+      expect(h.bucketRefresh).not.toHaveBeenCalled();
+    });
+
+    it('is disabled without a selected profile', () => {
+      setTab({ profileId: null });
+      useProfileStore.setState({ connectionProfiles: {} });
+      setup();
+
+      expect(createBtn()).toBeDisabled();
+      expect(showCreateBucketModal).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('bucket policy', () => {
+    beforeEach(() => {
+      vi.mocked(showBucketPolicyModal).mockReset();
+    });
+
+    it('opens the policy modal of the bucket of the connected profile', async () => {
+      setProfile({ isConnected: true });
+      const user = setup();
+
+      await user.click(screen.getByText('edit policy'));
+
+      expect(showBucketPolicyModal).toHaveBeenCalledExactlyOnceWith({
+        connectionId: 'p1',
+        profileName: 'Prof',
+        bucket: 'my-bucket',
+      });
+    });
+
+    it('ignores a request without a bucket name', async () => {
+      setProfile({ isConnected: true });
+      const user = setup();
+
+      await user.click(screen.getByText('edit nothing'));
+
+      expect(showBucketPolicyModal).not.toHaveBeenCalled();
+    });
+
+    it('ignores a request without a profile', async () => {
+      setTab({ profileId: null });
+      useProfileStore.setState({ connectionProfiles: {} });
+      const user = setup();
+
+      await user.click(screen.getByText('edit policy'));
+
+      expect(showBucketPolicyModal).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('delete bucket', () => {
+    const deleted = { bucketDeleted: true, deleted: 2, failed: 0, failures: [] };
+    const original = useTabListStore.getState().removeBucket;
+
+    beforeEach(() => {
+      vi.mocked(showDeleteBucketModal).mockReset();
+      h.bucketRefresh.mockReset();
+      h.bucketRefresh.mockResolvedValue(undefined);
+      setProfile({ isConnected: true });
+    });
+
+    afterEach(() => {
+      useTabListStore.setState({ removeBucket: original });
+    });
+
+    it('opens the modal with the connection, then removes the bucket from the tabs and refreshes', async () => {
+      vi.mocked(showDeleteBucketModal).mockResolvedValue(deleted as never);
+      const removeBucket = vi.fn();
+      useTabListStore.setState({ removeBucket });
+      const user = setup();
+
+      await user.click(screen.getByText('delete bucket'));
+
+      expect(showDeleteBucketModal).toHaveBeenCalledExactlyOnceWith({
+        connectionId: 'p1',
+        profileName: 'Prof',
+        bucket: 'my-bucket',
+      });
+      await waitFor(() => expect(h.bucketRefresh).toHaveBeenCalledTimes(1));
+      expect(removeBucket).toHaveBeenCalledExactlyOnceWith('p1', 'my-bucket');
+    });
+
+    it('only refreshes when the bucket itself was not deleted', async () => {
+      vi.mocked(showDeleteBucketModal).mockResolvedValue({ ...deleted, bucketDeleted: false, failed: 1 } as never);
+      const removeBucket = vi.fn();
+      useTabListStore.setState({ removeBucket });
+      const user = setup();
+
+      await user.click(screen.getByText('delete bucket'));
+
+      await waitFor(() => expect(h.bucketRefresh).toHaveBeenCalledTimes(1));
+      expect(removeBucket).not.toHaveBeenCalled();
+    });
+
+    it.each([[null], [undefined]])('does nothing when the modal resolves %s', async result => {
+      vi.mocked(showDeleteBucketModal).mockResolvedValue(result as never);
+      const removeBucket = vi.fn();
+      useTabListStore.setState({ removeBucket });
+      const user = setup();
+
+      await user.click(screen.getByText('delete bucket'));
+      await act(async () => {});
+
+      expect(showDeleteBucketModal).toHaveBeenCalledTimes(1);
+      expect(removeBucket).not.toHaveBeenCalled();
+      expect(h.bucketRefresh).not.toHaveBeenCalled();
+    });
+
+    it('ignores a request without a bucket name', async () => {
+      const user = setup();
+
+      await user.click(screen.getByText('delete nothing'));
+
+      expect(showDeleteBucketModal).not.toHaveBeenCalled();
+    });
+
+    it('ignores a request without a profile', async () => {
+      setTab({ profileId: null });
+      useProfileStore.setState({ connectionProfiles: {} });
+      const user = setup();
+
+      await user.click(screen.getByText('delete bucket'));
+
+      expect(showDeleteBucketModal).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('bucket detail drawer', () => {
+    const bucket = { name: 'my-bucket' } as never;
+
+    it('shows the drawer in the bucket list when a bucket is open', () => {
+      setProfile({ isConnected: true });
+      setTab({ detailBucket: bucket });
+      setup();
+
+      expect(screen.getByText(`bucket drawer ${TAB} p1 Prof`)).toBeInTheDocument();
+    });
+
+    it('does not show the drawer without an open bucket', () => {
+      setProfile({ isConnected: true });
+      setup();
+
+      expect(screen.queryByText(/bucket drawer/)).not.toBeInTheDocument();
+    });
+
+    it('does not show the drawer in the object list', () => {
+      setProfile({ isConnected: true });
+      setTab({ currentView: 'objectList', bucket: 'b', detailBucket: bucket });
+      setup();
+
+      expect(screen.queryByText(/bucket drawer/)).not.toBeInTheDocument();
+    });
+
+    it('does not show the drawer without a profile', () => {
+      setTab({ profileId: null, detailBucket: bucket });
+      useProfileStore.setState({ connectionProfiles: {} });
+      setup();
+
+      expect(screen.queryByText(/bucket drawer/)).not.toBeInTheDocument();
     });
   });
 

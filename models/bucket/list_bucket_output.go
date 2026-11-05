@@ -15,6 +15,9 @@ type Bucket struct {
 	// AccessPending is set when the access of the bucket is not known yet (not probed, or the probe gave no sure
 	// answer); the frontend should check it with CheckBucketAccess.
 	AccessPending bool `json:"accessPending,omitempty"`
+	// DeleteDenied is set only for MinIO with credentials when the account is known not to be allowed to
+	// delete the bucket (s3:DeleteBucket).
+	DeleteDenied bool `json:"deleteDenied,omitempty"`
 }
 
 // ListBucketOutput is one page of buckets; NextCursor is nil on the last page.

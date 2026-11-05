@@ -45,7 +45,7 @@ function App() {
             ))}
           </Route>
         </Routes>
-        <Toaster position={'top-center'} richColors={true} closeButton={true} />
+        <Toaster position={'top-center'} richColors={true} closeButton={true} duration={10000} />
       </I18nextProvider>
     </BrowserRouter>
   );

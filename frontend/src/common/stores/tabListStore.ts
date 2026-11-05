@@ -1,4 +1,4 @@
-import type { ObjectItem } from '@wails/S3Browser/models/bucket';
+import type { Bucket, ObjectItem } from '@wails/S3Browser/models/bucket';
 import type { TabState } from '@wails/S3Browser/models/setting';
 import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
@@ -20,6 +20,8 @@ interface TabDetail {
   deletingItems: KeySet;
   // Object shown in the detail drawer. Unset when the drawer is closed.
   detailItem?: ObjectItem;
+  // Bucket shown in the bucket detail drawer. Unset when the drawer is closed.
+  detailBucket?: Bucket;
 }
 
 interface TabListState {
@@ -50,6 +52,10 @@ interface TabListAction {
 
   openDetail: (tabId: string, item: ObjectItem) => void;
   closeDetail: (tabId: string) => void;
+  openBucketDetail: (tabId: string, bucket: Bucket) => void;
+  closeBucketDetail: (tabId: string) => void;
+  // For a deleted bucket: tabs of the profile inside it go back to the bucket list, its detail drawer closes.
+  removeBucket: (profileId: string, bucket: string) => void;
 
   setDeleting: (tabId: string, items: string[], deleting: boolean) => void;
   setUploadingTab: (tabId: string | null) => void;
@@ -72,6 +78,7 @@ const resetTabView = (tab: TabDetail) => {
   tab.prefix = '';
   tab.selectionItem = {};
   tab.detailItem = undefined;
+  tab.detailBucket = undefined;
 };
 
 /** A tab with no profile, showing the bucket list. */
@@ -232,6 +239,32 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>((set
       editTab('closeDetail', tabId, tab => {
         tab.detailItem = undefined;
       });
+    },
+
+    openBucketDetail: (tabId: string, bucket: Bucket) => {
+      editTab('openBucketDetail', tabId, tab => {
+        tab.detailBucket = bucket;
+      });
+    },
+
+    closeBucketDetail: (tabId: string) => {
+      editTab('closeBucketDetail', tabId, tab => {
+        tab.detailBucket = undefined;
+      });
+    },
+
+    removeBucket: (profileId: string, bucket: string) => {
+      set(
+        state => {
+          Object.values(state.tabList).forEach(tab => {
+            if (tab.profileId !== profileId) return;
+            if (tab.currentView === 'objectList' && tab.bucket === bucket) resetTabView(tab);
+            else if (tab.detailBucket?.name === bucket) tab.detailBucket = undefined;
+          });
+        },
+        undefined,
+        `${SCOPE}/removeBucket`
+      );
     },
 
     setDeleting: (tabId: string, items: string[], deleting: boolean) => {

@@ -1,0 +1,53 @@
+{
+  "title": "バケットの詳細",
+  "tooltip": {
+    "close": "閉じる"
+  },
+  "status": {
+    "loadError": "詳細を読み込めませんでした",
+    "retry": "再試行"
+  },
+  "section": {
+    "basic": "基本",
+    "access": "アクセス",
+    "config": "設定"
+  },
+  "label": {
+    "name": "名前",
+    "createDate": "作成日",
+    "region": "リージョン",
+    "arn": "ARN",
+    "endpointUrl": "エンドポイントURL",
+    "policy": "ポリシー",
+    "publicBlock": "ブロックパブリックアクセス",
+    "versioning": "バージョニング",
+    "encryption": "デフォルトの暗号化",
+    "objectLock": "オブジェクトロック",
+    "tags": "タグ",
+    "rootCount": "ルートのオブジェクト数"
+  },
+  "value": {
+    "policy": {
+      "private": "プライベート",
+      "public": "パブリック（読み取り専用）",
+      "custom": "カスタム"
+    },
+    "versioning": {
+      "enabled": "有効",
+      "suspended": "停止",
+      "off": "オフ"
+    },
+    "encryption": {
+      "none": "なし"
+    },
+    "objectLock": {
+      "enabled": "有効",
+      "disabled": "無効"
+    },
+    "publicBlock": {
+      "on": "オン",
+      "off": "オフ"
+    },
+    "rootCountCapped": "{{count}}+"
+  }
+}

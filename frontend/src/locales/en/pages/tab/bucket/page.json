@@ -2,7 +2,8 @@
   "empty": "No buckets yet",
   "tooltip": {
     "bucketList": "bucket list",
-    "inaccessible": "Cannot access this bucket (no permission or it does not exist)."
+    "inaccessible": "Cannot access this bucket (no permission or it does not exist).",
+    "moreActions": "More actions"
   },
   "label": {
     "createDate": "Create date:"
@@ -10,5 +11,10 @@
   "search": {
     "empty": "No matching buckets",
     "loadMore": "Search more"
+  },
+  "menu": {
+    "detail": "Details",
+    "editPolicy": "Access permission",
+    "delete": "Delete"
   }
 }

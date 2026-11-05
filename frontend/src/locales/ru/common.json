@@ -6,6 +6,10 @@
     "clear": "Очистить",
     "close": "Закрыть"
   },
+  "tooltip": {
+    "copy": "Копировать",
+    "copied": "Скопировано"
+  },
   "appName": "S3Browser",
   "window": {
     "minimise": "Свернуть",

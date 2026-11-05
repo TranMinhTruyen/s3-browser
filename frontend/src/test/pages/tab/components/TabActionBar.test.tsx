@@ -15,6 +15,7 @@ const handlers = () => ({
   onSearch: vi.fn(),
   onClearSearch: vi.fn(),
   onClickUpload: vi.fn(),
+  onClickCreateBucket: vi.fn(),
   onClickBack: vi.fn(),
 });
 
@@ -35,6 +36,7 @@ function setup(props: Props = {}) {
       tabId={TAB}
       currentView="objectList"
       isConnected
+      isAnonymous={false}
       selectedProfileId="p1"
       profileOptions={[{ name: 'Prof', value: 'p1' }]}
       prefix=""
@@ -95,6 +97,31 @@ describe('TabActionBar', () => {
     setup({ currentView: 'bucketList' });
     expect(btn('Refresh bucket list')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Search by name')).toBeInTheDocument();
+  });
+
+  describe('create bucket button', () => {
+    it('is shown in the bucket list and reports the click', async () => {
+      const { h, user } = setup({ currentView: 'bucketList' });
+      await user.click(btn('Create bucket'));
+      expect(h.onClickCreateBucket).toHaveBeenCalledTimes(1);
+    });
+
+    it('is not shown in the object list', () => {
+      setup({ currentView: 'objectList' });
+      expect(queryBtn('Create bucket')).not.toBeInTheDocument();
+    });
+
+    it('is not shown for an anonymous connection', () => {
+      setup({ currentView: 'bucketList', isAnonymous: true });
+      expect(queryBtn('Create bucket')).not.toBeInTheDocument();
+    });
+
+    it('is disabled until connected', async () => {
+      const { h, user } = setup({ currentView: 'bucketList', isConnected: false });
+      expect(btn('Create bucket')).toBeDisabled();
+      await user.click(btn('Create bucket'));
+      expect(h.onClickCreateBucket).not.toHaveBeenCalled();
+    });
   });
 
   it('labels the search placeholder for the object list', () => {

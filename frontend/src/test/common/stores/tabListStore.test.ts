@@ -344,3 +344,109 @@ describe('tabListStore', () => {
     });
   });
 });
+
+describe('tabListStore bucket detail', () => {
+  const bucket = { name: 'bkt', creationDate: '2026-01-02T03:04:05' } as never;
+
+  beforeEach(() => {
+    state().reset();
+    vi.clearAllMocks();
+  });
+
+  it('openBucketDetail and closeBucketDetail set and clear the bucket of the tab', () => {
+    const id = activeId();
+    state().openBucketDetail(id, bucket);
+    expect(state().tabList[id].detailBucket).toEqual(bucket);
+    state().closeBucketDetail(id);
+    expect(state().tabList[id].detailBucket).toBeUndefined();
+  });
+
+  it('ignores an unknown tab', () => {
+    state().openBucketDetail('ghost', bucket);
+    state().closeBucketDetail('ghost');
+    expect(state().tabList.ghost).toBeUndefined();
+  });
+
+  it('changeCurrentView clears the bucket detail', () => {
+    const id = activeId();
+    state().openBucketDetail(id, bucket);
+    state().changeCurrentView(id, 'objectList', 'bkt');
+    expect(state().tabList[id].detailBucket).toBeUndefined();
+  });
+
+  it('resetViewByProfile and clearProfile clear the bucket detail of that profile only', () => {
+    const mine = activeId();
+    state().updateTab(mine, { profileId: 'p1' });
+    state().addTab();
+    const other = activeId();
+    state().updateTab(other, { profileId: 'p2' });
+    state().openBucketDetail(mine, bucket);
+    state().openBucketDetail(other, bucket);
+
+    state().resetViewByProfile('p1');
+    expect(state().tabList[mine].detailBucket).toBeUndefined();
+    expect(state().tabList[other].detailBucket).toEqual(bucket);
+
+    state().openBucketDetail(mine, bucket);
+    state().clearProfile('p1');
+    expect(state().tabList[mine].detailBucket).toBeUndefined();
+    expect(state().tabList[other].detailBucket).toEqual(bucket);
+  });
+});
+
+describe('tabListStore removeBucket', () => {
+  const detail = { name: 'bkt', creationDate: '2026-01-02T03:04:05' } as never;
+  const other = { name: 'other', creationDate: '2026-01-02T03:04:05' } as never;
+  const tabs = () => state().tabList;
+
+  // Four tabs of profile p1 plus one of p2, each given a view.
+  function seed() {
+    state().restoreTabs({
+      tabs: [
+        { id: 'inBucket', profileId: 'p1' },
+        { id: 'inOther', profileId: 'p1' },
+        { id: 'listWithDetail', profileId: 'p1' },
+        { id: 'listWithOtherDetail', profileId: 'p1' },
+        { id: 'otherProfile', profileId: 'p2' },
+      ],
+      activeTab: 'inBucket',
+    });
+    state().changeCurrentView('inBucket', 'objectList', 'bkt');
+    state().changePrefix('inBucket', 'dir/');
+    state().changeCurrentView('inOther', 'objectList', 'other');
+    state().openBucketDetail('listWithDetail', detail);
+    state().openBucketDetail('listWithOtherDetail', other);
+    state().changeCurrentView('otherProfile', 'objectList', 'bkt');
+  }
+
+  beforeEach(() => {
+    state().reset();
+    vi.clearAllMocks();
+    seed();
+  });
+
+  it('sends the tabs of the profile that are inside the bucket back to the bucket list', () => {
+    state().removeBucket('p1', 'bkt');
+
+    expect(tabs().inBucket).toMatchObject({ currentView: 'bucketList', bucket: undefined, prefix: '' });
+  });
+
+  it('keeps the tabs of the profile inside another bucket', () => {
+    state().removeBucket('p1', 'bkt');
+
+    expect(tabs().inOther).toMatchObject({ currentView: 'objectList', bucket: 'other' });
+  });
+
+  it('closes the detail of the deleted bucket only', () => {
+    state().removeBucket('p1', 'bkt');
+
+    expect(tabs().listWithDetail.detailBucket).toBeUndefined();
+    expect(tabs().listWithOtherDetail.detailBucket).toEqual(other);
+  });
+
+  it('leaves the tabs of other profiles alone', () => {
+    state().removeBucket('p1', 'bkt');
+
+    expect(tabs().otherProfile).toMatchObject({ currentView: 'objectList', bucket: 'bkt' });
+  });
+});

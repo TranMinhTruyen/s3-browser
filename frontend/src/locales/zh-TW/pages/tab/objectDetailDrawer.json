@@ -14,9 +14,7 @@
     "bytes": "{{size}} 位元組"
   },
   "tooltip": {
-    "close": "關閉",
-    "copy": "複製",
-    "copied": "已複製"
+    "close": "關閉"
   },
   "status": {
     "loadError": "無法載入詳細資訊",

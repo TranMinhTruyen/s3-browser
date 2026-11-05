@@ -1,0 +1,20 @@
+{
+  "title": "刪除儲存貯體",
+  "checking": "正在檢查儲存貯體...",
+  "deleting": "正在刪除...",
+  "warning": {
+    "irreversible": "此操作無法復原，儲存貯體將被永久刪除。",
+    "notEmpty": "儲存貯體不是空的，其中所有物件都將被刪除。",
+    "unknown": "無法檢查儲存貯體是否為空。如果其中有物件，將全部被刪除。",
+    "versioned": "已啟用或曾啟用版本控制：所有版本和刪除標記都將被永久刪除。",
+    "objectLockBlocked": "儲存貯體 {{bucket}} 已啟用物件鎖定且不是空的，無法刪除。",
+    "objectLockUnknown": "儲存貯體已啟用物件鎖定。如果其中有物件，則無法刪除。"
+  },
+  "label": {
+    "confirmName": "輸入 {{bucket}} 以確認"
+  },
+  "placeholder": {
+    "confirmName": "儲存貯體名稱"
+  },
+  "delete": "刪除"
+}

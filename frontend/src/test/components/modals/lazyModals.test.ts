@@ -8,7 +8,10 @@ type ModalKey =
   | 'uploadPicker'
   | 'uploadLimit'
   | 'deleteResult'
-  | 'deleteConfirm';
+  | 'deleteConfirm'
+  | 'createBucket'
+  | 'bucketPolicy'
+  | 'deleteBucket';
 type LazyModals = typeof import('@/components/modals/lazyModals');
 
 // The chunk factories wait for `gate` and throw when `fail` is set, which makes the dynamic `import()` reject.
@@ -27,6 +30,9 @@ for (const key of [
   'uploadLimit',
   'deleteResult',
   'deleteConfirm',
+  'createBucket',
+  'bucketPolicy',
+  'deleteBucket',
 ])
   h.show[key] = vi.fn();
 
@@ -46,6 +52,9 @@ const CHUNKS: [string, ModalKey][] = [
   ['upload/UploadLimitModal', 'uploadLimit'],
   ['delete/DeleteConfirmModal', 'deleteConfirm'],
   ['delete/DeleteResultModal', 'deleteResult'],
+  ['bucket/CreateBucketModal', 'createBucket'],
+  ['bucket/BucketPolicyModal', 'bucketPolicy'],
+  ['bucket/DeleteBucketModal', 'deleteBucket'],
 ];
 
 const PROPS = {
@@ -53,6 +62,9 @@ const PROPS = {
   limit: { groups: [] } as never,
   confirm: { files: [{ key: 'a', size: 1 }] } as never,
   result: { deleted: 1, failed: 0, failures: [] } as never,
+  create: { connectionId: 'c', withRegion: true, defaultRegion: 'eu-west-1' } as never,
+  policy: { connectionId: 'c', profileName: 'n', bucket: 'b' } as never,
+  deleteBucket: { connectionId: 'c', profileName: 'n', bucket: 'b' } as never,
 };
 const wrappers: [ModalKey, (m: LazyModals) => Promise<unknown>][] = [
   ['connect', m => m.showConnectModal({ mode: 'editProfile' })],
@@ -63,6 +75,9 @@ const wrappers: [ModalKey, (m: LazyModals) => Promise<unknown>][] = [
   ['uploadLimit', m => m.showUploadLimitModal(PROPS.limit)],
   ['deleteConfirm', m => m.showDeleteConfirmModal(PROPS.confirm)],
   ['deleteResult', m => m.showDeleteResultModal(PROPS.result)],
+  ['createBucket', m => m.showCreateBucketModal(PROPS.create)],
+  ['bucketPolicy', m => m.showBucketPolicyModal(PROPS.policy)],
+  ['deleteBucket', m => m.showDeleteBucketModal(PROPS.deleteBucket)],
 ];
 
 // What MfaCodeModal imports besides modalUtils; stubbed by the string-failure test.
@@ -166,12 +181,18 @@ describe('lazyModals', () => {
     await lazy.showUploadLimitModal(PROPS.limit);
     await lazy.showDeleteConfirmModal(PROPS.confirm);
     await lazy.showDeleteResultModal(PROPS.result);
+    await lazy.showCreateBucketModal(PROPS.create);
+    await lazy.showBucketPolicyModal(PROPS.policy);
+    await lazy.showDeleteBucketModal(PROPS.deleteBucket);
 
     expect(h.show.connect).toHaveBeenCalledWith({ mode: 'manualconnect' });
     expect(h.show.uploadPicker).toHaveBeenCalledWith(PROPS.picker);
     expect(h.show.uploadLimit).toHaveBeenCalledWith(PROPS.limit);
     expect(h.show.deleteConfirm).toHaveBeenCalledWith(PROPS.confirm);
     expect(h.show.deleteResult).toHaveBeenCalledWith(PROPS.result);
+    expect(h.show.createBucket).toHaveBeenCalledWith(PROPS.create);
+    expect(h.show.bucketPolicy).toHaveBeenCalledWith(PROPS.policy);
+    expect(h.show.deleteBucket).toHaveBeenCalledWith(PROPS.deleteBucket);
   });
 
   it('passes the connection to the MFA code modal', async () => {

@@ -1,0 +1,17 @@
+{
+  "title": "建立儲存貯體",
+  "label": {
+    "name": "儲存貯體名稱",
+    "permission": "權限"
+  },
+  "placeholder": {
+    "name": "my-bucket"
+  },
+  "hint": {
+    "name": "3-63 個字元：小寫字母、數字、句點和連字號。"
+  },
+  "create": "建立",
+  "warning": {
+    "publicAccessBlock": "在 AWS 上，新的儲存貯體預設會封鎖公開存取。在關閉「封鎖公開存取」之前，設定公開政策可能會失敗。"
+  }
+}

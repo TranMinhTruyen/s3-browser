@@ -1,0 +1,17 @@
+{
+  "title": "Bucket erstellen",
+  "label": {
+    "name": "Bucket-Name",
+    "permission": "Berechtigung"
+  },
+  "placeholder": {
+    "name": "my-bucket"
+  },
+  "hint": {
+    "name": "3–63 Zeichen: Kleinbuchstaben, Ziffern, Punkte und Bindestriche."
+  },
+  "create": "Erstellen",
+  "warning": {
+    "publicAccessBlock": "Auf AWS blockieren neue Buckets den öffentlichen Zugriff standardmäßig. Das Setzen einer öffentlichen Richtlinie kann fehlschlagen, solange „Öffentlichen Zugriff blockieren“ aktiv ist."
+  }
+}

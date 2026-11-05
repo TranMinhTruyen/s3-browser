@@ -12,7 +12,8 @@
     "scrollRight": "Scroll right",
     "search": "Search",
     "clearSearch": "Clear search",
-    "upload": "Upload files"
+    "upload": "Upload files",
+    "createBucket": "Create bucket"
   },
   "search": {
     "placeholderProfile": "Search profile",

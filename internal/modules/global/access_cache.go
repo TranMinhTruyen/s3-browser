@@ -14,6 +14,7 @@ type AccessKind int
 const (
 	AccessRead AccessKind = iota
 	AccessWrite
+	AccessDelete
 )
 
 type accessEntry struct {
@@ -21,14 +22,14 @@ type accessEntry struct {
 	at     time.Time
 }
 
-// AccessCache keeps the bucket access checks of one connection, per bucket name. Read and write results have their
-// own time because a listing doesn't always check the write access. The zero value is ready to use.
+// AccessCache keeps the bucket access checks of one connection, per bucket name. Read, write and delete results have
+// their own time because a listing doesn't always check the write access. The zero value is ready to use.
 //
 // Reset bumps a generation. A caller reads Generation before probing and passes it to Set / MarkAccount, which
 // ignore the result when a Reset happened meanwhile (it was made with the old credentials).
 type AccessCache struct {
 	mu         sync.Mutex
-	entries    [2]map[string]accessEntry
+	entries    [3]map[string]accessEntry
 	accountAt  time.Time
 	generation uint64
 }
@@ -82,7 +83,7 @@ func (a *AccessCache) MarkAccount(gen uint64) {
 func (a *AccessCache) Reset() {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	a.entries = [2]map[string]accessEntry{}
+	a.entries = [3]map[string]accessEntry{}
 	a.accountAt = time.Time{}
 	a.generation++
 }

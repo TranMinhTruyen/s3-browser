@@ -6,6 +6,10 @@
     "clear": "Leeren",
     "close": "Schließen"
   },
+  "tooltip": {
+    "copy": "Kopieren",
+    "copied": "Kopiert"
+  },
   "appName": "S3Browser",
   "window": {
     "minimise": "Minimieren",
