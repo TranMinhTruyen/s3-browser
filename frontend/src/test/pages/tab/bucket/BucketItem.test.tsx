@@ -223,3 +223,61 @@ describe('BucketItem menu', () => {
     expect(screen.queryByRole('menuitem', { hidden: true, name: 'Delete' })).not.toBeInTheDocument();
   });
 });
+
+describe('BucketItem policy badge', () => {
+  const withMode = (policyMode?: string, extra: Record<string, unknown> = {}) =>
+    new Bucket({ name: 'my-bucket', creationDate: '2026-01-02T03:04:05', policyMode, ...extra });
+  const skeleton = () => document.querySelector('.mantine-Skeleton-root');
+
+  it('shows a skeleton next to the create date while the policy mode is unknown yet', () => {
+    renderWithProviders(<BucketItem item={withMode()} canEdit />);
+
+    expect(skeleton()).toBeInTheDocument();
+    expect(screen.queryByText(/^(Private|Public|Custom)$/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['private', 'Private', 'Private: no bucket policy.'],
+    ['public', 'Public', 'Public: anyone can read and list objects.'],
+    ['custom', 'Custom', 'Custom: the bucket has a custom policy.'],
+  ])('shows the %s badge with its tooltip', async (mode, label, tooltip) => {
+    renderWithProviders(<BucketItem item={withMode(mode)} canEdit />);
+
+    expect(skeleton()).not.toBeInTheDocument();
+    await userEvent.hover(screen.getByText(label));
+    expect(await screen.findByText(tooltip)).toBeInTheDocument();
+  });
+
+  it.each([['unknown'], ['something-else']])('shows neither a badge nor a skeleton for "%s"', mode => {
+    renderWithProviders(<BucketItem item={withMode(mode)} canEdit />);
+
+    expect(skeleton()).not.toBeInTheDocument();
+    expect(screen.queryByText(/^(Private|Public|Custom)$/)).not.toBeInTheDocument();
+    expect(screen.getByText('Create date:')).toBeInTheDocument();
+  });
+
+  it.each([[undefined], ['public']])('shows nothing without edit permission (policy mode %s)', mode => {
+    renderWithProviders(<BucketItem item={withMode(mode)} />);
+
+    expect(skeleton()).not.toBeInTheDocument();
+    expect(screen.queryByText(/^(Private|Public|Custom)$/)).not.toBeInTheDocument();
+  });
+
+  it.each([[undefined], ['public']])('shows nothing without a create date (policy mode %s)', mode => {
+    renderWithProviders(<BucketItem item={withMode(mode, { creationDate: '0001-01-01T00:00:00Z' })} canEdit />);
+
+    expect(skeleton()).not.toBeInTheDocument();
+    expect(screen.queryByText('Public')).not.toBeInTheDocument();
+  });
+
+  it('still selects the bucket on click and opens the menu with a badge shown', async () => {
+    const onSelectBucket = vi.fn();
+    renderWithProviders(<BucketItem item={withMode('public')} canEdit onSelectBucket={onSelectBucket} />);
+
+    await userEvent.click(screen.getByText('Public'));
+    expect(onSelectBucket).toHaveBeenCalledExactlyOnceWith('my-bucket');
+
+    await userEvent.click(screen.getByRole('button', { name: 'More actions' }));
+    expect(await screen.findByRole('menuitem', { hidden: true, name: 'Details' })).toBeInTheDocument();
+  });
+});

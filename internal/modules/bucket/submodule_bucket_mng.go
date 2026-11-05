@@ -73,7 +73,7 @@ func (m *submoduleBucketMng) listBucket(
 			return output.ThrowError()
 		}
 		output.Body.BucketList = anonymousBuckets(s3Conn, "")
-		if !flagBucketAccess(ctx, s3Conn, output.Body.BucketList, input.CheckWrite, input.LazyAccess) {
+		if !flagBucketAccess(ctx, s3Conn, output.Body.BucketList, input.CheckWrite, input.LazyAccess, false) {
 			return output.ThrowError()
 		}
 		return output
@@ -107,7 +107,7 @@ func (m *submoduleBucketMng) listBucket(
 		}
 	}
 
-	if !flagBucketAccess(ctx, s3Conn, body.BucketList, input.CheckWrite, input.LazyAccess) {
+	if !flagBucketAccess(ctx, s3Conn, body.BucketList, input.CheckWrite, input.LazyAccess, false) {
 		return output.ThrowError()
 	}
 
@@ -147,7 +147,7 @@ func (m *submoduleBucketMng) checkBucketAccess(
 		}
 	}
 
-	if !flagBucketAccess(ctx, s3Conn, buckets, input.CheckWrite, false) {
+	if !flagBucketAccess(ctx, s3Conn, buckets, input.CheckWrite, false, input.WithPolicy) {
 		return output.ThrowError()
 	}
 	output.Body.BucketList = buckets
@@ -155,14 +155,15 @@ func (m *submoduleBucketMng) checkBucketAccess(
 }
 
 // flagBucketAccess flags Inaccessible, DeleteDenied (MinIO with credentials) and, when checkWrite is set, ReadOnly
-// on the buckets. An anonymous connection
-// is already flagged Inaccessible by its own check. When lazy is set, a bucket that needs a probe and
-// has no cached result is not probed but flagged AccessPending. It returns false when the frontend canceled the call.
+// on the buckets, then PolicyMode (see flagPolicyModes; readPolicy tells whether to read the missing ones). An
+// anonymous connection is already flagged Inaccessible by its own check. When lazy is set, a bucket that needs a
+// probe and has no cached result is not probed but flagged AccessPending. It returns false when the frontend
+// canceled the call.
 func flagBucketAccess(
 	ctx context.Context,
 	conn *global.S3Conn,
 	buckets []models.Bucket,
-	checkWrite, lazy bool,
+	checkWrite, lazy, readPolicy bool,
 ) bool {
 	if conn.AuthType != cnst.AuthAnonymous {
 		if conn.MinioAdmin != nil {
@@ -179,7 +180,51 @@ func flagBucketAccess(
 	if checkWrite {
 		markReadOnlyBuckets(ctx, conn, buckets, lazy)
 	}
+	flagPolicyModes(ctx, conn, buckets, !readPolicy)
 	return !isCallCanceled(ctx)
+}
+
+// flagPolicyModes sets PolicyMode from the cache and, unless lazy, reads the missing ones in parallel under
+// bucketProbeTimeout. A bucket whose policy can't be read is flagged "unknown"; only a sure answer of the server
+// (see isSurePolicyError) is cached, so a timeout or network error is retried next time. Anonymous connections
+// are skipped, and so are lazy buckets with nothing cached (PolicyMode stays empty = not known yet).
+func flagPolicyModes(ctx context.Context, conn *global.S3Conn, buckets []models.Bucket, lazy bool) {
+	if conn.AuthType == cnst.AuthAnonymous {
+		return
+	}
+	var pending []int
+	for i := range buckets {
+		if buckets[i].Inaccessible {
+			buckets[i].PolicyMode = policyModeUnknown
+		} else if mode, ok := conn.Access.GetPolicy(buckets[i].Name); ok {
+			buckets[i].PolicyMode = mode
+		} else if !lazy {
+			pending = append(pending, i)
+		}
+	}
+	if len(pending) == 0 {
+		return
+	}
+	gen := conn.Access.Generation()
+	ctx, cancel := context.WithTimeout(ctx, bucketProbeTimeout)
+	defer cancel()
+
+	var g errgroup.Group
+	g.SetLimit(bucketProbeConcurrency)
+	for _, i := range pending {
+		g.Go(func() error {
+			mode, err := readPolicyModeInRegion(ctx, conn, buckets[i].Name)
+			if err != nil {
+				mode = policyModeUnknown
+			}
+			buckets[i].PolicyMode = mode
+			if err == nil || isSurePolicyError(err) {
+				conn.Access.SetPolicy(buckets[i].Name, mode, gen)
+			}
+			return nil
+		})
+	}
+	_ = g.Wait()
 }
 
 // markInaccessibleBuckets flags Inaccessible the buckets the connection can't read. Results are cached per

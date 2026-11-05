@@ -3,7 +3,12 @@
   "tooltip": {
     "bucketList": "bucket list",
     "inaccessible": "Cannot access this bucket (no permission or it does not exist).",
-    "moreActions": "More actions"
+    "moreActions": "More actions",
+    "policy": {
+      "private": "Private: no bucket policy.",
+      "public": "Public: anyone can read and list objects.",
+      "custom": "Custom: the bucket has a custom policy."
+    }
   },
   "label": {
     "createDate": "Create date:"
@@ -16,5 +21,12 @@
     "detail": "Details",
     "editPolicy": "Access permission",
     "delete": "Delete"
+  },
+  "badge": {
+    "policy": {
+      "private": "Private",
+      "public": "Public",
+      "custom": "Custom"
+    }
   }
 }

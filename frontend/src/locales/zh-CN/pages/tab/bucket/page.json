@@ -3,7 +3,12 @@
   "tooltip": {
     "bucketList": "存储桶列表",
     "inaccessible": "无法访问此存储桶（无权限或存储桶不存在）。",
-    "moreActions": "更多操作"
+    "moreActions": "更多操作",
+    "policy": {
+      "private": "私有：存储桶没有策略。",
+      "public": "公开：任何人都可以读取和列出对象。",
+      "custom": "自定义：存储桶使用自定义策略。"
+    }
   },
   "label": {
     "createDate": "创建日期："
@@ -16,5 +21,12 @@
     "detail": "详情",
     "editPolicy": "访问权限",
     "delete": "删除"
+  },
+  "badge": {
+    "policy": {
+      "private": "私有",
+      "public": "公开",
+      "custom": "自定义"
+    }
   }
 }

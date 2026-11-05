@@ -22,6 +22,8 @@ const PREFETCH_ROWS = 2;
 
 export type BucketListViewRef = {
   onRefresh?: () => Promise<void>;
+  // Patches the policy mode of one bucket, e.g. right after the user saved its policy.
+  setPolicyMode?: (bucket: string, mode: string) => void;
 };
 
 type BucketListViewProps = {
@@ -179,7 +181,15 @@ function BucketListView(props: BucketListViewProps) {
     return loadNextPage();
   }, [loadNextPage]);
 
-  useImperativeHandle(ref, () => ({ onRefresh }), [onRefresh]);
+  const setPolicyMode = useCallback((bucket: string, mode: string) => {
+    setBucketDatas(prev => {
+      const idx = prev.findIndex(item => item.name === bucket);
+      if (idx < 0) return prev;
+      return prev.map((item, i) => (i === idx ? { ...item, policyMode: mode } : item));
+    });
+  }, []);
+
+  useImperativeHandle(ref, () => ({ onRefresh, setPolicyMode }), [onRefresh, setPolicyMode]);
 
   const bucketList = connectionId ? bucketDatas : [];
 
@@ -221,29 +231,38 @@ function BucketListView(props: BucketListViewProps) {
           readOnly: result.readOnly,
           deleteDenied: result.deleteDenied,
           accessPending: result.accessPending,
+          policyMode: result.policyMode || item.policyMode,
         };
       });
       return changed ? next : prev;
     });
   }, []);
 
-  // Checks access of the visible buckets still pending, once the range stops moving. Each name is sent once per list.
+  // Checks access (and policy mode, unless anonymous) of the visible buckets still unknown, once the range stops moving. Each name is sent once per list.
   useEffect(() => {
     if (!active || !connectionId) return;
     const timer = setTimeout(async () => {
       const names = bucketDatas
         .slice(firstVisibleIndex, lastVisibleIndex + 1)
-        .flatMap(item => (item.accessPending && item.name && !checkedNames.current.has(item.name) ? [item.name] : []));
+        .flatMap(item =>
+          (item.accessPending || (canEdit && !item.policyMode)) && item.name && !checkedNames.current.has(item.name)
+            ? [item.name]
+            : []
+        );
       if (names.length === 0) return;
       names.forEach(name => checkedNames.current.add(name));
       checkCtrl.current ??= new AbortController();
       const { signal } = checkCtrl.current;
-      const output = await callIPC(CheckBucketAccess, [{ connectionId, profileName, bucketNames: names }], { signal });
+      const output = await callIPC(
+        CheckBucketAccess,
+        [{ connectionId, profileName, bucketNames: names, withPolicy: canEdit }],
+        { signal }
+      );
       if (signal.aborted) return;
       if (output?.bucketList) mergeAccess(output.bucketList);
     }, ACCESS_CHECK_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [active, connectionId, profileName, bucketDatas, firstVisibleIndex, lastVisibleIndex, mergeAccess]);
+  }, [active, connectionId, profileName, canEdit, bucketDatas, firstVisibleIndex, lastVisibleIndex, mergeAccess]);
 
   useEffect(() => {
     // After a failed page, wait for Refresh instead of retrying in a loop.

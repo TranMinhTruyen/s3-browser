@@ -16,11 +16,13 @@ type BucketPolicyModalProps = ModalProps & {
   connectionId: string;
   profileName?: string;
   bucket: string;
+  // Called with the saved mode after the policy was written.
+  onSaved?: (mode: PolicyMode) => void;
 };
 
 /** Shows and changes the access of a bucket as private / public read-only / custom policy JSON. */
 export default createMantineModal<BucketPolicyModalProps, boolean>(props => {
-  const { connectionId, profileName, bucket, mantine, size = 'md', centered = true, ...rest } = props;
+  const { connectionId, profileName, bucket, onSaved, mantine, size = 'md', centered = true, ...rest } = props;
 
   const { t } = useTranslation('bucketPolicyModal');
 
@@ -64,7 +66,8 @@ export default createMantineModal<BucketPolicyModalProps, boolean>(props => {
     // On failure callIPC already showed the error and the form keeps what the user typed.
     if (signal.aborted || !output) return;
     applyOutput(output);
-  }, [connectionId, profileName, bucket, mode, policy, applyOutput]);
+    onSaved?.(output.mode as PolicyMode);
+  }, [connectionId, profileName, bucket, mode, policy, applyOutput, onSaved]);
 
   useEffect(() => () => saveCtrl.current?.abort(), []);
 

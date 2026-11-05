@@ -199,7 +199,12 @@ function TabDetail(props: TabDetailProps) {
   const onEditBucketPolicy = useCallback(
     (bucket: string | undefined) => {
       if (!selectedProfile?.id || !bucket) return;
-      return showBucketPolicyModal({ connectionId: selectedProfile.id, profileName: selectedProfile.name, bucket });
+      return showBucketPolicyModal({
+        connectionId: selectedProfile.id,
+        profileName: selectedProfile.name,
+        bucket,
+        onSaved: mode => bucketListRef.current?.setPolicyMode?.(bucket, mode),
+      });
     },
     [selectedProfile]
   );

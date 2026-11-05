@@ -1,4 +1,4 @@
-import { Card, Group, Menu, Stack, Text } from '@mantine/core';
+import { Badge, Card, Group, Menu, Skeleton, Stack, Text, Tooltip } from '@mantine/core';
 import { Bucket } from '@wails/S3Browser/models/bucket';
 import dayjs from 'dayjs';
 import { Ellipsis, Folder, Info, ShieldCheck, Trash2 } from 'lucide-react';
@@ -32,6 +32,23 @@ const CONTENT_SECTION_STYLE: CSSProperties = { flex: 1, minWidth: 0, display: 'f
 const MENU_SECTION_STYLE: CSSProperties = { ...ICON_SECTION_STYLE, minWidth: '56px' };
 
 const stopPropagation = (e: MouseEvent) => e.stopPropagation();
+
+const POLICY_BADGE_COLORS = { private: 'gray', public: 'orange', custom: 'blue' } as const;
+
+/** Policy mode of a bucket: skeleton while unknown yet, nothing when it could not be read ("unknown"). */
+function PolicyBadge({ mode }: { mode?: string }) {
+  const { t } = useTranslation('bucket', { keyPrefix: 'page' });
+  if (!mode) return <Skeleton w={56} h={18} radius="xl" />;
+  if (!(mode in POLICY_BADGE_COLORS)) return null;
+  const policyMode = mode as keyof typeof POLICY_BADGE_COLORS;
+  return (
+    <Tooltip label={t(`tooltip.policy.${policyMode}`)}>
+      <Badge size="sm" variant="light" color={`var(--mantine-color-${POLICY_BADGE_COLORS[policyMode]}-6)`}>
+        {t(`badge.policy.${policyMode}`)}
+      </Badge>
+    </Tooltip>
+  );
+}
 
 /**
  * One row of the bucket list: name, creation date (unknown for anonymous buckets) and a warning when the bucket
@@ -90,12 +107,15 @@ function BucketItem(props: BucketItemProps) {
             {item.inaccessible ? <WarningIcon label={t('tooltip.inaccessible')} size={18} /> : null}
           </Group>
           {hasCreationDate ? (
-            <Text>
-              <Text span fw={500}>
-                {t('label.createDate')}
-              </Text>{' '}
-              {dayjs(item.creationDate).format(FULL_DATE_TIME_FORMAT)}
-            </Text>
+            <Group gap="xs" wrap="nowrap">
+              <Text>
+                <Text span fw={500}>
+                  {t('label.createDate')}
+                </Text>{' '}
+                {dayjs(item.creationDate).format(FULL_DATE_TIME_FORMAT)}
+              </Text>
+              {canEdit ? <PolicyBadge mode={item.policyMode} /> : null}
+            </Group>
           ) : null}
         </Stack>
       </Card.Section>
