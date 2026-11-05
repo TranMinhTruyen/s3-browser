@@ -88,7 +88,9 @@
     "S3E063": "Der Bucket {bucket} hat Object Lock und ist nicht leer, er kann nicht gelöscht werden.",
     "S3W008": "Die Anmeldedaten von Profil {name} laufen in {minutes} Minute(n) ab und können nicht automatisch erneuert werden.",
     "S3W009": "Auf Bucket {bucket} kann nicht anonym zugegriffen werden.",
-    "S3W010": "Die Anmeldedaten von Profil {name} laufen bald ab, geben Sie einen neuen MFA-Code ein, um die Verbindung zu halten."
+    "S3W010": "Die Anmeldedaten von Profil {name} laufen bald ab, geben Sie einen neuen MFA-Code ein, um die Verbindung zu halten.",
+    "S3W011": "Bucket {bucket} wurde erstellt, aber seine Berechtigung konnte nicht festgelegt werden. Sie können sie später unter Zugriffsberechtigung ändern.",
+    "S3W012": "Bucket {bucket} wurde erstellt, aber „Öffentlichen Zugriff blockieren“ erlaubt keine öffentliche Richtlinie, daher bleibt er privat."
   },
   "master": {
     "MTE001": "Fehler beim Laden der Stammdaten."

@@ -1,7 +1,8 @@
 {
   "title": "Tạo bucket",
   "label": {
-    "name": "Tên bucket"
+    "name": "Tên bucket",
+    "permission": "Quyền truy cập"
   },
   "placeholder": {
     "name": "my-bucket"
@@ -9,5 +10,8 @@
   "hint": {
     "name": "3-63 ký tự: chữ thường, số, dấu chấm và dấu gạch ngang."
   },
-  "create": "Tạo"
+  "create": "Tạo",
+  "warning": {
+    "publicAccessBlock": "Trên AWS, bucket mới mặc định chặn truy cập công khai. Đặt policy công khai có thể thất bại cho tới khi tắt Block Public Access."
+  }
 }

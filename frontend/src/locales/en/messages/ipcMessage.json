@@ -88,7 +88,9 @@
     "S3E063": "Bucket {bucket} has Object Lock and is not empty, it can't be deleted.",
     "S3W008": "Credentials of profile {name} expire in {minutes} minute(s) and cannot be renewed automatically.",
     "S3W009": "Bucket {bucket} cannot be accessed anonymously.",
-    "S3W010": "Credentials of profile {name} expire soon, enter a new MFA code to keep the connection."
+    "S3W010": "Credentials of profile {name} expire soon, enter a new MFA code to keep the connection.",
+    "S3W011": "Bucket {bucket} was created, but its permission could not be set. You can change it later with Access permission.",
+    "S3W012": "Bucket {bucket} was created, but Block Public Access does not allow a public policy, so it stays private."
   },
   "master": {
     "MTE001": "Error while loading master data."

@@ -18,6 +18,9 @@ import (
 // defaultBucketRegion is the region AWS creates a bucket in without a LocationConstraint.
 const defaultBucketRegion = "us-east-1"
 
+// createPolicyRetries is how many times setting the policy of a new bucket is retried on NoSuchBucket.
+const createPolicyRetries = 3
+
 // submoduleBucketEditMng creates buckets and reads or changes their policy and details.
 type submoduleBucketEditMng struct {
 	logger *slog.Logger
@@ -62,6 +65,14 @@ func (m *submoduleBucketEditMng) createBucket(
 		return output.ThrowError(anonymousEditMessage())
 	}
 
+	mode := cmp.Or(input.Mode, policyModePrivate)
+	switch validPolicyMode(mode, input.Policy) {
+	case errInvalidMode:
+		return output.ThrowError(bucketMessage(cnst.MessageTypeError, S3E053, input.Bucket, "invalid mode"))
+	case errInvalidPolicy:
+		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E057, ""))
+	}
+
 	createInput := &s3.CreateBucketInput{Bucket: &input.Bucket}
 	var optFns []func(*s3.Options)
 	if isRealAws(conn) {
@@ -80,7 +91,47 @@ func (m *submoduleBucketEditMng) createBucket(
 	}
 
 	conn.Access.Reset()
-	return *output.AddMessage(bucketMessage(cnst.MessageTypeSuccess, S3S007, input.Bucket, ""))
+	if mode == policyModePrivate {
+		return *output.AddMessage(bucketMessage(cnst.MessageTypeSuccess, S3S007, input.Bucket, ""))
+	}
+
+	// The bucket exists from here on: a failed policy is a warning and the call still succeeds.
+	err := applyPolicyAfterCreate(ctx, conn, input.Bucket, mode, input.Policy, optFns)
+	switch {
+	case err == nil:
+		return *output.AddMessage(bucketMessage(cnst.MessageTypeSuccess, S3S007, input.Bucket, ""))
+	case isCallCanceled(ctx):
+		return output
+	}
+	m.logger.Warn("set policy of new bucket failed", slog.String("bucket", input.Bucket), slog.Any("error", err))
+	code := S3W011
+	if bucketEditCode(err, "") == S3E052 {
+		if blocked, _ := readPublicBlocked(ctx, conn, input.Bucket, optFns...); blocked {
+			code = S3W012
+		}
+	}
+	return *output.AddMessage(bucketMessage(cnst.MessageTypeWarn, code, input.Bucket, UnwrapAwsError(err)))
+}
+
+// applyPolicyAfterCreate sets the policy of a new bucket. Real AWS can answer NoSuchBucket for a moment after the
+// bucket is created, so that answer is retried up to createPolicyRetries times, one second apart.
+func applyPolicyAfterCreate(
+	ctx context.Context,
+	conn *global.S3Conn,
+	bucket, mode, pol string,
+	optFns []func(*s3.Options),
+) error {
+	for retry := 0; ; retry++ {
+		err := applyBucketPolicy(ctx, conn, bucket, mode, pol, optFns...)
+		if err == nil || retry == createPolicyRetries || !isRealAws(conn) || UnwrapAwsError(err) != "NoSuchBucket" {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Second):
+		}
+	}
 }
 
 // bucketMessage is a message of the bucket module with the bucket param.

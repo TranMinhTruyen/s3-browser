@@ -256,6 +256,12 @@ var (
 	// Used by the frontend only.
 	// Credentials of profile {name} expire soon, enter a new MFA code to keep the connection.
 	S3W010 = "S3W010"
+
+	// Bucket {bucket} was created, but its permission could not be set. You can change it later with Access permission.
+	S3W011 = "S3W011"
+
+	// Bucket {bucket} was created, but Block Public Access does not allow a public policy, so it stays private.
+	S3W012 = "S3W012"
 )
 
 // Module is the public API of the bucket module.
@@ -426,8 +432,11 @@ func (m *Module) CheckBucketAccess(
 // CreateBucket creates the bucket input.Bucket. On real AWS the region is input.Region, else the profile region,
 // else us-east-1; the request goes to that region and a region other than us-east-1 is sent as the
 // LocationConstraint. MinIO and custom endpoints ignore input.Region. Fails with S3E054 (anonymous), S3E050 (name
-// taken), S3E051 (name invalid), S3E052 (denied) or S3E053. The access cache is reset on success. ctx is the call
-// context.
+// taken), S3E051 (name invalid), S3E052 (denied) or S3E053. The access cache is reset on success.
+// input.Mode (private, public or custom with input.Policy; empty means private) sets the access right after the
+// bucket is made. An unknown mode (S3E053) or a custom policy that is not JSON (S3E057) fails before the bucket is
+// created. If setting the access fails the bucket is kept: Result stays true with one warning, S3W012 when Block
+// Public Access refuses a public policy, else S3W011. ctx is the call context.
 func (m *Module) CreateBucket(ctx context.Context, input models.CreateBucketInput) models.Output[any] {
 	return m.submoduleBucketEditMng.createBucket(ctx, input)
 }

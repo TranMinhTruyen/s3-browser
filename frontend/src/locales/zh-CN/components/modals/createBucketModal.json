@@ -1,7 +1,8 @@
 {
   "title": "创建存储桶",
   "label": {
-    "name": "存储桶名称"
+    "name": "存储桶名称",
+    "permission": "权限"
   },
   "placeholder": {
     "name": "my-bucket"
@@ -9,5 +10,8 @@
   "hint": {
     "name": "3-63 个字符：小写字母、数字、点和连字符。"
   },
-  "create": "创建"
+  "create": "创建",
+  "warning": {
+    "publicAccessBlock": "在 AWS 上，新存储桶默认阻止公共访问。在关闭“阻止公共访问”之前，设置公开策略可能会失败。"
+  }
 }

@@ -16,3 +16,20 @@ export function validateBucketName(name: string): string | null {
   if (RESERVED_SUFFIXES.some(suffix => name.endsWith(suffix))) return 'V000010';
   return null;
 }
+
+export type PolicyMode = 'private' | 'public' | 'custom';
+export const POLICY_MODES: PolicyMode[] = ['private', 'public', 'custom'];
+
+const isValidJson = (text: string) => {
+  try {
+    JSON.parse(text);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+/** Returns the `validateMessage` code `V000004` when a custom policy is not valid JSON; an empty policy is not flagged. */
+export function validatePolicy(mode: PolicyMode, policy: string): string | null {
+  return mode === 'custom' && policy && !isValidJson(policy) ? 'V000004' : null;
+}

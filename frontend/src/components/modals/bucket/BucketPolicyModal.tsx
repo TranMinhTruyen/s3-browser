@@ -2,32 +2,20 @@ import { Center, Divider, Group, Loader, Modal, Paper, Stack, Text, Title } from
 import { GetBucketPolicy, PutBucketPolicy } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { BucketPolicyOutput } from '@wails/S3Browser/models/bucket';
 import { ShieldCheck } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { type PolicyMode, validatePolicy } from '@/common/utils/bucketUtils';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import Button from '@/components/buttons/Button';
 import TruncatedText from '@/components/display/TruncatedText';
-import FieldInput from '@/components/inputs/FieldInput';
-import SegmentedControl from '@/components/inputs/SegmentedControl';
+import BucketPolicyInput from '@/components/inputs/BucketPolicyInput';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 
 type BucketPolicyModalProps = ModalProps & {
   connectionId: string;
   profileName?: string;
   bucket: string;
-};
-
-type PolicyMode = 'private' | 'public' | 'custom';
-const MODES: PolicyMode[] = ['private', 'public', 'custom'];
-
-const isValidJson = (text: string) => {
-  try {
-    JSON.parse(text);
-    return true;
-  } catch {
-    return false;
-  }
 };
 
 /** Shows and changes the access of a bucket as private / public read-only / custom policy JSON. */
@@ -61,13 +49,9 @@ export default createMantineModal<BucketPolicyModalProps, boolean>(props => {
   }, [connectionId, profileName, bucket, applyOutput]);
 
   const readOnly = !current || current.editDenied;
-  const policyError = mode === 'custom' && policy && !isValidJson(policy) ? 'V000004' : null;
-  const canSave = !readOnly && !policyError && (mode !== 'custom' || !!policy);
-
-  const modeOptions = useMemo(() => MODES.map(value => ({ value, label: t(`mode.${value}`) })), [t]);
+  const canSave = !readOnly && !validatePolicy(mode, policy) && (mode !== 'custom' || !!policy);
 
   const onChangePolicy = useCallback((value: string) => setPolicy(value), []);
-  const onChangeMode = useCallback((value: string) => setMode(value as PolicyMode), []);
 
   const onClickSave = useCallback(async () => {
     saveCtrl.current = new AbortController();
@@ -129,29 +113,13 @@ export default createMantineModal<BucketPolicyModalProps, boolean>(props => {
                 {current?.publicBlocked ? (
                   <Text c="var(--mantine-color-orange-filled)">{t('warning.publicBlocked')}</Text>
                 ) : null}
-                <SegmentedControl
-                  fullWidth
-                  data={modeOptions}
-                  value={mode}
-                  disabled={readOnly}
-                  onChange={onChangeMode}
+                <BucketPolicyInput
+                  mode={mode}
+                  policy={policy}
+                  readOnly={readOnly}
+                  onChangeMode={setMode}
+                  onChangePolicy={onChangePolicy}
                 />
-                <Text size="sm" c="dimmed">
-                  {t(`hint.${mode}`)}
-                </Text>
-                {mode === 'custom' ? (
-                  <FieldInput
-                    type="json"
-                    label={t('label.policy')}
-                    autosize
-                    minRows={8}
-                    maxRows={16}
-                    readOnly={readOnly}
-                    value={policy}
-                    error={policyError}
-                    onChange={onChangePolicy}
-                  />
-                ) : null}
               </Stack>
             )}
           </Paper>

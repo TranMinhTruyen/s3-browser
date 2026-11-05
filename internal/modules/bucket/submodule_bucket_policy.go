@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -45,7 +46,7 @@ func (m *submoduleBucketEditMng) getBucketPolicy(
 		return output.ThrowError(anonymousEditMessage())
 	}
 
-	state, err := m.loadPolicyState(ctx, conn, input.Bucket)
+	state, err := m.loadPolicyState(ctx, conn, input.Bucket, policyOptFns(ctx, conn, input.Bucket))
 	if err != nil {
 		m.logger.Error("get bucket policy failed", slog.String("bucket", input.Bucket), slog.Any("error", err))
 		return bucketEditFailed(ctx, output, input.ProfileName, input.Bucket, err, S3E055)
@@ -74,33 +75,20 @@ func (m *submoduleBucketEditMng) putBucketPolicy(
 		return output.ThrowError(anonymousEditMessage())
 	}
 
-	var err error
-	switch input.Mode {
-	case policyModePrivate:
-		_, err = conn.Client.DeleteBucketPolicy(ctx, &s3.DeleteBucketPolicyInput{Bucket: &input.Bucket})
-	case policyModePublic:
-		_, err = conn.Client.PutBucketPolicy(ctx, &s3.PutBucketPolicyInput{
-			Bucket: &input.Bucket,
-			Policy: aws.String(publicReadPolicy(input.Bucket)),
-		})
-	case policyModeCustom:
-		if !json.Valid([]byte(input.Policy)) {
-			return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E057, ""))
-		}
-		_, err = conn.Client.PutBucketPolicy(ctx, &s3.PutBucketPolicyInput{
-			Bucket: &input.Bucket,
-			Policy: &input.Policy,
-		})
-	default:
+	switch validPolicyMode(input.Mode, input.Policy) {
+	case errInvalidMode:
 		return output.ThrowError(bucketMessage(cnst.MessageTypeError, S3E056, input.Bucket, "invalid mode"))
+	case errInvalidPolicy:
+		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E057, ""))
 	}
-	if err != nil {
+	optFns := policyOptFns(ctx, conn, input.Bucket)
+	if err := applyBucketPolicy(ctx, conn, input.Bucket, input.Mode, input.Policy, optFns...); err != nil {
 		m.logger.Error("put bucket policy failed", slog.String("bucket", input.Bucket), slog.Any("error", err))
-		return putPolicyFailed(ctx, conn, output, input, err)
+		return putPolicyFailed(ctx, conn, output, input, err, optFns)
 	}
 
 	conn.Access.Reset()
-	state, err := m.loadPolicyState(ctx, conn, input.Bucket)
+	state, err := m.loadPolicyState(ctx, conn, input.Bucket, optFns)
 	if err != nil {
 		// Saved, only the read back failed: show what was asked.
 		m.logger.Warn("read back bucket policy failed", slog.String("bucket", input.Bucket), slog.Any("error", err))
@@ -112,6 +100,61 @@ func (m *submoduleBucketEditMng) putBucketPolicy(
 	return *output.AddMessage(bucketMessage(cnst.MessageTypeSuccess, S3S008, input.Bucket, ""))
 }
 
+var (
+	errInvalidMode   = errors.New("invalid policy mode")
+	errInvalidPolicy = errors.New("invalid policy json")
+)
+
+// validPolicyMode checks mode and, for custom, that policy is JSON. It returns nil, errInvalidMode or errInvalidPolicy.
+func validPolicyMode(mode, pol string) error {
+	switch mode {
+	case policyModePrivate, policyModePublic:
+		return nil
+	case policyModeCustom:
+		if !json.Valid([]byte(pol)) {
+			return errInvalidPolicy
+		}
+		return nil
+	}
+	return errInvalidMode
+}
+
+// applyBucketPolicy sets the access mode of the bucket: private deletes the policy, public and custom put one.
+// The mode must have passed validPolicyMode.
+func applyBucketPolicy(
+	ctx context.Context,
+	conn *global.S3Conn,
+	bucket, mode, pol string,
+	optFns ...func(*s3.Options),
+) error {
+	var err error
+	switch mode {
+	case policyModePrivate:
+		_, err = conn.Client.DeleteBucketPolicy(ctx, &s3.DeleteBucketPolicyInput{Bucket: &bucket}, optFns...)
+	case policyModePublic:
+		_, err = conn.Client.PutBucketPolicy(ctx, &s3.PutBucketPolicyInput{
+			Bucket: &bucket,
+			Policy: aws.String(publicReadPolicy(bucket)),
+		}, optFns...)
+	case policyModeCustom:
+		_, err = conn.Client.PutBucketPolicy(ctx, &s3.PutBucketPolicyInput{Bucket: &bucket, Policy: &pol}, optFns...)
+	}
+	return err
+}
+
+// policyOptFns sends the policy requests of real AWS to the region of the bucket. Elsewhere, or when the region
+// can't be read, it returns nil and the connection region is used.
+func policyOptFns(ctx context.Context, conn *global.S3Conn, bucket string) []func(*s3.Options) {
+	if !isRealAws(conn) {
+		return nil
+	}
+	region, err := readBucketRegion(ctx, conn, bucket)
+	if err != nil {
+		return nil
+	}
+	return regionOptFns(conn, region)
+}
+
 // putPolicyFailed maps a failed save: a malformed policy gives S3E057, a denied public policy under Block Public
 // Access S3E058, anything else the generic bucket edit errors with S3E056 as fallback.
 func putPolicyFailed(
@@ -120,13 +163,14 @@ func putPolicyFailed(
 	output models.Output[models.BucketPolicyOutput],
 	input models.PutBucketPolicyInput,
 	err error,
+	optFns []func(*s3.Options),
 ) models.Output[models.BucketPolicyOutput] {
 	if UnwrapAwsError(err) == "MalformedPolicy" {
 		return failCall(ctx, output, input.ProfileName, err,
 			models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E057, UnwrapAwsError(err)))
 	}
 	if input.Mode != policyModePrivate && bucketEditCode(err, S3E056) == S3E052 {
-		if blocked, _ := readPublicBlocked(ctx, conn, input.Bucket); blocked {
+		if blocked, _ := readPublicBlocked(ctx, conn, input.Bucket, optFns...); blocked {
 			return failCall(ctx, output, input.ProfileName, err,
 				bucketMessage(cnst.MessageTypeError, S3E058, input.Bucket, UnwrapAwsError(err)))
 		}
@@ -140,12 +184,13 @@ func (m *submoduleBucketEditMng) loadPolicyState(
 	ctx context.Context,
 	conn *global.S3Conn,
 	bucket string,
+	optFns []func(*s3.Options),
 ) (models.BucketPolicyOutput, error) {
-	mode, pol, err := readPolicyMode(ctx, conn, bucket)
+	mode, pol, err := readPolicyMode(ctx, conn, bucket, optFns...)
 	if err != nil {
 		return models.BucketPolicyOutput{}, err
 	}
-	blocked, err := readPublicBlocked(ctx, conn, bucket)
+	blocked, err := readPublicBlocked(ctx, conn, bucket, optFns...)
 	if err != nil {
 		m.logger.Debug("read public access block failed", slog.String("bucket", bucket), slog.Any("error", err))
 	}

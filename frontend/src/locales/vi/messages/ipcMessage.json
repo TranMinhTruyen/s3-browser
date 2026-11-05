@@ -88,7 +88,9 @@
     "S3E063": "Bucket {bucket} có Object Lock và không rỗng nên không thể xoá.",
     "S3W008": "Thông tin xác thực của hồ sơ {name} sẽ hết hạn sau {minutes} phút và không thể tự động gia hạn.",
     "S3W009": "Không thể truy cập bucket {bucket} bằng chế độ ẩn danh.",
-    "S3W010": "Thông tin xác thực của hồ sơ {name} sắp hết hạn, hãy nhập mã MFA mới để giữ kết nối."
+    "S3W010": "Thông tin xác thực của hồ sơ {name} sắp hết hạn, hãy nhập mã MFA mới để giữ kết nối.",
+    "S3W011": "Đã tạo bucket {bucket} nhưng không thể đặt quyền truy cập. Bạn có thể đổi sau bằng Quyền truy cập.",
+    "S3W012": "Đã tạo bucket {bucket} nhưng Block Public Access không cho phép policy công khai nên bucket vẫn ở chế độ riêng tư."
   },
   "master": {
     "MTE001": "Lỗi khi tải dữ liệu master"

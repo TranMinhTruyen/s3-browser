@@ -1,12 +1,13 @@
-import { Divider, Group, Modal, Paper, Stack, Title } from '@mantine/core';
+import { Divider, Group, Modal, Paper, Stack, Text, Title } from '@mantine/core';
 import { CreateBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { FolderPlus } from 'lucide-react';
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { validateBucketName } from '@/common/utils/bucketUtils';
+import { type PolicyMode, validateBucketName, validatePolicy } from '@/common/utils/bucketUtils';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import Button from '@/components/buttons/Button';
+import BucketPolicyInput from '@/components/inputs/BucketPolicyInput';
 import RegionCombobox from '@/components/inputs/combobox/RegionCombobox';
 import FieldInput from '@/components/inputs/FieldInput';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
@@ -28,7 +29,7 @@ export default createMantineModal<CreateBucketModalProps, boolean>(
       withRegion,
       defaultRegion,
       mantine,
-      size = 'sm',
+      size = 'md',
       centered = true,
       ...rest
     } = props;
@@ -37,6 +38,8 @@ export default createMantineModal<CreateBucketModalProps, boolean>(
 
     const [name, setName] = useState('');
     const [region, setRegion] = useState<string | null>(defaultRegion || null);
+    const [mode, setMode] = useState<PolicyMode>('private');
+    const [policy, setPolicy] = useState('');
     const ctrl = useRef<AbortController>(null);
 
     // Closing the modal (any way) cancels a create still in flight.
@@ -47,6 +50,8 @@ export default createMantineModal<CreateBucketModalProps, boolean>(
 
     const onChangeName = useCallback((e: ChangeEvent<HTMLInputElement>) => setName(e.currentTarget.value), []);
 
+    const onChangePolicy = useCallback((value: string) => setPolicy(value), []);
+
     const onClickCreate = useCallback(async () => {
       if (validateBucketName(name)) return;
       ctrl.current = new AbortController();
@@ -54,7 +59,16 @@ export default createMantineModal<CreateBucketModalProps, boolean>(
       let created = false;
       await callIPC(
         CreateBucket,
-        [{ connectionId, profileName, bucket: name, region: withRegion ? (region ?? undefined) : undefined }],
+        [
+          {
+            connectionId,
+            profileName,
+            bucket: name,
+            region: withRegion ? (region ?? undefined) : undefined,
+            mode: mode !== 'private' ? mode : undefined,
+            policy: mode === 'custom' ? policy : undefined,
+          },
+        ],
         {
           signal,
           resolveAction: () => {
@@ -66,7 +80,7 @@ export default createMantineModal<CreateBucketModalProps, boolean>(
       if (signal.aborted || !created) return;
       mantine.handler.resolve(true);
       mantine.handler.hide();
-    }, [name, connectionId, profileName, withRegion, region, mantine.handler]);
+    }, [name, connectionId, profileName, withRegion, region, mode, policy, mantine.handler]);
 
     const onClickCancel = useCallback(() => {
       mantine.handler.resolve(false);
@@ -109,6 +123,15 @@ export default createMantineModal<CreateBucketModalProps, boolean>(
                   onChange={onChangeName}
                 />
                 {withRegion ? <RegionCombobox value={region} onChange={setRegion} /> : null}
+                <Text size="sm" fw={500}>
+                  {t('label.permission')}
+                </Text>
+                {withRegion && mode !== 'private' ? (
+                  <Text size="sm" c="var(--mantine-color-orange-filled)">
+                    {t('warning.publicAccessBlock')}
+                  </Text>
+                ) : null}
+                <BucketPolicyInput mode={mode} policy={policy} onChangeMode={setMode} onChangePolicy={onChangePolicy} />
               </Stack>
             </Paper>
           </Modal.Body>
@@ -119,7 +142,10 @@ export default createMantineModal<CreateBucketModalProps, boolean>(
             <Button onClick={onClickCancel} color="red">
               {t('common:button.cancel')}
             </Button>
-            <Button onClick={onClickCreate} disabled={!name || !!error}>
+            <Button
+              onClick={onClickCreate}
+              disabled={!name || !!error || (mode === 'custom' && (!policy || !!validatePolicy(mode, policy)))}
+            >
               {t('create')}
             </Button>
           </Group>

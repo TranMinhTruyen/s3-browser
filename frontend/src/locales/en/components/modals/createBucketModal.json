@@ -1,7 +1,8 @@
 {
   "title": "Create bucket",
   "label": {
-    "name": "Bucket name"
+    "name": "Bucket name",
+    "permission": "Permission"
   },
   "placeholder": {
     "name": "my-bucket"
@@ -9,5 +10,8 @@
   "hint": {
     "name": "3-63 characters: lowercase letters, numbers, dots and hyphens."
   },
-  "create": "Create"
+  "create": "Create",
+  "warning": {
+    "publicAccessBlock": "On AWS, new buckets block public access by default. Setting a public policy may fail until Block Public Access is turned off."
+  }
 }

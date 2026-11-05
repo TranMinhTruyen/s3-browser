@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { validateBucketName } from '@/common/utils/bucketUtils';
+import { validateBucketName, validatePolicy } from '@/common/utils/bucketUtils';
+
+describe('validatePolicy', () => {
+  it.each([
+    ['private', '', null],
+    ['private', 'not json', null],
+    ['public', 'not json', null],
+    ['custom', '', null],
+    ['custom', '{bad', 'V000004'],
+    ['custom', '{"Version":"2012-10-17"}', null],
+  ] as const)('mode %s with %j gives %s', (mode, policy, expected) => {
+    expect(validatePolicy(mode, policy)).toBe(expected);
+  });
+});
 
 describe('validateBucketName', () => {
   it.each([
