@@ -1,4 +1,4 @@
-import { Badge, Card, Group, Menu, Skeleton, Stack, Text, Tooltip } from '@mantine/core';
+import { Card, Group, Menu, Stack, Text } from '@mantine/core';
 import { Bucket } from '@wails/S3Browser/models/bucket';
 import dayjs from 'dayjs';
 import { Ellipsis, Folder, Info, ShieldCheck, Trash2 } from 'lucide-react';
@@ -6,6 +6,7 @@ import { type CSSProperties, type MouseEvent, memo, useCallback, useEffect, useR
 import { useTranslation } from 'react-i18next';
 import { FULL_DATE_TIME_FORMAT, LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
 import ActionIcon from '@/components/buttons/ActionIcon';
+import PolicyBadge from '@/components/display/PolicyBadge';
 import TruncatedText from '@/components/display/TruncatedText';
 import WarningIcon from '@/components/display/WarningIcon';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
@@ -32,23 +33,6 @@ const CONTENT_SECTION_STYLE: CSSProperties = { flex: 1, minWidth: 0, display: 'f
 const MENU_SECTION_STYLE: CSSProperties = { ...ICON_SECTION_STYLE, minWidth: '56px' };
 
 const stopPropagation = (e: MouseEvent) => e.stopPropagation();
-
-const POLICY_BADGE_COLORS = { private: 'gray', public: 'orange', custom: 'blue' } as const;
-
-/** Policy mode of a bucket: skeleton while unknown yet, nothing when it could not be read ("unknown"). */
-function PolicyBadge({ mode }: { mode?: string }) {
-  const { t } = useTranslation('bucket', { keyPrefix: 'page' });
-  if (!mode) return <Skeleton w={56} h={18} radius="xl" />;
-  if (!(mode in POLICY_BADGE_COLORS)) return null;
-  const policyMode = mode as keyof typeof POLICY_BADGE_COLORS;
-  return (
-    <Tooltip label={t(`tooltip.policy.${policyMode}`)}>
-      <Badge size="sm" variant="light" color={`var(--mantine-color-${POLICY_BADGE_COLORS[policyMode]}-6)`}>
-        {t(`badge.policy.${policyMode}`)}
-      </Badge>
-    </Tooltip>
-  );
-}
 
 /**
  * One row of the bucket list: name, creation date (unknown for anonymous buckets) and a warning when the bucket

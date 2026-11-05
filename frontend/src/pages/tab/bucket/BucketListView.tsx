@@ -70,11 +70,14 @@ function BucketListView(props: BucketListViewProps) {
   // Access check of the visible buckets: own controller, and names already sent for the current list.
   const checkCtrl = useRef<AbortController>(null);
   const checkedNames = useRef(new Set<string>());
+  // Buckets whose policy mode was patched by hand (setPolicyMode): a stale access response must not overwrite it.
+  const patchedNames = useRef(new Set<string>());
 
   const resetAccessCheck = useCallback(() => {
     checkCtrl.current?.abort();
     checkCtrl.current = null;
     checkedNames.current.clear();
+    patchedNames.current.clear();
   }, []);
 
   const startRequest = useCallback(() => {
@@ -182,6 +185,7 @@ function BucketListView(props: BucketListViewProps) {
   }, [loadNextPage]);
 
   const setPolicyMode = useCallback((bucket: string, mode: string) => {
+    patchedNames.current.add(bucket);
     setBucketDatas(prev => {
       const idx = prev.findIndex(item => item.name === bucket);
       if (idx < 0) return prev;
@@ -231,14 +235,25 @@ function BucketListView(props: BucketListViewProps) {
           readOnly: result.readOnly,
           deleteDenied: result.deleteDenied,
           accessPending: result.accessPending,
-          policyMode: result.policyMode || item.policyMode,
+          policyMode: patchedNames.current.has(item.name ?? '')
+            ? item.policyMode
+            : result.policyMode || item.policyMode,
         };
       });
       return changed ? next : prev;
     });
   }, []);
 
-  // Checks access (and policy mode, unless anonymous) of the visible buckets still unknown, once the range stops moving. Each name is sent once per list.
+  // Check failed: hide the badge skeleton of the buckets sent, so it does not show forever.
+  const markPolicyUnknown = useCallback((names: string[]) => {
+    const failed = new Set(names);
+    setBucketDatas(prev =>
+      prev.map(item => (failed.has(item.name ?? '') && !item.policyMode ? { ...item, policyMode: 'unknown' } : item))
+    );
+  }, []);
+
+  // Checks access (and policy mode, unless anonymous) of the visible buckets still unknown,
+  // once the range stops moving. Each name is sent once per list.
   useEffect(() => {
     if (!active || !connectionId) return;
     const timer = setTimeout(async () => {
@@ -260,9 +275,20 @@ function BucketListView(props: BucketListViewProps) {
       );
       if (signal.aborted) return;
       if (output?.bucketList) mergeAccess(output.bucketList);
+      else if (!output) markPolicyUnknown(names);
     }, ACCESS_CHECK_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [active, connectionId, profileName, canEdit, bucketDatas, firstVisibleIndex, lastVisibleIndex, mergeAccess]);
+  }, [
+    active,
+    connectionId,
+    profileName,
+    canEdit,
+    bucketDatas,
+    firstVisibleIndex,
+    lastVisibleIndex,
+    mergeAccess,
+    markPolicyUnknown,
+  ]);
 
   useEffect(() => {
     // After a failed page, wait for Refresh instead of retrying in a loop.

@@ -824,6 +824,80 @@ describe('BucketListView', () => {
       expect(screen.getAllByText(/^[abcd]$/)).toHaveLength(4);
     });
 
+    describe('failed check', () => {
+      const skeletons = () => document.querySelectorAll('.mantine-Skeleton-root');
+      const dated = (name: string) => new Bucket({ name, creationDate: '2026-01-02T03:04:05', accessPending: true });
+
+      it('hides the badge skeleton of the buckets sent, but keeps a known policy mode', async () => {
+        listed = [
+          dated('a'),
+          new Bucket({ name: 'b', creationDate: '2026-01-02T03:04:05', accessPending: true, policyMode: 'custom' }),
+        ];
+        checkImpl = async () => null;
+        await renderLoaded();
+        expect(skeletons()).toHaveLength(1);
+        await tick();
+        expect(checkCalls()).toHaveLength(1);
+        expect(skeletons()).toHaveLength(0);
+        expect(screen.getByText('Custom')).toBeInTheDocument();
+        expect(screen.queryByText(/^(Private|Public)$/)).not.toBeInTheDocument();
+      });
+
+      it('leaves buckets that were not sent with their skeleton', async () => {
+        virtual.endIndex = 0;
+        listed = ['a', 'b', 'c', 'd'].map(dated);
+        checkImpl = async () => null;
+        await renderLoaded();
+        await tick();
+        expect(skeletons()).toHaveLength(3);
+      });
+
+      it('does not mark anything unknown when the check was cancelled', async () => {
+        listed = ['a', 'b', 'c', 'd'].map(dated);
+        let resolveCheck: (v: unknown) => void = () => {};
+        callIPCMock.mockImplementation((async (f: unknown) =>
+          f === CheckBucketAccess ? new Promise(r => (resolveCheck = r)) : page([...listed])) as never);
+        const { ref } = await renderLoaded();
+        await tick();
+        expect(checkCalls()).toHaveLength(1);
+
+        await act(async () => ref.current?.onRefresh?.());
+        expect(skeletons()).toHaveLength(4);
+        await act(async () => resolveCheck(null));
+        expect(skeletons()).toHaveLength(4);
+      });
+    });
+
+    describe('patched policy mode', () => {
+      it('is not overwritten by a check response that arrives later', async () => {
+        let resolveCheck: (v: unknown) => void = () => {};
+        callIPCMock.mockImplementation((async (f: unknown) =>
+          f === CheckBucketAccess ? new Promise(r => (resolveCheck = r)) : page([nb('a'), nb('b')])) as never);
+        const { ref } = await renderLoaded();
+        await tick();
+        expect(checkCalls()).toHaveLength(1);
+
+        await act(async () => ref.current?.setPolicyMode?.('a', 'public'));
+        await act(async () => resolveCheck({ bucketList: [mb('a', 'private'), mb('b', 'private')] }));
+
+        expect(screen.getByText('Public')).toBeInTheDocument();
+        expect(screen.getAllByText('Private')).toHaveLength(1);
+      });
+
+      it('is forgotten after a refresh, so the next check result applies', async () => {
+        listed = [nb('a')];
+        checkImpl = async () => ({ bucketList: [mb('a', 'private')] });
+        const { ref } = await renderLoaded();
+        await act(async () => ref.current?.setPolicyMode?.('a', 'public'));
+        expect(screen.getByText('Public')).toBeInTheDocument();
+
+        await act(async () => ref.current?.onRefresh?.());
+        await tick();
+        expect(screen.getByText('Private')).toBeInTheDocument();
+        expect(screen.queryByText('Public')).not.toBeInTheDocument();
+      });
+    });
+
     it('drops the result of a check cancelled by a refresh, then checks the same buckets again', async () => {
       const resolvers: ((v: unknown) => void)[] = [];
       const signals: AbortSignal[] = [];
