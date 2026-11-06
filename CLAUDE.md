@@ -39,13 +39,13 @@ Hãy tự hỏi: "Liệu một kỹ sư cấp cao có cho rằng cách làm này
 ## 4. Luật bắt buộc
 
 1. Luôn trả lời bằng **tiếng Việt**; giữ nguyên tên định danh trong code bằng tiếng Anh.
-2. **Không bao giờ** chạy `git commit`, `git push`, `git switch`, `git reset`, `git checkout`, `git stash` hay lệnh nào thay đổi branch hoặc lịch sử git. **Ngoại lệ duy nhất**: agent `git-flow`, khi được `orchestrator` gọi trong quy trình sprint, được tách branch `SP-NN/<slug>` từ `origin/staging`, commit local, và chỉ push + tạo PR vào `staging` sau khi người dùng đồng ý. `master` là branch release: không agent nào được commit, push hay tạo PR vào `master`; code lên `master` chỉ qua PR `staging` → `master` do người dùng tự tạo và merge. Không agent nào được push thẳng vào `staging`, force push hay merge PR. Ngoài quy trình sprint, khi được yêu cầu chỉ soạn commit message cho các thay đổi đã stage (`git diff --cached`) bằng skill `/commit-message`.
+2. **Không bao giờ** chạy `git commit`, `git push`, `git switch`, `git reset`, `git checkout`, `git stash` hay lệnh nào thay đổi branch hoặc lịch sử git. **Ngoại lệ duy nhất**: agent `git-flow`, khi được `orchestrator` gọi trong quy trình sprint, được tạo `SP-NN/release` từ `origin/staging` khi bắt đầu sprint, tách feature `SP-NN/<slug>` từ `origin/SP-NN/release`, commit, rồi tự push feature và tạo PR vào `SP-NN/release`. Feature **không bao giờ** PR vào `staging`; chỉ `SP-NN/release` được PR vào `staging`, và chỉ khi người dùng báo sprint DONE và đồng ý. `master` là branch release: không agent nào được commit, push hay tạo PR vào `master`; code lên `master` chỉ qua PR `staging` → `master` do người dùng tự tạo và merge. Không agent nào được push thẳng vào `staging` hay `SP-NN/release`, force push hay merge PR. Ngoài quy trình sprint, khi được yêu cầu chỉ soạn commit message cho các thay đổi đã stage (`git diff --cached`) bằng skill `/commit-message`.
 3. Không tự ý quyết định phần yêu cầu chưa rõ: ghi lại thành câu hỏi và chờ người dùng trả lời.
 4. Không sửa tay code sinh tự động: `internal/pkg/db/sqlc/**`, `frontend/bindings/**`. Các đường dẫn này, cùng `.claude/**`, `CLAUDE.md`, `go.sum`, `.env*`, bị chặn ghi trong `.claude/settings.json`; chỉ được thay đổi qua lệnh sinh code tương ứng hoặc do người dùng tự sửa.
 5. Chỉ format/lint frontend bằng **biome** và **oxlint**, không dùng prettier/eslint.
 6. Gặp điểm chưa rõ giữa chừng thì **dừng task đó** và báo về, không tự đoán.
 7. Nếu thay đổi làm lệch quy ước trong file này, báo cho người dùng để cập nhật `CLAUDE.md` (agent không tự sửa file này).
-8. Luôn viết unit test cho frontend, yêu cầu coverage C1 ≥ 95% cho mỗi file đã đổi (xem mục **Testing**). Test do `react-tester` viết. Backend Go hiện **không** viết unit test.
+8. Luôn viết unit test cho frontend, yêu cầu coverage C1 ≥ 95% cho mỗi file đã đổi (xem mục **Testing**). Test do `react-tester` viết. Mọi function đã sửa, ở cả frontend lẫn backend, phải được **test hồi quy** để chắc không làm hỏng hành vi cũ hay sinh bug mới. Backend Go dùng unit test **tạm** do `go-tester` viết: chạy xong thì xoá, không bao giờ commit file `*_test.go`.
 9. Luôn cố gắng tối ưu hiệu năng để tăng trải nghiệm người dùng.
 10. Code đơn giản, súc tích, dễ hiểu đừng quá dài dòng có comment cho code rõ ràng để dễ maintain sau này.
 
@@ -56,14 +56,15 @@ Hãy tự hỏi: "Liệu một kỹ sư cấp cao có cho rằng cách làm này
 | B1   | Phân tích yêu cầu, liệt kê câu hỏi chưa rõ                                                                                                                                                                                                                                    | `planner`                                                                               |
 | B2   | Lập plan, chia task backend/frontend, liệt kê rủi ro                                                                                                                                                                                                                          | `planner`                                                                               |
 | B3   | Hỏi người dùng có triển khai không; chưa được đồng ý thì dừng                                                                                                                                                                                                                 | `orchestrator`                                                                          |
-| B3.5 | Tách branch `SP-NN/<slug>` từ `origin/staging` cho từng yêu cầu (mỗi yêu cầu một branch, trừ khi plan gộp)                                                                                                                                                                     | `git-flow`                                                                              |
-| B4   | Làm **lần lượt từng branch**. Trong mỗi branch, **tuần tự**: Go → skill `wails3-bindings` (`go tool wails3 generate bindings -clean=true -ts`) → Frontend → FE test → verify → review. Lặp lại **tối đa 3 vòng**; quá 3 vòng thì dừng và hỏi người dùng. Đạt thì commit local | `go-backend`, `react-frontend`, `react-tester`, `verifier`, `code-reviewer`, `git-flow` |
+| B3.5 | Tạo `SP-NN/release` từ `origin/staging` (push lên remote). Mỗi yêu cầu một branch `SP-NN/<slug>` tách từ `origin/SP-NN/release` khi tới lượt (trừ khi plan gộp), không chờ PR trước merge                                                                                                                                                                     | `git-flow`                                                                              |
+| B4   | Làm **lần lượt từng branch**. Trong mỗi branch, **tuần tự**: Go → skill `wails3-bindings` (`go tool wails3 generate bindings -clean=true -ts`) → Go test hồi quy (tạm, xoá sau khi chạy) → Frontend → FE test → verify → review. Lặp lại **tối đa 3 vòng**; quá 3 vòng thì dừng và hỏi người dùng. Đạt thì commit, push và tạo PR vào `SP-NN/release` (không hỏi) | `go-backend`, `go-tester`, `react-frontend`, `react-tester`, `verifier`, `code-reviewer`, `git-flow` |
 | B5   | Báo cáo: số dòng thêm/xoá, file sửa, file mới, phần chưa làm được; cập nhật `memory/MEMORY.md`                                                                                                                                                                                | `orchestrator`                                                                          |
-| B6   | Hỏi người dùng một lần; đồng ý thì push các branch và tạo PR vào `staging` bằng `gh` CLI (người dùng tự merge)                                                                                                                                                                 | `orchestrator`, `git-flow`                                                              |
+| B6   | Người dùng merge PR feature, test trên `SP-NN/release` rồi báo DONE. Khi đó: branch `SP-NN/sprint_docs` (requirement, plan, report, memory) PR vào `SP-NN/release`, và PR `SP-NN/release` → `staging` để ra bản beta (người dùng tự merge)                                                                                                                                                                 | `orchestrator`, `git-flow`                                                              |
 - Yêu cầu lấy từ thư mục `sprints/sprint-NN/` (xem `sprints/README.md`), tạo bằng skill `/new-sprint <tên>`.
 - Làm theo sprint: chạy `claude --agent orchestrator`. Orchestrator **không** phải agent mặc định.
 - Sửa nhỏ: mở `claude` bình thường và gọi thẳng `go-backend` hoặc `react-frontend`.
 - Viết bù test cho code cũ: mở `claude` bình thường và gọi thẳng `react-tester` kèm thư mục cần test (ví dụ `dùng react-tester viết test cho frontend/src/pages/bucket`).
+- Kiểm hồi quy backend sau khi sửa nhỏ: gọi thẳng `go-tester` kèm file/function Go đã sửa (test tạm, tự xoá sau khi chạy).
 - Không bao giờ chạy hai agent viết code song song.
 - Tạo PR cần `gh` CLI đã cài và đăng nhập (`gh auth login`) trên máy.
 
@@ -183,11 +184,22 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 
 ### Chung
 
-- Ngưỡng: mỗi file production đã đổi trong sprint (hoặc trong phạm vi viết bù) đạt **C1 ≥ 95%**. Áp dụng cho cả file, kể cả code cũ trong file đó.
-- Phạm vi: chỉ frontend. Backend Go hiện không viết unit test.
+- Ngưỡng (frontend): mỗi file production đã đổi trong sprint (hoặc trong phạm vi viết bù) đạt **C1 ≥ 95%**. Áp dụng cho cả file, kể cả code cũ trong file đó.
 - Loại trừ: `frontend/src/test/**`, code sinh tự động (`frontend/bindings/**`), `frontend/src/main.tsx`, file locale, file chỉ khai báo type/hằng (`*.d.ts`).
-- Test do `react-tester` viết, chỉ sửa file test; agent code không sửa test của tester để cho qua. Nhánh không test được phải ghi rõ lý do.
-- Unit test không gọi mạng hay Wails runtime thật.
+- Test FE do `react-tester` viết, test Go do `go-tester` viết; tester chỉ sửa file test, agent code không sửa test của tester để cho qua. Nhánh không test được phải ghi rõ lý do.
+- Unit test không gọi mạng hay Wails runtime thật (Go được dùng `httptest.Server` trên loopback để giả S3).
+
+### Test hồi quy
+
+- Phạm vi: mọi function đã sửa (không chỉ function mới) **và** nơi gọi tới nó. Tìm nơi gọi bằng `graphify query`/grep: Go từ submodule lên module, handler; FE từ util/store/hook lên component dùng nó.
+- Test hồi quy assert **hành vi cũ vẫn đúng** (input cũ cho output cũ, nhánh lỗi cũ vẫn trả message cũ) cùng hành vi mới theo plan.
+- Test cũ đang có bị fail là lỗi hồi quy: báo về agent code để sửa code, **không** sửa assert của test cũ để cho qua. Chỉ sửa test cũ khi plan đã duyệt chủ ý đổi hành vi đó, và phải ghi rõ trong báo cáo.
+
+### Backend (Go, test tạm)
+
+- Test Go chỉ để kiểm hồi quy trong lúc làm, **không commit**. `go-tester` tạo file tên `<file>_regression_test.go` cạnh file cần test (cùng package để test được hàm unexported), chạy rồi **xoá hết file đã tạo trước khi trả kết quả**. Working tree khi tới `verifier`, `code-reviewer`, `git-flow` không được còn file `*_test.go`.
+- Chỉ dùng thư viện chuẩn (`testing`, `net/http/httptest`), table-driven, không thêm dependency, không sửa `go.mod`/`go.sum`.
+- Chạy ở gốc repo: `go test -count=1 -race -cover ./internal/<package>/...` (bỏ `-race` nếu máy không có cgo). Không đặt ngưỡng coverage cho Go; báo lại % coverage của package đã chạy.
 
 ### Frontend
 
@@ -196,12 +208,13 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 - Đo coverage (chạy trong `frontend/`; Windows dùng `node_modules/.bin/vitest.exe`, không dùng `npx vitest`):
   `node_modules/.bin/vitest run --coverage.enabled --coverage.provider=v8 --coverage.reporter=text --coverage.include=<file> --coverage.thresholds.branches=95 --coverage.thresholds.lines=95 --coverage.thresholds.perFile`
 - Ngưỡng FE: **Branches (C1) ≥ 95%** và **Lines ≥ 95%** cho từng file.
+- Hồi quy FE: ngoài test của file đã đổi, luôn chạy **toàn bộ** `vitest run`; test của file khác bị fail sau thay đổi là lỗi hồi quy.
 - **Console sạch khi chạy test**: output của `vitest run` không được có warning/error từ React hoặc thư viện (`Warning: ...`, `act(...)`, `console.error`, `console.warn`, `stderr |`). Test cố ý đi vào nhánh có ghi lỗi thì phải `vi.spyOn(console, 'error').mockImplementation(() => {})` và assert spy đã được gọi đúng, không để lọt ra output.
 
 ## 10. Memory
 
 - File `memory/MEMORY.md` lưu những gì session sau cần biết mà không suy ra được từ code: trạng thái sprint đang dở, quyết định đã chốt kèm lý do, lỗi và bẫy đã gặp. File được import ở đầu `CLAUDE.md` nên mọi session và subagent đều tự đọc.
-- **Chỉ `orchestrator` ghi**, ở B5 của mỗi sprint (và khi sprint dừng giữa chừng), commit cùng branch cuối. Agent khác và session thường chỉ đọc; thấy điều cần nhớ thì ghi vào kết quả trả về để orchestrator đưa vào memory.
+- **Chỉ `orchestrator` ghi**, ở B5 của mỗi sprint (và khi sprint dừng giữa chừng), commit trên branch `SP-NN/sprint_docs` khi sprint DONE. Agent khác và session thường chỉ đọc; thấy điều cần nhớ thì ghi vào kết quả trả về để orchestrator đưa vào memory.
 - Tối đa **250 dòng**. Vượt thì gộp các mục cũ nhất của mục 2 và 3 thành dòng ngắn ở mục 4 "Tóm tắt cũ" cho tới khi còn khoảng 220 dòng. Quyết định bị thay thế thì xoá dòng cũ, ghi dòng mới.
 - Không ghi secret, access key, endpoint thật hay đường dẫn máy cá nhân. Không chép lại nội dung đã có trong `CLAUDE.md` hay `report.md`.
 - Memory có thể lỗi thời: khi mâu thuẫn với code hoặc `CLAUDE.md` thì tin code và `CLAUDE.md`, rồi báo để sửa memory.

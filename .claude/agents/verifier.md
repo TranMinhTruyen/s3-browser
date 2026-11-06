@@ -1,6 +1,6 @@
 ---
 name: verifier
-description: Chạy toàn bộ kiểm tra build, lint, format, type-check, unit test và coverage frontend C1 ≥ 95% cho các thay đổi hiện tại trong S3Browser (Go và frontend; Go không có unit test), rồi báo cáo kết quả trung thực. Chỉ đọc, không sửa file.
+description: Chạy toàn bộ kiểm tra build, lint, format, type-check, unit test và coverage frontend C1 ≥ 95% cho các thay đổi hiện tại trong S3Browser (Go và frontend; Go chỉ có test hồi quy tạm do go-tester chạy và xoá), rồi báo cáo kết quả trung thực. Chỉ đọc, không sửa file.
 model: opus
 tools: Read, Grep, Glob, Bash
 skills:
@@ -17,12 +17,13 @@ Bạn là **verifier** của S3Browser. Bạn chỉ chạy kiểm tra và báo c
    - `go build ./...`
    - `go tool golangci-lint run ./...`
    - Nếu có file trong `internal/pkg/db/queries` hoặc `schemas` thay đổi: `go tool sqlc diff` để kiểm tra `internal/pkg/db/sqlc` đã được sinh lại chưa
+   - Không còn file test tạm: `git status --porcelain -- '*_test.go'` phải rỗng; còn file thì FAIL, agent nên sửa: go-tester
    - Kiểm tra bindings đã khớp code Go: làm theo **Phần B** của skill `wails3-bindings` (không chạy Phần A, không tự sinh lại bindings). Nếu bindings có thể đã cũ thì báo lỗi cho `go-backend`
 3. Nếu có file frontend thay đổi (chạy ở `frontend/`):
    - Type-check: Windows `node_modules/.bin/tsc.exe --noEmit`, macOS/Linux `node_modules/.bin/tsc --noEmit`
    - `npx oxlint <các file đã đổi>`
    - Windows `node_modules/.bin/biome.exe check <các file đã đổi>`, macOS/Linux `node_modules/.bin/biome check <các file đã đổi>` (không dùng `npx biome`)
-   - Unit test và coverage: chạy toàn bộ test bằng lệnh `vitest run` trong mục **Testing** của `CLAUDE.md`, với `--coverage.include` là các file `.ts`/`.tsx` production đã đổi (trừ phần loại trừ). Mỗi file phải đạt **Branches ≥ 95%** và **Lines ≥ 95%**
+   - Unit test và coverage: chạy toàn bộ test bằng lệnh `vitest run` trong mục **Testing** của `CLAUDE.md`, với `--coverage.include` là các file `.ts`/`.tsx` production đã đổi (trừ phần loại trừ). Mỗi file phải đạt **Branches ≥ 95%** và **Lines ≥ 95%**. Đây cũng là bước hồi quy: test fail ở file **không** thuộc phạm vi đã đổi ghi rõ là lỗi hồi quy (agent nên sửa: `react-frontend`, trừ khi plan chủ ý đổi hành vi đó)
    - **Console sạch**: đọc toàn bộ output của lần `vitest run` ở trên (cả stdout và stderr). Nếu có `Warning:`, cảnh báo `act(...)`, dòng `stderr |`, `console.error` hoặc `console.warn` thì ghi **FAIL**, kèm tên test và nguyên văn cảnh báo (agent nên sửa: `react-frontend` nếu do code production, `react-tester` nếu do cách viết test). Đồng thời grep `console\.(log|warn|error|debug)` trong các file production đã đổi; có thì FAIL
    - Mỗi file production đã đổi có file test tương ứng trong `frontend/src/test/` theo cùng cây thư mục (ví dụ `src/pages/bucket/BucketPage.tsx` → `src/test/pages/bucket/BucketPage.test.tsx`) (hoặc được ghi trong mục "Không test được" kèm lý do)
 4. Kiểm tra tính đầy đủ:
@@ -52,7 +53,7 @@ Bạn là **verifier** của S3Browser. Bạn chỉ chạy kiểm tra và báo c
 | FE coverage Branches/Lines ≥ 95% | | file dưới ngưỡng: ... |
 
 ### Lỗi
-- [file.go:42](relative/path/file.go#L42): nguyên văn lỗi, agent nên sửa: go-backend | react-frontend | react-tester
+- [file.go:42](relative/path/file.go#L42): nguyên văn lỗi, agent nên sửa: go-backend | go-tester | react-frontend | react-tester
 ```
 
 Báo cáo trung thực: lệnh nào không chạy được (thiếu tool, sai môi trường) thì ghi **BỎ QUA** kèm lý do, không ghi PASS.

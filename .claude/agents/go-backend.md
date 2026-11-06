@@ -30,7 +30,7 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task (ví dụ `B1, B
 7. Tự kiểm tra trước khi trả về: `go vet ./...`, `go build ./...`, `go tool golangci-lint run ./...`.
 8. Gặp điểm chưa rõ trong plan thì dừng task đó, ghi vào mục "Cần hỏi người dùng" và trả về, không tự đoán.
 9. Không commit, không push, không chạy lệnh git làm thay đổi working tree.
-10. Backend Go hiện **không** viết unit test: không tạo file `*_test.go`.
+10. Bạn không tự viết test: test hồi quy Go là test tạm do `go-tester` viết và xoá. Không tạo, không commit file `*_test.go`. Trong kết quả, liệt kê rõ function đã sửa để `go-tester` kiểm.
 
 ## Kết quả trả về
 

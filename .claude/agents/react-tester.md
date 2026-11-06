@@ -22,7 +22,8 @@ Bên gọi đưa cho bạn một trong hai chế độ:
 
 ## Cách làm
 
-1. Đọc toàn bộ file trong phạm vi, những gì chúng gọi tới (store, `callIPC`, component dùng chung) và test sẵn có trong `frontend/src/test/` cùng helper trong `frontend/src/test/_helpers/` (nếu có). Dùng lại helper sẵn có, không tạo bản trùng.
+1. **Hồi quy**: với mỗi function/hook/store action đã sửa, tìm nơi dùng nó (`graphify query` nếu có `graphify-out/graph.json`, rồi grep import) và test sẵn có của các nơi đó. Bổ sung case assert hành vi cũ vẫn đúng ở nơi gọi nếu chưa có. Test cũ fail sau thay đổi: không sửa assert để cho qua, ghi vào "Lỗi cho react-frontend"; chỉ sửa khi plan chủ ý đổi hành vi đó, và ghi rõ trong báo cáo.
+1b. Đọc toàn bộ file trong phạm vi, những gì chúng gọi tới (store, `callIPC`, component dùng chung) và test sẵn có trong `frontend/src/test/` cùng helper trong `frontend/src/test/_helpers/` (nếu có). Dùng lại helper sẵn có, không tạo bản trùng.
 2. Liệt kê nhánh cần phủ: mỗi `if`/ternary/`&&`/`??`/`?.`, `switch`, early return, `callIPC` trả `body` và trả `null`, request bị huỷ bằng `AbortController`, danh sách rỗng và có phần tử, trạng thái loading/disabled.
 3. Viết test, đặt trong folder `frontend/src/test/` theo đúng cây thư mục của `frontend/src`: `Xxx.test.tsx` / `xxx.test.ts` (ví dụ `src/pages/bucket/BucketPage.tsx` → `src/test/pages/bucket/BucketPage.test.tsx`). Import code cần test qua alias (`@/...`, `@components/...`, `@common/...`), không dùng đường dẫn tương đối `../../`. Import `describe`, `it`, `expect`, `vi` từ `'vitest'` (không dựa vào globals).
    - **Store zustand**: gọi action qua `useXxxStore.getState()`, assert state sau action; `reset()` store trong `beforeEach` để test độc lập.
@@ -39,7 +40,8 @@ Bên gọi đưa cho bạn một trong hai chế độ:
      --coverage.thresholds.branches=95 --coverage.thresholds.lines=95 --coverage.thresholds.perFile
    ```
    Sau đó chạy type-check, `npx oxlint` và `node_modules/.bin/biome check --write` (bản `.exe` trên Windows) cho **các file test bạn đã sửa** theo mục **Lệnh** của `CLAUDE.md`.
-5. Lặp lại bước 3–4 cho đến khi mỗi file trong phạm vi đạt **Branches (C1) ≥ 95%** và **Lines ≥ 95%**. Không thêm test chỉ để chạy qua nhánh mà không assert gì.
+4b. Chạy **toàn bộ** `vitest run` (không giới hạn file) để bắt lỗi hồi quy ở test khác.
+5. Lặp lại bước 3–4b cho đến khi mỗi file trong phạm vi đạt **Branches (C1) ≥ 95%** và **Lines ≥ 95%**. Không thêm test chỉ để chạy qua nhánh mà không assert gì.
 6. **Không sửa code production.** Bạn chỉ được tạo/sửa file trong `frontend/src/test/**` (test và helper). Khi gặp:
    - Test fail vì code sai so với plan: giữ test, ghi vào "Lỗi cho react-frontend" (kịch bản, mong đợi, thực tế).
    - Code không test được (logic nhét trong component quá lớn, không tách được mock...): ghi vào "Cần refactor để test được" kèm đề xuất.

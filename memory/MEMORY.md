@@ -4,25 +4,28 @@
 
 ## 1. Trạng thái hiện tại
 
-- Cập nhật: 2026-11-05.
-- Sprint gần nhất: sprint-13 (tạo bucket, sửa bucket policy, drawer chi tiết, xoá bucket, đặt quyền khi tạo): **DONE** 2026-11-05, R1–R6 merge vào `staging` qua PR #6 (merge commit `47286aa`).
-- Sprint-12 DONE 2026-11-04, mọi PR đã merge vào `staging`.
-- Repo đã tách khỏi monorepo ngày 2026-11-03 (`TranMinhTruyen/s3-browser`); sprint branch tách từ `origin/staging`.
-- Sprint-14 (badge policy type trên từng `BucketItem`, load lười dòng đang hiện, cache 5 phút): đã có `sprints/sprint-14/requirement.md`, chưa lập plan.
+- Cập nhật: 2026-11-06.
+- Sprint-15 (cập nhật README, user guide, ARCHITECTURE, CHANGELOG 0.1.0, mở rộng `docs/scripts/shots.mjs` chụp ảnh tự động cho bản release v0.1): đã có `sprints/sprint-15/requirement.md`, chưa lập plan; còn câu hỏi mở trong file (thêm 4 ngôn ngữ docs, server mode với Wails v3.1.0, chụp OIDC/LDAP, chụp với AWS).
+- Sprint-14 (R1 badge policy type, R3 `CloseButton` dùng chung, R2 auto-update từ GitHub Releases): mọi PR đã merge vào `staging` (#7 R1+R3, #10 R2); #8 đưa sprint-12/13/14 R1-R3 lên `master`. Chưa có `report.md`.
+- Release: version hiện `0.0.1-beta.1.1`; có workflow `release.yml` và `pre-release.yml` (pre-release từ `staging`).
+- Sprint-13 DONE 2026-11-05 (PR #6); sprint-12 DONE 2026-11-04.
+- Repo đã tách khỏi monorepo ngày 2026-11-03 (`TranMinhTruyen/s3-browser`); từ sprint-15 dùng luồng `SP-NN/release` (mục 2).
+- 2026-11-06: thêm agent `go-tester` và quy tắc test hồi quy (xem `CLAUDE.md` mục 9).
 - Lưu ý: các mục test tay của sprint-13 (bucket khác region, Object Lock/versioning khi xoá, xoá file/folder sau khi sửa `batchDeleter`, tạo bucket public trên AWS) chưa ghi nhận kết quả; gặp lỗi thì mở sprint sửa.
-- Việc tiếp theo: làm sprint-14; cập nhật docs ARCHITECTURE và user guide (còn nợ từ sprint-11).
+- Việc tiếp theo: làm sprint-15 (`claude --agent orchestrator`, `làm sprint-15`).
 
 ## 2. Quyết định
 
 <!-- Cộng dồn. Mẫu: - YYYY-MM-DD [sprint-NN] quyết định — lý do. Quyết định bị thay thế thì xoá dòng cũ, ghi dòng mới. -->
 
-- 2026-10-28 [quy trình] Mỗi yêu cầu một branch `SP-NN/<slug>` và một PR riêng, tách từ `origin/staging` — PR nhỏ, review và merge độc lập.
+- 2026-11-06 [quy trình] Mỗi sprint có `SP-NN/release` tạo từ `origin/staging`; mỗi yêu cầu một branch `SP-NN/<slug>` tách từ release ngay khi tới lượt (không chờ merge), tự push + PR vào release không hỏi; feature không PR vào `staging` — gom code sprint, chỉ đưa lên staging khi đã test.
+- 2026-11-06 [quy trình] Sprint DONE (người dùng báo sau khi test, `sprint-NN DONE`): branch `SP-NN/sprint_docs` PR docs + memory vào release, rồi PR `SP-NN/release` → `staging` để ra bản beta — cần người dùng đồng ý.
 - 2026-10-28 [quy trình] Agent không bao giờ merge PR; người dùng tự merge — giữ quyền kiểm soát master.
 - 2026-10-27 [quy trình] Commit message và PR bằng tiếng Anh, Conventional Commits — thống nhất lịch sử git.
-- 2026-10-28 [testing] Backend Go không viết unit test; chỉ frontend, C1 ≥ 95% mỗi file đã đổi — người dùng bỏ go-tester.
+- 2026-11-06 [testing] Mọi function đã sửa (FE và Go) phải test hồi quy; Go dùng test tạm do `go-tester` viết, chạy xong xoá, không commit `*_test.go`; FE giữ C1 ≥ 95% và chạy toàn bộ vitest — người dùng muốn chặn bug hồi quy nhưng không giữ test Go trong repo (thay quyết định 2026-10-28 bỏ go-tester).
 - 2026-10-27 [testing] Test FE đặt trong `frontend/src/test/` theo cây `src/`, import qua `@/` — tách test khỏi code.
 - 2026-10-30 [sprint-11] Giữ SQLite cho profile (cột JSON `auth_config`, `auth_secret` mã hoá), không chuyển sang file JSON.
-- 2026-11-01 [quy trình] Memory này chỉ orchestrator ghi ở B5, commit cùng branch cuối của sprint — tránh conflict giữa các PR và không chặn `git-flow` tách branch.
+- 2026-11-01 [quy trình] Memory này chỉ orchestrator ghi ở B5, commit trên `SP-NN/sprint_docs` khi sprint DONE — tránh conflict giữa các PR và không chặn `git-flow` tách branch.
 - 2026-11-02 [quy trình] Harness chặn subagent ghi `report.md`; orchestrator soạn nội dung, session chính ghi `report.md` + `MEMORY.md` khi người dùng đồng ý.
 - 2026-11-02 [sprint-11] OIDC chỉ public client + PKCE; phiên đăng nhập chỉ ở RAM, dùng lại tới min(exp, 10 phút), FE chỉ giữ sessionId — không lưu token.
 - 2026-11-02 [sprint-11] URL IdP (issuer, endpoint discovery) chỉ https hoặc http loopback (`utils.IsSecureUrl`) — chặn MITM/scheme lạ khi mở trình duyệt.
@@ -31,7 +34,7 @@
 - 2026-11-02 [sprint-11] madmin đọc credential qua provider từ SwapCreds — Reauth có hiệu lực ngay.
 - 2026-11-02 [quy trình] Môi trường test (`test-env/` ở gốc repo, gồm `test-profiles.txt`) dùng chung cho mọi sprint — chuyển ra khỏi `sprints/sprint-11/` để sprint sau dùng lại tài khoản test.
 - 2026-11-02 [sprint-11] Badge/Button variant light truyền màu gốc `var(--mantine-color-<c>-6)`; `-light-color` chỉ cho chữ/viền.
-- 2026-11-04 [quy trình] Branch sprint tách từ `origin/staging`, `master` chỉ qua PR staging -> master do người dùng tạo — repo tách khỏi monorepo, master là branch release.
+- 2026-11-04 [quy trình] `master` chỉ qua PR staging -> master do người dùng tạo — repo tách khỏi monorepo, master là branch release.
 - 2026-11-04 [sprint-12] Sprint dừng đo tay theo nhóm: (R5,R6,R1), (R2,R4,R3), (R7a,R7b), (R8c,R8d,R8e) — người dùng kiểm hiệu năng thủ công trước khi sang nhóm sau.
 - 2026-11-04 [sprint-12] Key i18n chỉ xoá khi grep toàn FE không còn dùng, kể cả key động (`authType.*`, `form.button.${mode}`, `confirmCode.*`) — tránh hiện key thô.
 - 2026-11-04 [sprint-12] Export chỉ test dùng (knip --production báo) không coi là code chết — CLAUDE.md mục 8.

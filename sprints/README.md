@@ -20,6 +20,7 @@ sprints/
 2. Mở terminal ở gốc repo, chạy `claude --agent orchestrator`. (Chạy `claude` không kèm `--agent` là session bình thường, dùng cho việc sửa nhỏ.)
 3. Gõ: `làm sprint-NN`.
 4. Trả lời câu hỏi chưa rõ (nếu có), duyệt plan, rồi chờ báo cáo trong `report.md`.
+5. Merge các PR feature vào `SP-NN/release`, test, rồi báo DONE (`sprint-NN DONE`).
 
 ## Lưu ý
 
@@ -27,4 +28,5 @@ sprints/
 - Có thể sửa `requirement.md` rồi yêu cầu orchestrator lập lại plan.
 - Không đặt file cấu hình hay secret (access key, endpoint thật) trong thư mục sprint.
 - Môi trường test dùng chung (Docker Compose MinIO, LDAP, Floci, Keycloak, MinIO TLS) và danh sách profile/tài khoản test nằm ở `test-env/` (gốc repo), xem `test-env/README.txt` và `test-env/test-profiles.txt`. Sprint mới cần thêm môi trường thì bổ sung vào đó, không tạo bản riêng trong thư mục sprint.
-- Cuối mỗi sprint, orchestrator cập nhật `memory/MEMORY.md` (trạng thái, quyết định, lỗi đã gặp) để session sau tự nhớ. Nên merge PR của sprint trước rồi mới chạy sprint mới, nếu không memory của sprint trước chưa có trên `origin/staging`.
+- Cuối mỗi sprint, orchestrator cập nhật `memory/MEMORY.md` (trạng thái, quyết định, lỗi đã gặp) để session sau tự nhớ. Nên merge PR `SP-NN/release` → `staging` của sprint trước rồi mới chạy sprint mới, nếu không code và memory của sprint trước chưa có trên `origin/staging`.
+- Luồng branch: `SP-NN/release` tạo từ `staging` khi bắt đầu sprint; mỗi feature `SP-NN/<slug>` tách từ release và tự PR vào release; test xong gõ `sprint-NN DONE` để orchestrator tạo PR docs vào release và PR release → `staging` (bản beta). Mọi PR do người dùng merge.

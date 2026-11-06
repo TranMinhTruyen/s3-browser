@@ -36,7 +36,9 @@
       "Bash(gh pr list *)",
       "Bash(gh pr view *)",
       "Bash(wc -l *)",
-      "Bash(gh pr create --base staging *)"
+      "Bash(git fetch origin SP-*)",
+      "Bash(gh pr create --base staging --head SP-*)",
+      "Bash(gh pr create --base SP-*)"
     ],
     "deny": [
       "Bash(git reset *)",
