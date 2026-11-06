@@ -46,7 +46,10 @@ jobs:
 
       - name: Install NSIS
         if: steps.ver.outputs.skip != 'true'
-        run: choco install nsis -y --no-progress
+        # choco không thêm NSIS vào PATH, phải tự thêm cho các bước sau (makensis)
+        run: |
+          choco install nsis -y --no-progress
+          echo "C:\\Program Files (x86)\\NSIS" >> "$GITHUB_PATH"
 
       # Build exe + installer NSIS -> build/bin/S3Browser-amd64-installer.exe
       - name: Build installer
