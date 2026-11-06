@@ -2,6 +2,7 @@ import { ResourceLanguage } from 'i18next';
 import common from '@/locales/zh-TW/common.json';
 import bucketPicker from '@/locales/zh-TW/components/inputs/bucketPicker.json';
 import inputs from '@/locales/zh-TW/components/inputs/inputs.json';
+import appUpdate from '@/locales/zh-TW/components/layouts/appUpdate.json';
 import connectionProfiles from '@/locales/zh-TW/components/layouts/navbar/connectionProfiles.json';
 import downloaderWindow from '@/locales/zh-TW/components/layouts/transfer/downloaderWindow.json';
 import uploaderWindow from '@/locales/zh-TW/components/layouts/transfer/uploaderWindow.json';
@@ -41,6 +42,7 @@ const traditionalChineseResource: ResourceLanguage = {
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,
   uploadPickerModal: uploadPickerModal,
+  appUpdate: appUpdate,
   bucketPicker: bucketPicker,
   connectionProfiles: connectionProfiles,
   bucket: {

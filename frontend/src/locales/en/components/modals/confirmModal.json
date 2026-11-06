@@ -10,6 +10,8 @@
     "C000005": "Maximum item selected is 5!",
     "C000006": "Please confirm that you want to delete folder [{object}] and ALL of its contents? This action cannot be undone.",
     "C000007": "You may not have access to bucket [{bucket}] (no permission or it does not exist). Continue anyway?",
-    "C000008": "You may not have permission to upload to bucket [{bucket}]. Continue anyway?"
+    "C000008": "You may not have permission to upload to bucket [{bucket}]. Continue anyway?",
+    "C000009": "The app will close, install the new version and reopen automatically. Continue?",
+    "C000010": "{count} upload/download task(s) are running and will be canceled. The app will close, install the new version and reopen automatically. Continue?"
   }
 }

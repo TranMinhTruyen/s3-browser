@@ -7,6 +7,7 @@ var (
 	Profile = "profile"
 	Bucket  = "bucket"
 	Setting = "setting"
+	Update  = "update"
 )
 
 var (

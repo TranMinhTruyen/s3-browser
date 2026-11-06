@@ -2,6 +2,7 @@ import { ResourceLanguage } from 'i18next';
 import common from '@/locales/ru/common.json';
 import bucketPicker from '@/locales/ru/components/inputs/bucketPicker.json';
 import inputs from '@/locales/ru/components/inputs/inputs.json';
+import appUpdate from '@/locales/ru/components/layouts/appUpdate.json';
 import connectionProfiles from '@/locales/ru/components/layouts/navbar/connectionProfiles.json';
 import downloaderWindow from '@/locales/ru/components/layouts/transfer/downloaderWindow.json';
 import uploaderWindow from '@/locales/ru/components/layouts/transfer/uploaderWindow.json';
@@ -41,6 +42,7 @@ const russianResource: ResourceLanguage = {
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,
   uploadPickerModal: uploadPickerModal,
+  appUpdate: appUpdate,
   bucketPicker: bucketPicker,
   connectionProfiles: connectionProfiles,
   bucket: {

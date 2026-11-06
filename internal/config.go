@@ -6,6 +6,9 @@ import "encoding/json"
 // so the project config stays the single source of truth for app metadata.
 type Config struct {
 	Name string `json:"name"`
+	// Version and DevMode are not in wails.json: main fills them from build/config.yml and the build tag.
+	Version string `json:"-"`
+	DevMode bool   `json:"-"`
 }
 
 // ParseConfig decodes the embedded wails.json payload handed in by main.

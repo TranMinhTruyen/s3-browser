@@ -7,4 +7,6 @@ type SaveSettingInput struct {
 	Font            string `json:"font"`
 	Language        string `json:"language"`
 	LaunchOnStartup bool   `json:"launchOnStartup"`
+	AutoUpdate      bool   `json:"autoUpdate"`
+	BetaUpdate      bool   `json:"betaUpdate"`
 }

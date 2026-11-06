@@ -2,6 +2,7 @@ import { ResourceLanguage } from 'i18next';
 import common from '@/locales/vi/common.json';
 import bucketPicker from '@/locales/vi/components/inputs/bucketPicker.json';
 import inputs from '@/locales/vi/components/inputs/inputs.json';
+import appUpdate from '@/locales/vi/components/layouts/appUpdate.json';
 import connectionProfiles from '@/locales/vi/components/layouts/navbar/connectionProfiles.json';
 import downloaderWindow from '@/locales/vi/components/layouts/transfer/downloaderWindow.json';
 import uploaderWindow from '@/locales/vi/components/layouts/transfer/uploaderWindow.json';
@@ -41,6 +42,7 @@ const vietnameseResource: ResourceLanguage = {
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,
   uploadPickerModal: uploadPickerModal,
+  appUpdate: appUpdate,
   bucketPicker: bucketPicker,
   connectionProfiles: connectionProfiles,
   bucket: {

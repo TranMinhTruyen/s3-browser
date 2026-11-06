@@ -2,6 +2,7 @@ import { ResourceLanguage } from 'i18next';
 import common from '@/locales/de/common.json';
 import bucketPicker from '@/locales/de/components/inputs/bucketPicker.json';
 import inputs from '@/locales/de/components/inputs/inputs.json';
+import appUpdate from '@/locales/de/components/layouts/appUpdate.json';
 import connectionProfiles from '@/locales/de/components/layouts/navbar/connectionProfiles.json';
 import downloaderWindow from '@/locales/de/components/layouts/transfer/downloaderWindow.json';
 import uploaderWindow from '@/locales/de/components/layouts/transfer/uploaderWindow.json';
@@ -41,6 +42,7 @@ const germanResource: ResourceLanguage = {
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,
   uploadPickerModal: uploadPickerModal,
+  appUpdate: appUpdate,
   bucketPicker: bucketPicker,
   connectionProfiles: connectionProfiles,
   bucket: {

@@ -4,7 +4,9 @@
     "theme": "佈景主題",
     "font": "字型",
     "language": "語言",
-    "launchOnStartup": "隨 Windows 啟動"
+    "launchOnStartup": "隨 Windows 啟動",
+    "autoUpdate": "自動檢查並下載更新",
+    "betaUpdate": "接收測試版 (搶先發行版本)"
   },
   "option": {
     "theme": {
@@ -30,6 +32,23 @@
     "cancel": "取消",
     "apply": "套用",
     "reset": "還原預設值"
+  },
+  "update": {
+    "title": "更新",
+    "currentVersion": "目前版本：{{version}}",
+    "check": "檢查更新",
+    "download": "下載",
+    "install": "立即更新",
+    "viewRelease": "在 GitHub 上檢視",
+    "status": {
+      "idle": "尚未檢查更新。",
+      "checking": "正在檢查更新...",
+      "upToDate": "已是最新版本。",
+      "available": "有新版本 {{version}} 可用。",
+      "downloading": "正在下載版本 {{version}}...",
+      "ready": "版本 {{version}} 已下載完成，可以安裝。",
+      "error": "更新失敗。"
+    }
   },
   "message": {
     "saved": "設定已儲存。",
