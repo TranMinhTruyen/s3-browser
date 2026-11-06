@@ -205,3 +205,14 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 - Tối đa **250 dòng**. Vượt thì gộp các mục cũ nhất của mục 2 và 3 thành dòng ngắn ở mục 4 "Tóm tắt cũ" cho tới khi còn khoảng 220 dòng. Quyết định bị thay thế thì xoá dòng cũ, ghi dòng mới.
 - Không ghi secret, access key, endpoint thật hay đường dẫn máy cá nhân. Không chép lại nội dung đã có trong `CLAUDE.md` hay `report.md`.
 - Memory có thể lỗi thời: khi mâu thuẫn với code hoặc `CLAUDE.md` thì tin code và `CLAUDE.md`, rồi báo để sửa memory.
+
+## graphify
+
+Project có knowledge graph ở `graphify-out/`, gồm các node trung tâm (god node), cấu trúc cụm (community) và quan hệ giữa các file.
+
+Quy tắc:
+- Khi đã có `graphify-out/graph.json`: với câu hỏi về codebase, chạy `graphify query "<câu hỏi>"` trước lần grep, tìm kiếm hay đọc file nguồn đầu tiên, và ghi quy tắc này vào prompt của mọi subagent có duyệt code. Chỉ đọc file gốc ở những dòng mà graph hoặc lần đọc trước đã chỉ ra. Dùng `graphify path "<A>" "<B>"` để xem quan hệ giữa hai thành phần và `graphify explain "<khái niệm>"` cho một khái niệm cụ thể. Các lệnh này trả về subgraph thu hẹp, thường nhỏ hơn nhiều so với `GRAPH_REPORT.md` hay output grep thô.
+- Nếu có `graphify-out/wiki/index.md` thì dùng nó để định hướng tổng quát thay vì duyệt source thô.
+- Chỉ đọc `graphify-out/GRAPH_REPORT.md` khi cần review kiến trúc tổng thể hoặc khi query/path/explain không cho đủ ngữ cảnh.
+- Sau khi sửa code, chạy `graphify update .` để graph luôn mới (chỉ phân tích AST, không tốn phí API).
+- `graphify-out/graph.json` đã commit bị ghi lại toàn bộ mỗi lần build, nên diff lớn ở file này trong PR là bình thường. Không coi đó là thay đổi thừa, không đề xuất bỏ bước build lại graph hay hook của nó.

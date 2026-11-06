@@ -22,6 +22,8 @@ const PREFETCH_ROWS = 2;
 
 export type BucketListViewRef = {
   onRefresh?: () => Promise<void>;
+  // Patches the policy mode of one bucket, e.g. right after the user saved its policy.
+  setPolicyMode?: (bucket: string, mode: string) => void;
 };
 
 type BucketListViewProps = {
@@ -68,11 +70,14 @@ function BucketListView(props: BucketListViewProps) {
   // Access check of the visible buckets: own controller, and names already sent for the current list.
   const checkCtrl = useRef<AbortController>(null);
   const checkedNames = useRef(new Set<string>());
+  // Buckets whose policy mode was patched by hand (setPolicyMode): a stale access response must not overwrite it.
+  const patchedNames = useRef(new Set<string>());
 
   const resetAccessCheck = useCallback(() => {
     checkCtrl.current?.abort();
     checkCtrl.current = null;
     checkedNames.current.clear();
+    patchedNames.current.clear();
   }, []);
 
   const startRequest = useCallback(() => {
@@ -179,7 +184,16 @@ function BucketListView(props: BucketListViewProps) {
     return loadNextPage();
   }, [loadNextPage]);
 
-  useImperativeHandle(ref, () => ({ onRefresh }), [onRefresh]);
+  const setPolicyMode = useCallback((bucket: string, mode: string) => {
+    patchedNames.current.add(bucket);
+    setBucketDatas(prev => {
+      const idx = prev.findIndex(item => item.name === bucket);
+      if (idx < 0) return prev;
+      return prev.map((item, i) => (i === idx ? { ...item, policyMode: mode } : item));
+    });
+  }, []);
+
+  useImperativeHandle(ref, () => ({ onRefresh, setPolicyMode }), [onRefresh, setPolicyMode]);
 
   const bucketList = connectionId ? bucketDatas : [];
 
@@ -221,29 +235,60 @@ function BucketListView(props: BucketListViewProps) {
           readOnly: result.readOnly,
           deleteDenied: result.deleteDenied,
           accessPending: result.accessPending,
+          policyMode: patchedNames.current.has(item.name ?? '')
+            ? item.policyMode
+            : result.policyMode || item.policyMode,
         };
       });
       return changed ? next : prev;
     });
   }, []);
 
-  // Checks access of the visible buckets still pending, once the range stops moving. Each name is sent once per list.
+  // Check failed: hide the badge skeleton of the buckets sent, so it does not show forever.
+  const markPolicyUnknown = useCallback((names: string[]) => {
+    const failed = new Set(names);
+    setBucketDatas(prev =>
+      prev.map(item => (failed.has(item.name ?? '') && !item.policyMode ? { ...item, policyMode: 'unknown' } : item))
+    );
+  }, []);
+
+  // Checks access (and policy mode, unless anonymous) of the visible buckets still unknown,
+  // once the range stops moving. Each name is sent once per list.
   useEffect(() => {
     if (!active || !connectionId) return;
     const timer = setTimeout(async () => {
       const names = bucketDatas
         .slice(firstVisibleIndex, lastVisibleIndex + 1)
-        .flatMap(item => (item.accessPending && item.name && !checkedNames.current.has(item.name) ? [item.name] : []));
+        .flatMap(item =>
+          (item.accessPending || (canEdit && !item.policyMode)) && item.name && !checkedNames.current.has(item.name)
+            ? [item.name]
+            : []
+        );
       if (names.length === 0) return;
       names.forEach(name => checkedNames.current.add(name));
       checkCtrl.current ??= new AbortController();
       const { signal } = checkCtrl.current;
-      const output = await callIPC(CheckBucketAccess, [{ connectionId, profileName, bucketNames: names }], { signal });
+      const output = await callIPC(
+        CheckBucketAccess,
+        [{ connectionId, profileName, bucketNames: names, withPolicy: canEdit }],
+        { signal }
+      );
       if (signal.aborted) return;
       if (output?.bucketList) mergeAccess(output.bucketList);
+      else if (!output) markPolicyUnknown(names);
     }, ACCESS_CHECK_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [active, connectionId, profileName, bucketDatas, firstVisibleIndex, lastVisibleIndex, mergeAccess]);
+  }, [
+    active,
+    connectionId,
+    profileName,
+    canEdit,
+    bucketDatas,
+    firstVisibleIndex,
+    lastVisibleIndex,
+    mergeAccess,
+    markPolicyUnknown,
+  ]);
 
   useEffect(() => {
     // After a failed page, wait for Refresh instead of retrying in a loop.

@@ -1,0 +1,69 @@
+# Tự tạo GitHub Release khi master thay đổi.
+# Version lấy từ build/config.yml (info.version); tag v<version> đã có thì bỏ qua,
+# nên muốn ra bản mới phải tăng version trước khi merge staging -> master.
+# Tên asset và checksums.txt theo quy ước mà module update (sprint-14 R2) tìm.
+name: release
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+
+# Không chạy 2 lượt release cùng lúc khi merge liên tiếp
+concurrency: release
+
+jobs:
+  release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: ver
+        run: |
+          v=$(sed -nE 's/^\s+version:\s*"([^"]+)".*/\1/p' build/config.yml | head -1)
+          if [ -z "$v" ]; then echo "::error::Không đọc được info.version trong build/config.yml"; exit 1; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if gh release view "v$v" >/dev/null 2>&1; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Release v$v đã tồn tại, bỏ qua (tăng info.version để ra bản mới)"
+          fi
+
+      - if: steps.ver.outputs.skip != 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - if: steps.ver.outputs.skip != 'true'
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install NSIS
+        if: steps.ver.outputs.skip != 'true'
+        # choco không thêm NSIS vào PATH, phải tự thêm cho các bước sau (makensis)
+        run: |
+          choco install nsis -y --no-progress
+          echo "C:\\Program Files (x86)\\NSIS" >> "$GITHUB_PATH"
+
+      # Build exe + installer NSIS -> build/bin/S3Browser-amd64-installer.exe
+      - name: Build installer
+        if: steps.ver.outputs.skip != 'true'
+        run: go tool wails3 task windows:package
+
+      - name: Create release
+        if: steps.ver.outputs.skip != 'true'
+        run: |
+          v="${{ steps.ver.outputs.version }}"
+          f="S3Browser-$v-windows-amd64-installer.exe"
+          mkdir dist
+          cp build/bin/S3Browser-amd64-installer.exe "dist/$f"
+          (cd dist && sha256sum "$f" > checksums.txt)
+          pre=""
+          if [[ "$v" == *-* ]]; then pre="--prerelease"; fi
+          gh release create "v$v" dist/* --target "$GITHUB_SHA" --title "v$v" --generate-notes $pre

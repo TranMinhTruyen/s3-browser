@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"reflect"
 	"slices"
 	"strings"
@@ -26,6 +27,8 @@ const (
 	policyModePrivate = "private"
 	policyModePublic  = "public"
 	policyModeCustom  = "custom"
+	// policyModeUnknown is a bucket whose policy can't be read (no permission, not supported, ...).
+	policyModeUnknown = "unknown"
 )
 
 // getBucketPolicy reads the access state of input.Bucket (10s timeout).
@@ -153,6 +156,44 @@ func policyOptFns(ctx context.Context, conn *global.S3Conn, bucket string) []fun
 		return nil
 	}
 	return regionOptFns(conn, region)
+}
+
+// readPolicyModeInRegion reads the access mode of the bucket for the badge. Real AWS first asks the region of the
+// connection; only when the answer says the bucket lives elsewhere (isWrongRegion) it reads the bucket region and
+// asks once more there, so a bucket in the connection region costs one request instead of two.
+func readPolicyModeInRegion(ctx context.Context, conn *global.S3Conn, bucket string) (string, error) {
+	mode, _, err := readPolicyMode(ctx, conn, bucket)
+	if err == nil || !isRealAws(conn) || !isWrongRegion(err) {
+		return mode, err
+	}
+	region, err := readBucketRegion(ctx, conn, bucket)
+	if err != nil {
+		return "", err
+	}
+	mode, _, err = readPolicyMode(ctx, conn, bucket, regionOptFns(conn, region)...)
+	return mode, err
+}
+
+// isWrongRegion reports whether err says the request went to a region the bucket is not in.
+func isWrongRegion(err error) bool {
+	if statusCode(err) == http.StatusMovedPermanently {
+		return true
+	}
+	switch UnwrapAwsError(err) {
+	case "PermanentRedirect", "AuthorizationHeaderMalformed", "IllegalLocationConstraintException":
+		return true
+	}
+	return false
+}
+
+// isSurePolicyError reports whether err is a definite answer of the server that the policy can't be read, which
+// stays true until the credentials or the bucket change, so it may be cached.
+func isSurePolicyError(err error) bool {
+	switch UnwrapAwsError(err) {
+	case "AccessDenied", "NotImplemented", "MethodNotAllowed":
+		return true
+	}
+	return statusCode(err) == http.StatusForbidden
 }
 
 // putPolicyFailed maps a failed save: a malformed policy gives S3E057, a denied public policy under Block Public

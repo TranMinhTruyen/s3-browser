@@ -12,6 +12,7 @@ import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import { formatStringJson } from '@/common/utils/stringUtils';
 import { mergePickedFiles, PickerLimits, PickerList, removePickedFiles } from '@/common/utils/uploadUtils';
 import Button from '@/components/buttons/Button';
+import CloseButton from '@/components/buttons/CloseButton';
 import TruncatedText from '@/components/display/TruncatedText';
 import BucketPicker from '@/components/inputs/combobox/BucketPicker';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
@@ -250,7 +251,7 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
             <Upload />
             <Title order={4}>{t('title')}</Title>
           </Group>
-          <Modal.CloseButton size="md" aria-label={t('common:button.close')} />
+          <CloseButton tooltip={t('common:button.close')} onClick={mantine.props.onClose} />
         </Modal.Header>
 
         <Divider />

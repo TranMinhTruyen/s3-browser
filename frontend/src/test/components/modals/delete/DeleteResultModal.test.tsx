@@ -136,9 +136,11 @@ describe('DeleteResultModal', () => {
     await expect(result).resolves.toBeUndefined();
   });
 
-  it('has a close button', async () => {
-    await open({ deleted: 1, failed: 0, failures: [] });
+  it('resolves null when closed with the X button', async () => {
+    const { result } = await open({ deleted: 1, failed: 0, failures: [] });
 
-    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    await expect(result).resolves.toBeNull();
   });
 });

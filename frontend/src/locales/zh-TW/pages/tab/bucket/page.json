@@ -3,7 +3,12 @@
   "tooltip": {
     "bucketList": "儲存貯體清單",
     "inaccessible": "無法存取此儲存貯體（沒有權限或儲存貯體不存在）。",
-    "moreActions": "更多操作"
+    "moreActions": "更多操作",
+    "policy": {
+      "private": "私有：儲存貯體沒有政策。",
+      "public": "公開：任何人都可以讀取和列出物件。",
+      "custom": "自訂：儲存貯體使用自訂政策。"
+    }
   },
   "label": {
     "createDate": "建立日期："
@@ -16,5 +21,12 @@
     "detail": "詳細資料",
     "editPolicy": "存取權限",
     "delete": "刪除"
+  },
+  "badge": {
+    "policy": {
+      "private": "私有",
+      "public": "公開",
+      "custom": "自訂"
+    }
   }
 }

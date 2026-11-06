@@ -28,7 +28,7 @@ const POLICY_JSON = '{"Version":"2012-10-17","Statement":[]}';
 const policy = (extra: Partial<Policy> = {}): Policy => ({ mode: 'private', policy: '', ...extra });
 
 type Props = Parameters<typeof BucketPolicyModal.show>[0];
-async function open(settle = true) {
+async function open(settle = true, onSaved?: (mode: string) => void) {
   renderWithProviders(<div />);
   let result!: Promise<boolean>;
   act(() => {
@@ -36,6 +36,7 @@ async function open(settle = true) {
       connectionId: 'c1',
       profileName: 'Prod',
       bucket: 'my-bucket',
+      onSaved,
     } as Props) as Promise<boolean>;
   });
   if (settle) await flush();
@@ -276,5 +277,62 @@ describe('BucketPolicyModal', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(signals.put?.aborted).toBe(true));
     await act(async () => finishSave());
+  });
+
+  describe('onSaved', () => {
+    it('reports the mode the backend saved, after the form shows it', async () => {
+      results.put = policy({ mode: 'public' });
+      const onSaved = vi.fn();
+      const { user } = await open(true, onSaved);
+
+      await user.click(screen.getByText('Public (read-only)'));
+      await user.click(saveBtn());
+
+      await waitFor(() => expect(onSaved).toHaveBeenCalledExactlyOnceWith('public'));
+      expect(segment('Public (read-only)').checked).toBe(true);
+    });
+
+    it('is not called when the save fails', async () => {
+      results.put = null;
+      const onSaved = vi.fn();
+      const { user } = await open(true, onSaved);
+
+      await user.click(screen.getByText('Public (read-only)'));
+      await user.click(saveBtn());
+      await flush();
+
+      expect(onSaved).not.toHaveBeenCalled();
+    });
+
+    it('is not called when the modal is closed before the save returns', async () => {
+      let finishSave!: () => void;
+      callIPCMock.mockImplementation(((fn: unknown, _args: unknown, options?: { signal?: AbortSignal }) => {
+        if (fn === GetBucketPolicy) return Promise.resolve(policy());
+        signals.put = options?.signal;
+        return new Promise(resolve => {
+          finishSave = () => resolve(policy({ mode: 'public' }));
+        });
+      }) as never);
+      const onSaved = vi.fn();
+      const { user } = await open(true, onSaved);
+
+      await user.click(screen.getByText('Public (read-only)'));
+      await user.click(saveBtn());
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      await waitFor(() => expect(signals.put?.aborted).toBe(true));
+      await act(async () => finishSave());
+
+      expect(onSaved).not.toHaveBeenCalled();
+    });
+
+    it('saves without error when no callback is given', async () => {
+      results.put = policy({ mode: 'public' });
+      const { user } = await open();
+
+      await user.click(screen.getByText('Public (read-only)'));
+      await user.click(saveBtn());
+
+      await waitFor(() => expect(segment('Public (read-only)').checked).toBe(true));
+    });
   });
 });

@@ -5,11 +5,12 @@
 ## 1. Trạng thái hiện tại
 
 - Cập nhật: 2026-11-05.
-- Sprint gần nhất: sprint-13 (tạo bucket, sửa bucket policy, drawer chi tiết, xoá bucket, đặt quyền khi tạo): code xong R1–R6 trên branch `SP-13/bucket_create_policy_detail` (3 commit code `9ab7dd2` R1–R4, `deabc60` R5, `862a657` R6 + commit docs), đã push và tạo PR vào `staging`, chờ người dùng test tay và merge.
+- Sprint gần nhất: sprint-13 (tạo bucket, sửa bucket policy, drawer chi tiết, xoá bucket, đặt quyền khi tạo): **DONE** 2026-11-05, R1–R6 merge vào `staging` qua PR #6 (merge commit `47286aa`).
 - Sprint-12 DONE 2026-11-04, mọi PR đã merge vào `staging`.
 - Repo đã tách khỏi monorepo ngày 2026-11-03 (`TranMinhTruyen/s3-browser`); sprint branch tách từ `origin/staging`.
-- Việc dở: test tay sprint-13 trên `test-env/` và AWS thật (bucket khác region, Object Lock, versioning, `NoSuchBucket` sau khi tạo, Block Public Access, xoá file/folder sau khi sửa `batchDeleter`).
-- Việc tiếp theo: ý tưởng hiện policy type trên từng `BucketItem` (load lười dòng đang hiện, cache 5 phút) cho sprint sau; cập nhật docs ARCHITECTURE và user guide (còn nợ từ sprint-11); sprint mới tạo bằng `/new-sprint`.
+- Sprint-14 (badge policy type trên từng `BucketItem`, load lười dòng đang hiện, cache 5 phút): đã có `sprints/sprint-14/requirement.md`, chưa lập plan.
+- Lưu ý: các mục test tay của sprint-13 (bucket khác region, Object Lock/versioning khi xoá, xoá file/folder sau khi sửa `batchDeleter`, tạo bucket public trên AWS) chưa ghi nhận kết quả; gặp lỗi thì mở sprint sửa.
+- Việc tiếp theo: làm sprint-14; cập nhật docs ARCHITECTURE và user guide (còn nợ từ sprint-11).
 
 ## 2. Quyết định
 

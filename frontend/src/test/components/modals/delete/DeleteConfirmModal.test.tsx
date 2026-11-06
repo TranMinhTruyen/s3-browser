@@ -113,10 +113,12 @@ describe('DeleteConfirmModal', () => {
     await expect(result).resolves.toBeNull();
   });
 
-  it('has a close button', async () => {
-    await open({ files: FILES });
+  it('resolves null when closed with the X button', async () => {
+    const { result } = await open({ files: FILES });
 
-    expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    await expect(result).resolves.toBeNull();
   });
 
   it('handles an empty list: nothing to delete', async () => {

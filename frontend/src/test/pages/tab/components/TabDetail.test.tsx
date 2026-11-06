@@ -30,7 +30,12 @@ type BucketStubProps = {
 };
 type ObjectStubProps = { bucket?: string; keyword?: string; ref: Ref<unknown> };
 
-const h = vi.hoisted(() => ({ bucketRefresh: vi.fn(), objectRefresh: vi.fn(), menu: vi.fn() }));
+const h = vi.hoisted(() => ({
+  bucketRefresh: vi.fn(),
+  setPolicyMode: vi.fn(),
+  objectRefresh: vi.fn(),
+  menu: vi.fn(),
+}));
 
 // The two list views are tested on their own: here they are stubs exposing their ref and callbacks.
 vi.mock('@/pages/tab/bucket/BucketListView', () => ({
@@ -44,7 +49,7 @@ vi.mock('@/pages/tab/bucket/BucketListView', () => ({
     onDeleteBucket,
     ref,
   }: BucketStubProps) {
-    useImperativeHandle(ref, () => ({ onRefresh: h.bucketRefresh }), []);
+    useImperativeHandle(ref, () => ({ onRefresh: h.bucketRefresh, setPolicyMode: h.setPolicyMode }), []);
     return (
       <div>
         <span>{`bucket list profile=${profile?.id ?? 'none'} active=${active}`}</span>
@@ -406,7 +411,21 @@ describe('TabDetail', () => {
         connectionId: 'p1',
         profileName: 'Prof',
         bucket: 'my-bucket',
+        onSaved: expect.any(Function),
       });
+    });
+
+    it('patches the policy badge of that bucket in the list when the modal reports a saved mode', async () => {
+      setProfile({ isConnected: true });
+      h.setPolicyMode.mockClear();
+      const user = setup();
+
+      await user.click(screen.getByText('edit policy'));
+      const { onSaved } = vi.mocked(showBucketPolicyModal).mock.calls[0][0] as { onSaved: (m: string) => void };
+      expect(h.setPolicyMode).not.toHaveBeenCalled();
+      onSaved('public');
+
+      expect(h.setPolicyMode).toHaveBeenCalledExactlyOnceWith('my-bucket', 'public');
     });
 
     it('ignores a request without a bucket name', async () => {
