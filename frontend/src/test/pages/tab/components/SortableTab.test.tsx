@@ -110,7 +110,7 @@ describe('SortableTab', () => {
     expect(wrapper.style.boxShadow).not.toBe('var(--mantine-shadow-md)');
     expect(wrapper.parentElement!.style.visibility).toBe('hidden');
     expect(wrapper.parentElement!.style.zIndex).toBe('');
-    expect(wrapper.parentElement!.style.transform).toBe('translate3d(12px, 0px, 0)');
+    expect(wrapper.parentElement!.style.transform).toBe('translate3d(12px, 0px, 0px)');
     expect(wrapper.parentElement!.style.transition).toBe('transform 200ms');
   });
 

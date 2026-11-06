@@ -200,7 +200,7 @@ describe('ConnectionProfiles', () => {
     ])('uses a contrasting text color for a %s profile color', (_name, color, expected) => {
       renderProfiles({ p: profile('p', { color }) });
 
-      expect(card('p-name')).toHaveStyle({ color: expected });
+      expect(card('p-name').style.color).toBe(expected);
     });
   });
 

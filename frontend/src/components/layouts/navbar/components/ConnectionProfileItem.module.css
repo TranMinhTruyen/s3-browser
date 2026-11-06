@@ -20,6 +20,6 @@
 .card .badge {
   color: inherit;
   background: transparent;
-  border: 1px solid currentColor;
+  border: 1px solid currentcolor;
   opacity: 0.8;
 }

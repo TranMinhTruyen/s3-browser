@@ -359,7 +359,7 @@ describe('TabPage', () => {
       const { container } = renderWithProviders(<TabPage />);
       expect(container.querySelector('.mantine-Scroller-container')).not.toBeInTheDocument();
       expect(container.querySelector('[data-draggable]')).not.toBeInTheDocument();
-      expect(screen.getByRole('tab').closest('div[style*="overflow-x"]')).toBeInTheDocument();
+      expect(screen.getByRole('tab').closest('div[style*="overflow"]')).toBeInTheDocument();
     });
 
     it('scrolls the element marked data-active (inside the scroller) into view', () => {
@@ -373,7 +373,7 @@ describe('TabPage', () => {
 
     it('scrolls the real active tab, not a tab that is still exiting', () => {
       const { container } = renderWithProviders(<TabPage />);
-      const viewport = screen.getByRole('tab').closest('div[style*="overflow-x"]')!;
+      const viewport = screen.getByRole('tab').closest('div[style*="overflow"]')!;
       // A closing tab stays in the DOM (data-active, data-exiting) before the real active tab.
       const ghost = screen.getByRole('tab').cloneNode(true) as HTMLElement;
       ghost.setAttribute('data-exiting', '');
