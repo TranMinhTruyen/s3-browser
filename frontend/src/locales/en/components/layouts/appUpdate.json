@@ -1,0 +1,11 @@
+{
+  "available": "Version {{version}} is available",
+  "downloading": "Downloading version {{version}}",
+  "progress": "{{percent}}% · {{written}} / {{total}}",
+  "progressUnknown": "{{written}}",
+  "ready": "Version {{version}} is ready to install",
+  "button": {
+    "download": "Download",
+    "install": "Update"
+  }
+}

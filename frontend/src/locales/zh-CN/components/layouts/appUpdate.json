@@ -1,0 +1,11 @@
+{
+  "available": "有新版本 {{version}} 可用",
+  "downloading": "正在下载版本 {{version}}",
+  "progress": "{{percent}}% · {{written}} / {{total}}",
+  "progressUnknown": "{{written}}",
+  "ready": "版本 {{version}} 可以安装",
+  "button": {
+    "download": "下载",
+    "install": "更新"
+  }
+}

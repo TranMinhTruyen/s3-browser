@@ -14,7 +14,7 @@ vi.mock('@wails/S3Browser/internal/handlers/settinghandler', () => ({ GetSetting
 
 const callIPCMock = vi.mocked(callIPC);
 const state = () => useSettingStore.getState();
-const dark = { theme: 'dark', font: 'arial', language: 'vi', launchOnStartup: true } as const;
+const dark = { theme: 'dark', font: 'arial', language: 'vi', launchOnStartup: true, autoUpdate: true } as const;
 
 describe('settingStore', () => {
   beforeEach(() => {
@@ -137,9 +137,25 @@ describe('settingStore', () => {
       state().setDraft({ theme: 'dark', font: 'arial', language: 'vi', launchOnStartup: true });
       state().apply();
 
-      expect(state().applied).toEqual({ theme: 'dark', font: 'arial', language: 'vi', launchOnStartup: false });
+      expect(state().applied).toEqual({
+        theme: 'dark',
+        font: 'arial',
+        language: 'vi',
+        launchOnStartup: false,
+        autoUpdate: true,
+      });
       expect(state().saved).toEqual(DEFAULT_SETTINGS);
       expect(state().draft.launchOnStartup).toBe(true);
+      expect(callIPCMock).not.toHaveBeenCalled();
+    });
+
+    it('keeps the previous applied autoUpdate when the draft changes it', () => {
+      state().setDraft({ theme: 'dark', autoUpdate: false });
+      state().apply();
+
+      expect(state().applied).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark', autoUpdate: true });
+      expect(state().draft.autoUpdate).toBe(false);
+      expect(state().saved.autoUpdate).toBe(true);
       expect(callIPCMock).not.toHaveBeenCalled();
     });
 

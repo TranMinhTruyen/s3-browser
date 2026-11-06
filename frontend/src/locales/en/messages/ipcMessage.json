@@ -116,5 +116,14 @@
     "STE005": "Error while loading tabs.",
     "STE006": "Error while saving tabs.",
     "STE007": "Invalid tab data."
+  },
+  "update": {
+    "UPE001": "Cannot check for updates.",
+    "UPE002": "GitHub is limiting requests, try again later.",
+    "UPE003": "Cannot download the update.",
+    "UPE004": "The update has no checksum or the checksum does not match, the file was deleted.",
+    "UPE005": "Cannot run the installer, or administrator permission was denied.",
+    "UPE006": "Version {version} has no installer for this machine.",
+    "UPS001": "Already on the latest version {version}."
   }
 }

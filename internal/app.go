@@ -8,6 +8,7 @@ import (
 	"S3Browser/internal/modules/master"
 	"S3Browser/internal/modules/profile"
 	"S3Browser/internal/modules/setting"
+	"S3Browser/internal/modules/update"
 	"S3Browser/internal/pkg/db"
 	"S3Browser/internal/pkg/utils"
 	"database/sql"
@@ -26,6 +27,9 @@ type App struct {
 	MasterHandler  *handlers.MasterHandler
 	ProfileHandler *handlers.ProfileHandler
 	SettingHandler *handlers.SettingHandler
+	UpdateHandler  *handlers.UpdateHandler
+
+	updateModule *update.Module
 }
 
 // NewApp opens and migrates the database, builds the modules, then the handlers on top of them.
@@ -55,11 +59,13 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) (*App, error)
 	bucketModule := bucket.NewModule(app, logger, globalModule, sqlDb, profileModule)
 	masterModule := master.NewModule(app, logger, sqlDb)
 	settingModule := setting.NewModule(logger, cfg.Name)
+	updateModule := update.NewModule(app, logger, settingModule, cfg.Version, cfg.DevMode)
 
 	profileHandler := handlers.NewProfileHandler(profileModule)
 	bucketHandler := handlers.NewBucketHandler(bucketModule)
 	masterHandler := handlers.NewMasterHandler(masterModule)
-	settingHandler := handlers.NewSettingHandler(settingModule)
+	settingHandler := handlers.NewSettingHandler(settingModule, updateModule)
+	updateHandler := handlers.NewUpdateHandler(updateModule)
 
 	return &App{
 		logger:         log,
@@ -69,11 +75,14 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) (*App, error)
 		MasterHandler:  masterHandler,
 		ProfileHandler: profileHandler,
 		SettingHandler: settingHandler,
+		UpdateHandler:  updateHandler,
+		updateModule:   updateModule,
 	}, nil
 }
 
-// Shutdown cancels running transfers, closes every connection and the database.
+// Shutdown cancels running transfers and the update check, closes every connection and the database.
 func (a *App) Shutdown() {
+	a.updateModule.Close()
 	a.BucketHandler.CancelAllDownloads()
 	a.BucketHandler.CancelAllUploads()
 	a.BucketHandler.DisconnectAll()

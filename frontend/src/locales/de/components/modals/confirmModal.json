@@ -10,6 +10,8 @@
     "C000005": "Es können höchstens 5 Elemente ausgewählt werden!",
     "C000006": "Bitte bestätigen Sie, dass Sie den Ordner [{object}] und ALLE seine Inhalte löschen möchten. Diese Aktion kann nicht rückgängig gemacht werden.",
     "C000007": "Möglicherweise haben Sie keinen Zugriff auf den Bucket [{bucket}] (keine Berechtigung oder er existiert nicht). Trotzdem fortfahren?",
-    "C000008": "Möglicherweise haben Sie keine Berechtigung, in den Bucket [{bucket}] hochzuladen. Trotzdem fortfahren?"
+    "C000008": "Möglicherweise haben Sie keine Berechtigung, in den Bucket [{bucket}] hochzuladen. Trotzdem fortfahren?",
+    "C000009": "Die App wird geschlossen, installiert die neue Version und startet automatisch neu. Fortfahren?",
+    "C000010": "{count} Upload-/Download-Aufgabe(n) laufen und werden abgebrochen. Die App wird geschlossen, installiert die neue Version und startet automatisch neu. Fortfahren?"
   }
 }

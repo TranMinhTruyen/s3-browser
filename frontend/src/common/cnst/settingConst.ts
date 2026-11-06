@@ -50,6 +50,8 @@ export interface AppSettingValues {
   font: FontKey;
   language: LanguageKey;
   launchOnStartup: boolean;
+  /** Check for and download updates by itself; takes effect on Save only. */
+  autoUpdate: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettingValues = {
@@ -57,4 +59,5 @@ export const DEFAULT_SETTINGS: AppSettingValues = {
   font: 'nunito',
   language: 'en',
   launchOnStartup: false,
+  autoUpdate: true,
 };

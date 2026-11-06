@@ -4,7 +4,8 @@
     "theme": "Theme",
     "font": "Font",
     "language": "Language",
-    "launchOnStartup": "Launch on Windows startup"
+    "launchOnStartup": "Launch on Windows startup",
+    "autoUpdate": "Automatically check for and download updates"
   },
   "option": {
     "theme": { "light": "Light", "dark": "Dark", "auto": "Follow system" },
@@ -22,5 +23,22 @@
     }
   },
   "button": { "save": "Save", "cancel": "Cancel", "apply": "Apply", "reset": "Reset to default" },
+  "update": {
+    "title": "Update",
+    "currentVersion": "Current version: {{version}}",
+    "check": "Check for updates",
+    "download": "Download",
+    "install": "Update now",
+    "viewRelease": "View on GitHub",
+    "status": {
+      "idle": "Updates have not been checked yet.",
+      "checking": "Checking for updates...",
+      "upToDate": "You are on the latest version.",
+      "available": "Version {{version}} is available.",
+      "downloading": "Downloading version {{version}}...",
+      "ready": "Version {{version}} is downloaded and ready to install.",
+      "error": "The update failed."
+    }
+  },
   "message": { "saved": "Settings saved.", "applied": "Settings applied until the app is closed." }
 }

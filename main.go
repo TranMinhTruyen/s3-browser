@@ -13,6 +13,7 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
+	"go.yaml.in/yaml/v3"
 )
 
 // assets is the built frontend served to the webview.
@@ -24,6 +25,22 @@ var assets embed.FS
 //
 //go:embed all:wails.json
 var wailsConfigJSON []byte
+
+// buildConfigYAML is read back at runtime so build/config.yml stays the single source of the app version.
+//
+//go:embed build/config.yml
+var buildConfigYAML []byte
+
+// appVersion returns info.version of build/config.yml, or "" when it cannot be parsed.
+func appVersion(raw []byte) string {
+	var cfg struct {
+		Info struct {
+			Version string `yaml:"version"`
+		} `yaml:"info"`
+	}
+	_ = yaml.Unmarshal(raw, &cfg) // on error the version stays empty, which turns the updater off
+	return cfg.Info.Version
+}
 
 // portableWindowsOptions points WebView2 at the runtime shipped next to the exe and keeps its profile in data/,
 // so the app writes nothing to %APPDATA%.
@@ -68,6 +85,8 @@ func startupErrorMessage(err error) string {
 // main wires logger, app, handlers and the main window, then runs the Wails event loop.
 func main() {
 	cfg := internal.ParseConfig(wailsConfigJSON)
+	cfg.Version = appVersion(buildConfigYAML)
+	cfg.DevMode = DevMode
 
 	appLogger, closer, err := logger.Setup(logger.Config{
 		AppName: cfg.Name,
@@ -109,6 +128,7 @@ func main() {
 	mainApp.RegisterService(application.NewService(app.MasterHandler))
 	mainApp.RegisterService(application.NewService(app.ProfileHandler))
 	mainApp.RegisterService(application.NewService(app.SettingHandler))
+	mainApp.RegisterService(application.NewService(app.UpdateHandler))
 
 	theme := app.SettingHandler.GetSettings().Body.Settings.Theme
 	mainWindow := mainApp.Window.NewWithOptions(application.WebviewWindowOptions{

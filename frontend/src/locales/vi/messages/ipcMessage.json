@@ -116,5 +116,14 @@
     "STE005": "Lỗi khi tải các tab",
     "STE006": "Lỗi khi lưu các tab",
     "STE007": "Dữ liệu tab không hợp lệ"
+  },
+  "update": {
+    "UPE001": "Không kiểm tra được bản cập nhật.",
+    "UPE002": "GitHub đang giới hạn số yêu cầu, hãy thử lại sau.",
+    "UPE003": "Không tải được bản cập nhật.",
+    "UPE004": "Bản cập nhật không có checksum hoặc checksum không khớp, file đã bị xoá.",
+    "UPE005": "Không chạy được bộ cài, hoặc quyền quản trị đã bị từ chối.",
+    "UPE006": "Phiên bản {version} chưa có bộ cài cho máy này.",
+    "UPS001": "Đang dùng phiên bản mới nhất {version}."
   }
 }

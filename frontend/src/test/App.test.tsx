@@ -23,6 +23,7 @@ vi.mock('@/components/layouts/MainLayout', () => ({
     </div>
   ),
 }));
+vi.mock('@/components/layouts/AppUpdateToast', () => ({ default: () => <div>update toast</div> }));
 vi.mock('@/common/hooks/useCredentialExpiring', () => ({ useCredentialExpiring: vi.fn() }));
 vi.mock('@/components/router/RouterItem', () => ({ default: h.routes }));
 vi.mock('sonner', () => ({ Toaster: () => <div>toaster</div>, toast: { error: vi.fn(), warning: vi.fn() } }));
@@ -84,6 +85,14 @@ describe('App', () => {
       rerender(<App />);
 
       expect(useCredentialExpiring).toHaveBeenCalled();
+    });
+  });
+
+  describe('app update', () => {
+    it('renders the app update toast component for the whole app', () => {
+      render(<App />);
+
+      expect(screen.getByText('update toast')).toBeInTheDocument();
     });
   });
 

@@ -79,8 +79,12 @@ export const useSettingStore = createAppStore<SettingState & SettingAction>((set
 
     apply: () => {
       const { draft, applied } = get();
-      // launchOnStartup needs the registry, so it only changes on Save.
-      set({ applied: { ...draft, launchOnStartup: applied.launchOnStartup } }, undefined, `${SCOPE}/apply`);
+      // launchOnStartup (registry) and autoUpdate (updater schedule) are backend state, so they only change on Save.
+      set(
+        { applied: { ...draft, launchOnStartup: applied.launchOnStartup, autoUpdate: applied.autoUpdate } },
+        undefined,
+        `${SCOPE}/apply`
+      );
     },
 
     resetDraft: () => {

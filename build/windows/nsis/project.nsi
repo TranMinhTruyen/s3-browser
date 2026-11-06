@@ -34,6 +34,12 @@ Unicode true
 ####
 !include "wails_tools.nsh"
 
+!insertmacro GetOptions # From FileFunc.nsh (included by wails_tools.nsh), reads /relaunch below.
+
+# 1 when the app runs this installer to update itself (/S /relaunch /D=<install dir>): wait for the old exe to
+# exit and start the app again when done. A manual install does not pass /relaunch and never starts the app.
+Var Relaunch
+
 # Numeric 4-part version for VIProductVersion/VIFileVersion (INFO_PRODUCTVERSION may hold a prerelease suffix)
 !define INFO_NUMERIC_VERSION "0.0.1.1"
 VIProductVersion "${INFO_NUMERIC_VERSION}"
@@ -86,6 +92,12 @@ ShowInstDetails show # This will always show the installation details.
 
 Function .onInit
    !insertmacro wails.checkArchitecture
+
+   StrCpy $Relaunch 0
+   ClearErrors
+   ${GetOptions} $CMDLINE "/relaunch" $0
+   IfErrors +2
+   StrCpy $Relaunch 1
 FunctionEnd
 
 Section
@@ -94,6 +106,22 @@ Section
     !insertmacro wails.webview2runtime
 
     SetOutPath $INSTDIR
+
+    # The app quits right after starting this installer; wait (up to 15 s) until the old exe can be overwritten.
+    StrCmp $Relaunch 1 0 skipWait
+    IfFileExists "$INSTDIR\${PRODUCT_EXECUTABLE}" 0 skipWait
+    StrCpy $0 0
+    waitExe:
+        ClearErrors
+        FileOpen $1 "$INSTDIR\${PRODUCT_EXECUTABLE}" a
+        IfErrors 0 exeFree
+        IntOp $0 $0 + 1
+        IntCmp $0 30 skipWait 0 skipWait
+        Sleep 500
+        Goto waitExe
+    exeFree:
+        FileClose $1
+    skipWait:
 
     !insertmacro wails.files
 
@@ -104,6 +132,10 @@ Section
     !insertmacro wails.associateCustomProtocols
 
     !insertmacro wails.writeUninstaller
+
+    # Start the app through explorer.exe so it runs as the normal user, not with this installer's admin rights.
+    StrCmp $Relaunch 1 0 +2
+    Exec '"$WINDIR\explorer.exe" "$INSTDIR\${PRODUCT_EXECUTABLE}"'
 SectionEnd
 
 Section "uninstall"

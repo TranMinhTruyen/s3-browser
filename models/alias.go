@@ -8,6 +8,7 @@ import (
 	"S3Browser/models/master"
 	"S3Browser/models/profile"
 	"S3Browser/models/setting"
+	"S3Browser/models/update"
 )
 
 type (
@@ -176,4 +177,9 @@ type (
 	TabState = setting.TabState
 	// SaveTabStateInput re-exports setting.SaveTabStateInput.
 	SaveTabStateInput = setting.SaveTabStateInput
+)
+
+type (
+	// UpdateStateOutput re-exports update.UpdateStateOutput.
+	UpdateStateOutput = update.UpdateStateOutput
 )

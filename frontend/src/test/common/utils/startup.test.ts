@@ -20,7 +20,7 @@ vi.mock('@wails/S3Browser/internal/handlers/settinghandler', () => ({
 }));
 
 const callIPCMock = vi.mocked(callIPC);
-const dark = { theme: 'dark', font: 'arial', language: 'vi', launchOnStartup: true } as const;
+const dark = { theme: 'dark', font: 'arial', language: 'vi', launchOnStartup: true, autoUpdate: true } as const;
 
 /** Resolves each backend call by binding. */
 const backend = (results: { settings: unknown; tabs: unknown }) =>

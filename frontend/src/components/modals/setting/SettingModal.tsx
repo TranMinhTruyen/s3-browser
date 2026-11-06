@@ -14,12 +14,14 @@ import {
   type ThemeKey,
 } from '@/common/cnst/settingConst';
 import { useSettingStore } from '@/common/stores/settingStore';
+import { useUpdateStore } from '@/common/stores/updateStore';
 import { tintedColor } from '@/common/theme/tintedColor';
 import { createMantineModal } from '@/common/utils/modalUtils';
 import Button from '@/components/buttons/Button';
 import SelectInput from '@/components/inputs/SelectInput';
 import SwitchInput from '@/components/inputs/SwitchInput';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
+import UpdateSection from '@/components/modals/setting/UpdateSection';
 
 /** Resolves true when the settings were saved, false/null when dismissed. */
 export default createMantineModal<{}, boolean>(props => {
@@ -31,6 +33,7 @@ export default createMantineModal<{}, boolean>(props => {
 
   const draft = useSettingStore(useShallow(s => s.draft));
   const autostartSupported = useSettingStore(s => s.autostartSupported);
+  const updateSupported = useUpdateStore(s => s.supported);
   const setDraft = useSettingStore(s => s.setDraft);
   const save = useSettingStore(s => s.save);
   const apply = useSettingStore(s => s.apply);
@@ -62,6 +65,11 @@ export default createMantineModal<{}, boolean>(props => {
   );
   const onChangeLaunchOnStartup = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => setDraft({ launchOnStartup: e.currentTarget.checked }),
+    [setDraft]
+  );
+
+  const onChangeAutoUpdate = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => setDraft({ autoUpdate: e.currentTarget.checked }),
     [setDraft]
   );
 
@@ -134,42 +142,48 @@ export default createMantineModal<{}, boolean>(props => {
         <Divider />
 
         <Modal.Body p="8px">
-          <Paper withBorder p="8px">
-            <Stack>
-              <SelectInput
-                label={t('label.theme')}
-                data={themeOptions}
-                value={draft.theme}
-                onChange={onChangeTheme}
-                allowDeselect={false}
-                comboboxProps={comboboxProps}
-              />
-              <SelectInput
-                label={t('label.font')}
-                data={fontOptions}
-                value={draft.font}
-                onChange={onChangeFont}
-                renderOption={renderFontOption}
-                allowDeselect={false}
-                comboboxProps={comboboxProps}
-              />
-              <SelectInput
-                label={t('label.language')}
-                data={languageOptions}
-                value={draft.language}
-                onChange={onChangeLanguage}
-                allowDeselect={false}
-                comboboxProps={comboboxProps}
-              />
-              {autostartSupported ? (
-                <SwitchInput
-                  label={t('label.launchOnStartup')}
-                  checked={draft.launchOnStartup}
-                  onChange={onChangeLaunchOnStartup}
+          <Stack gap="8px">
+            <Paper withBorder p="8px">
+              <Stack>
+                <SelectInput
+                  label={t('label.theme')}
+                  data={themeOptions}
+                  value={draft.theme}
+                  onChange={onChangeTheme}
+                  allowDeselect={false}
+                  comboboxProps={comboboxProps}
                 />
-              ) : null}
-            </Stack>
-          </Paper>
+                <SelectInput
+                  label={t('label.font')}
+                  data={fontOptions}
+                  value={draft.font}
+                  onChange={onChangeFont}
+                  renderOption={renderFontOption}
+                  allowDeselect={false}
+                  comboboxProps={comboboxProps}
+                />
+                <SelectInput
+                  label={t('label.language')}
+                  data={languageOptions}
+                  value={draft.language}
+                  onChange={onChangeLanguage}
+                  allowDeselect={false}
+                  comboboxProps={comboboxProps}
+                />
+                {autostartSupported ? (
+                  <SwitchInput
+                    label={t('label.launchOnStartup')}
+                    checked={draft.launchOnStartup}
+                    onChange={onChangeLaunchOnStartup}
+                  />
+                ) : null}
+                {updateSupported ? (
+                  <SwitchInput label={t('label.autoUpdate')} checked={draft.autoUpdate} onChange={onChangeAutoUpdate} />
+                ) : null}
+              </Stack>
+            </Paper>
+            <UpdateSection />
+          </Stack>
         </Modal.Body>
 
         <Divider />

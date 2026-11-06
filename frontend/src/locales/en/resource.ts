@@ -2,6 +2,7 @@ import { ResourceLanguage } from 'i18next';
 import common from '@/locales/en/common.json';
 import bucketPicker from '@/locales/en/components/inputs/bucketPicker.json';
 import inputs from '@/locales/en/components/inputs/inputs.json';
+import appUpdate from '@/locales/en/components/layouts/appUpdate.json';
 import connectionProfiles from '@/locales/en/components/layouts/navbar/connectionProfiles.json';
 import downloaderWindow from '@/locales/en/components/layouts/transfer/downloaderWindow.json';
 import uploaderWindow from '@/locales/en/components/layouts/transfer/uploaderWindow.json';
@@ -41,6 +42,7 @@ const englishResource: ResourceLanguage = {
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,
   uploadPickerModal: uploadPickerModal,
+  appUpdate: appUpdate,
   bucketPicker: bucketPicker,
   connectionProfiles: connectionProfiles,
   bucket: {

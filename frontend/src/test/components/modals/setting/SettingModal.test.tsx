@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '@/common/cnst/settingConst';
 import { useModalStackStore } from '@/common/stores/modalStackStore';
 import { useSettingStore } from '@/common/stores/settingStore';
+import { useUpdateStore } from '@/common/stores/updateStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { applySettings } from '@/common/utils/settingUtils';
 import SettingModal from '@/components/modals/setting/SettingModal';
@@ -22,6 +23,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 const callIPCMock = vi.mocked(callIPC);
 const flush = () => act(async () => {});
 const state = () => useSettingStore.getState();
+const AUTO_UPDATE_LABEL = 'Automatically check for and download updates';
 const realSave = state().save;
 
 function open() {
@@ -43,6 +45,7 @@ describe('SettingModal', () => {
     useModalStackStore.getState().reset();
     useSettingStore.setState({ save: realSave });
     state().reset();
+    useUpdateStore.getState().reset();
     vi.clearAllMocks();
   });
 
@@ -95,6 +98,32 @@ describe('SettingModal', () => {
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   });
 
+  it('hides the auto update switch and the update section when updates are not supported', async () => {
+    open();
+    await flush();
+
+    expect(screen.queryByRole('switch', { name: AUTO_UPDATE_LABEL })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Check for updates' })).not.toBeInTheDocument();
+  });
+
+  it('shows the update section and an auto update switch that only changes the draft', async () => {
+    const user = userEvent.setup();
+    useUpdateStore.setState({ supported: true, currentVersion: '1.0.0' });
+    open();
+    await flush();
+
+    expect(screen.getByRole('button', { name: 'Check for updates' })).toBeInTheDocument();
+    const autoUpdate = screen.getByRole('switch', { name: AUTO_UPDATE_LABEL });
+    expect(autoUpdate).toBeChecked();
+
+    await user.click(autoUpdate);
+
+    expect(state().draft.autoUpdate).toBe(false);
+    expect(state().saved.autoUpdate).toBe(true);
+    expect(autoUpdate).not.toBeChecked();
+    expect(callIPCMock).not.toHaveBeenCalled();
+  });
+
   it('previews each change through the store without saving', async () => {
     const user = userEvent.setup();
     useSettingStore.setState({ autostartSupported: true });
@@ -106,7 +135,13 @@ describe('SettingModal', () => {
     await pickOption(user, 'Language', '日本語');
     await user.click(screen.getByRole('switch', { name: 'Launch on Windows startup' }));
 
-    expect(state().draft).toEqual({ theme: 'dark', font: 'jetbrains-mono', language: 'ja', launchOnStartup: true });
+    expect(state().draft).toEqual({
+      theme: 'dark',
+      font: 'jetbrains-mono',
+      language: 'ja',
+      launchOnStartup: true,
+      autoUpdate: true,
+    });
     expect(state().saved).toEqual(DEFAULT_SETTINGS);
     expect(applySettings).toHaveBeenLastCalledWith(state().draft);
     expect(callIPCMock).not.toHaveBeenCalled();
