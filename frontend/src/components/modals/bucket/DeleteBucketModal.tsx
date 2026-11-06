@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import Button from '@/components/buttons/Button';
+import CloseButton from '@/components/buttons/CloseButton';
 import FieldInput from '@/components/inputs/FieldInput';
 import { showDeleteResultModal } from '@/components/modals/lazyModals';
 import { WARNING_BG_COLOR } from '@/components/modals/modalColors';
@@ -104,7 +105,7 @@ export default createMantineModal<DeleteBucketModalProps, DeleteBucketOutput | n
             <Trash2 />
             <Title order={4}>{t('title')}</Title>
           </Group>
-          {deleting ? null : <Modal.CloseButton size="md" aria-label={t('common:button.close')} />}
+          {deleting ? null : <CloseButton tooltip={t('common:button.close')} onClick={mantine.props.onClose} />}
         </Modal.Header>
 
         <Divider />

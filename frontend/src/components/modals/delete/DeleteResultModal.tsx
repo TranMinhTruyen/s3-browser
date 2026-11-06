@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import { formatStringJson } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
+import CloseButton from '@/components/buttons/CloseButton';
 import DeleteKeyList, { DeleteKeyRow } from '@/components/modals/delete/DeleteKeyList';
 import { INFO_BG_COLOR, INFO_COLOR } from '@/components/modals/modalColors';
 
@@ -51,7 +52,7 @@ export default createMantineModal<DeleteResultModalProps, void>(props => {
               {t('title')}
             </Title>
           </Group>
-          <Modal.CloseButton size="md" aria-label={t('common:button.close')} />
+          <CloseButton tooltip={t('common:button.close')} onClick={mantine.props.onClose} />
         </Modal.Header>
 
         <Divider />

@@ -429,12 +429,14 @@ describe('ConnectModal', () => {
       expect(screen.getByRole('checkbox', { name: 'Path style' })).toBeChecked();
     });
 
-    it('closes from the close button', async () => {
+    it('closes from the close button without submitting the form', async () => {
       const user = await open();
 
       await user.click(screen.getByRole('button', { name: 'Close' }));
 
       await isClosed();
+      expect(screen.queryByText('Access key is required')).not.toBeInTheDocument();
+      expect(callIPCMock).not.toHaveBeenCalled();
     });
   });
 });

@@ -68,6 +68,24 @@ describe('TransferPanel', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it('shows a Ban icon on cancel-all and an X icon on close, so the two buttons differ', () => {
+    renderPanel();
+
+    const cancelAll = screen.getByRole('button', { name: 'Cancel all' });
+    const close = screen.getByRole('button', { name: 'Close' });
+    expect(cancelAll.querySelector('svg.lucide-ban')).toBeInTheDocument();
+    expect(cancelAll.querySelector('svg.lucide-x')).not.toBeInTheDocument();
+    expect(close.querySelector('svg.lucide-x')).toBeInTheDocument();
+  });
+
+  it('close button shows closeLabel as tooltip on hover', async () => {
+    renderPanel({ closeLabel: 'Dismiss' });
+
+    await userEvent.hover(screen.getByRole('button', { name: 'Dismiss' }));
+
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Dismiss');
+  });
+
   it('close button uses closeLabel as aria-label and calls onClose', async () => {
     const { onCancelAll, onClose } = renderPanel({ closeLabel: 'Dismiss' });
 

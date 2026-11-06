@@ -1,8 +1,9 @@
-import { CloseButton, Divider, Group, Paper, Text } from '@mantine/core';
-import { X } from 'lucide-react';
+import { Divider, Group, Paper, Text } from '@mantine/core';
+import { Ban } from 'lucide-react';
 import { ReactNode } from 'react';
 import { tintedColor } from '@/common/theme/tintedColor';
 import ActionIcon from '@/components/buttons/ActionIcon';
+import CloseButton from '@/components/buttons/CloseButton';
 import { ITEM_HEIGHT } from '@/components/layouts/transfer/transferItem';
 import VirtualItemList from '@/components/layouts/transfer/VirtualItemList';
 
@@ -28,9 +29,9 @@ function TransferPanel(props: TransferPanelProps) {
         <Text>{title}</Text>
         <Group gap="xs">
           <ActionIcon {...tintedColor('red', 'ai')} size="md" onClick={onCancelAll} tooltip={cancelAllTooltip}>
-            <X />
+            <Ban />
           </ActionIcon>
-          <CloseButton onClick={onClose} aria-label={closeLabel} />
+          <CloseButton onClick={onClose} tooltip={closeLabel} />
         </Group>
       </Group>
 

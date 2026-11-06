@@ -8,6 +8,7 @@ import { type PolicyMode, validatePolicy } from '@/common/utils/bucketUtils';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import Button from '@/components/buttons/Button';
+import CloseButton from '@/components/buttons/CloseButton';
 import TruncatedText from '@/components/display/TruncatedText';
 import BucketPolicyInput from '@/components/inputs/BucketPolicyInput';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
@@ -90,7 +91,7 @@ export default createMantineModal<BucketPolicyModalProps, boolean>(props => {
             <ShieldCheck />
             <Title order={4}>{t('title')}</Title>
           </Group>
-          <Modal.CloseButton size="md" aria-label={t('common:button.close')} />
+          <CloseButton tooltip={t('common:button.close')} onClick={mantine.props.onClose} />
         </Modal.Header>
 
         <Divider />

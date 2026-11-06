@@ -187,6 +187,13 @@ describe('UploadLimitModal', () => {
     await expect(result).resolves.toEqual([]);
   });
 
+  it('resolves null when closed with the X button', async () => {
+    const dismissed = open([photos()]);
+    await flush();
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+    await expect(dismissed).resolves.toBeNull();
+  });
+
   it('resolves null when the modal is closed', async () => {
     const dismissed = open([photos()]);
     await flush();

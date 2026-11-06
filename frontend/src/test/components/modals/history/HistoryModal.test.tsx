@@ -294,6 +294,20 @@ describe('HistoryModal', () => {
     await expect(result).resolves.toBe(false);
   });
 
+  it('resolves null when closed with the X button', async () => {
+    callIPCMock.mockResolvedValueOnce(pageOf([]));
+    renderWithProviders(<div />);
+    let result!: Promise<false | null>;
+    act(() => {
+      result = HistoryModal.show();
+    });
+    await flush();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    await expect(result).resolves.toBeNull();
+  });
+
   it('gives the virtualizer the row estimate and the modal scroll container', async () => {
     callIPCMock.mockResolvedValueOnce(pageOf([item('a')]));
     open();

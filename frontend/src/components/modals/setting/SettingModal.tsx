@@ -17,6 +17,7 @@ import { useSettingStore } from '@/common/stores/settingStore';
 import { tintedColor } from '@/common/theme/tintedColor';
 import { createMantineModal } from '@/common/utils/modalUtils';
 import Button from '@/components/buttons/Button';
+import CloseButton from '@/components/buttons/CloseButton';
 import SelectInput from '@/components/inputs/SelectInput';
 import SwitchInput from '@/components/inputs/SwitchInput';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
@@ -128,7 +129,7 @@ export default createMantineModal<{}, boolean>(props => {
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
             <Title order={4}>{t('title')}</Title>
           </Group>
-          <Modal.CloseButton size="md" disabled={saving} aria-label={t('common:button.close')} />
+          <CloseButton tooltip={t('common:button.close')} disabled={saving} onClick={onCloseModal} />
         </Modal.Header>
 
         <Divider />
