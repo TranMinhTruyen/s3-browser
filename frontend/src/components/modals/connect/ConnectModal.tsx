@@ -13,6 +13,7 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal } from '@/common/utils/modalUtils';
 import { createUUID } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
+import CloseButton from '@/components/buttons/CloseButton';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import RegionCombobox from '@/components/inputs/combobox/RegionCombobox';
 import FieldInput from '@/components/inputs/FieldInput';
@@ -61,10 +62,10 @@ const PROVIDER_OPTIONS = [
   ),
 }));
 
-// Max body height on tall screens, sized for the Access key method; longer methods scroll. Each shrinks on short
-// screens so the modal stays in the viewport. Create/edit show the hint under the fields (2 lines of xs text plus the
-// Stack gap, measured at about 43px); connect modes do not. Measured content: 747px in create, so 747 - 43 = 704 in
-// connect, plus a few px of slack = 710.
+// Max body height on tall screens, sized for the Access key method: shorter methods shrink the modal to fit, longer
+// methods scroll. Each cap shrinks on short screens so the modal stays in the viewport. Create/edit show the hint under
+// the fields (2 lines of xs text plus the Stack gap, measured at about 43px); connect modes do not. Measured content:
+// 747px in create, so 747 - 43 = 704 in connect, plus a few px of slack = 710.
 const bodyHeight = (px: number) => `min(${px}px, calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT}))`;
 const BODY_HEIGHT_WITH_HINT = bodyHeight(750);
 const BODY_HEIGHT_NO_HINT = bodyHeight(710);
@@ -284,14 +285,14 @@ export default createMantineModal<ConnectModalProps, false>(
               >
                 {t('title')}
               </Title>
-              <Modal.CloseButton size="md" aria-label={t('common:button.close')} />
+              <CloseButton tooltip={t('common:button.close')} onClick={mantine.props.onClose} />
             </Modal.Header>
 
             <Divider />
 
             <Modal.Body
               p="16px"
-              style={{ overflow: 'auto', height: secretRequired ? BODY_HEIGHT_NO_HINT : BODY_HEIGHT_WITH_HINT }}
+              style={{ overflow: 'auto', maxHeight: secretRequired ? BODY_HEIGHT_NO_HINT : BODY_HEIGHT_WITH_HINT }}
             >
               <Stack gap="sm">
                 <SegmentedControl

@@ -11,6 +11,7 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal } from '@/common/utils/modalUtils';
 import { formatStringJson } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
+import CloseButton from '@/components/buttons/CloseButton';
 import FieldInput from '@/components/inputs/FieldInput';
 import { WARNING_BG_COLOR } from '@/components/modals/modalColors';
 import { MODAL_CHROME_HEIGHT } from '@/components/modals/modalLayout';
@@ -101,7 +102,7 @@ export default createMantineModal<MfaCodeModalProps, boolean>(
               >
                 {t('mfa.title')}
               </Title>
-              <Modal.CloseButton size="md" aria-label={t('common:button.close')} />
+              <CloseButton tooltip={t('common:button.close')} onClick={mantine.props.onClose} />
             </Modal.Header>
 
             <Divider />

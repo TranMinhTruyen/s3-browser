@@ -42,3 +42,6 @@ desktop.ini
 
 # --- Test coverage ---
 frontend/coverage/
+
+# graphify (knowledge graph, tạo lại bằng `graphify update .`)
+graphify-out/

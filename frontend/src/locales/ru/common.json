@@ -1,13 +1,14 @@
 {
   "button": {
-    "create": "Создать",
-    "update": "Обновить",
-    "refresh": "Обновить",
     "connect": "Подключиться",
     "cancel": "Отмена",
     "OK": "ОК",
     "clear": "Очистить",
     "close": "Закрыть"
+  },
+  "tooltip": {
+    "copy": "Копировать",
+    "copied": "Скопировано"
   },
   "appName": "S3Browser",
   "window": {

@@ -1,477 +1,125 @@
-S3Browser - profile test thủ công dùng chung cho các phương thức đăng nhập (dựng ở sprint-11)
-==============================================================================================
+S3Browser - profile test thủ công cho các phương thức đăng nhập
+================================================================
 
-Tài liệu test thủ công, KHÔNG phải requirement. Mọi tài khoản bên dưới chỉ dùng cho
-MinIO/LDAP/Floci chạy local bằng Docker, không dùng cho môi trường thật.
+Chỉ dùng cho môi trường Docker local, KHÔNG dùng cho môi trường thật.
+Dựng môi trường: xem README.txt (mục 2 MinIO + LDAP, mục 3 Floci, mục 7 MinIO TLS + Keycloak).
+Tên field bên dưới theo nhãn tiếng Anh trong form "Connection Profile" của app.
 
-  PHẦN A (mục 1-7): provider MinIO - Access key, Anonymous, MinIO STS, LDAP.
-  PHẦN C (mục 14-16): provider MinIO bật TLS - OIDC (Keycloak), Certificate (mTLS) và CA certificate file.
-  PHẦN B (mục 8-13): provider AWS, giả lập bằng Floci - Access key, AWS CLI profile,
-                    Assume role, AWS SSO, Default chain, Anonymous.
-
-  CÁCH NHANH để dựng môi trường trên máy test: dùng Docker Compose trong thư mục này
-  (xem README.txt). Mục 5 và mục 11 bên dưới là cách dựng thủ công từng bước.
+Kiểm thêm với mỗi profile:
+  - Chạy cả "Test connection" và "Connect".
+  - Tắt "Save secrets" thì mở lại app phải hỏi lại secret.
+  - Bật "Auto connect" thì profile tự kết nối khi mở app (profile sai credential phải báo lỗi).
 
 
-######################################################################################
-PHẦN A - MinIO
-######################################################################################
-
-
-1. Môi trường
--------------
-
-  Thành phần         Container                  Cổng trên máy        Ghi chú
-  -----------------  -------------------------  -------------------  --------------------------------
-  MinIO S3 API       minio_s3_browser_test      localhost:10010      Endpoint nhập vào app
-  MinIO Console      minio_s3_browser_test      localhost:10011      Web UI, KHÔNG dùng làm endpoint
-  OpenLDAP           openldap_s3_browser_test   localhost:10389      Cùng network với MinIO
-
-  Docker network: s3_browser_test_app-network
-
-  QUAN TRỌNG: Endpoint trong profile phải là http://localhost:10010 (S3 API).
-  Nhập nhầm cổng 10011 (Console) sẽ gặp lỗi:
-    "expected element type <AssumeRoleWithLDAPIdentityResponse> but have <html>"
-
-
-2. Tài khoản test
------------------
-
-  Root MinIO:  admin / mật khẩu root của container
-               (container tạo bằng script ở mục 5 thì là MinioRoot#2026;
-                container có sẵn thì xem biến MINIO_ROOT_PASSWORD trong container)
-
-  LDAP admin:  cn=admin,dc=s3browser,dc=local / LdapAdmin#2026
-
-  User LDAP    Mật khẩu       Quyền                                  Access key cố định
-  -----------  -------------  -------------------------------------  ------------------------------
-  ldap-rw      LdapRw#2026    readwrite (qua group s3-writers)       s3b-rw-key / S3bRwKey#2026
-  ldap-ro      LdapRo#2026    readonly (gắn trực tiếp cho user)      s3b-ro-key / S3bRoKey#2026
-
-  Bucket             Quyền ẩn danh        Nội dung mẫu
-  -----------------  -------------------  ------------------------------
-  anon-public-read   download (chỉ đọc)   hello.txt, docs/readme.txt
-  anon-public-rw     public (đọc + ghi)   hello.txt, docs/readme.txt
-  demo-photos        private              (dùng để test bị từ chối)
-
-
-3. Profile cần tạo trong app và kết quả mong đợi
-------------------------------------------------
-
-Mọi profile: Provider = MinIO, Endpoint = http://localhost:10010, Region giữ mặc định,
-Path style bật.
-
-  #   Tên profile gợi ý        Method      Thông tin nhập                          Kết quả mong đợi
-  --  -----------------------  ----------  --------------------------------------  ------------------------------------------
-  P1  Test AccessKey RW        Access key  s3b-rw-key / S3bRwKey#2026              Xem danh sách bucket, upload, xoá được
-  P2  Test AccessKey RO        Access key  s3b-ro-key / S3bRoKey#2026              Xem được; upload/xoá báo Access Denied
-  P3  Test AccessKey Wrong     Access key  s3b-rw-key / sai-mat-khau               Test connection báo lỗi sai credential
-  P4  Test Anonymous           Anonymous   Buckets: anon-public-read,              anon-public-read: chỉ đọc, upload bị từ chối
-                                           anon-public-rw, demo-photos             anon-public-rw: đọc + upload + xoá được
-                                                                                   demo-photos: hiển thị không truy cập được
-  P5  Test Anonymous Empty     Anonymous   Không nhập bucket nào                   Bị chặn: cần ít nhất 1 bucket (PFE009)
-  P6  Test STS Root            MinIO STS   admin / mật khẩu root                   Kết nối được, toàn quyền
-  P7  Test STS Policy RO       MinIO STS   admin / mật khẩu root,                  Xem/tải được; upload bị Access Denied
-                                           Policy = JSON ở mục 3.1
-  P8  Test STS Duration        MinIO STS   như P6, Duration = 900                  Credential hết hạn sau 15 phút và app tự
-                                                                                   xin lại, thao tác không bị gián đoạn
-  P9  Test LDAP RW             LDAP        ldap-rw / LdapRw#2026                   Đọc + ghi được
-  P10 Test LDAP RO             LDAP        ldap-ro / LdapRo#2026                   Chỉ đọc; upload bị Access Denied
-  P11 Test LDAP Wrong          LDAP        ldap-rw / sai-mat-khau                  Báo lỗi đăng nhập LDAP (S3E038)
-  P12 Test LDAP Duration       LDAP        như P9, Duration = 900                  Như P8
-  P13 Test Wrong Port          LDAP        như P9, Endpoint = localhost:10011      Báo lỗi (Console trả về HTML)
-
-Với mỗi profile nên kiểm thêm:
-  - Bật/tắt "Save secrets": tắt thì mở lại app phải hỏi lại mật khẩu/secret.
-  - "Auto connect": profile tự kết nối khi mở app (riêng P3, P11 phải báo lỗi).
-  - Chạy được cả "Test connection" lẫn "Connect".
-
-3.1. Policy chỉ đọc cho P7:
-
-  {
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Effect": "Allow",
-        "Action": ["s3:GetObject", "s3:ListBucket", "s3:ListAllMyBuckets", "s3:GetBucketLocation"],
-        "Resource": ["arn:aws:s3:::*"]
-      }
-    ]
-  }
-
-
-4. Lưu ý về MinIO khi bật LDAP
-------------------------------
-
-  - Khi đã bật LDAP, user nội bộ của MinIO (tạo bằng `mc admin user add`) KHÔNG còn quyền:
-    vẫn đăng nhập được nhưng mọi thao tác đều Access Denied. Vì vậy access key cố định phải
-    tạo gắn với user LDAP (`mc idp ldap accesskey create`).
-  - MinIO STS (AssumeRole) chỉ chạy được bằng tài khoản root. Access key của user LDAP gọi
-    AssumeRole sẽ bị AccessDenied. Muốn test quyền hạn chế thì dùng Policy như P7.
-  - Tài khoản root vẫn dùng bình thường, các profile cũ dùng root không bị ảnh hưởng.
-
-
-5. Dựng môi trường từ đầu
--------------------------
-
-Chạy trong Git Bash (Windows) hoặc bash (macOS/Linux). Nếu đã có container
-minio_s3_browser_test thì bỏ qua bước 5.1.
-
-  export MSYS_NO_PATHCONV=1   # Git Bash: không cho đổi đường dẫn kiểu /tmp, ou=...
-
-5.1. Network và MinIO
-
-  docker network create s3_browser_test_app-network
-  docker run -d --name minio_s3_browser_test --network s3_browser_test_app-network \
-    --restart unless-stopped -p 10010:10000 -p 10011:10001 \
-    -e MINIO_ROOT_USER=admin -e MINIO_ROOT_PASSWORD='MinioRoot#2026' \
-    minio/minio:RELEASE.2025-04-22T22-12-26Z \
-    server --address :10000 --console-address :10001 /data
-  docker exec minio_s3_browser_test sh -c \
-    'mc alias set local http://127.0.0.1:10000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"'
-  docker exec minio_s3_browser_test mc mb --ignore-existing local/demo-photos
-
-5.2. OpenLDAP
-
-  docker run -d --name openldap_s3_browser_test --network s3_browser_test_app-network \
-    --restart unless-stopped -p 10389:389 \
-    -e LDAP_ORGANISATION="S3Browser Test" -e LDAP_DOMAIN="s3browser.local" \
-    -e LDAP_ADMIN_PASSWORD='LdapAdmin#2026' \
-    osixia/openldap:1.5.0
-
-  Chờ khoảng 10 giây cho LDAP khởi động xong rồi thêm user và group:
-
-  docker exec -i openldap_s3_browser_test ldapadd -x -H ldap://localhost \
-    -D cn=admin,dc=s3browser,dc=local -w 'LdapAdmin#2026' <<'EOF'
-  dn: ou=users,dc=s3browser,dc=local
-  objectClass: organizationalUnit
-  ou: users
-
-  dn: ou=groups,dc=s3browser,dc=local
-  objectClass: organizationalUnit
-  ou: groups
-
-  dn: uid=ldap-rw,ou=users,dc=s3browser,dc=local
-  objectClass: inetOrgPerson
-  uid: ldap-rw
-  cn: LDAP ReadWrite
-  sn: ReadWrite
-  userPassword: LdapRw#2026
-
-  dn: uid=ldap-ro,ou=users,dc=s3browser,dc=local
-  objectClass: inetOrgPerson
-  uid: ldap-ro
-  cn: LDAP ReadOnly
-  sn: ReadOnly
-  userPassword: LdapRo#2026
-
-  dn: cn=s3-writers,ou=groups,dc=s3browser,dc=local
-  objectClass: groupOfNames
-  cn: s3-writers
-  member: uid=ldap-rw,ou=users,dc=s3browser,dc=local
-  EOF
-
-  (Khi chép lệnh trên, bỏ 2 dấu cách thụt đầu dòng của phần LDIF và dòng EOF.)
-
-5.3. Bật LDAP cho MinIO, gắn policy và tạo access key
-
-  docker exec minio_s3_browser_test mc idp ldap add local \
-    server_addr=openldap_s3_browser_test:389 server_insecure=on \
-    lookup_bind_dn=cn=admin,dc=s3browser,dc=local lookup_bind_password='LdapAdmin#2026' \
-    user_dn_search_base_dn=ou=users,dc=s3browser,dc=local 'user_dn_search_filter=(uid=%s)' \
-    group_search_base_dn=ou=groups,dc=s3browser,dc=local \
-    'group_search_filter=(&(objectclass=groupOfNames)(member=%d))'
-  docker exec minio_s3_browser_test mc admin service restart local
-
-  docker exec minio_s3_browser_test mc idp ldap policy attach local readwrite \
-    --group=cn=s3-writers,ou=groups,dc=s3browser,dc=local
-  docker exec minio_s3_browser_test mc idp ldap policy attach local readonly \
-    --user=uid=ldap-ro,ou=users,dc=s3browser,dc=local
-
-  docker exec minio_s3_browser_test mc idp ldap accesskey create local ldap-rw \
-    --access-key s3b-rw-key --secret-key 'S3bRwKey#2026' --name s3browser-test-rw
-  docker exec minio_s3_browser_test mc idp ldap accesskey create local ldap-ro \
-    --access-key s3b-ro-key --secret-key 'S3bRoKey#2026' --name s3browser-test-ro
-
-  Lưu ý: tham số user của `accesskey create` là tên ngắn (ldap-rw), không phải DN đầy đủ.
-
-5.4. Bucket cho Anonymous
-
-  docker exec minio_s3_browser_test sh -c '
-    for b in anon-public-read anon-public-rw; do mc mb --ignore-existing local/$b; done
-    mc anonymous set download local/anon-public-read
-    mc anonymous set public local/anon-public-rw
-    echo "hello anonymous" > /tmp/hello.txt
-    for b in anon-public-read anon-public-rw; do
-      mc cp -q /tmp/hello.txt local/$b/hello.txt
-      mc cp -q /tmp/hello.txt local/$b/docs/readme.txt
-    done
-    rm /tmp/hello.txt'
-
-
-6. Kiểm tra nhanh môi trường (không cần app)
---------------------------------------------
-
-  # Anonymous: mong đợi 200, 403, 403
-  curl -s -o /dev/null -w '%{http_code}\n' "http://localhost:10010/anon-public-read?list-type=2"
-  curl -s -o /dev/null -w '%{http_code}\n' "http://localhost:10010/demo-photos?list-type=2"
-  curl -s -o /dev/null -w '%{http_code}\n' -X PUT --data x http://localhost:10010/anon-public-read/x.txt
-
-  # LDAP: mong đợi thấy thẻ <AccessKeyId>
-  curl -s -X POST http://localhost:10010/ \
-    -d 'Action=AssumeRoleWithLDAPIdentity&Version=2011-06-15&LDAPUsername=ldap-rw&LDAPPassword=LdapRw%232026'
-
-  # Access key: mong đợi liệt kê được bucket
-  docker exec minio_s3_browser_test sh -c \
-    'MC_HOST_t="http://s3b-rw-key:S3bRwKey#2026@127.0.0.1:10000" mc ls t'
-
-
-7. Dọn dẹp sau khi test
+1. MinIO (README mục 2)
 -----------------------
 
-  docker exec minio_s3_browser_test mc rb --force local/anon-public-read local/anon-public-rw
-  docker exec minio_s3_browser_test mc idp ldap accesskey rm local s3b-rw-key
-  docker exec minio_s3_browser_test mc idp ldap accesskey rm local s3b-ro-key
-  docker exec minio_s3_browser_test mc idp ldap remove local
-  docker exec minio_s3_browser_test mc admin service restart local
-  docker rm -f openldap_s3_browser_test
+Field chung: Provider = MinIO | Endpoint = http://localhost:10010 | Path style = bật
+
+  #    Method      Field cần nhập                              Kết quả mong đợi
+  ---  ----------  ------------------------------------------  ------------------------------------------
+  P1   Access key  Access key = s3b-rw-key                     Liệt kê bucket, upload, xoá được
+                   Secret key = S3bRwKey#2026
+  P2   Access key  Access key = s3b-ro-key                     Xem được; upload/xoá báo Access Denied
+                   Secret key = S3bRoKey#2026
+  P3   Access key  Access key = s3b-rw-key                     Báo lỗi sai credential
+                   Secret key = sai-mat-khau
+  P4   Anonymous   Buckets = anon-public-read,                 anon-public-read: chỉ đọc
+                             anon-public-rw, demo-photos       anon-public-rw: đọc, upload, xoá được
+                                                               demo-photos: không truy cập được
+  P5   Anonymous   Buckets = (để trống)                        Bị chặn, cần ít nhất 1 bucket (PFE009)
+  P6   MinIO STS   Access key = admin                          Kết nối được, toàn quyền
+                   Secret key = MinioRoot#2026
+  P7   MinIO STS   như P6                                      Xem/tải được; upload báo Access Denied
+                   Inline policy = JSON chỉ đọc (cuối mục 1)
+  P8   MinIO STS   như P6                                      Sau 15 phút app tự xin lại credential,
+                   Duration (seconds) = 900                    thao tác không bị gián đoạn
+  P9   LDAP        LDAP username = ldap-rw                     Đọc và ghi được
+                   LDAP password = LdapRw#2026
+  P10  LDAP        LDAP username = ldap-ro                     Chỉ đọc; upload báo Access Denied
+                   LDAP password = LdapRo#2026
+  P11  LDAP        LDAP username = ldap-rw                     Báo lỗi đăng nhập LDAP (S3E038)
+                   LDAP password = sai-mat-khau
+  P12  LDAP        như P9                                      Như P8
+                   Duration (seconds) = 900
+  P13  LDAP        như P9                                      Báo lỗi (cổng Console trả về HTML)
+                   Endpoint = http://localhost:10011
+
+  JSON chỉ đọc cho P7:
+    {"Version":"2012-10-17","Statement":[{"Effect":"Allow",
+     "Action":["s3:GetObject","s3:ListBucket","s3:ListAllMyBuckets","s3:GetBucketLocation"],
+     "Resource":["arn:aws:s3:::*"]}]}
+
+  Lưu ý:
+    - MinIO STS chỉ chạy với tài khoản root; muốn quyền hạn chế thì dùng Inline policy như P7.
+    - Khi MinIO bật LDAP, user nội bộ MinIO đăng nhập được nhưng mọi thao tác đều Access Denied.
 
 
-######################################################################################
-PHẦN B - AWS giả lập bằng Floci
-######################################################################################
+2. AWS giả lập bằng Floci (README mục 3)
+----------------------------------------
 
-8. Môi trường Floci
--------------------
+Field chung: Provider = AWS | Endpoint = http://localhost:4566 | Region = ap-southeast-1 | Path style = bật
+Access key/secret key do Floci sinh ngẫu nhiên: lấy trong ~/.aws/floci-credentials (đã copy theo README).
 
-  Container: s3b-test-floci (image floci/floci:latest)
-  Endpoint:  http://localhost:4566     Region dùng cho test: ap-southeast-1
-  Compose:   test-env/docker-compose-floci.yml
-             docker compose -f docker-compose-floci.yml -p s3b-floci-test up -d
+  #    Method           Field cần nhập                                  Kết quả mong đợi
+  ---  ---------------  ----------------------------------------------  -------------------------------------
+  F1   Access key       Access key, Secret key = của [floci-rw]         Liệt kê bucket, upload, xoá được
+  F2   Access key       Access key, Secret key = của [floci-ro]         Xem được; upload/xoá báo Access Denied
+  F3   Access key       Access key, Secret key = của [floci-assumer]    Báo Access Denied (không có quyền S3)
+  F4   Access key       Access key = AKIAFAKEFAKE                       Báo key không tồn tại
+                        Secret key = bất kỳ
+  F5   AWS CLI profile  AWS CLI profile = floci-rw                      Như F1
+                        AWS config file = ~/.aws/floci-config
+                        AWS credentials file = ~/.aws/floci-credentials
+  F6   AWS CLI profile  như F5, AWS CLI profile = floci-ro              Như F2
+  F7   AWS CLI profile  như F5, AWS CLI profile = khong-ton-tai         Báo profile không tồn tại (S3E033)
+  F8   Anonymous        Buckets = s3b-public-read                       Xem và tải file được
+  P-DC Default chain    (không có field, mở app như dưới)               Như F1
 
-  Floci mặc định KHÔNG kiểm tra quyền (key nào cũng dùng được). Compose đã bật 3 cờ:
-    FLOCI_SERVICES_IAM_ENFORCEMENT_ENABLED=true   kiểm tra IAM policy
-    FLOCI_AUTH_VALIDATE_SIGNATURES=true           từ chối access key không tồn tại
-    FLOCI_SERVICES_S3_ENFORCE_AUTH=true           áp dụng kiểm tra cho S3
-
-  Tài khoản quản trị (root) của Floci: test / test. Chỉ dùng để dựng môi trường.
-
-  Giới hạn của Floci 1.5.14 (đã kiểm tra, không phải lỗi của app):
-    - S3 không kiểm tra secret key: đúng access key + sai secret vẫn được chấp nhận.
-      STS và IAM thì có kiểm tra.
-    - Request không ký (ẩn danh) luôn được chấp nhận với mọi bucket, kể cả bucket private.
-    - Managed policy AWS (AmazonS3FullAccess, AmazonS3ReadOnlyAccess, ...) chỉ là bản giả
-      "Allow *", nên phải dùng inline policy tự viết.
-    - sts get-caller-identity luôn trả về root, không dùng để kiểm tra danh tính được.
-
-
-9. Tài khoản Floci
-------------------
-
-  Loại       Tên            Quyền (inline policy)                               Profile CLI
-  ---------  -------------  --------------------------------------------------  ---------------
-  IAM user   s3b-rw         s3:*                                                floci-rw
-  IAM user   s3b-ro         s3:Get*, s3:List*                                   floci-ro
-  IAM user   s3b-assumer    chỉ sts:AssumeRole vào role/s3b-* (không có S3)     floci-assumer
-  IAM role   s3b-role-rw    s3:*, trust: user s3b-assumer                       floci-role-rw
-  IAM role   s3b-role-ro    s3:Get*, s3:List*, trust: user s3b-assumer          floci-role-ro
-
-  Bucket            Nội dung mẫu                  Ghi chú
-  ----------------  ----------------------------  ----------------------------------------
-  s3b-private       hello.txt, docs/readme.txt    Riêng tư
-  s3b-public-read   hello.txt, docs/readme.txt    Bucket policy cho đọc ẩn danh
-
-  Access key do Floci sinh ngẫu nhiên, nằm trong 2 file riêng (KHÔNG đụng ~/.aws mặc định):
-    ~/.aws/floci-config        region + endpoint_url + role_arn
-    ~/.aws/floci-credentials   access key / secret key
-  Xem key: mở ~/.aws/floci-credentials, hoặc
-    aws configure get aws_access_key_id --profile floci-rw   (cần set AWS_CONFIG_FILE,
-    AWS_SHARED_CREDENTIALS_FILE như mục 10, P-DC)
-
-
-10. Profile cần tạo trong app và kết quả mong đợi
--------------------------------------------------
-
-Mọi profile: Provider = AWS, Endpoint = http://localhost:4566, Region = ap-southeast-1,
-Path style bật.
-
-  #      Method           Thông tin nhập                               Kết quả mong đợi
-  -----  ---------------  -------------------------------------------  -------------------------------------
-  F1     Access key       Key của profile floci-rw                     Liệt kê bucket, upload, xoá được
-  F2     Access key       Key của profile floci-ro                     Xem được; upload/xoá báo Access Denied
-  F3     Access key       Key của profile floci-assumer                Kết nối báo Access Denied
-                                                                       (không có quyền s3:ListAllMyBuckets)
-  F4     Access key       AKIAFAKEFAKE / bất kỳ                        Báo key không tồn tại
-  F5     AWS CLI profile  Profile floci-rw,                            Như F1
-                          Config file ~/.aws/floci-config,
-                          Credentials file ~/.aws/floci-credentials
-  F6     AWS CLI profile  Profile floci-ro, file như F5                Như F2
-  F7     AWS CLI profile  Profile khong-ton-tai, file như F5           Báo profile không tồn tại (S3E033)
-  F8     Anonymous        Buckets: s3b-public-read                     Xem và tải file được
-  P-DC   Default chain    Mở app với biến môi trường (xem dưới)        Như F1
-
-  Default chain đọc credential từ môi trường của process app, nên phải mở app từ terminal
-  đã set biến. PowerShell, ở gốc repo:
+  Default chain: mở app từ PowerShell ở gốc repo, đổi AWS_PROFILE = floci-ro để thấy upload bị từ chối:
     $env:AWS_CONFIG_FILE = "$HOME\.aws\floci-config"
     $env:AWS_SHARED_CREDENTIALS_FILE = "$HOME\.aws\floci-credentials"
     $env:AWS_PROFILE = "floci-rw"
     go tool wails3 task dev
-  Đổi AWS_PROFILE=floci-ro để thấy upload bị từ chối.
 
-  CHƯA test được trên Floci (giới hạn của app, cần sửa code):
-    - Assume role: app tạo STS client không dùng Endpoint của profile
-      (internal/modules/bucket/submodule_cfg_credentials.go, assumeRoleCredentials), nên request
-      STS đi tới sts.<region>.amazonaws.com (AWS thật) và bị từ chối InvalidClientTokenId.
-      AWS CLI profile có role_arn (floci-role-rw) cũng vậy: AWS SDK Go không áp endpoint_url
-      cho bước AssumeRole. Riêng AWS CLI (Python) thì chạy đúng:
-        aws s3 ls --profile floci-role-rw   -> OK
-        aws s3 cp - s3://s3b-private/x.txt --profile floci-role-ro   -> AccessDenied
-    - AWS SSO: tương tự, SDK gọi portal/OIDC của AWS thật. Chưa dựng SSO trên Floci.
-    - Anonymous không phân biệt được bucket public và private (giới hạn Floci, mục 8).
-  Hai method Assume role và AWS SSO cần test trên AWS thật cho đến khi app hỗ trợ endpoint STS.
+  Giới hạn của Floci (không phải lỗi app):
+    - S3 không kiểm tra secret key: đúng access key + sai secret vẫn qua.
+    - Request ẩn danh luôn được chấp nhận, kể cả bucket private (s3b-private).
+  Chưa test được trên Floci: Assume role và AWS SSO. App chưa áp Endpoint cho STS nên request
+  đi tới AWS thật. Hai method này cần test trên AWS thật.
 
 
-11. Dựng môi trường Floci từ đầu
---------------------------------
+3. MinIO TLS, OIDC và Client certificate (README mục 7)
+-------------------------------------------------------
 
-Chạy trong Git Bash. Cần AWS CLI v2. Bật 3 cờ ở mục 8 trong compose rồi
-`docker compose ... up -d`, sau đó:
+Field chung: Provider = MinIO | Endpoint = https://localhost:10020 | Path style = bật
+File nằm trong test-env/certs/ (sinh bởi gen-certs.sh). Đăng nhập Keycloak: oidc-user / OidcUser#2026.
 
-  export AWS_PAGER="" AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test
-  E="--endpoint-url http://localhost:4566 --region ap-southeast-1"
-  RW='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":"*"}]}'
-  RO='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:Get*","s3:List*"],"Resource":"*"}]}'
-  ASSUME='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"sts:AssumeRole","Resource":"arn:aws:iam::000000000000:role/s3b-*"}]}'
-  TRUST='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":"arn:aws:iam::000000000000:user/s3b-assumer"},"Action":"sts:AssumeRole"}]}'
+  #    Method              Field cần nhập                                     Kết quả mong đợi
+  ---  ------------------  -------------------------------------------------  -----------------------------------
+  P14  OIDC                Issuer URL = http://localhost:8180/realms/s3browser Đăng nhập Keycloak, Connect liệt kê
+                           Client ID = s3browser                              bucket s3b-tls
+                           Callback port = 48765
+                           CA certificate file = ca.pem
+  P15  OIDC                như P14,                                           Báo lỗi S3E041
+                           Issuer URL = http://localhost:8180/realms/sai
+  P16  Client certificate  Client certificate file = client/client.crt        Connect thành công
+                           Private key file = client/client.key
+                           CA certificate file = ca.pem
+  P17  Client certificate  như P16, Private key file = client/client-enc.key  Connect thành công
+                           The private key has a password = tick
+                           Private key password = ClientKey#2026
+  P18  Client certificate  như P17, Private key password = sai-mat-khau       Báo lỗi S3E043
+  P19  Client certificate  như P17, Private key password = (để trống)         Báo lỗi S3E048
+  P20  Client certificate  như P17, Private key file = client/client-legacy.key  S3E043 kèm gợi ý openssl pkcs8 -topk8
+  P21  Client certificate  như P16, CA certificate file = (để trống)          Lỗi TLS "unknown authority", không treo
+  P22  Client certificate  như P16, Client certificate file = file không có   Báo lỗi S3E042 kèm đường dẫn
+  P23  Client certificate  như P16, Endpoint = http://localhost:10020         Báo lỗi PFE009 (cần https)
+  P24  Access key          Access key = admin                                 Kết nối được
+                           Secret key = MinioRoot#2026
+                           CA certificate file = ca.pem
+  P25  Access key          như P24, CA certificate file = file không có       Báo lỗi S3E049 kèm đường dẫn
+  P26  Access key          như P24, CA certificate file = client/client.key   Báo lỗi S3E049 kèm đường dẫn
 
-  for u in s3b-rw s3b-ro s3b-assumer; do aws iam create-user --user-name $u $E >/dev/null; done
-  aws iam put-user-policy --user-name s3b-rw --policy-name s3-rw --policy-document "$RW" $E
-  aws iam put-user-policy --user-name s3b-ro --policy-name s3-ro --policy-document "$RO" $E
-  aws iam put-user-policy --user-name s3b-assumer --policy-name allow-assume --policy-document "$ASSUME" $E
-  aws iam create-role --role-name s3b-role-rw --assume-role-policy-document "$TRUST" $E >/dev/null
-  aws iam create-role --role-name s3b-role-ro --assume-role-policy-document "$TRUST" $E >/dev/null
-  aws iam put-role-policy --role-name s3b-role-rw --policy-name s3-rw --policy-document "$RW" $E
-  aws iam put-role-policy --role-name s3b-role-ro --policy-name s3-ro --policy-document "$RO" $E
-
-  # Ghi access key vào ~/.aws/floci-credentials (dừng nếu file đã có)
-  [ -e ~/.aws/floci-credentials ] && echo "floci-credentials đã tồn tại" || \
-  for u in rw ro assumer; do
-    read -r ak sk < <(aws iam create-access-key --user-name s3b-$u $E \
-      --query 'AccessKey.[AccessKeyId,SecretAccessKey]' --output text)
-    printf '[floci-%s]\naws_access_key_id = %s\naws_secret_access_key = %s\n\n' $u "$ak" "$sk"
-  done > ~/.aws/floci-credentials
-
-  # ~/.aws/floci-config
-  { for p in rw ro assumer; do
-      printf '[profile floci-%s]\nregion = ap-southeast-1\nendpoint_url = http://localhost:4566\n\n' $p
-    done
-    for p in rw ro; do
-      printf '[profile floci-role-%s]\nregion = ap-southeast-1\nendpoint_url = http://localhost:4566\n' $p
-      printf 'role_arn = arn:aws:iam::000000000000:role/s3b-role-%s\nsource_profile = floci-assumer\n\n' $p
-    done; } > ~/.aws/floci-config
-
-  # Bucket
-  for b in s3b-private s3b-public-read; do
-    aws s3api create-bucket --bucket $b --create-bucket-configuration LocationConstraint=ap-southeast-1 $E >/dev/null
-    echo "hello floci" | aws s3 cp - s3://$b/hello.txt $E
-    echo "hello floci" | aws s3 cp - s3://$b/docs/readme.txt $E
-  done
-  aws s3api put-bucket-policy --bucket s3b-public-read $E --policy '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":"*","Action":["s3:GetObject","s3:ListBucket"],"Resource":["arn:aws:s3:::s3b-public-read","arn:aws:s3:::s3b-public-read/*"]}]}'
-
-
-12. Kiểm tra nhanh Floci (không cần app)
-----------------------------------------
-
-  export AWS_PAGER="" AWS_CONFIG_FILE="$(cygpath -w ~/.aws/floci-config)" \
-    AWS_SHARED_CREDENTIALS_FILE="$(cygpath -w ~/.aws/floci-credentials)"
-  E="--endpoint-url http://localhost:4566 --region ap-southeast-1"
-  aws s3 ls $E --profile floci-rw                                        # OK
-  echo x | aws s3 cp - s3://s3b-private/x.txt $E --profile floci-ro      # AccessDenied
-  aws s3 ls $E --profile floci-assumer                                   # AccessDenied
-
-  Lưu ý Git Bash: dùng cygpath -w như trên, KHÔNG set MSYS_NO_PATHCONV=1 khi chạy aws CLI
-  (CLI sẽ không tìm thấy file profile).
-
-
-13. Dọn dẹp / tắt kiểm tra quyền
---------------------------------
-
-  Xoá tài khoản và bucket test (dùng key root test/test):
-    for b in s3b-private s3b-public-read; do aws s3 rb s3://$b --force $E; done
-    for u in s3b-rw s3b-ro s3b-assumer; do
-      for k in $(aws iam list-access-keys --user-name $u $E --query 'AccessKeyMetadata[].AccessKeyId' --output text); do
-        aws iam delete-access-key --user-name $u --access-key-id $k $E; done
-      for p in $(aws iam list-user-policies --user-name $u $E --query PolicyNames --output text); do
-        aws iam delete-user-policy --user-name $u --policy-name $p $E; done
-      aws iam delete-user --user-name $u $E
-    done
-    for r in s3b-role-rw s3b-role-ro; do
-      for p in $(aws iam list-role-policies --role-name $r $E --query PolicyNames --output text); do
-        aws iam delete-role-policy --role-name $r --policy-name $p $E; done
-      aws iam delete-role --role-name $r $E
-    done
-    rm ~/.aws/floci-config ~/.aws/floci-credentials
-
-  Tắt kiểm tra quyền (khi project khác cần dùng key bất kỳ): xoá 3 cờ ở mục 8 khỏi
-  test-env/docker-compose-floci.yml rồi chạy lại `docker compose ... up -d`.
-
-
-
-######################################################################################
-PHẦN C - MinIO TLS, OIDC (Keycloak) và Certificate (mTLS)
-######################################################################################
-
-
-14. Môi trường
---------------
-
-  Dựng theo README.txt mục 7 (gen-certs.sh, Keycloak, rồi MinIO TLS).
-
-  Thành phần       Container            Địa chỉ trên máy
-  ---------------  -------------------  ---------------------------------------------
-  MinIO TLS        s3b-test-minio-tls   https://localhost:10020  <- Endpoint nhập vào app
-  Keycloak         s3b-test-keycloak    http://localhost:8180    (Admin: admin / KeycloakAdmin#2026)
-  CA                                    certs/ca.pem    <- "CA certificate file"
-
-  Bucket có sẵn: s3b-tls (file docs/readme.txt). MinIO root: admin / MinioRoot#2026.
-  Redirect URI của app (đã khai báo trong realm): http://127.0.0.1:48765/callback
-
-
-15. Profile cần tạo trong app và kết quả mong đợi
--------------------------------------------------
-
-Mọi profile: Provider = MinIO, Endpoint = https://localhost:10020, Path style bật.
-Đường dẫn file bên dưới tính từ certs/ (khi chọn file trong app, chọn file thật trong thư mục đó).
-
-  #    Method       Thông tin nhập                                          Kết quả mong đợi
-  ---  -----------  ------------------------------------------------------  ----------------------------------------
-  P14  OIDC         Issuer URL = http://localhost:8180/realms/s3browser,     Đăng nhập Keycloak (oidc-user /
-                    Client ID = s3browser, Callback port = 48765,            OidcUser#2026), Connect liệt kê
-                    CA = ca.pem                                              s3b-tls (policy readwrite)
-  P15  OIDC         như P14, Issuer URL = http://localhost:8180/realms/sai   S3E041 (Keycloak không có realm này)
-  P16  Certificate  Cert = client/client.crt, Key = client/client.key,       Connect thành công (policy readwrite
-                    CA = ca.pem                                              theo CN của cert)
-  P17  Certificate  Cert = client/client.crt, Key = client/client-enc.key,   Connect thành công
-                    tick "Private key có mật khẩu", mật khẩu ClientKey#2026
-  P18  Certificate  như P17, mật khẩu = sai-mat-khau                         S3E043
-  P19  Certificate  như P17, để trống mật khẩu                               S3E048
-  P20  Certificate  Cert = client/client.crt, Key = client/client-legacy.key S3E043 kèm gợi ý openssl pkcs8 -topk8
-                    (tick có mật khẩu, mật khẩu ClientKey#2026)
-  P21  Certificate  như P16 nhưng không chọn CA                              Lỗi TLS "unknown authority", không treo
-  P22  Certificate  như P16, Cert = file không tồn tại                       S3E042 nêu đường dẫn
-  P23  Certificate  như P16, Endpoint = http://localhost:10020               PFE009 (cần https)
-  P24  Access key   admin / MinioRoot#2026, CA = ca.pem                      Kết nối được (CA áp cho mọi method MinIO)
-  P25  Access key   như P24, CA = file không tồn tại                         S3E049 nêu đường dẫn
-  P26  Access key   như P24, CA = client/client.key (PEM không có chứng chỉ) S3E049 nêu đường dẫn
-
-  Ghi chú OIDC: app gửi id_token (kèm access_token) cho MinIO (Q-G3-2 = A). Claim "policy" của Keycloak
-  được gán cứng readwrite cho mọi user (keycloak/s3browser-realm.json). Nếu MinIO từ chối token thì báo
-  lại để chuyển sang phương án C (chọn loại token trong profile).
-  Hết hạn OIDC (case O10): Keycloak Admin -> realm s3browser -> Realm settings -> Tokens ->
-  Access Token Lifespan = 2-3 phút (mặc định 5 phút).
-
-
-16. Dọn dẹp
------------
-
-  Xem README.txt mục 8.
+  Test hết hạn OIDC: Keycloak Admin (http://localhost:8180, admin / KeycloakAdmin#2026) -> realm s3browser
+  -> Realm settings -> Tokens -> Access Token Lifespan = 2-3 phút.

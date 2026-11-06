@@ -1,13 +1,14 @@
 {
   "button": {
-    "create": "作成",
-    "update": "更新",
-    "refresh": "再読み込み",
     "connect": "接続",
     "cancel": "キャンセル",
     "OK": "OK",
     "clear": "クリア",
     "close": "閉じる"
+  },
+  "tooltip": {
+    "copy": "コピー",
+    "copied": "コピーしました"
   },
   "appName": "S3Browser",
   "window": {

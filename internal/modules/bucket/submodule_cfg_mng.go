@@ -55,28 +55,30 @@ func (m *submoduleCfgMng) buildClient(
 	if input.Provider == cnst.ProviderMinio {
 		caFile = input.AuthConfig.CaFile
 	}
-	client, transport, err := newHTTPClient(caFile)
+	transport, err := newTransport(caFile)
 	if err != nil {
 		return nil, err
 	}
 
-	creds, err := buildCredentials(ctx, input, client, m.oidc)
+	// The credential providers (minio-go) need the bare transport; only the S3 client uses http11Transport.
+	creds, err := buildCredentials(ctx, input, &http.Client{Transport: transport}, m.oidc)
 	if err != nil {
 		transport.CloseIdleConnections()
 		return nil, err
 	}
 
 	conn := &global.S3Conn{
-		ProfileName: input.Name,
-		Provider:    input.Provider,
-		AuthType:    input.AuthType,
-		AwsProfile:  cmp.Or(input.AuthConfig.ProfileName, "default"),
-		Transport:   transport,
+		ProfileName:    input.Name,
+		Provider:       input.Provider,
+		AuthType:       input.AuthType,
+		AwsProfile:     cmp.Or(input.AuthConfig.ProfileName, "default"),
+		CustomEndpoint: input.Endpoint != "",
+		Transport:      transport,
 	}
 	cfg := aws.Config{
 		Credentials:      creds.AWS,
 		Region:           cmp.Or(input.Region, creds.Region, defaultS3Region),
-		HTTPClient:       client,
+		HTTPClient:       &http.Client{Transport: http11Transport{transport}},
 		RetryMaxAttempts: 3,
 	}
 
@@ -161,13 +163,6 @@ func (m *submoduleCfgMng) probe(ctx context.Context, c *global.S3Conn) (models.O
 	return output, nil
 }
 
-// isS3Answer reports whether err is an answer of the S3 server (AccessDenied, NoSuchBucket, 403, 404...) rather
-// than a network failure or timeout.
-func isS3Answer(err error) bool {
-	var apiErr smithy.APIError
-	return errors.As(err, &apiErr)
-}
-
 // checkAnonymousBuckets runs HeadBucket on every bucket of an anonymous connection, in parallel, and returns the
 // error of each (nil when accessible), in the order of c.AnonymousBuckets(). The Accessible flags are updated
 // only when the server answered; on a network failure the previous flag is kept.
@@ -185,7 +180,7 @@ func checkAnonymousBuckets(ctx context.Context, c *global.S3Conn) []error {
 	_ = g.Wait()
 
 	for i, err := range errs {
-		if err == nil || isS3Answer(err) {
+		if err == nil || statusCode(err) != 0 {
 			c.SetAnonymousAccessible(i, err == nil)
 		}
 	}
@@ -208,7 +203,7 @@ func (m *submoduleCfgMng) probeAnonymous(
 		switch {
 		case err == nil:
 			accessible++
-		case !isS3Answer(err):
+		case statusCode(err) == 0:
 			networkErr = err
 		}
 		if err != nil {
@@ -333,17 +328,16 @@ func UnwrapAwsError(err error) string {
 	return ""
 }
 
-// newHTTPClient returns an HTTP client with a dedicated transport tuned for many parallel
-// transfers: large idle pool, 64 KiB buffers, no HTTP/2 (S3-compatible servers often lack it).
-// The transport is returned too so the caller can close its idle connections.
+// newTransport returns a dedicated transport tuned for many parallel transfers: large idle pool, 64 KiB
+// buffers, no HTTP/2 (S3-compatible servers often lack it). The caller closes its idle connections.
 // A non-empty caFile adds its certificates to the system CA pool (S3E049 if it can't be loaded). TLSClientConfig is
 // always set: minio-go's certificate STS call writes into it.
-func newHTTPClient(caFile string) (*http.Client, *http.Transport, error) {
+func newTransport(caFile string) (*http.Transport, error) {
 	tlsConfig := &tls.Config{}
 	if caFile != "" {
 		pool, err := loadCaPool(caFile)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		tlsConfig.RootCAs = pool
 	}
@@ -363,8 +357,24 @@ func newHTTPClient(caFile string) (*http.Client, *http.Transport, error) {
 		ReadBufferSize:        64 * 1024,
 		ForceAttemptHTTP2:     false,
 		ResponseHeaderTimeout: 30 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second, // needed with http11Transport for "Expect: 100-continue"
 		TLSClientConfig:       tlsConfig,
 	}
 
-	return &http.Client{Transport: tr}, tr, nil
+	return tr, nil
+}
+
+// http11Transport marks requests as HTTP/1.1 before sending them. smithy-go leaves Proto at 0.0,
+// and net/http only honors "Expect: 100-continue" for HTTP/1.1, so without this the body is sent at
+// once and an upload hangs when the server rejects it early (e.g. a 403) and stops reading.
+// Only the S3 client uses it: minio-go's certificate STS call type-asserts the client transport to
+// *http.Transport, so credential providers and madmin get the bare transport.
+type http11Transport struct{ http.RoundTripper }
+
+func (t http11Transport) RoundTrip(r *http.Request) (*http.Response, error) {
+	if !r.ProtoAtLeast(1, 1) {
+		r = r.WithContext(r.Context()) // shallow copy: a RoundTripper must not modify the request
+		r.Proto, r.ProtoMajor, r.ProtoMinor = "HTTP/1.1", 1, 1
+	}
+	return t.RoundTripper.RoundTrip(r)
 }

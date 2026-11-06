@@ -38,6 +38,10 @@ type (
 	ListBucketInput = bucket.ListBucketInput
 	// ListBucketOutput re-exports bucket.ListBucketOutput.
 	ListBucketOutput = bucket.ListBucketOutput
+	// CheckBucketAccessInput re-exports bucket.CheckBucketAccessInput.
+	CheckBucketAccessInput = bucket.CheckBucketAccessInput
+	// CheckBucketAccessOutput re-exports bucket.CheckBucketAccessOutput.
+	CheckBucketAccessOutput = bucket.CheckBucketAccessOutput
 	// ListObjectInput re-exports bucket.ListObjectInput.
 	ListObjectInput = bucket.ListObjectInput
 	// ListObjectOutput re-exports bucket.ListObjectOutput.
@@ -90,6 +94,24 @@ type (
 	UploadFinishedOutput = bucket.UploadFinishedOutput
 	// UploadStatus re-exports bucket.UploadStatus.
 	UploadStatus = bucket.UploadStatus
+	// CreateBucketInput re-exports bucket.CreateBucketInput.
+	CreateBucketInput = bucket.CreateBucketInput
+	// BucketPolicyInput re-exports bucket.BucketPolicyInput.
+	BucketPolicyInput = bucket.BucketPolicyInput
+	// BucketPolicyOutput re-exports bucket.BucketPolicyOutput.
+	BucketPolicyOutput = bucket.BucketPolicyOutput
+	// PutBucketPolicyInput re-exports bucket.PutBucketPolicyInput.
+	PutBucketPolicyInput = bucket.PutBucketPolicyInput
+	// BucketDetailInput re-exports bucket.BucketDetailInput.
+	BucketDetailInput = bucket.BucketDetailInput
+	// BucketDetailOutput re-exports bucket.BucketDetailOutput.
+	BucketDetailOutput = bucket.BucketDetailOutput
+	// DeleteBucketInput re-exports bucket.DeleteBucketInput.
+	DeleteBucketInput = bucket.DeleteBucketInput
+	// DeleteBucketInfoOutput re-exports bucket.DeleteBucketInfoOutput.
+	DeleteBucketInfoOutput = bucket.DeleteBucketInfoOutput
+	// DeleteBucketOutput re-exports bucket.DeleteBucketOutput.
+	DeleteBucketOutput = bucket.DeleteBucketOutput
 )
 
 const (

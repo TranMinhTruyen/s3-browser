@@ -2,5 +2,11 @@
   "V000001": "{0} is required",
   "V000002": "{0} max length is {1}",
   "V000003": "{0} must be between {1} and {2}",
-  "V000004": "{0} is not valid"
+  "V000004": "{0} is not valid",
+  "V000005": "{0} can only contain lowercase letters, numbers, dots and hyphens",
+  "V000006": "{0} must begin and end with a letter or number",
+  "V000007": "{0} must not contain two adjacent dots",
+  "V000008": "{0} must not be formatted as an IP address",
+  "V000009": "{0} must not start with a reserved prefix",
+  "V000010": "{0} must not end with a reserved suffix"
 }

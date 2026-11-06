@@ -2,5 +2,7 @@
   "placeholder": "Bucket auswählen",
   "searchPlaceholder": "Bucket suchen",
   "loadMore": "Mehr laden",
-  "empty": "Keine Buckets gefunden"
+  "empty": "Keine Buckets gefunden",
+  "inaccessible": "Kein Zugriff auf diesen Bucket (keine Berechtigung oder er existiert nicht).",
+  "readOnly": "Möglicherweise haben Sie keine Berechtigung, in diesen Bucket hochzuladen."
 }

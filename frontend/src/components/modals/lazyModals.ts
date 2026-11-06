@@ -65,3 +65,15 @@ export const showDeleteConfirmModal = async (
 export const showDeleteResultModal = async (
   props: Parameters<typeof import('@/components/modals/delete/DeleteResultModal')['default']['show']>[0]
 ) => (await loadModal(() => import('@/components/modals/delete/DeleteResultModal')))?.default.show(props);
+
+export const showCreateBucketModal = async (
+  props: Parameters<typeof import('@/components/modals/bucket/CreateBucketModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/components/modals/bucket/CreateBucketModal')))?.default.show(props);
+
+export const showBucketPolicyModal = async (
+  props: Parameters<typeof import('@/components/modals/bucket/BucketPolicyModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/components/modals/bucket/BucketPolicyModal')))?.default.show(props);
+
+export const showDeleteBucketModal = async (
+  props: Parameters<typeof import('@/components/modals/bucket/DeleteBucketModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/components/modals/bucket/DeleteBucketModal')))?.default.show(props);

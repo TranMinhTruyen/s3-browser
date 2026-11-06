@@ -2,7 +2,7 @@ import { Card, Text } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { File, Folder } from 'lucide-react';
 import { CSSProperties, memo, useCallback, useState } from 'react';
-import TruncatedText from '@/components/TruncatedText';
+import TruncatedText from '@/components/display/TruncatedText';
 
 const LIST_MAX_HEIGHT = 320;
 // One-line card plus its gap; the real height is measured, as error reasons may wrap.

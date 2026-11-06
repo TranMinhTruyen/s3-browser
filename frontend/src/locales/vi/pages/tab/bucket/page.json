@@ -1,0 +1,32 @@
+{
+  "empty": "Chưa có bucket",
+  "tooltip": {
+    "bucketList": "danh sách bucket",
+    "inaccessible": "Không truy cập được bucket này (không có quyền hoặc bucket không tồn tại).",
+    "moreActions": "Thao tác khác",
+    "policy": {
+      "private": "Riêng tư: bucket không có policy.",
+      "public": "Công khai: ai cũng có thể đọc và liệt kê object.",
+      "custom": "Tuỳ chỉnh: bucket có policy tuỳ chỉnh."
+    }
+  },
+  "label": {
+    "createDate": "Ngày tạo:"
+  },
+  "search": {
+    "empty": "Không có bucket phù hợp",
+    "loadMore": "Tìm tiếp"
+  },
+  "menu": {
+    "detail": "Chi tiết",
+    "editPolicy": "Quyền truy cập",
+    "delete": "Xoá"
+  },
+  "badge": {
+    "policy": {
+      "private": "Riêng tư",
+      "public": "Công khai",
+      "custom": "Tuỳ chỉnh"
+    }
+  }
+}

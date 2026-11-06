@@ -191,5 +191,15 @@ describe('MfaCodeModal', () => {
 
       await expect(result).resolves.toBe(false);
     });
+
+    it('does not submit the form when the close button is clicked', async () => {
+      const { user, result } = await open(profile({ savedSecrets: ['secretKey'] }));
+
+      await user.click(screen.getByRole('button', { name: 'Close' }));
+
+      await expect(result).resolves.toBe(false);
+      expect(screen.queryByText('MFA code is required')).not.toBeInTheDocument();
+      expect(callIPCMock).not.toHaveBeenCalled();
+    });
   });
 });

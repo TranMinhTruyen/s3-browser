@@ -1,13 +1,14 @@
 {
   "button": {
-    "create": "Create",
-    "update": "Update",
-    "refresh": "Refresh",
     "connect": "Connect",
     "cancel": "Cancel",
     "OK": "OK",
     "clear": "Clear",
     "close": "Close"
+  },
+  "tooltip": {
+    "copy": "Copy",
+    "copied": "Copied"
   },
   "appName": "S3Browser",
   "window": {

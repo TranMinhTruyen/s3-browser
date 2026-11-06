@@ -11,6 +11,9 @@ type AuthSubject = { authType?: string; authConfig?: Pick<AuthConfig, 'mfaSerial
 /** Profiles saved before sprint-11 have no authType; they are `static`. */
 export const getAuthType = (profile: AuthSubject): AuthType => (profile.authType || DEFAULT_AUTH_TYPE) as AuthType;
 
+/** An anonymous connection can only read: it cannot create or change buckets. */
+export const isAnonymous = (profile: AuthSubject): boolean => getAuthType(profile) === 'anonymous';
+
 /** An MFA device makes the connection need a one-time code each time. */
 export const needsMfa = (profile: AuthSubject): boolean =>
   getAuthType(profile) === 'assumeRole' && !!profile.authConfig?.mfaSerial;

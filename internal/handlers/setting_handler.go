@@ -3,23 +3,16 @@ package handlers
 import (
 	"S3Browser/internal/modules/setting"
 	"S3Browser/models"
-	"log/slog"
-
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // SettingHandler is the Wails service for app settings.
 type SettingHandler struct {
-	logger  *slog.Logger
-	app     *application.App
 	setting *setting.Module
 }
 
 // NewSettingHandler creates the setting handler.
-func NewSettingHandler(app *application.App, logger *slog.Logger, setting *setting.Module) *SettingHandler {
+func NewSettingHandler(setting *setting.Module) *SettingHandler {
 	return &SettingHandler{
-		logger:  logger.With("component", "setting_handler"),
-		app:     app,
 		setting: setting,
 	}
 }

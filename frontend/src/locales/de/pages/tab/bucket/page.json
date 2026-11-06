@@ -1,0 +1,32 @@
+{
+  "empty": "Noch keine Buckets",
+  "tooltip": {
+    "bucketList": "Bucket-Liste",
+    "inaccessible": "Kein Zugriff auf diesen Bucket (keine Berechtigung oder er existiert nicht).",
+    "moreActions": "Weitere Aktionen",
+    "policy": {
+      "private": "Privat: Der Bucket hat keine Richtlinie.",
+      "public": "Öffentlich: Jeder kann Objekte lesen und auflisten.",
+      "custom": "Benutzerdefiniert: Der Bucket hat eine benutzerdefinierte Richtlinie."
+    }
+  },
+  "label": {
+    "createDate": "Erstellt am:"
+  },
+  "search": {
+    "empty": "Keine passenden Buckets",
+    "loadMore": "Weiter suchen"
+  },
+  "menu": {
+    "detail": "Details",
+    "editPolicy": "Zugriffsberechtigung",
+    "delete": "Löschen"
+  },
+  "badge": {
+    "policy": {
+      "private": "Privat",
+      "public": "Öffentlich",
+      "custom": "Benutzerdefiniert"
+    }
+  }
+}

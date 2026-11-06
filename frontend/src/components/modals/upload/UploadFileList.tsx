@@ -6,8 +6,8 @@ import { ChangeEvent, CSSProperties, memo, ReactNode, useCallback, useMemo, useR
 import { tintedColor } from '@/common/theme/tintedColor';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
+import TruncatedText from '@/components/display/TruncatedText';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
-import TruncatedText from '@/components/TruncatedText';
 
 /** A group header or a file of a group, as shown in the upload file lists. */
 export type UploadRow = { kind: 'group'; index: number; group: DroppedGroup } | { kind: 'file'; file: DroppedFile };

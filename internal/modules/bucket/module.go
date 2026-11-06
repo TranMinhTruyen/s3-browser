@@ -33,6 +33,15 @@ var (
 	// Upload file {name} success, key {key}.
 	S3S006 = "S3S006"
 
+	// Bucket {bucket} created.
+	S3S007 = "S3S007"
+
+	// Permission of bucket {bucket} saved.
+	S3S008 = "S3S008"
+
+	// Bucket {bucket} deleted.
+	S3S009 = "S3S009"
+
 	// ---- Error ----
 
 	// Access key or secret key is not valid for this endpoint.
@@ -174,6 +183,48 @@ var (
 	// CA certificate file {path} not found or has no valid certificate.
 	S3E049 = "S3E049"
 
+	// Bucket name {bucket} is already taken.
+	S3E050 = "S3E050"
+
+	// Bucket name {bucket} is invalid.
+	S3E051 = "S3E051"
+
+	// You do not have permission to change bucket {bucket}.
+	S3E052 = "S3E052"
+
+	// Create bucket {bucket} error.
+	S3E053 = "S3E053"
+
+	// An anonymous connection can't create, change or delete buckets.
+	S3E054 = "S3E054"
+
+	// Get permission of bucket {bucket} error.
+	S3E055 = "S3E055"
+
+	// Save permission of bucket {bucket} error.
+	S3E056 = "S3E056"
+
+	// The bucket policy is invalid.
+	S3E057 = "S3E057"
+
+	// Block Public Access of bucket {bucket} does not allow a public policy.
+	S3E058 = "S3E058"
+
+	// Bucket {bucket} does not exist.
+	S3E059 = "S3E059"
+
+	// Delete bucket {bucket} error.
+	S3E060 = "S3E060"
+
+	// Bucket {bucket} is not empty (new objects were added), it was not deleted.
+	S3E061 = "S3E061"
+
+	// Bucket {bucket} was not deleted: {failed} object(s) could not be deleted.
+	S3E062 = "S3E062"
+
+	// Bucket {bucket} has Object Lock and is not empty, it can't be deleted.
+	S3E063 = "S3E063"
+
 	// ---- Warning ----
 
 	// Access bucket is limited.
@@ -205,6 +256,12 @@ var (
 	// Used by the frontend only.
 	// Credentials of profile {name} expire soon, enter a new MFA code to keep the connection.
 	S3W010 = "S3W010"
+
+	// Bucket {bucket} was created, but its permission could not be set. You can change it later with Access permission.
+	S3W011 = "S3W011"
+
+	// Bucket {bucket} was created, but Block Public Access does not allow a public policy, so it stays private.
+	S3W012 = "S3W012"
 )
 
 // Module is the public API of the bucket module.
@@ -217,6 +274,7 @@ type Module struct {
 	submoduleDownloadHistoryMng *submoduleDownloadHistoryMng
 	submoduleConnMng            *submoduleConnMng
 	submoduleBucketMng          *submoduleBucketMng
+	submoduleBucketEditMng      *submoduleBucketEditMng
 	submoduleObjMng             *submoduleObjMng
 	submoduleSearchMng          *submoduleSearchMng
 	submoduleAwsProfilesMng     *submoduleAwsProfilesMng
@@ -239,6 +297,7 @@ func NewModule(
 	submoduleDownloadHistoryMng := newSubmoduleDownloadHistoryMng(app, logger, db)
 	submoduleConnMng := newSubmoduleConnMng(app, logger, global, profileModule, submoduleCfgMng)
 	submoduleBucketMng := newSubmoduleBucketMng(app, logger, global)
+	submoduleBucketEditMng := newSubmoduleBucketEditMng(app, logger, global)
 	submoduleObjMng := newSubmoduleObjMng(app, logger, global)
 	submoduleSearchMng := newSubmoduleSearchMng(app, logger, global)
 	submoduleAwsProfilesMng := newSubmoduleAwsProfilesMng(logger)
@@ -255,6 +314,7 @@ func NewModule(
 		submoduleDownloadHistoryMng: submoduleDownloadHistoryMng,
 		submoduleConnMng:            submoduleConnMng,
 		submoduleBucketMng:          submoduleBucketMng,
+		submoduleBucketEditMng:      submoduleBucketEditMng,
 		submoduleObjMng:             submoduleObjMng,
 		submoduleSearchMng:          submoduleSearchMng,
 		submoduleAwsProfilesMng:     submoduleAwsProfilesMng,
@@ -357,6 +417,84 @@ func (m *Module) GetListBucket(
 	input models.ListBucketInput,
 ) models.Output[models.ListBucketOutput] {
 	return m.submoduleBucketMng.listBucket(ctx, input)
+}
+
+// CheckBucketAccess returns the Inaccessible / ReadOnly flags of input.BucketNames, probing the buckets whose
+// access is not cached. A bucket the probe could not settle in time comes back with AccessPending. With
+// input.WithPolicy it also reads PolicyMode of the buckets not cached (ListBucket and SearchBucket only return the
+// cached ones). ctx is the call context.
+func (m *Module) CheckBucketAccess(
+	ctx context.Context,
+	input models.CheckBucketAccessInput,
+) models.Output[models.CheckBucketAccessOutput] {
+	return m.submoduleBucketMng.checkBucketAccess(ctx, input)
+}
+
+// CreateBucket creates the bucket input.Bucket. On real AWS the region is input.Region, else the profile region,
+// else us-east-1; the request goes to that region and a region other than us-east-1 is sent as the
+// LocationConstraint. MinIO and custom endpoints ignore input.Region. Fails with S3E054 (anonymous), S3E050 (name
+// taken), S3E051 (name invalid), S3E052 (denied) or S3E053. The access cache is reset on success.
+// input.Mode (private, public or custom with input.Policy; empty means private) sets the access right after the
+// bucket is made. An unknown mode (S3E053) or a custom policy that is not JSON (S3E057) fails before the bucket is
+// created. If setting the access fails the bucket is kept: Result stays true with one warning, S3W012 when Block
+// Public Access refuses a public policy, else S3W011. ctx is the call context.
+func (m *Module) CreateBucket(ctx context.Context, input models.CreateBucketInput) models.Output[any] {
+	return m.submoduleBucketEditMng.createBucket(ctx, input)
+}
+
+// GetBucketPolicy returns the access mode of the bucket (private, public read-only or custom), its policy JSON,
+// whether Block Public Access forbids a public policy (real AWS) and whether the account is known not to be allowed
+// to change the policy (MinIO with credentials). Fails with S3E054 (anonymous), S3E052 (denied) or S3E055. ctx is
+// the call context.
+func (m *Module) GetBucketPolicy(
+	ctx context.Context,
+	input models.BucketPolicyInput,
+) models.Output[models.BucketPolicyOutput] {
+	return m.submoduleBucketEditMng.getBucketPolicy(ctx, input)
+}
+
+// PutBucketPolicy sets the access mode of the bucket: private deletes the policy, public puts a read-only public
+// policy, custom puts input.Policy. It returns the state read back after saving. Fails with S3E054 (anonymous),
+// S3E057 (invalid policy), S3E058 (Block Public Access), S3E052 (denied) or S3E056. ctx is the call context.
+func (m *Module) PutBucketPolicy(
+	ctx context.Context,
+	input models.PutBucketPolicyInput,
+) models.Output[models.BucketPolicyOutput] {
+	return m.submoduleBucketEditMng.putBucketPolicy(ctx, input)
+}
+
+// GetBucketDetail returns the read-only detail of the bucket. An item that can't be read (denied, not supported,
+// timeout) is nil in the body. It works for anonymous connections too. Fails with S3E006, S3E030 or S3E059.
+// ctx is the call context: canceling it aborts the call without a message.
+func (m *Module) GetBucketDetail(
+	ctx context.Context,
+	input models.BucketDetailInput,
+) models.Output[models.BucketDetailOutput] {
+	return m.submoduleBucketEditMng.getBucketDetail(ctx, input)
+}
+
+// GetBucketDeleteInfo returns what the delete dialog needs: whether the bucket is empty (nil when unknown), its
+// versioning ("Enabled", "Suspended", "Off", empty when unknown) and whether Object Lock is enabled. Fails with
+// S3E006, S3E030, S3E054 (anonymous) or S3E059. ctx is the call context.
+func (m *Module) GetBucketDeleteInfo(
+	ctx context.Context,
+	input models.DeleteBucketInput,
+) models.Output[models.DeleteBucketInfoOutput] {
+	return m.submoduleBucketEditMng.getBucketDeleteInfo(ctx, input)
+}
+
+// DeleteBucket deletes every object, version and delete marker of the bucket, then the bucket itself. It can't be
+// undone. A bucket that is not empty and has Object Lock is refused before any object is deleted (S3E063); so is
+// one whose Object Lock can't be read (S3E060). It stops at the first batch with a failed key (S3E062, the body lists
+// the failures) without deleting the bucket. The body counts what was deleted even when Result is false. Other
+// failures: S3E054 (anonymous), S3E052 (denied), S3E059 (not found), S3E061 (new objects arrived), S3E060 (also a
+// timeout of 30 minutes). Closing the app stops it without a message. The access cache is reset on success.
+// ctx is the call context.
+func (m *Module) DeleteBucket(
+	ctx context.Context,
+	input models.DeleteBucketInput,
+) models.Output[models.DeleteBucketOutput] {
+	return m.submoduleBucketEditMng.deleteBucket(ctx, input)
 }
 
 // GetListObject returns the objects in the bucket specified in input,

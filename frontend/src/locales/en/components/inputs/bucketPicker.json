@@ -2,5 +2,7 @@
   "placeholder": "Select bucket",
   "searchPlaceholder": "Search bucket",
   "loadMore": "Load more",
-  "empty": "No buckets found"
+  "empty": "No buckets found",
+  "inaccessible": "Cannot access this bucket (no permission or it does not exist).",
+  "readOnly": "You may not have permission to upload to this bucket."
 }

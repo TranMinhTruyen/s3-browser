@@ -1,0 +1,24 @@
+{
+  "title": {
+    "defaultTabName": "New profile"
+  },
+  "tooltip": {
+    "closeTab": "Close tab",
+    "dragTab": "Drag to reorder (Ctrl+Shift+←/→)",
+    "connect": "Connect",
+    "refresh": "Refresh {target}",
+    "addTab": "Add tab",
+    "scrollLeft": "Scroll left",
+    "scrollRight": "Scroll right",
+    "search": "Search",
+    "clearSearch": "Clear search",
+    "upload": "Upload files",
+    "createBucket": "Create bucket"
+  },
+  "search": {
+    "placeholderProfile": "Search profile",
+    "emptyProfile": "No profiles found",
+    "placeholderObject": "Search by key",
+    "placeholderBucket": "Search by name"
+  }
+}

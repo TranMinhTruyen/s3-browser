@@ -61,10 +61,10 @@ function MainLayout() {
 
       <AppShell.Main>
         <Splitter h="100%">
-          <Splitter.Pane defaultSize="18%" min="18%" p={'4px 4px 4px 4px'}>
+          <Splitter.Pane defaultSize="18%" min="18%" p="4px">
             <LeftNavbar />
           </Splitter.Pane>
-          <Splitter.Pane defaultSize="85%" min="50%" p={'4px 4px 4px 4px'}>
+          <Splitter.Pane defaultSize="85%" min="50%" p="4px">
             <Outlet />
           </Splitter.Pane>
         </Splitter>

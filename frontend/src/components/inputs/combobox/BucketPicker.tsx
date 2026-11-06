@@ -7,9 +7,11 @@ import { ChangeEvent, memo, useCallback, useEffect, useMemo, useRef, useState } 
 import { useTranslation } from 'react-i18next';
 import { callIPC } from '@/common/utils/ipcUtils';
 import Button from '@/components/buttons/Button';
+import TruncatedText from '@/components/display/TruncatedText';
+import WarningIcon from '@/components/display/WarningIcon';
 import ComboboxClearButton from '@/components/inputs/combobox/ComboboxClearButton';
 import ComboboxOptions from '@/components/inputs/combobox/ComboboxOptions';
-import TruncatedText from '@/components/TruncatedText';
+import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 
 // Buckets fetched per page.
 const BUCKET_PAGE_SIZE = 20;
@@ -69,13 +71,17 @@ function BucketPicker(props: BucketPickerProps) {
     (cursor: string, signal: AbortSignal) => {
       if (!connectionId) return Promise.resolve(undefined);
       if (debouncedKeyword) {
-        return callIPC(SearchBucket, [{ connectionId, profileName, keyword: debouncedKeyword, nextCursor: cursor }], {
-          signal,
-        });
+        return callIPC(
+          SearchBucket,
+          [{ connectionId, profileName, keyword: debouncedKeyword, nextCursor: cursor, checkWrite: true }],
+          { signal }
+        );
       }
-      return callIPC(GetListBucket, [{ connectionId, profileName, nextCursor: cursor, limit: BUCKET_PAGE_SIZE }], {
-        signal,
-      });
+      return callIPC(
+        GetListBucket,
+        [{ connectionId, profileName, nextCursor: cursor, limit: BUCKET_PAGE_SIZE, checkWrite: true }],
+        { signal }
+      );
     },
     [connectionId, profileName, debouncedKeyword]
   );
@@ -118,11 +124,18 @@ function BucketPicker(props: BucketPickerProps) {
   const onChangeKeyword = useCallback((e: ChangeEvent<HTMLInputElement>) => setKeyword(e.currentTarget.value), []);
 
   const onSubmitOption = useCallback(
-    (name: string) => {
-      onChange(name);
+    async (name: string) => {
       closeDropdown();
+      // The access probe can be wrong (e.g. prefix-scoped policies), so warn and let the user decide.
+      const picked = namedBuckets.find(bucket => bucket.name === name);
+      if (picked?.inaccessible || picked?.readOnly) {
+        const confirmCode = picked.inaccessible ? 'C000007' : 'C000008';
+        const confirmed = await ConfirmModal.show({ type: 'warning', confirmCode, params: { bucket: name } });
+        if (!confirmed) return;
+      }
+      onChange(name);
     },
-    [onChange, closeDropdown]
+    [onChange, closeDropdown, namedBuckets]
   );
 
   const onClickToggle = useCallback(() => toggleDropdown(), [toggleDropdown]);
@@ -153,14 +166,18 @@ function BucketPicker(props: BucketPickerProps) {
       <Combobox.Dropdown miw={targetWidth}>
         <Combobox.Search value={keyword} onChange={onChangeKeyword} placeholder={t('searchPlaceholder')} />
         <ComboboxOptions>
-          {namedBuckets.map(bucket => (
-            <Combobox.Option key={bucket.name} value={bucket.name as string} active={bucket.name === value}>
-              <Group gap="xs" wrap="nowrap">
-                {bucket.name === value && <CheckIcon size={12} />}
-                <TruncatedText>{bucket.name}</TruncatedText>
-              </Group>
-            </Combobox.Option>
-          ))}
+          {namedBuckets.map(bucket => {
+            const warning = bucket.inaccessible ? t('inaccessible') : bucket.readOnly ? t('readOnly') : null;
+            return (
+              <Combobox.Option key={bucket.name} value={bucket.name as string} active={bucket.name === value}>
+                <Group gap="xs" wrap="nowrap">
+                  {bucket.name === value && <CheckIcon size={12} />}
+                  <TruncatedText>{bucket.name}</TruncatedText>
+                  {warning ? <WarningIcon label={warning} /> : null}
+                </Group>
+              </Combobox.Option>
+            );
+          })}
           {!isLoading && namedBuckets.length === 0 && <Combobox.Empty>{t('empty')}</Combobox.Empty>}
           {isLoading && (
             <Group justify="center" p="xs">

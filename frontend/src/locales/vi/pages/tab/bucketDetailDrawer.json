@@ -1,0 +1,53 @@
+{
+  "title": "Chi tiết bucket",
+  "tooltip": {
+    "close": "Đóng"
+  },
+  "status": {
+    "loadError": "Không tải được chi tiết",
+    "retry": "Thử lại"
+  },
+  "section": {
+    "basic": "Cơ bản",
+    "access": "Truy cập",
+    "config": "Cấu hình"
+  },
+  "label": {
+    "name": "Tên",
+    "createDate": "Ngày tạo",
+    "region": "Region",
+    "arn": "ARN",
+    "endpointUrl": "URL endpoint",
+    "policy": "Policy",
+    "publicBlock": "Block Public Access",
+    "versioning": "Versioning",
+    "encryption": "Mã hoá mặc định",
+    "objectLock": "Object lock",
+    "tags": "Tag",
+    "rootCount": "Object ở gốc"
+  },
+  "value": {
+    "policy": {
+      "private": "Riêng tư",
+      "public": "Công khai (chỉ đọc)",
+      "custom": "Tuỳ chỉnh"
+    },
+    "versioning": {
+      "enabled": "Bật",
+      "suspended": "Tạm dừng",
+      "off": "Tắt"
+    },
+    "encryption": {
+      "none": "Không có"
+    },
+    "objectLock": {
+      "enabled": "Bật",
+      "disabled": "Tắt"
+    },
+    "publicBlock": {
+      "on": "Bật",
+      "off": "Tắt"
+    },
+    "rootCountCapped": "{{count}}+"
+  }
+}

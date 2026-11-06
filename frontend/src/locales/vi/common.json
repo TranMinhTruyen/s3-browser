@@ -1,13 +1,14 @@
 {
   "button": {
-    "create": "Tạo mới",
-    "update": "Cập nhật",
-    "refresh": "Làm mới",
     "connect": "Kết nối",
     "cancel": "Hủy",
     "OK": "OK",
     "clear": "Xoá",
     "close": "Đóng"
+  },
+  "tooltip": {
+    "copy": "Sao chép",
+    "copied": "Đã sao chép"
   },
   "appName": "S3Browser",
   "window": {

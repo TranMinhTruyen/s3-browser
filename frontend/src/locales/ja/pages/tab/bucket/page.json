@@ -1,0 +1,32 @@
+{
+  "empty": "バケットがありません",
+  "tooltip": {
+    "bucketList": "バケット一覧",
+    "inaccessible": "このバケットにアクセスできません（権限がないか、バケットが存在しません）。",
+    "moreActions": "その他の操作",
+    "policy": {
+      "private": "プライベート: バケットポリシーがありません。",
+      "public": "パブリック: 誰でもオブジェクトを読み取り・一覧表示できます。",
+      "custom": "カスタム: バケットにカスタムポリシーがあります。"
+    }
+  },
+  "label": {
+    "createDate": "作成日:"
+  },
+  "search": {
+    "empty": "一致するバケットがありません",
+    "loadMore": "さらに検索"
+  },
+  "menu": {
+    "detail": "詳細",
+    "editPolicy": "アクセス権限",
+    "delete": "削除"
+  },
+  "badge": {
+    "policy": {
+      "private": "プライベート",
+      "public": "パブリック",
+      "custom": "カスタム"
+    }
+  }
+}

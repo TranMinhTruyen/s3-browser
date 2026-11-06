@@ -1,5 +1,7 @@
 # Sprint 12: Tối ưu hiệu năng
 
+> **Trạng thái:** DONE (2026-11-04). Mọi yêu cầu đã merge vào `staging` (PR cuối #5); người dùng đã đo và kiểm tay theo nhóm, xác nhận đạt tiêu chí.
+
 ## Mục tiêu
 Người dùng thấy app bị lag khi dùng. Ưu tiên ba chỗ người dùng báo lag: đổi ngôn ngữ, đổi font, cuộn danh sách profile. Sau đó giảm độ trễ khi cuộn danh sách object, khi đang upload/download và lúc khởi động, dựa trên kết quả rà soát code (2026-11-02). Cuối sprint refactor toàn bộ backend (R7) và frontend (R8) để code gọn hơn và bỏ code thừa.
 
@@ -45,10 +47,10 @@ Người dùng thấy app bị lag khi dùng. Ưu tiên ba chỗ người dùng 
   - Hàng cao cố định thì dùng `estimateSize` cố định, bỏ `measureElement`.
   - Selection/deleting trong store dùng `Record<string, true>` để tra O(1) (giữ nguyên API action).
 - **Tiêu chí chấp nhận:**
-  - [ ] Folder ≥ 5000 object: cuộn liên tục không thấy loader ở cuối danh sách trong điều kiện mạng bình thường.
-  - [ ] Thời gian hiện trang đầu không chậm hơn hiện tại quá 100ms (đo cả AWS và MinIO).
-  - [ ] Bật/tắt chọn một object chỉ re-render đúng hàng đó (kiểm bằng React Profiler).
-  - [ ] Không đổi hành vi hiện có: chọn, xoá, tải xuống, mở drawer, tìm kiếm, "load more" sau lỗi.
+  - [x] Folder ≥ 5000 object: cuộn liên tục không thấy loader ở cuối danh sách trong điều kiện mạng bình thường.
+  - [x] Thời gian hiện trang đầu không chậm hơn hiện tại quá 100ms (đo cả AWS và MinIO).
+  - [x] Bật/tắt chọn một object chỉ re-render đúng hàng đó (kiểm bằng React Profiler).
+  - [x] Không đổi hành vi hiện có: chọn, xoá, tải xuống, mở drawer, tìm kiếm, "load more" sau lỗi.
 
 ### R2: Gộp sự kiện tiến trình upload/download
 - **Mô tả:** Khi nhiều file đang truyền, UI vẫn phản hồi nhanh (cuộn, đổi tab, mở menu).
@@ -60,8 +62,8 @@ Người dùng thấy app bị lag khi dùng. Ưu tiên ba chỗ người dùng 
   - Frontend: một action `set()` cập nhật cả batch; nếu vẫn giữ event cũ thì gom event theo `requestAnimationFrame` trước khi ghi store.
   - Lưu sẵn danh sách id đang DOWNLOADING trong store thay vì lọc lại toàn bộ lịch sử mỗi event.
 - **Tiêu chí chấp nhận:**
-  - [ ] 5 upload + 6 download đồng thời: tối đa ~5 lần ghi store/giây cho mỗi loại transfer.
-  - [ ] Phần trăm, dung lượng, trạng thái "finalizing", huỷ một/huỷ tất cả vẫn đúng.
+  - [x] 5 upload + 6 download đồng thời: tối đa ~5 lần ghi store/giây cho mỗi loại transfer.
+  - [x] Phần trăm, dung lượng, trạng thái "finalizing", huỷ một/huỷ tất cả vẫn đúng.
 
 ### R3: Giảm thời gian khởi động
 - **Mô tả:** App mở nhanh hơn, bundle khởi động nhỏ hơn.
@@ -69,8 +71,8 @@ Người dùng thấy app bị lag khi dùng. Ưu tiên ba chỗ người dùng 
 - **Màn hình liên quan:** khởi động app, đổi ngôn ngữ trong Setting
 - **Gợi ý hướng làm:** Chỉ nạp sẵn `en` + ngôn ngữ đang chọn; ngôn ngữ khác `import()` động khi người dùng đổi (dùng `i18n.addResourceBundle`). So sánh kích thước bundle trước/sau bằng `vite build`.
 - **Tiêu chí chấp nhận:**
-  - [ ] Chunk khởi động không còn chứa locale của ngôn ngữ không dùng.
-  - [ ] Đổi ngôn ngữ không nháy key thô, không có warning i18next thiếu key trong console.
+  - [x] Chunk khởi động không còn chứa locale của ngôn ngữ không dùng.
+  - [x] Đổi ngôn ngữ không nháy key thô, không có warning i18next thiếu key trong console.
 
 ### R4: Dọn re-render thừa
 - **Mô tả:** Giảm việc tính toán lặp lại không cần thiết trong store và component.
@@ -80,8 +82,8 @@ Người dùng thấy app bị lag khi dùng. Ưu tiên ba chỗ người dùng 
   - `useTabPersistence`: selector hẹp (thứ tự tab, `activeTab`, `profileId` qua `useShallow`), chỉ `JSON.stringify` khi các giá trị đó đổi.
   - `ConnectionProfiles`: select danh sách id bằng `useShallow`, mỗi `ConnectionProfileItem` tự select profile của mình.
 - **Tiêu chí chấp nhận:**
-  - [ ] Chọn object, mở/đóng drawer không chạy lại serialize tab.
-  - [ ] Connect/disconnect một profile chỉ re-render item của profile đó.
+  - [x] Chọn object, mở/đóng drawer không chạy lại serialize tab.
+  - [x] Connect/disconnect một profile chỉ re-render item của profile đó.
 
 ### R5: Đổi ngôn ngữ và font không bị khựng
 - **Mô tả:** Chọn ngôn ngữ hoặc font trong Setting (xem trước trực tiếp) thì giao diện đổi ngay, không đơ.
@@ -94,9 +96,9 @@ Người dùng thấy app bị lag khi dùng. Ưu tiên ba chỗ người dùng 
   - Hàng list có chiều cao cố định thì bỏ `measureElement` để đổi font không kích hoạt đo lại hàng loạt; cân nhắc `contain: content` cho hàng.
   - Thêm `font-display: swap` cho Nunito; chỉ nạp các weight JetBrains Mono thực sự dùng.
 - **Tiêu chí chấp nhận:**
-  - [ ] Có 3 tab đã mở với list object dài: đổi ngôn ngữ/font, thời gian commit React và task dài trên main thread giảm rõ so với baseline (ghi số liệu).
-  - [ ] Tab ẩn vẫn giữ nguyên state (folder, vị trí cuộn, lựa chọn) khi quay lại.
-  - [ ] Revert/Apply/Save trong Setting vẫn đúng; không có key thô hay warning i18next.
+  - [x] Có 3 tab đã mở với list object dài: đổi ngôn ngữ/font, thời gian commit React và task dài trên main thread giảm rõ so với baseline (ghi số liệu).
+  - [x] Tab ẩn vẫn giữ nguyên state (folder, vị trí cuộn, lựa chọn) khi quay lại.
+  - [x] Revert/Apply/Save trong Setting vẫn đúng; không có key thô hay warning i18next.
 
 ### R6: Cuộn danh sách profile mượt
 - **Mô tả:** Cuộn navbar profile không giật, kể cả khi có nhiều profile.
@@ -111,9 +113,9 @@ Người dùng thấy app bị lag khi dùng. Ưu tiên ba chỗ người dùng 
   - Effect dọn menu phụ thuộc giá trị ổn định (key đang mở có nằm trong range hay không) thay vì `virtualItems`.
   - Gộp với R4: mỗi item tự select profile của mình.
 - **Tiêu chí chấp nhận:**
-  - [ ] 200 profile: cuộn liên tục không có task dài > 50ms (tab Performance).
-  - [ ] Kéo thanh cuộn từ đầu tới cuối: thumb bám theo chuột, chiều cao nội dung (`scrollHeight`) không đổi trong lúc kéo, với mọi font.
-  - [ ] Chuột phải, double-click connect, connect/disconnect/edit/delete vẫn hoạt động như cũ.
+  - [x] 200 profile: cuộn liên tục không có task dài > 50ms (tab Performance).
+  - [x] Kéo thanh cuộn từ đầu tới cuối: thumb bám theo chuột, chiều cao nội dung (`scrollHeight`) không đổi trong lúc kéo, với mọi font.
+  - [x] Chuột phải, double-click connect, connect/disconnect/edit/delete vẫn hoạt động như cũ.
 
 ### R7: Refactor backend, bỏ code thừa
 - **Mô tả:** Người dùng muốn code gọn hơn, bỏ code thừa trên toàn repo (chốt 2026-11-02: phạm vi toàn bộ FE + BE, làm hết trong sprint-12). R7 làm **backend Go + config**, R8 làm frontend. Hành vi app giữ nguyên.
@@ -128,10 +130,10 @@ Người dùng thấy app bị lag khi dùng. Ưu tiên ba chỗ người dùng 
   - Comment: giữ **tiếng Anh** như hiện tại (chốt 2026-11-02, không làm song ngữ); sửa comment sai/lỗi thời, bỏ comment chỉ lặp lại nội dung code.
 - **Cách chia branch (đề xuất cho planner):** làm **sau** R1–R6 để không conflict; 2 branch/PR: (a) BE `modules/bucket`, (b) BE còn lại + config.
 - **Tiêu chí chấp nhận:**
-  - [ ] `go vet`, `go build`, `golangci-lint`, `go tool deadcode` (đã xử lý hết mục đúng) đều sạch.
-  - [ ] Không đổi hành vi: test FE hiện có vẫn pass; BE kiểm tay theo `test-env/test-profiles.txt`.
-  - [ ] Bindings sinh lại khớp; không sửa tay `frontend/bindings/**`, `internal/pkg/db/sqlc/**`.
-  - [ ] `report.md` liệt kê số dòng xoá/thêm theo vùng và danh sách code đã xoá.
+  - [x] `go vet`, `go build`, `golangci-lint`, `go tool deadcode` (đã xử lý hết mục đúng) đều sạch.
+  - [x] Không đổi hành vi: test FE hiện có vẫn pass; BE kiểm tay theo `test-env/test-profiles.txt`.
+  - [x] Bindings sinh lại khớp; không sửa tay `frontend/bindings/**`, `internal/pkg/db/sqlc/**`.
+  - [x] `report.md` liệt kê số dòng xoá/thêm theo vùng và danh sách code đã xoá.
 
 ### R8: Refactor frontend, bỏ code thừa
 - **Mô tả:** Frontend gọn hơn, bỏ code thừa, hành vi app giữ nguyên. Làm sau R7.
@@ -146,11 +148,11 @@ Người dùng thấy app bị lag khi dùng. Ưu tiên ba chỗ người dùng 
   - Không làm mất các tối ưu của R1–R6 (chiều cao hàng cố định, menu mount khi cần, `Activity` cho tab ẩn...): so sánh nhanh bằng React Profiler trước/sau R8.
 - **Cách chia branch (đề xuất cho planner):** làm **sau** R7, mỗi vùng một branch/PR, tuần tự: (c) `common/` (hooks, stores, utils, cài `knip`), (d) `components/`, (e) `pages/` + locale.
 - **Tiêu chí chấp nhận:**
-  - [ ] `tsc --noEmit`, biome, oxlint đều sạch; `knip` không còn báo mục nào, hoặc mục còn lại có ghi lý do giữ trong `report.md`.
-  - [ ] Mọi file FE đã sửa đạt C1 ≥ 95% và Lines ≥ 95%, kể cả file chỉ bị xoá code; console sạch khi chạy test.
-  - [ ] Test FE hiện có vẫn pass mà **không** phải sửa assert (chỉ sửa import/đường dẫn khi file bị gộp/đổi tên).
-  - [ ] Không có warning i18next thiếu key khi chạy app và test; không sửa tay `frontend/bindings/**`.
-  - [ ] `report.md` liệt kê số dòng xoá/thêm theo vùng và danh sách code đã xoá.
+  - [x] `tsc --noEmit`, biome, oxlint đều sạch; `knip` không còn báo mục nào, hoặc mục còn lại có ghi lý do giữ trong `report.md`.
+  - [x] Mọi file FE đã sửa đạt C1 ≥ 95% và Lines ≥ 95%, kể cả file chỉ bị xoá code; console sạch khi chạy test.
+  - [x] Test FE hiện có vẫn pass mà **không** phải sửa assert (chỉ sửa import/đường dẫn khi file bị gộp/đổi tên).
+  - [x] Không có warning i18next thiếu key khi chạy app và test; không sửa tay `frontend/bindings/**`.
+  - [x] `report.md` liệt kê số dòng xoá/thêm theo vùng và danh sách code đã xoá.
 
 ## Ngoài phạm vi
 - Thay đổi giao diện hay tính năng mới.

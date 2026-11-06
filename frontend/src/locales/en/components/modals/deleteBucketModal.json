@@ -1,0 +1,20 @@
+{
+  "title": "Delete bucket",
+  "checking": "Checking the bucket...",
+  "deleting": "Deleting...",
+  "warning": {
+    "irreversible": "This can't be undone. The bucket will be deleted permanently.",
+    "notEmpty": "The bucket is not empty. All its objects will be deleted.",
+    "unknown": "Could not check whether the bucket is empty. If it holds objects, they will all be deleted.",
+    "versioned": "Versioning is on or was used: every version and delete marker will be deleted permanently.",
+    "objectLockBlocked": "Bucket {{bucket}} has Object Lock and is not empty, so it can't be deleted.",
+    "objectLockUnknown": "The bucket has Object Lock. If it holds objects, it can't be deleted."
+  },
+  "label": {
+    "confirmName": "Type {{bucket}} to confirm"
+  },
+  "placeholder": {
+    "confirmName": "Bucket name"
+  },
+  "delete": "Delete"
+}

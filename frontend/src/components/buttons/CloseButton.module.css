@@ -1,0 +1,4 @@
+.closeButton:hover:not(:disabled, [data-disabled]) {
+  background-color: var(--mantine-color-red-6);
+  color: var(--mantine-color-white);
+}

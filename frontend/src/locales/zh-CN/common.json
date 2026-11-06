@@ -1,13 +1,14 @@
 {
   "button": {
-    "create": "创建",
-    "update": "更新",
-    "refresh": "刷新",
     "connect": "连接",
     "cancel": "取消",
     "OK": "确定",
     "clear": "清除",
     "close": "关闭"
+  },
+  "tooltip": {
+    "copy": "复制",
+    "copied": "已复制"
   },
   "appName": "S3Browser",
   "window": {

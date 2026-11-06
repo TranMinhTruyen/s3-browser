@@ -8,6 +8,8 @@
     "C000002": "Please confirm that you want to delete this connection profile ?",
     "C000003": "Please disconnect before action!",
     "C000005": "Maximum item selected is 5!",
-    "C000006": "Please confirm that you want to delete folder [{object}] and ALL of its contents? This action cannot be undone."
+    "C000006": "Please confirm that you want to delete folder [{object}] and ALL of its contents? This action cannot be undone.",
+    "C000007": "You may not have access to bucket [{bucket}] (no permission or it does not exist). Continue anyway?",
+    "C000008": "You may not have permission to upload to bucket [{bucket}]. Continue anyway?"
   }
 }

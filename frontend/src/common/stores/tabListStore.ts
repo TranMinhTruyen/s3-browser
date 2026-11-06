@@ -1,4 +1,4 @@
-import type { ObjectItem } from '@wails/S3Browser/models/bucket';
+import type { Bucket, ObjectItem } from '@wails/S3Browser/models/bucket';
 import type { TabState } from '@wails/S3Browser/models/setting';
 import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
@@ -20,6 +20,8 @@ interface TabDetail {
   deletingItems: KeySet;
   // Object shown in the detail drawer. Unset when the drawer is closed.
   detailItem?: ObjectItem;
+  // Bucket shown in the bucket detail drawer. Unset when the drawer is closed.
+  detailBucket?: Bucket;
 }
 
 interface TabListState {
@@ -50,6 +52,10 @@ interface TabListAction {
 
   openDetail: (tabId: string, item: ObjectItem) => void;
   closeDetail: (tabId: string) => void;
+  openBucketDetail: (tabId: string, bucket: Bucket) => void;
+  closeBucketDetail: (tabId: string) => void;
+  // For a deleted bucket: tabs of the profile inside it go back to the bucket list, its detail drawer closes.
+  removeBucket: (profileId: string, bucket: string) => void;
 
   setDeleting: (tabId: string, items: string[], deleting: boolean) => void;
   setUploadingTab: (tabId: string | null) => void;
@@ -72,14 +78,26 @@ const resetTabView = (tab: TabDetail) => {
   tab.prefix = '';
   tab.selectionItem = {};
   tab.detailItem = undefined;
+  tab.detailBucket = undefined;
 };
 
 /** A tab with no profile, showing the bucket list. */
 const newTab = (): TabDetail => ({ currentView: 'bucketList', prefix: '', selectionItem: {}, deletingItems: {} });
 
 /** Open tabs, the active one and which tab is uploading. */
-export const useTabListStore = createAppStore<TabListState & TabListAction>(
-  (set, get) => ({
+export const useTabListStore = createAppStore<TabListState & TabListAction>((set, get) => {
+  // Edits one tab inside an immer `set`; does nothing when the tab is gone.
+  const editTab = (action: keyof TabListAction, tabId: string, edit: (tab: TabDetail) => void) =>
+    set(
+      state => {
+        const tab = state.tabList[tabId];
+        if (tab) edit(tab);
+      },
+      undefined,
+      `${SCOPE}/${action}`
+    );
+
+  return {
     activeTab: initialId,
     tabList: {
       [initialId]: newTab(),
@@ -107,14 +125,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
     },
 
     updateTab: (tabId: string, patch: Partial<TabDetail>) => {
-      set(
-        state => {
-          const tab = state.tabList[tabId];
-          if (tab) Object.assign(tab, patch);
-        },
-        undefined,
-        `${SCOPE}/updateTab`
-      );
+      editTab('updateTab', tabId, tab => Object.assign(tab, patch));
     },
 
     closeTab: tabId => {
@@ -150,35 +161,21 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
     },
 
     changeCurrentView: (tabId: string, currentView: 'bucketList' | 'objectList', bucket?: string) => {
-      set(
-        state => {
-          const tab = state.tabList[tabId];
-          if (tab) {
-            // Opening or leaving a bucket always starts from its root.
-            resetTabView(tab);
-            tab.currentView = currentView;
-            if (currentView === 'objectList') tab.bucket = bucket;
-          }
-        },
-        undefined,
-        `${SCOPE}/changeCurrentView`
-      );
+      editTab('changeCurrentView', tabId, tab => {
+        // Opening or leaving a bucket always starts from its root.
+        resetTabView(tab);
+        tab.currentView = currentView;
+        if (currentView === 'objectList') tab.bucket = bucket;
+      });
     },
 
     changePrefix: (tabId: string, prefix: string) => {
-      set(
-        state => {
-          const tab = state.tabList[tabId];
-          if (tab) {
-            tab.prefix = prefix;
-            // Selected keys belong to the previous folder and are no longer visible.
-            tab.selectionItem = {};
-            tab.detailItem = undefined;
-          }
-        },
-        undefined,
-        `${SCOPE}/changePrefix`
-      );
+      editTab('changePrefix', tabId, tab => {
+        tab.prefix = prefix;
+        // Selected keys belong to the previous folder and are no longer visible.
+        tab.selectionItem = {};
+        tab.detailItem = undefined;
+      });
     },
 
     resetViewByProfile: (profileId: string) => {
@@ -211,81 +208,72 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
     },
 
     addSelectItem: (tabId: string, items: string[]) => {
-      set(
-        state => {
-          const tab = state.tabList[tabId];
-          if (tab) {
-            items.forEach(item => {
-              tab.selectionItem[item] = true;
-            });
-          }
-        },
-        undefined,
-        `${SCOPE}/addSelectItem`
-      );
+      editTab('addSelectItem', tabId, tab => {
+        items.forEach(item => {
+          tab.selectionItem[item] = true;
+        });
+      });
     },
 
     removeSelectItem: (tabId: string, items: string[]) => {
-      set(
-        state => {
-          const tab = state.tabList[tabId];
-          if (tab) {
-            items.forEach(item => {
-              delete tab.selectionItem[item];
-            });
-          }
-        },
-        undefined,
-        `${SCOPE}/removeSelectItem`
-      );
+      editTab('removeSelectItem', tabId, tab => {
+        items.forEach(item => {
+          delete tab.selectionItem[item];
+        });
+      });
     },
 
     clearSelectItem: (tabId: string) => {
-      set(
-        state => {
-          const tab = state.tabList[tabId];
-          if (tab) tab.selectionItem = {};
-        },
-        undefined,
-        `${SCOPE}/clearSelectItem`
-      );
+      editTab('clearSelectItem', tabId, tab => {
+        tab.selectionItem = {};
+      });
     },
 
     openDetail: (tabId: string, item: ObjectItem) => {
-      set(
-        state => {
-          const tab = state.tabList[tabId];
-          if (tab) tab.detailItem = item;
-        },
-        undefined,
-        `${SCOPE}/openDetail`
-      );
+      editTab('openDetail', tabId, tab => {
+        tab.detailItem = item;
+      });
     },
 
     closeDetail: (tabId: string) => {
+      editTab('closeDetail', tabId, tab => {
+        tab.detailItem = undefined;
+      });
+    },
+
+    openBucketDetail: (tabId: string, bucket: Bucket) => {
+      editTab('openBucketDetail', tabId, tab => {
+        tab.detailBucket = bucket;
+      });
+    },
+
+    closeBucketDetail: (tabId: string) => {
+      editTab('closeBucketDetail', tabId, tab => {
+        tab.detailBucket = undefined;
+      });
+    },
+
+    removeBucket: (profileId: string, bucket: string) => {
       set(
         state => {
-          const tab = state.tabList[tabId];
-          if (tab) tab.detailItem = undefined;
+          Object.values(state.tabList).forEach(tab => {
+            if (tab.profileId !== profileId) return;
+            if (tab.currentView === 'objectList' && tab.bucket === bucket) resetTabView(tab);
+            else if (tab.detailBucket?.name === bucket) tab.detailBucket = undefined;
+          });
         },
         undefined,
-        `${SCOPE}/closeDetail`
+        `${SCOPE}/removeBucket`
       );
     },
 
     setDeleting: (tabId: string, items: string[], deleting: boolean) => {
-      set(
-        state => {
-          const tab = state.tabList[tabId];
-          if (!tab) return;
-          items.forEach(item => {
-            if (deleting) tab.deletingItems[item] = true;
-            else delete tab.deletingItems[item];
-          });
-        },
-        undefined,
-        `${SCOPE}/setDeleting`
-      );
+      editTab('setDeleting', tabId, tab => {
+        items.forEach(item => {
+          if (deleting) tab.deletingItems[item] = true;
+          else delete tab.deletingItems[item];
+        });
+      });
     },
 
     setUploadingTab: (tabId: string | null) => {
@@ -318,6 +306,5 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>(
       const id = createUUID();
       set({ activeTab: id, tabList: { [id]: newTab() } }, undefined, `${SCOPE}/reset`);
     },
-  }),
-  SCOPE
-);
+  };
+}, SCOPE);

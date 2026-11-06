@@ -4,23 +4,18 @@ import (
 	"S3Browser/internal/modules/bucket"
 	"S3Browser/models"
 	"context"
-	"log/slog"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // BucketHandler is the Wails service for connections, buckets, objects, uploads and downloads.
 type BucketHandler struct {
-	logger *slog.Logger
-	app    *application.App
 	bucket *bucket.Module
 }
 
 // NewBucketHandler creates the bucket handler.
-func NewBucketHandler(app *application.App, logger *slog.Logger, bucket *bucket.Module) *BucketHandler {
+func NewBucketHandler(bucket *bucket.Module) *BucketHandler {
 	return &BucketHandler{
-		logger: logger.With("component", "bucket_handler"),
-		app:    app,
 		bucket: bucket,
 	}
 }
@@ -89,6 +84,59 @@ func (h *BucketHandler) GetListBucket(
 	input models.ListBucketInput,
 ) models.Output[models.ListBucketOutput] {
 	return h.bucket.GetListBucket(ctx, input)
+}
+
+// CheckBucketAccess returns the access flags of the given buckets.
+func (h *BucketHandler) CheckBucketAccess(
+	ctx context.Context,
+	input models.CheckBucketAccessInput,
+) models.Output[models.CheckBucketAccessOutput] {
+	return h.bucket.CheckBucketAccess(ctx, input)
+}
+
+// CreateBucket creates a bucket.
+func (h *BucketHandler) CreateBucket(ctx context.Context, input models.CreateBucketInput) models.Output[any] {
+	return h.bucket.CreateBucket(ctx, input)
+}
+
+// GetBucketPolicy returns the access mode and policy of a bucket.
+func (h *BucketHandler) GetBucketPolicy(
+	ctx context.Context,
+	input models.BucketPolicyInput,
+) models.Output[models.BucketPolicyOutput] {
+	return h.bucket.GetBucketPolicy(ctx, input)
+}
+
+// PutBucketPolicy sets the access mode of a bucket.
+func (h *BucketHandler) PutBucketPolicy(
+	ctx context.Context,
+	input models.PutBucketPolicyInput,
+) models.Output[models.BucketPolicyOutput] {
+	return h.bucket.PutBucketPolicy(ctx, input)
+}
+
+// GetBucketDetail returns the read-only detail of a bucket.
+func (h *BucketHandler) GetBucketDetail(
+	ctx context.Context,
+	input models.BucketDetailInput,
+) models.Output[models.BucketDetailOutput] {
+	return h.bucket.GetBucketDetail(ctx, input)
+}
+
+// GetBucketDeleteInfo returns whether a bucket is empty, its versioning and Object Lock.
+func (h *BucketHandler) GetBucketDeleteInfo(
+	ctx context.Context,
+	input models.DeleteBucketInput,
+) models.Output[models.DeleteBucketInfoOutput] {
+	return h.bucket.GetBucketDeleteInfo(ctx, input)
+}
+
+// DeleteBucket deletes a bucket with everything in it.
+func (h *BucketHandler) DeleteBucket(
+	ctx context.Context,
+	input models.DeleteBucketInput,
+) models.Output[models.DeleteBucketOutput] {
+	return h.bucket.DeleteBucket(ctx, input)
 }
 
 // GetListObject lists one page of objects under a prefix.

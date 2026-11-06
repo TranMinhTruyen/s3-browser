@@ -157,7 +157,8 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 - Component Mantine được bọc lại trong `components/buttons|inputs|modals`.
 - Button: luôn dùng wrapper `components/buttons/Button` (không import thẳng `Button` từ `@mantine/core`). Wrapper tự co theo container, cắt chữ bằng ellipsis và hiện tooltip khi chữ bị cắt; không bọc thêm `Tooltip` chứa đúng label của nút, không ép width cố định.
 - ActionIcon: luôn dùng wrapper `components/buttons/ActionIcon` (không import thẳng `ActionIcon` từ `@mantine/core`), bắt buộc truyền prop `tooltip` (chuỗi đã dịch); wrapper tự bọc `Tooltip` và đặt `aria-label`, không bọc thêm `Tooltip` bên ngoài. Nút luôn nằm trong một span `inline-flex`: margin props (`m`, `ml`, `mr`...) và `style` áp lên span, các prop khác (kể cả `className`, `ref`) áp lên nút; tooltip tự tắt khi `aria-expanded` (ví dụ nút là `Menu.Target` đang mở).
-- Chữ một dòng có thể bị cắt: dùng `components/TruncatedText` (ellipsis, tooltip khi bị cắt, `label`/`alwaysTip` khi tooltip cần nội dung khác) thay cho `Text truncate`.
+- Component mới luôn đặt trong folder con của `components/` (`buttons`, `inputs`, `modals`, `layouts`, `display`...), không để file thẳng trong `components/`. Component chỉ hiển thị (chữ, icon) vào `display/`. Không có folder phù hợp thì hỏi người dùng.
+- Chữ một dòng có thể bị cắt: dùng `components/display/TruncatedText` (ellipsis, tooltip khi bị cắt, `label`/`alwaysTip` khi tooltip cần nội dung khác) thay cho `Text truncate`.
 - Màu: dùng biến theme `var(--mantine-color-*)` và `light-dark(<light>, <dark>)` để hỗ trợ cả light/dark theme; không hard-code hex/rgb/tên màu (ngoại lệ: màu lưu như dữ liệu, ví dụ màu profile do user chọn; prop `color="red"` của nút Huỷ trong footer modal). Component variant `light` (Badge, Button...) truyền màu gốc `var(--mantine-color-<c>-6)`; biến `-light-color` chỉ dùng cho chữ/viền.
 - **Console sạch**: code không được sinh warning hay error trong console của React (thiếu `key`, setState sau unmount, controlled/uncontrolled, DOM lồng sai, prop không hợp lệ truyền xuống DOM, i18next thiếu key, cảnh báo của Mantine...). Không để `console.log`/`console.warn`/`console.error` trong code production; lỗi cần báo cho người dùng thì đi qua `callIPC`/toast, cần ghi log thì đi qua backend.
 - Modal: footer đặt nút Huỷ (`color="red"`) bên **trái**, các nút hành động (Reset, Apply, Save, OK, Upload, ...) bên **phải**, dùng `<Group p="8px" justify="space-between" wrap="nowrap">` để không nhảy layout khi đổi ngôn ngữ/font. Phần thân modal có form/nội dung chính thì bọc trong `<Paper withBorder>` giống `UploadPickerModal`.
@@ -175,6 +176,7 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 - Format/check: Windows `node_modules/.bin/biome.exe check <paths>`, macOS/Linux `node_modules/.bin/biome check <paths>`. Không dùng `npx biome` (resolve nhầm sang package `biome@0.3.3`). File luôn lưu LF (theo `.gitattributes` và `biome.json`).
 - Quy tắc format biome: (2 spaces, single quotes, semicolons, width 120, trailingCommas es5, arrowParens asNeeded, import groups).
 - Lint: `npx oxlint <paths>` (theo `.oxlintrc.json`).
+- Tìm code chết: Windows `node_modules/.bin/knip.exe`, macOS/Linux `node_modules/.bin/knip` (theo `knip.json`). Thêm `--production` để tìm export chỉ có test dùng; export vẫn được dùng trong chính file của nó và chỉ export cho test thì không coi là code chết.
 - Type-check: Windows `node_modules/.bin/tsc.exe --noEmit`, macOS/Linux `node_modules/.bin/tsc --noEmit`. Không dùng `npx tsc` (không resolve được ở đây).
 
 ## 9. Testing
@@ -203,3 +205,14 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 - Tối đa **250 dòng**. Vượt thì gộp các mục cũ nhất của mục 2 và 3 thành dòng ngắn ở mục 4 "Tóm tắt cũ" cho tới khi còn khoảng 220 dòng. Quyết định bị thay thế thì xoá dòng cũ, ghi dòng mới.
 - Không ghi secret, access key, endpoint thật hay đường dẫn máy cá nhân. Không chép lại nội dung đã có trong `CLAUDE.md` hay `report.md`.
 - Memory có thể lỗi thời: khi mâu thuẫn với code hoặc `CLAUDE.md` thì tin code và `CLAUDE.md`, rồi báo để sửa memory.
+
+## graphify
+
+Project có knowledge graph ở `graphify-out/`, gồm các node trung tâm (god node), cấu trúc cụm (community) và quan hệ giữa các file.
+
+Quy tắc:
+- Khi đã có `graphify-out/graph.json`: với câu hỏi về codebase, chạy `graphify query "<câu hỏi>"` trước lần grep, tìm kiếm hay đọc file nguồn đầu tiên, và ghi quy tắc này vào prompt của mọi subagent có duyệt code. Chỉ đọc file gốc ở những dòng mà graph hoặc lần đọc trước đã chỉ ra. Dùng `graphify path "<A>" "<B>"` để xem quan hệ giữa hai thành phần và `graphify explain "<khái niệm>"` cho một khái niệm cụ thể. Các lệnh này trả về subgraph thu hẹp, thường nhỏ hơn nhiều so với `GRAPH_REPORT.md` hay output grep thô.
+- Nếu có `graphify-out/wiki/index.md` thì dùng nó để định hướng tổng quát thay vì duyệt source thô.
+- Chỉ đọc `graphify-out/GRAPH_REPORT.md` khi cần review kiến trúc tổng thể hoặc khi query/path/explain không cho đủ ngữ cảnh.
+- Sau khi sửa code, chạy `graphify update .` để graph luôn mới (chỉ phân tích AST, không tốn phí API).
+- `graphify-out/graph.json` đã commit bị ghi lại toàn bộ mỗi lần build, nên diff lớn ở file này trong PR là bình thường. Không coi đó là thay đổi thừa, không đề xuất bỏ bước build lại graph hay hook của nó.

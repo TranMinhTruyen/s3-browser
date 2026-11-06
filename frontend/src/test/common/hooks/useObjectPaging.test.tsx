@@ -48,7 +48,7 @@ describe('useObjectPaging', () => {
     expect(callIPC).toHaveBeenCalledExactlyOnceWith(
       GetListObject,
       [{ connectionId: 'conn', profileName: 'prof', bucket: 'bkt', prefix: 'dir/', nextCursor: '', limit: 200 }],
-      { signal: expect.any(AbortSignal) }
+      { signal: expect.any(AbortSignal), rejectAction: expect.any(Function) }
     );
     expect(keysOf(result)).toEqual(['a', 'b']);
     expect(result.current.nextCursor).toBe('c1');
@@ -282,6 +282,75 @@ describe('useObjectPaging', () => {
 
       expect(signalOf(1).aborted).toBe(true);
       expect(keysOf(result)).toEqual(['a']);
+    });
+  });
+
+  describe('access denied', () => {
+    const changeCurrentView = vi.fn();
+    type Options = { signal: AbortSignal; rejectAction?: (output?: { body?: { accessDenied?: boolean } }) => void };
+    const optionsOf = (call: number) => mockIPC().mock.calls[call][2] as Options;
+
+    beforeEach(() => {
+      changeCurrentView.mockClear();
+      useTabListStore.setState({ changeCurrentView });
+    });
+
+    it('goes back to the bucket list when the listing is denied', async () => {
+      mockIPC().mockResolvedValue(null);
+      setup();
+      await waitFor(() => expect(callIPC).toHaveBeenCalled());
+
+      optionsOf(0).rejectAction?.({ body: { accessDenied: true } });
+
+      expect(changeCurrentView).toHaveBeenCalledExactlyOnceWith('tab-1', 'bucketList');
+    });
+
+    it.each([
+      ['access is not denied', { body: { accessDenied: false } }],
+      ['there is no body', {}],
+      ['there is no output', undefined],
+    ])('keeps the view when %s', async (_name, output) => {
+      mockIPC().mockResolvedValue(null);
+      setup();
+      await waitFor(() => expect(callIPC).toHaveBeenCalled());
+
+      optionsOf(0).rejectAction?.(output);
+
+      expect(changeCurrentView).not.toHaveBeenCalled();
+    });
+
+    it('keeps the view when the request was already aborted', async () => {
+      mockIPC().mockReturnValue(new Promise(() => {}));
+      const { unmount } = setup();
+      await waitFor(() => expect(callIPC).toHaveBeenCalled());
+      unmount();
+
+      optionsOf(0).rejectAction?.({ body: { accessDenied: true } });
+
+      expect(changeCurrentView).not.toHaveBeenCalled();
+    });
+
+    it('does not pass rejectAction to search', async () => {
+      mockIPC().mockResolvedValue(page(['a']));
+      setup({ keyword: 'abc' });
+      await waitFor(() => expect(callIPC).toHaveBeenCalled());
+
+      expect(optionsOf(0)).not.toHaveProperty('rejectAction');
+    });
+
+    it('keeps the view when a next page is denied', async () => {
+      mockIPC()
+        .mockResolvedValueOnce(page(['a'], 'c1'))
+        .mockResolvedValueOnce(null);
+      const { result } = setup();
+      await waitFor(() => expect(result.current.nextCursor).toBe('c1'));
+
+      await act(async () => {
+        await result.current.loadNextPage();
+      });
+      optionsOf(1).rejectAction?.({ body: { accessDenied: true } });
+
+      expect(changeCurrentView).not.toHaveBeenCalled();
     });
   });
 

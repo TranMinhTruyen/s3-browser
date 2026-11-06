@@ -3,23 +3,16 @@ package handlers
 import (
 	"S3Browser/internal/modules/profile"
 	"S3Browser/models"
-	"log/slog"
-
-	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // ProfileHandler is the Wails service for connection profiles.
 type ProfileHandler struct {
-	logger  *slog.Logger
-	app     *application.App
 	profile *profile.Module
 }
 
 // NewProfileHandler creates the profile handler.
-func NewProfileHandler(app *application.App, logger *slog.Logger, profile *profile.Module) *ProfileHandler {
+func NewProfileHandler(profile *profile.Module) *ProfileHandler {
 	return &ProfileHandler{
-		logger:  logger.With("component", "profile_handler"),
-		app:     app,
 		profile: profile,
 	}
 }

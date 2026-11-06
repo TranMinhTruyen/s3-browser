@@ -18,4 +18,6 @@ type ObjectItem struct {
 type ListObjectOutput struct {
 	ObjectList []ObjectItem `json:"objectList"`
 	NextCursor *string      `json:"nextCursor,omitempty"`
+	// AccessDenied is set when the server answered 403, so the frontend can go back to the bucket list.
+	AccessDenied bool `json:"accessDenied,omitempty"`
 }

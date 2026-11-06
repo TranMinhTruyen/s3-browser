@@ -297,10 +297,21 @@ func (m *submoduleSearchMng) searchBucket(
 	if s3Conn.AuthType == cnst.AuthAnonymous {
 		buckets := anonymousBuckets(s3Conn, keyword)
 		output.Body.BucketList = buckets[:min(len(buckets), searchMaxResults)]
+		if !flagBucketAccess(ctx, s3Conn, output.Body.BucketList, input.CheckWrite, input.LazyAccess, false) {
+			return output.ThrowError()
+		}
 		return output
 	}
 
 	body := models.SearchBucketOutput{BucketList: make([]models.Bucket, 0, searchMaxResults)}
+	// finish flags the inaccessible buckets of the matches to return (not of every bucket scanned).
+	finish := func() models.Output[models.SearchBucketOutput] {
+		if !flagBucketAccess(ctx, s3Conn, body.BucketList, input.CheckWrite, input.LazyAccess, false) {
+			return output.ThrowError()
+		}
+		output.Body = body
+		return output
+	}
 
 	for range searchMaxPages {
 		listInput := &s3.ListBucketsInput{MaxBuckets: aws.Int32(searchPageSize)}
@@ -344,19 +355,16 @@ func (m *submoduleSearchMng) searchBucket(
 			case next != "":
 				body.NextCursor = encodeBucketCursor(bucketCursor{Token: next})
 			}
-			output.Body = body
-			return output
+			return finish()
 		}
 
 		if next == "" {
-			output.Body = body
-			return output
+			return finish()
 		}
 		cur = bucketCursor{Token: next}
 	}
 
 	// Page limit hit: continue from the next page.
 	body.NextCursor = encodeBucketCursor(cur)
-	output.Body = body
-	return output
+	return finish()
 }

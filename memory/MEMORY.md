@@ -4,14 +4,13 @@
 
 ## 1. Trạng thái hiện tại
 
-<!-- Ghi đè mỗi lần cập nhật. Ngắn gọn: sprint gần nhất, branch/PR, việc dở dang, việc tiếp theo. -->
-
-- Cập nhật: 2026-11-02.
-- Sprint gần nhất: sprint-11 (nhiều phương thức xác thực, AWS + MinIO).
-  - GĐ1 `SP-11/auth_core` (PR #21) và GĐ2 `SP-11/auth_minio_anonymous` (PR #23): đã merge.
-  - GĐ3 `SP-11/auth_minio_oidc_cert` (R3 OIDC, mTLS, CA file, dọn Low GĐ2): đã commit local, chưa push.
-- 2026-11-02 người dùng chấp nhận test tay GĐ3 (bug phát sinh sửa ở sprint sau).
-- Việc tiếp theo: push với `git push -u origin SP-11/auth_minio_oidc_cert` (upstream đang trỏ origin/master) và tạo PR. Sau đó cập nhật docs ARCHITECTURE và user guide.
+- Cập nhật: 2026-11-05.
+- Sprint gần nhất: sprint-13 (tạo bucket, sửa bucket policy, drawer chi tiết, xoá bucket, đặt quyền khi tạo): **DONE** 2026-11-05, R1–R6 merge vào `staging` qua PR #6 (merge commit `47286aa`).
+- Sprint-12 DONE 2026-11-04, mọi PR đã merge vào `staging`.
+- Repo đã tách khỏi monorepo ngày 2026-11-03 (`TranMinhTruyen/s3-browser`); sprint branch tách từ `origin/staging`.
+- Sprint-14 (badge policy type trên từng `BucketItem`, load lười dòng đang hiện, cache 5 phút): đã có `sprints/sprint-14/requirement.md`, chưa lập plan.
+- Lưu ý: các mục test tay của sprint-13 (bucket khác region, Object Lock/versioning khi xoá, xoá file/folder sau khi sửa `batchDeleter`, tạo bucket public trên AWS) chưa ghi nhận kết quả; gặp lỗi thì mở sprint sửa.
+- Việc tiếp theo: làm sprint-14; cập nhật docs ARCHITECTURE và user guide (còn nợ từ sprint-11).
 
 ## 2. Quyết định
 
@@ -32,6 +31,25 @@
 - 2026-11-02 [sprint-11] madmin đọc credential qua provider từ SwapCreds — Reauth có hiệu lực ngay.
 - 2026-11-02 [quy trình] Môi trường test (`test-env/` ở gốc repo, gồm `test-profiles.txt`) dùng chung cho mọi sprint — chuyển ra khỏi `sprints/sprint-11/` để sprint sau dùng lại tài khoản test.
 - 2026-11-02 [sprint-11] Badge/Button variant light truyền màu gốc `var(--mantine-color-<c>-6)`; `-light-color` chỉ cho chữ/viền.
+- 2026-11-04 [quy trình] Branch sprint tách từ `origin/staging`, `master` chỉ qua PR staging -> master do người dùng tạo — repo tách khỏi monorepo, master là branch release.
+- 2026-11-04 [sprint-12] Sprint dừng đo tay theo nhóm: (R5,R6,R1), (R2,R4,R3), (R7a,R7b), (R8c,R8d,R8e) — người dùng kiểm hiệu năng thủ công trước khi sang nhóm sau.
+- 2026-11-04 [sprint-12] Key i18n chỉ xoá khi grep toàn FE không còn dùng, kể cả key động (`authType.*`, `form.button.${mode}`, `confirmCode.*`) — tránh hiện key thô.
+- 2026-11-04 [sprint-12] Export chỉ test dùng (knip --production báo) không coi là code chết — CLAUDE.md mục 8.
+- 2026-11-04 [sprint-12] Tab là page riêng `pages/tab/TabPage.tsx`, bucket/object nằm dưới `pages/tab/` — tab chứa hai view nên không còn là layout; namespace i18n vẫn tên `tabLayout`.
+- 2026-11-04 [sprint-12] Padding 4px chỉ cho layout app (pane MainLayout, header navbar, khung TabPage); item và modal giữ padding riêng — người dùng thử padding 4px toàn app rồi bỏ.
+- 2026-11-05 [sprint-13] Bỏ đổi tên bucket (Q1); R1–R6 chung 1 branch `SP-13/bucket_create_policy_detail`, mỗi yêu cầu một commit — người dùng chốt, R4–R6 thêm giữa sprint.
+- 2026-11-05 [sprint-13] "Quyền" bucket = bucket policy 3 chế độ: private (xoá policy), public chỉ đọc (GetObject, ListBucket, GetBucketLocation cho `*`), custom JSON; không ACL; Block Public Access chỉ hiển thị + cảnh báo.
+- 2026-11-05 [sprint-13] Anonymous: ẩn nút tạo, mục "Quyền truy cập" và "Xoá", backend chặn `S3E054`; vẫn có mục "Chi tiết", `GetBucketDetail` cho anonymous (Q4, Q12).
+- 2026-11-05 [sprint-13] Tạo bucket: chỉ AWS thật có region; lỗi chỉ hiện modal error, không retry (Q10); tạo xong `onRefresh()` + `Access.Reset()`.
+- 2026-11-05 [sprint-13] Menu `BucketItem` theo mẫu `ObjectItem` (mount khi mở); drawer bucket dùng state riêng `detailBucket` trong `tabListStore`; `DetailRow` dùng chung ở `components/display/`.
+- 2026-11-05 [sprint-13] Đếm object ở gốc trong drawer tối đa 10 trang (10.000 mục), chạm giới hạn hiện `10,000+` (Q11).
+- 2026-11-05 [sprint-13] Xoá bucket: luôn gõ đúng tên; không rỗng thì xoá mọi version + delete marker rồi `DeleteBucket`; không dùng force-delete MinIO (Q13, Q21); dừng ở lô lỗi đầu tiên, không gọi `DeleteBucket` (Q18); chỉ refresh tab hiện tại (Q17).
+- 2026-11-05 [sprint-13] Xoá bucket không rỗng có Object Lock thì chặn hẳn `S3E063`, backend kiểm trước khi xoá object nào (Q14); đọc Object Lock lỗi `NotImplemented` = Disabled, lỗi khác + không rỗng → dừng `S3E060`, rỗng vẫn xoá (Q23).
+- 2026-11-05 [sprint-13] Xoá bucket không event tiến trình, không nút Huỷ, modal khoá X/Esc/click ngoài; backend timeout 30 phút (Q15).
+- 2026-11-05 [sprint-13] Mục Xoá chỉ ẩn khi chắc bị từ chối `s3:DeleteBucket` (MinIO `AccountInfo`, policy đơn giản, cờ `Bucket.deleteDenied` qua `AccessDelete`); không chắc thì hiện, lỗi thì báo (Q19).
+- 2026-11-05 [sprint-13] Đặt quyền khi tạo bucket: backend một call, kiểm JSON trước khi tạo; đặt policy lỗi thì giữ bucket, `Result=true` + `S3W012` (BPA chặn policy public) hoặc `S3W011` (lỗi khác), không rollback (Q24, Q26); AWS retry `NoSuchBucket` 3 lần x 1 giây (Q27).
+- 2026-11-05 [sprint-13] Get/put bucket policy dùng region của bucket (`readBucketRegion`) với AWS thật — tránh lỗi 301 với bucket khác region profile (Q33).
+- 2026-11-05 [frontend] Toast sonner mặc định tự ẩn sau 10 giây (`duration` ở `<Toaster>` trong `App.tsx`); toast credential sắp hết hạn giữ `Infinity` — người dùng chọn.
 
 ## 3. Lỗi và bẫy đã gặp
 
@@ -48,6 +66,24 @@
 - 2026-11-02 [test-env] MinIO TLS chờ OpenID — phải chạy Keycloak trước, nếu không thì `docker restart s3b-test-minio-tls`.
 - 2026-11-02 [wails] Huỷ dialog chọn file hiện toast lỗi trên Windows — Wails trả lỗi "cancelled by user" (sentinel ở package internal) thay vì path rỗng — kiểm tra bằng `utils.IsDialogCancelled`.
 - 2026-11-02 [git] Branch SP-11/auth_minio_oidc_cert có upstream trỏ origin/master — push phải ghi rõ `-u origin <branch>`.
+- 2026-11-04 [bindings] Bước 4 phần B skill `wails3-bindings` báo nhầm "bindings cũ" — `find -newer frontend/bindings` so với mtime thư mục, mà mtime không đổi khi sinh lại file bên trong — so với file mới nhất trong thư mục bindings.
+- 2026-11-04 [test] Báo cáo coverage `text` của vitest ẩn file đạt 100% — chỉ liệt kê file chưa đủ — thêm `--coverage.reporter=json-summary` để lấy số từng file.
+- 2026-11-04 [git] Branch tách bằng `git switch -c ... origin/staging` có upstream trỏ origin/staging — push phải ghi rõ `git push -u origin <branch>`.
+- 2026-11-04 [quy trình] Subagent bị harness chặn ghi `report.md` và `MEMORY.md` — session chính ghi từ nội dung orchestrator soạn.
+- 2026-11-04 [quy trình] Orchestrator không nhận lời đồng ý push/PR do session chính chuyển lại — B6 chạy qua `claude --agent orchestrator` hoặc gọi thẳng `git-flow` publish.
+- 2026-11-04 [git] `gh pr create` có thể lỗi HTTP 502 tạm thời — kiểm `gh pr list --head <branch> --state all` rồi mới tạo lại để tránh trùng.
+- 2026-11-04 [vite] Ghi đè file bằng `git show > file` khi dev server đang chạy làm Vite cache module rỗng (lỗi "does not provide an export named ...") — ghi ra file tạm rồi move, hoặc touch lại từng file.
+- 2026-11-05 [sprint-13] Policy Public trên MinIO hiện thành custom — MinIO trả policy đã chuẩn hoá (`Principal {"AWS":["*"]}`, mảng) nên DeepEqual sai — so theo ngữ nghĩa (`samePolicy`/`canonicalPolicy`).
+- 2026-11-05 [sprint-13] Panic trong goroutine `errgroup` không được Wails `recover`, crash cả app (vd. `json.Unmarshal("null", &m)` rồi gán vào nil map) — code trong `g.Go` phải không thể panic, kiểm `m == nil`.
+- 2026-11-05 [sprint-13] Tạo bucket AWS `us-east-1` lỗi khi profile ở region khác — request đi tới endpoint region profile — AWS thật luôn đặt `o.Region`, chỉ gửi `LocationConstraint` khi khác us-east-1.
+- 2026-11-05 [sprint-13] `failCall` luôn trả `Result=false` — không dùng cho bước phụ sau khi đã tạo bucket — tự dựng message Warn, trả `Result=true` (`callIPC` vẫn chạy `resolveAction` + `toast.warning`).
+- 2026-11-05 [sprint-13] `isCallCanceled` chỉ bắt `context.Canceled`, `DeadlineExceeded` vẫn trả lỗi — thao tác dài (xoá bucket) hết timeout sẽ báo message, không im lặng.
+- 2026-11-05 [sprint-13] `batchDeleter` dùng chung cho xoá file/folder và xoá bucket — sửa dễ đổi hành vi cũ — giữ `deleteBatch(keys)` chuyển sang identifier không version rồi gọi `deleteIDs`; test tay xoá file/folder sau khi sửa.
+- 2026-11-05 [test] Dropdown `Menu` Mantine trong jsdom bị `display: none` — truy vấn bằng `{ hidden: true }`; đóng modal có transition nên kiểm unmount bằng `waitFor`.
+- 2026-11-05 [test] Component thêm prop bắt buộc làm `tsc` lỗi ở test cũ — react-tester cập nhật helper props (agent code không sửa test).
+- 2026-11-05 [test] `WarningIcon.test.tsx` fail khi chạy cả bộ lúc máy tải nặng (`findByRole('tooltip')` quá thời gian), pass khi chạy riêng — nghi flaky, ngoài sprint-13.
+- 2026-11-05 [wails] Docs https://v3.wails.io/ trả 403 cho agent — tránh dùng API Wails mới, ghi "chưa xác minh" trong plan.
+- 2026-11-05 [quy trình] Orchestrator chạy làm subagent của session chính được (gọi được agent con), nhận B3 do session chính chuyển; dừng do rate limit thì SendMessage để chạy tiếp.
 
 ## 4. Tóm tắt cũ
 

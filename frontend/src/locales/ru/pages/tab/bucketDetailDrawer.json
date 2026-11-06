@@ -1,0 +1,53 @@
+{
+  "title": "Сведения о бакете",
+  "tooltip": {
+    "close": "Закрыть"
+  },
+  "status": {
+    "loadError": "Не удалось загрузить сведения",
+    "retry": "Повторить"
+  },
+  "section": {
+    "basic": "Основное",
+    "access": "Доступ",
+    "config": "Конфигурация"
+  },
+  "label": {
+    "name": "Имя",
+    "createDate": "Дата создания",
+    "region": "Регион",
+    "arn": "ARN",
+    "endpointUrl": "URL конечной точки",
+    "policy": "Политика",
+    "publicBlock": "Блокировка публичного доступа",
+    "versioning": "Управление версиями",
+    "encryption": "Шифрование по умолчанию",
+    "objectLock": "Блокировка объектов",
+    "tags": "Теги",
+    "rootCount": "Объектов в корне"
+  },
+  "value": {
+    "policy": {
+      "private": "Приватный",
+      "public": "Публичный (только чтение)",
+      "custom": "Пользовательский"
+    },
+    "versioning": {
+      "enabled": "Включено",
+      "suspended": "Приостановлено",
+      "off": "Выключено"
+    },
+    "encryption": {
+      "none": "Нет"
+    },
+    "objectLock": {
+      "enabled": "Включена",
+      "disabled": "Отключена"
+    },
+    "publicBlock": {
+      "on": "Вкл.",
+      "off": "Выкл."
+    },
+    "rootCountCapped": "{{count}}+"
+  }
+}

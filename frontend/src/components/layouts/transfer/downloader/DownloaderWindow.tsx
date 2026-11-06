@@ -1,18 +1,16 @@
-import { Affix, CloseButton, Divider, Group, Paper, Text } from '@mantine/core';
+import { Affix } from '@mantine/core';
 import { useElementSize } from '@mantine/hooks';
 import * as AppEvents from '@wails/events';
 import { CancelAllDownloads } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Events } from '@wailsio/runtime';
-import { Download, X } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { selectDownloadingIds, useDownloaderStore } from '@/common/stores/downloaderStore';
-import { tintedColor } from '@/common/theme/tintedColor';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import DownloaderItem from '@/components/layouts/transfer/downloader/DownloaderItem';
-import { ITEM_HEIGHT } from '@/components/layouts/transfer/transferItem';
-import VirtualItemList from '@/components/layouts/transfer/VirtualItemList';
+import TransferPanel from '@/components/layouts/transfer/TransferPanel';
 
 // Same as the former Stack gap="xs" (10px), so rows keep their spacing.
 const ITEM_GAP = 10;
@@ -80,26 +78,16 @@ function DownloaderWindow() {
       ) : null}
       {visible && (
         <Affix ref={sizeRef} position={{ bottom: 16, right: 16 }}>
-          <Paper w="400px" withBorder style={{ overflow: 'hidden' }}>
-            <Group p="xs" justify="space-between">
-              <Text>{t('title')}</Text>
-              <Group gap="xs">
-                <ActionIcon
-                  {...tintedColor('red', 'ai')}
-                  size="md"
-                  onClick={onClickCancelAll}
-                  tooltip={t('action.cancelAll')}
-                >
-                  <X />
-                </ActionIcon>
-                <CloseButton onClick={closeWindow} aria-label={t('action.close')} />
-              </Group>
-            </Group>
-
-            <Divider />
-
-            <VirtualItemList ids={downloadItemIds} gap={ITEM_GAP} itemHeight={ITEM_HEIGHT} renderItem={renderItem} />
-          </Paper>
+          <TransferPanel
+            title={t('title')}
+            cancelAllTooltip={t('action.cancelAll')}
+            closeLabel={t('action.close')}
+            ids={downloadItemIds}
+            gap={ITEM_GAP}
+            renderItem={renderItem}
+            onCancelAll={onClickCancelAll}
+            onClose={closeWindow}
+          />
         </Affix>
       )}
     </>
