@@ -5,7 +5,8 @@
     "font": "フォント",
     "language": "言語",
     "launchOnStartup": "Windows 起動時に自動起動",
-    "autoUpdate": "アップデートを自動的に確認してダウンロードする"
+    "autoUpdate": "アップデートを自動的に確認してダウンロードする",
+    "betaUpdate": "ベータ版 (プレリリース) を受け取る"
   },
   "option": {
     "theme": { "light": "ライト", "dark": "ダーク", "auto": "システムに合わせる" },

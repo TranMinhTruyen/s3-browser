@@ -5,7 +5,8 @@
     "font": "Phông chữ",
     "language": "Ngôn ngữ",
     "launchOnStartup": "Khởi động cùng Windows",
-    "autoUpdate": "Tự động kiểm tra và tải bản cập nhật"
+    "autoUpdate": "Tự động kiểm tra và tải bản cập nhật",
+    "betaUpdate": "Nhận bản beta (thử nghiệm)"
   },
   "option": {
     "theme": { "light": "Sáng", "dark": "Tối", "auto": "Theo hệ thống" },

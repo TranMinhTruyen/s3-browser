@@ -45,12 +45,15 @@ type Module struct {
 	mng *submoduleUpdateMng
 }
 
-// NewModule creates the update module. version comes from build/config.yml; the feature is off for dev,
-// portable and non-NSIS builds. The periodic check starts when autoUpdate is on in the saved settings.
+// NewModule creates the update module. version comes from build/config.yml; the feature is off for portable
+// and non-NSIS builds, and always on in dev mode for testing. The periodic check starts when autoUpdate is on
+// in the saved settings.
 func NewModule(app *application.App, logger *slog.Logger, setting *setting.Module, version string, devMode bool,
 ) *Module {
 	m := &Module{app: app, mng: newSubmoduleUpdateMng(app, logger, version, devMode)}
-	m.mng.setAutoUpdate(setting.GetSettings().Body.Settings.AutoUpdate)
+	saved := setting.GetSettings().Body.Settings
+	m.mng.setBeta(saved.BetaUpdate)
+	m.mng.setAutoUpdate(saved.AutoUpdate)
 	return m
 }
 
@@ -113,6 +116,11 @@ func (m *Module) Install() models.Output[models.UpdateStateOutput] {
 // SetAutoUpdate starts or stops the periodic check. A download that is already running keeps going.
 func (m *Module) SetAutoUpdate(enabled bool) {
 	m.mng.setAutoUpdate(enabled)
+}
+
+// SetBeta makes the next checks follow pre-releases too (true) or stable releases only (false).
+func (m *Module) SetBeta(enabled bool) {
+	m.mng.setBeta(enabled)
 }
 
 // Close stops the periodic check and any download.

@@ -24,6 +24,7 @@ export function normalizeSettings(raw?: Partial<Record<keyof AppSettingValues, u
     language: pick<LanguageKey>(LANGUAGES, raw?.language, DEFAULT_SETTINGS.language),
     launchOnStartup: raw?.launchOnStartup === true,
     autoUpdate: raw?.autoUpdate !== false,
+    betaUpdate: raw?.betaUpdate === true,
   };
 }
 

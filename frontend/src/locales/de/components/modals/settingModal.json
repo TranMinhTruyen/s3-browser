@@ -5,7 +5,8 @@
     "font": "Schriftart",
     "language": "Sprache",
     "launchOnStartup": "Beim Windows-Start starten",
-    "autoUpdate": "Updates automatisch suchen und herunterladen"
+    "autoUpdate": "Updates automatisch suchen und herunterladen",
+    "betaUpdate": "Beta-Versionen (Vorabversionen) erhalten"
   },
   "option": {
     "theme": {

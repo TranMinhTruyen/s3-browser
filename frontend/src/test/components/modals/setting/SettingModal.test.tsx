@@ -24,6 +24,7 @@ const callIPCMock = vi.mocked(callIPC);
 const flush = () => act(async () => {});
 const state = () => useSettingStore.getState();
 const AUTO_UPDATE_LABEL = 'Automatically check for and download updates';
+const BETA_LABEL = 'Receive beta (pre-release) versions';
 const realSave = state().save;
 
 function open() {
@@ -103,6 +104,7 @@ describe('SettingModal', () => {
     await flush();
 
     expect(screen.queryByRole('switch', { name: AUTO_UPDATE_LABEL })).toBeNull();
+    expect(screen.queryByRole('switch', { name: BETA_LABEL })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Check for updates' })).not.toBeInTheDocument();
   });
 
@@ -124,6 +126,23 @@ describe('SettingModal', () => {
     expect(callIPCMock).not.toHaveBeenCalled();
   });
 
+  it('shows a beta switch that only changes the draft when updates are supported', async () => {
+    const user = userEvent.setup();
+    useUpdateStore.setState({ supported: true, currentVersion: '1.0.0' });
+    open();
+    await flush();
+
+    const beta = screen.getByRole('switch', { name: BETA_LABEL });
+    expect(beta).not.toBeChecked();
+
+    await user.click(beta);
+
+    expect(state().draft.betaUpdate).toBe(true);
+    expect(state().saved.betaUpdate).toBe(false);
+    expect(beta).toBeChecked();
+    expect(callIPCMock).not.toHaveBeenCalled();
+  });
+
   it('previews each change through the store without saving', async () => {
     const user = userEvent.setup();
     useSettingStore.setState({ autostartSupported: true });
@@ -141,6 +160,7 @@ describe('SettingModal', () => {
       language: 'ja',
       launchOnStartup: true,
       autoUpdate: true,
+      betaUpdate: false,
     });
     expect(state().saved).toEqual(DEFAULT_SETTINGS);
     expect(applySettings).toHaveBeenLastCalledWith(state().draft);

@@ -74,6 +74,11 @@ export default createMantineModal<{}, boolean>(props => {
     [setDraft]
   );
 
+  const onChangeBetaUpdate = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => setDraft({ betaUpdate: e.currentTarget.checked }),
+    [setDraft]
+  );
+
   // Each font option is previewed in its own font.
   const renderFontOption = useCallback(
     ({ option }: { option: { value: string; label: string } }) => (
@@ -179,7 +184,18 @@ export default createMantineModal<{}, boolean>(props => {
                   />
                 ) : null}
                 {updateSupported ? (
-                  <SwitchInput label={t('label.autoUpdate')} checked={draft.autoUpdate} onChange={onChangeAutoUpdate} />
+                  <>
+                    <SwitchInput
+                      label={t('label.autoUpdate')}
+                      checked={draft.autoUpdate}
+                      onChange={onChangeAutoUpdate}
+                    />
+                    <SwitchInput
+                      label={t('label.betaUpdate')}
+                      checked={draft.betaUpdate}
+                      onChange={onChangeBetaUpdate}
+                    />
+                  </>
                 ) : null}
               </Stack>
             </Paper>

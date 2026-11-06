@@ -8,4 +8,5 @@ type SaveSettingInput struct {
 	Language        string `json:"language"`
 	LaunchOnStartup bool   `json:"launchOnStartup"`
 	AutoUpdate      bool   `json:"autoUpdate"`
+	BetaUpdate      bool   `json:"betaUpdate"`
 }

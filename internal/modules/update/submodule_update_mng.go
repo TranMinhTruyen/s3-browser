@@ -45,6 +45,7 @@ const (
 	downloadTimeout  = 30 * time.Minute // whole download
 	downloadIdle     = 60 * time.Second // no new byte for this long stops the download
 	maxRedirects     = 10
+	cleanupDelay     = 30 * time.Second // lets the installer that relaunched the app exit and unlock its exe
 )
 
 // errBusy means a check, a download or a ready installer is in the way (or the feature is off), so nothing was done.
@@ -69,8 +70,9 @@ type submoduleUpdateMng struct {
 	logger   *slog.Logger
 	app      *application.App
 	version  string
-	provider *github.Provider
-	ctx      context.Context // ends on close or app shutdown, stops the download and the periodic check
+	provider *github.Provider // stable releases only
+	betaProv *github.Provider // also pre-releases
+	ctx      context.Context  // ends on close or app shutdown, stops the download and the periodic check
 	cancel   context.CancelFunc
 
 	mu         sync.Mutex
@@ -78,6 +80,7 @@ type submoduleUpdateMng struct {
 	rel        *updater.Release // release found by the last check
 	installer  string           // downloaded and verified installer
 	autoUpdate bool
+	beta       bool // follow pre-releases too
 	stopLoop   context.CancelFunc
 	lastEmit   time.Time
 }
@@ -95,21 +98,50 @@ func newSubmoduleUpdateMng(app *application.App, logger *slog.Logger, version st
 	}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.ResponseHeaderTimeout = checkTimeout
-	provider, err := github.New(github.Config{
-		Repository: repository,
-		// A pre-release build also follows pre-releases, a stable build only follows stable releases.
-		Prerelease:    strings.Contains(version, "-"),
+	cfg := github.Config{
+		Repository:    repository,
 		ChecksumAsset: checksumAsset,
 		AssetMatcher:  matchInstaller,
 		HTTPClient:    &http.Client{Transport: transport, CheckRedirect: checkRedirect},
-	})
+	}
+	// Config.Prerelease is fixed at creation, so keep one provider per channel.
+	provider, err := github.New(cfg)
+	if err == nil {
+		cfg.Prerelease = true
+		m.betaProv, err = github.New(cfg)
+	}
 	if err != nil {
 		m.logger.Error("create github provider failed", "error", err)
 	}
 	m.provider = provider
-	m.st.Supported = err == nil && version != "" && !devMode && installSupported()
+	// Dev mode is always on so the update flow can be tested; it then installs into the dev exe folder.
+	m.st.Supported = err == nil && version != "" && (devMode || installSupported())
 	m.logger.Info("update module ready", "version", version, "supported", m.st.Supported)
+	go m.cleanupDownloads()
 	return m
+}
+
+// cleanupDownloads deletes the installer left by the last update once the app has started again. A file still
+// locked stays until the next start; a download started meanwhile is left alone.
+func (m *submoduleUpdateMng) cleanupDownloads() {
+	select {
+	case <-m.ctx.Done():
+		return
+	case <-time.After(cleanupDelay):
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock() // held so no download starts while the folder is removed
+	if m.st.State == stateDownloading || m.st.State == stateReady {
+		return
+	}
+	if err := os.RemoveAll(downloadDir()); err != nil {
+		m.logger.Warn("remove old update files failed", "error", err)
+	}
+}
+
+// downloadDir is the temp folder that holds the downloaded installer.
+func downloadDir() string {
+	return filepath.Join(os.TempDir(), "S3Browser-update")
 }
 
 // snapshot returns a copy of the current state.
@@ -205,19 +237,36 @@ func (m *submoduleUpdateMng) check(ctx context.Context) error {
 	return nil
 }
 
-// fetchRelease asks GitHub for a release newer than the running version; nil means up to date.
+// fetchRelease asks GitHub for the release to install; nil means up to date. Beta on: only a newer pre-release.
+// Beta off: a newer stable, or the latest stable when the running build is a pre-release.
 func (m *submoduleUpdateMng) fetchRelease(ctx context.Context) (*updater.Release, *updateError) {
 	ctx, cancel := context.WithTimeout(ctx, checkTimeout)
 	defer cancel()
-	rel, err := m.provider.Check(ctx, updater.CheckRequest{
-		CurrentVersion: m.version,
+	m.mu.Lock()
+	beta := m.beta
+	m.mu.Unlock()
+	provider, current := m.provider, m.version
+	switch {
+	case beta:
+		provider = m.betaProv
+	case strings.Contains(m.version, "-"):
+		// A pre-release build with beta off goes back to the latest stable, even an older one.
+		current = "0.0.0"
+	}
+	rel, err := provider.Check(ctx, updater.CheckRequest{
+		CurrentVersion: current,
 		Platform:       runtime.GOOS,
 		Arch:           runtime.GOARCH,
 	})
 	switch {
 	case err != nil:
 		return nil, checkError(err)
-	case rel != nil && rel.Artifact.Filename != installerName(rel.Version):
+	case rel == nil || rel.Version == m.version:
+		return nil, nil
+	case beta && rel.Channel != "prerelease":
+		// Beta on only takes pre-releases; a newer stable on top of the list counts as up to date.
+		return nil, nil
+	case rel.Artifact.Filename != installerName(rel.Version):
 		return nil, &updateError{code: UPE006, version: rel.Version, err: errors.New("no installer for this machine")}
 	}
 	return rel, nil
@@ -293,7 +342,7 @@ func (m *submoduleUpdateMng) runDownload(rel *updater.Release) {
 
 // download writes the installer to the temp dir while hashing it, and deletes it unless the SHA-256 matches.
 func (m *submoduleUpdateMng) download(rel *updater.Release) (string, *updateError) {
-	dir := filepath.Join(os.TempDir(), "S3Browser-update")
+	dir := downloadDir()
 	_ = os.RemoveAll(dir) // an older installer is useless now
 	path := filepath.Join(dir, filepath.Base(rel.Artifact.Filename))
 	file, err := createFile(dir, path)
@@ -396,6 +445,26 @@ func (m *submoduleUpdateMng) setAutoUpdate(enabled bool) {
 		_ = m.startDownload()
 	}
 	go m.loop(loopCtx)
+}
+
+// setBeta switches between stable-only and stable + pre-release. A result found on the old channel is dropped
+// (back to idle) unless a download is running or ready.
+func (m *submoduleUpdateMng) setBeta(enabled bool) {
+	m.mu.Lock()
+	if enabled == m.beta {
+		m.mu.Unlock()
+		return
+	}
+	m.beta = enabled
+	if !m.st.Supported || m.st.State == stateChecking || m.st.State == stateDownloading || m.st.State == stateReady {
+		m.mu.Unlock()
+		return
+	}
+	m.rel = nil
+	m.st = models.UpdateStateOutput{Supported: true, State: stateIdle, CurrentVersion: m.version}
+	st := m.st
+	m.mu.Unlock()
+	m.emit(st)
 }
 
 // loop checks 10 seconds after it starts, then every checkInterval, until ctx ends. Failures are only logged.

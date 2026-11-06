@@ -14,7 +14,14 @@ vi.mock('@wails/S3Browser/internal/handlers/settinghandler', () => ({ GetSetting
 
 const callIPCMock = vi.mocked(callIPC);
 const state = () => useSettingStore.getState();
-const dark = { theme: 'dark', font: 'arial', language: 'vi', launchOnStartup: true, autoUpdate: true } as const;
+const dark = {
+  theme: 'dark',
+  font: 'arial',
+  language: 'vi',
+  launchOnStartup: true,
+  autoUpdate: true,
+  betaUpdate: true,
+} as const;
 
 describe('settingStore', () => {
   beforeEach(() => {
@@ -143,6 +150,7 @@ describe('settingStore', () => {
         language: 'vi',
         launchOnStartup: false,
         autoUpdate: true,
+        betaUpdate: false,
       });
       expect(state().saved).toEqual(DEFAULT_SETTINGS);
       expect(state().draft.launchOnStartup).toBe(true);
@@ -157,6 +165,15 @@ describe('settingStore', () => {
       expect(state().draft.autoUpdate).toBe(false);
       expect(state().saved.autoUpdate).toBe(true);
       expect(callIPCMock).not.toHaveBeenCalled();
+    });
+
+    it('keeps the previous applied betaUpdate when the draft changes it', () => {
+      useSettingStore.setState({ applied: { ...DEFAULT_SETTINGS, betaUpdate: true } });
+      state().setDraft({ theme: 'dark', betaUpdate: false });
+      state().apply();
+
+      expect(state().applied).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark', betaUpdate: true });
+      expect(state().draft.betaUpdate).toBe(false);
     });
 
     it('keeps the previous applied launchOnStartup', () => {
@@ -176,6 +193,16 @@ describe('settingStore', () => {
       expect(state().draft).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark' });
       expect(applySettings).toHaveBeenLastCalledWith({ ...DEFAULT_SETTINGS, theme: 'dark' });
     });
+  });
+
+  it('save sends the draft including betaUpdate and follows the returned betaUpdate', async () => {
+    state().setDraft({ betaUpdate: true });
+    callIPCMock.mockResolvedValueOnce({ settings: { ...DEFAULT_SETTINGS, betaUpdate: true } });
+    await expect(state().save()).resolves.toBe(true);
+
+    expect(callIPCMock.mock.calls[0][1]).toEqual([expect.objectContaining({ betaUpdate: true })]);
+    expect(state().saved.betaUpdate).toBe(true);
+    expect(state().applied.betaUpdate).toBe(true);
   });
 
   it('save and load also set applied', async () => {

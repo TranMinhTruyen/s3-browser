@@ -25,10 +25,11 @@ func (h *SettingHandler) GetSettings() models.Output[models.SettingsOutput] {
 	return h.setting.GetSettings()
 }
 
-// SaveSettings saves the settings, applies launch on startup and starts or stops the periodic update check.
+// SaveSettings saves the settings, applies launch on startup, the update channel and the periodic update check.
 func (h *SettingHandler) SaveSettings(input models.SaveSettingInput) models.Output[models.SettingsOutput] {
 	output := h.setting.SaveSettings(input)
 	if output.Result {
+		h.update.SetBeta(output.Body.Settings.BetaUpdate)
 		h.update.SetAutoUpdate(output.Body.Settings.AutoUpdate)
 	}
 	return output

@@ -5,7 +5,8 @@
     "font": "Font",
     "language": "Language",
     "launchOnStartup": "Launch on Windows startup",
-    "autoUpdate": "Automatically check for and download updates"
+    "autoUpdate": "Automatically check for and download updates",
+    "betaUpdate": "Receive beta (pre-release) versions"
   },
   "option": {
     "theme": { "light": "Light", "dark": "Dark", "auto": "Follow system" },

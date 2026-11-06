@@ -5,7 +5,8 @@
     "font": "字型",
     "language": "語言",
     "launchOnStartup": "隨 Windows 啟動",
-    "autoUpdate": "自動檢查並下載更新"
+    "autoUpdate": "自動檢查並下載更新",
+    "betaUpdate": "接收測試版 (搶先發行版本)"
   },
   "option": {
     "theme": {

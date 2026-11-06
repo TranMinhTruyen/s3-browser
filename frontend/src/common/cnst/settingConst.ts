@@ -52,6 +52,8 @@ export interface AppSettingValues {
   launchOnStartup: boolean;
   /** Check for and download updates by itself; takes effect on Save only. */
   autoUpdate: boolean;
+  /** Also take pre-release (beta) versions; takes effect on Save only. */
+  betaUpdate: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettingValues = {
@@ -60,4 +62,5 @@ export const DEFAULT_SETTINGS: AppSettingValues = {
   language: 'en',
   launchOnStartup: false,
   autoUpdate: true,
+  betaUpdate: false,
 };
