@@ -22,6 +22,11 @@ type accessEntry struct {
 	at     time.Time
 }
 
+type policyEntry struct {
+	mode string
+	at   time.Time
+}
+
 // AccessCache keeps the bucket access checks of one connection, per bucket name. Read, write and delete results have
 // their own time because a listing doesn't always check the write access. The zero value is ready to use.
 //
@@ -30,6 +35,7 @@ type accessEntry struct {
 type AccessCache struct {
 	mu         sync.Mutex
 	entries    [3]map[string]accessEntry
+	policies   map[string]policyEntry
 	accountAt  time.Time
 	generation uint64
 }
@@ -62,6 +68,27 @@ func (a *AccessCache) Set(kind AccessKind, bucket string, denied bool, gen uint6
 	a.entries[kind][bucket] = accessEntry{denied: denied, at: time.Now()}
 }
 
+// GetPolicy returns the policy mode last read for the bucket; ok is false when there is none or it expired.
+func (a *AccessCache) GetPolicy(bucket string) (mode string, ok bool) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	e, ok := a.policies[bucket]
+	return e.mode, ok && time.Since(e.at) < accessTTL
+}
+
+// SetPolicy records the policy mode read for the bucket; gen is the Generation taken before the read.
+func (a *AccessCache) SetPolicy(bucket, mode string, gen uint64) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if gen != a.generation {
+		return
+	}
+	if a.policies == nil {
+		a.policies = map[string]policyEntry{}
+	}
+	a.policies[bucket] = policyEntry{mode: mode, at: time.Now()}
+}
+
 // AccountFresh reports whether the MinIO AccountInfo was called recently enough (see MarkAccount) not to call it again.
 func (a *AccessCache) AccountFresh() bool {
 	a.mu.Lock()
@@ -84,6 +111,7 @@ func (a *AccessCache) Reset() {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.entries = [3]map[string]accessEntry{}
+	a.policies = nil
 	a.accountAt = time.Time{}
 	a.generation++
 }

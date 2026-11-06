@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import { formatStringJson } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
+import CloseButton from '@/components/buttons/CloseButton';
 import TruncatedText from '@/components/display/TruncatedText';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import { WARNING_BG_COLOR, WARNING_COLOR } from '@/components/modals/modalColors';
@@ -101,7 +102,7 @@ export default createMantineModal<DeleteConfirmModalProps, string[] | null>(prop
               {t('title')}
             </Title>
           </Group>
-          <Modal.CloseButton size="md" aria-label={t('common:button.close')} />
+          <CloseButton tooltip={t('common:button.close')} onClick={mantine.props.onClose} />
         </Modal.Header>
 
         <Divider />

@@ -8,6 +8,7 @@ import { type PolicyMode, validatePolicy } from '@/common/utils/bucketUtils';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import Button from '@/components/buttons/Button';
+import CloseButton from '@/components/buttons/CloseButton';
 import TruncatedText from '@/components/display/TruncatedText';
 import BucketPolicyInput from '@/components/inputs/BucketPolicyInput';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
@@ -16,11 +17,13 @@ type BucketPolicyModalProps = ModalProps & {
   connectionId: string;
   profileName?: string;
   bucket: string;
+  // Called with the saved mode after the policy was written.
+  onSaved?: (mode: PolicyMode) => void;
 };
 
 /** Shows and changes the access of a bucket as private / public read-only / custom policy JSON. */
 export default createMantineModal<BucketPolicyModalProps, boolean>(props => {
-  const { connectionId, profileName, bucket, mantine, size = 'md', centered = true, ...rest } = props;
+  const { connectionId, profileName, bucket, onSaved, mantine, size = 'md', centered = true, ...rest } = props;
 
   const { t } = useTranslation('bucketPolicyModal');
 
@@ -64,7 +67,8 @@ export default createMantineModal<BucketPolicyModalProps, boolean>(props => {
     // On failure callIPC already showed the error and the form keeps what the user typed.
     if (signal.aborted || !output) return;
     applyOutput(output);
-  }, [connectionId, profileName, bucket, mode, policy, applyOutput]);
+    onSaved?.(output.mode as PolicyMode);
+  }, [connectionId, profileName, bucket, mode, policy, applyOutput, onSaved]);
 
   useEffect(() => () => saveCtrl.current?.abort(), []);
 
@@ -87,7 +91,7 @@ export default createMantineModal<BucketPolicyModalProps, boolean>(props => {
             <ShieldCheck />
             <Title order={4}>{t('title')}</Title>
           </Group>
-          <Modal.CloseButton size="md" aria-label={t('common:button.close')} />
+          <CloseButton tooltip={t('common:button.close')} onClick={mantine.props.onClose} />
         </Modal.Header>
 
         <Divider />

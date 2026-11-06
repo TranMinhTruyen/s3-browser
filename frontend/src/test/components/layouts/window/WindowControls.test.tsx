@@ -105,4 +105,15 @@ describe('WindowControls', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(rt.close).toHaveBeenCalledTimes(1);
   });
+
+  it('renders the close button as the shared large CloseButton with a tooltip', async () => {
+    renderWithProviders(<WindowControls />);
+
+    const close = await screen.findByRole('button', { name: 'Close' });
+    expect(close).toHaveAttribute('data-size', 'lg');
+    expect(close).toHaveAttribute('type', 'button');
+    expect(close.querySelector('svg.lucide-x')).toBeInTheDocument();
+    await userEvent.hover(close);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Close');
+  });
 });

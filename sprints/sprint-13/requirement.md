@@ -1,5 +1,7 @@
 # Sprint 13: Tạo mới bucket và chỉnh sửa quyền bucket
 
+> **Trạng thái:** DONE (2026-11-05). R1–R6 đã merge vào `staging` qua PR #6 (merge commit `47286aa`).
+
 ## Mục tiêu
 Cho phép người dùng tạo bucket mới và chỉnh sửa quyền của bucket có sẵn ngay trong app, thay vì phải dùng console AWS/MinIO.
 
@@ -10,62 +12,62 @@ Cho phép người dùng tạo bucket mới và chỉnh sửa quyền của buck
 - **Nền tảng:** Cả hai (AWS S3 và MinIO)
 - **Màn hình liên quan:** trang bucket (`pages/tab/bucket`), modal tạo bucket mới
 - **Tiêu chí chấp nhận:**
-  - [ ] Có nút tạo bucket trên view danh sách bucket.
-  - [ ] Validate tên bucket theo quy tắc đặt tên của S3 trước khi gửi.
-  - [ ] Tạo thành công thì bucket mới hiện trong danh sách, không cần reload tay.
-  - [ ] Lỗi (tên đã tồn tại, không có quyền, ...) hiện message rõ ràng, đủ 7 ngôn ngữ.
+  - [x] Có nút tạo bucket trên view danh sách bucket.
+  - [x] Validate tên bucket theo quy tắc đặt tên của S3 trước khi gửi.
+  - [x] Tạo thành công thì bucket mới hiện trong danh sách, không cần reload tay.
+  - [x] Lỗi (tên đã tồn tại, không có quyền, ...) hiện message rõ ràng, đủ 7 ngôn ngữ.
 
 ### R2: Chỉnh sửa bucket: đổi quyền
 - **Mô tả:** Người dùng xem và thay đổi quyền truy cập của bucket.
 - **Nền tảng:** Cả hai
 - **Màn hình liên quan:** trang bucket, modal chỉnh sửa bucket
 - **Tiêu chí chấp nhận:**
-  - [ ] Hiển thị quyền hiện tại của bucket.
-  - [ ] Thay đổi và lưu quyền mới, lưu xong hiển thị lại đúng trạng thái.
-  - [ ] Chỉ account có quyền mới thực hiện được (xem R3).
+  - [x] Hiển thị quyền hiện tại của bucket.
+  - [x] Thay đổi và lưu quyền mới, lưu xong hiển thị lại đúng trạng thái.
+  - [x] Chỉ account có quyền mới thực hiện được (xem R3).
 
 ### R3: Kiểm soát quyền chỉnh sửa
 - **Mô tả:** Chỉ những account có quyền tương ứng mới được chỉnh sửa bucket; account không có quyền không thể thực hiện thao tác.
 - **Nền tảng:** Cả hai
 - **Màn hình liên quan:** trang bucket, modal chỉnh sửa bucket
 - **Tiêu chí chấp nhận:**
-  - [ ] Account không có quyền: nút/chức năng chỉnh sửa bị ẩn hoặc disable, hoặc thao tác bị từ chối với message rõ ràng.
-  - [ ] Không để bucket ở trạng thái dở dang khi bị từ chối quyền giữa chừng.
+  - [x] Account không có quyền: nút/chức năng chỉnh sửa bị ẩn hoặc disable, hoặc thao tác bị từ chối với message rõ ràng.
+  - [x] Không để bucket ở trạng thái dở dang khi bị từ chối quyền giữa chừng.
 
 ### R4: Xem chi tiết bucket
 - **Mô tả:** Menu của `BucketItem` có mục "Chi tiết", mở drawer bên phải giống `ObjectDetailDrawer` của danh sách object, hiển thị thông tin bucket (chỉ đọc).
 - **Nền tảng:** Cả hai
 - **Màn hình liên quan:** trang bucket, menu `BucketItem`, drawer chi tiết bucket
 - **Tiêu chí chấp nhận:**
-  - [ ] Thông tin cơ bản: tên, ngày tạo, region, ARN/URL endpoint (có nút copy).
-  - [ ] Quyền truy cập: chế độ policy (private / public chỉ đọc / custom) và trạng thái Block Public Access (AWS).
-  - [ ] Cấu hình bucket (chỉ đọc): versioning, mã hoá mặc định, object lock, tag.
-  - [ ] Số lượng object ở gốc bucket: mỗi folder chỉ tính là 1 object (list với delimiter `/`, không đếm đệ quy).
-  - [ ] Mục nào bị từ chối quyền hoặc không hỗ trợ thì hiện `-`, không làm hỏng cả drawer.
-  - [ ] Load lười, huỷ được khi đóng drawer hoặc đổi bucket, giống `ObjectDetailDrawer`.
+  - [x] Thông tin cơ bản: tên, ngày tạo, region, ARN/URL endpoint (có nút copy).
+  - [x] Quyền truy cập: chế độ policy (private / public chỉ đọc / custom) và trạng thái Block Public Access (AWS).
+  - [x] Cấu hình bucket (chỉ đọc): versioning, mã hoá mặc định, object lock, tag.
+  - [x] Số lượng object ở gốc bucket: mỗi folder chỉ tính là 1 object (list với delimiter `/`, không đếm đệ quy).
+  - [x] Mục nào bị từ chối quyền hoặc không hỗ trợ thì hiện `-`, không làm hỏng cả drawer.
+  - [x] Load lười, huỷ được khi đóng drawer hoặc đổi bucket, giống `ObjectDetailDrawer`.
 
 ### R5: Xoá bucket (thêm 2026-11-05)
 - **Mô tả:** Menu của `BucketItem` có mục "Xoá" (Delete). Người dùng xác nhận bằng cách gõ lại tên bucket rồi app xoá bucket và cập nhật danh sách.
 - **Nền tảng:** Cả hai
 - **Màn hình liên quan:** trang bucket, menu `BucketItem`, modal xác nhận xoá bucket
 - **Tiêu chí chấp nhận:**
-  - [ ] Kết nối anonymous: luôn ẩn mục Xoá (backend cũng chặn).
-  - [ ] Chỉ ẩn mục Xoá khi biết chắc account bị từ chối `s3:DeleteBucket` (MinIO, policy `AccountInfo` đơn giản, giống `policyEditDenied`). Không xác định được (AWS, policy có Condition/biến, `AccountInfo` lỗi) thì vẫn hiện; xoá bị từ chối thì báo message rõ ràng, đủ 7 ngôn ngữ.
-  - [ ] Luôn xác nhận bằng modal yêu cầu gõ đúng tên bucket thì nút Xoá mới bật.
-  - [ ] Bucket còn object: modal hiện cảnh báo bucket không rỗng và toàn bộ object bên trong sẽ bị xoá; user gõ đúng tên bucket mới bắt đầu xoá hết object rồi xoá bucket.
-  - [ ] Xoá xong bucket biến mất khỏi danh sách, không cần reload tay; tab đang mở bucket đó (nếu có) không bị hỏng.
-  - [ ] Bị từ chối hoặc lỗi giữa chừng thì báo message rõ ràng; không xoá bucket khi chưa xoá hết object.
+  - [x] Kết nối anonymous: luôn ẩn mục Xoá (backend cũng chặn).
+  - [x] Chỉ ẩn mục Xoá khi biết chắc account bị từ chối `s3:DeleteBucket` (MinIO, policy `AccountInfo` đơn giản, giống `policyEditDenied`). Không xác định được (AWS, policy có Condition/biến, `AccountInfo` lỗi) thì vẫn hiện; xoá bị từ chối thì báo message rõ ràng, đủ 7 ngôn ngữ.
+  - [x] Luôn xác nhận bằng modal yêu cầu gõ đúng tên bucket thì nút Xoá mới bật.
+  - [x] Bucket còn object: modal hiện cảnh báo bucket không rỗng và toàn bộ object bên trong sẽ bị xoá; user gõ đúng tên bucket mới bắt đầu xoá hết object rồi xoá bucket.
+  - [x] Xoá xong bucket biến mất khỏi danh sách, không cần reload tay; tab đang mở bucket đó (nếu có) không bị hỏng.
+  - [x] Bị từ chối hoặc lỗi giữa chừng thì báo message rõ ràng; không xoá bucket khi chưa xoá hết object.
 
 ### R6: Đặt quyền ngay khi tạo bucket (thêm 2026-11-05)
 - **Mô tả:** Modal tạo bucket (R1) có thêm phần chọn quyền truy cập, dùng đúng 3 chế độ của R2: private / public chỉ đọc / custom JSON. App tạo bucket rồi đặt policy theo lựa chọn.
 - **Nền tảng:** Cả hai
 - **Màn hình liên quan:** `CreateBucketModal`
 - **Tiêu chí chấp nhận:**
-  - [ ] Mặc định chọn private (không đặt policy, giữ hành vi R1).
-  - [ ] Chọn public hoặc custom: sau khi `CreateBucket` thành công thì đặt policy (dùng lại logic của R2, custom validate JSON trước khi gửi giống `BucketPolicyModal`).
-  - [ ] Đặt policy lỗi: GIỮ bucket đã tạo (private), báo cảnh báo rõ ràng "bucket đã tạo nhưng chưa đặt được quyền" (7 ngôn ngữ), danh sách vẫn refresh; người dùng sửa sau bằng "Access permission". Không rollback xoá bucket.
-  - [ ] AWS: chọn public/custom thì cảnh báo Block Public Access mặc định có thể chặn policy public (không sửa BPA).
-  - [ ] Anonymous không mở được modal (giữ R1/R3).
+  - [x] Mặc định chọn private (không đặt policy, giữ hành vi R1).
+  - [x] Chọn public hoặc custom: sau khi `CreateBucket` thành công thì đặt policy (dùng lại logic của R2, custom validate JSON trước khi gửi giống `BucketPolicyModal`).
+  - [x] Đặt policy lỗi: GIỮ bucket đã tạo (private), báo cảnh báo rõ ràng "bucket đã tạo nhưng chưa đặt được quyền" (7 ngôn ngữ), danh sách vẫn refresh; người dùng sửa sau bằng "Access permission". Không rollback xoá bucket.
+  - [x] AWS: chọn public/custom thì cảnh báo Block Public Access mặc định có thể chặn policy public (không sửa BPA).
+  - [x] Anonymous không mở được modal (giữ R1/R3).
 
 ## Ngoài phạm vi
 - Đổi tên bucket (người dùng quyết định bỏ, 2026-11-05: S3/MinIO không có API rename, copy + xoá có rủi ro mất dữ liệu).

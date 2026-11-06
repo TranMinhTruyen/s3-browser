@@ -2,15 +2,14 @@ import { Box, DataList, Divider, Group, Loader, ScrollArea, Stack, Text } from '
 import { GetObjectDetail } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ObjectDetailOutput } from '@wails/S3Browser/models/bucket';
 import dayjs from 'dayjs';
-import { X } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
-import ActionIcon from '@/components/buttons/ActionIcon';
 import Button from '@/components/buttons/Button';
+import CloseButton from '@/components/buttons/CloseButton';
 import DetailRow, { EMPTY_VALUE } from '@/components/display/DetailRow';
 
 // Go's zero time (0001-01-01) means the backend has no date.
@@ -90,9 +89,7 @@ function ObjectDetailDrawer(props: ObjectDetailDrawerProps) {
     >
       <Group justify="space-between" p="8px" wrap="nowrap" style={{ flexShrink: 0 }}>
         <Text fw={600}>{t('title')}</Text>
-        <ActionIcon onClick={onClickClose} tooltip={t('tooltip.close')}>
-          <X />
-        </ActionIcon>
+        <CloseButton onClick={onClickClose} tooltip={t('tooltip.close')} />
       </Group>
 
       <ScrollArea style={{ flex: 1, minHeight: 0 }}>

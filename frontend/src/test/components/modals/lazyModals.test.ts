@@ -88,6 +88,7 @@ const HEAVY_CHUNK_DEPS = [
   '@/common/stores/profileStore',
   '@/common/utils/ipcUtils',
   '@/components/buttons/Button',
+  '@/components/buttons/CloseButton',
   '@/components/inputs/FieldInput',
 ];
 

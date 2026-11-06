@@ -1,5 +1,7 @@
 # Plan sprint-13
 
+> **DONE** (2026-11-05): R1–R6 đã merge vào `staging` qua PR #6. Các dòng trạng thái dưới đây là lịch sử lúc lập plan.
+>
 > Trạng thái:
 > - R1–R4: **mọi câu hỏi đã chốt** (2026-11-05, kể cả Q11 và Q12 của R4), đã làm xong và commit local `9ab7dd2` trên `SP-13/bucket_create_policy_detail` (chưa push).
 > - R5: mọi câu hỏi Q13–Q23 đã chốt, người dùng đã đồng ý triển khai B3; đã commit local `deabc60` trên cùng branch (chưa push).

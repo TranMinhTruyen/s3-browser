@@ -6,6 +6,7 @@ import { type CSSProperties, type MouseEvent, memo, useCallback, useEffect, useR
 import { useTranslation } from 'react-i18next';
 import { FULL_DATE_TIME_FORMAT, LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
 import ActionIcon from '@/components/buttons/ActionIcon';
+import PolicyBadge from '@/components/display/PolicyBadge';
 import TruncatedText from '@/components/display/TruncatedText';
 import WarningIcon from '@/components/display/WarningIcon';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
@@ -90,12 +91,15 @@ function BucketItem(props: BucketItemProps) {
             {item.inaccessible ? <WarningIcon label={t('tooltip.inaccessible')} size={18} /> : null}
           </Group>
           {hasCreationDate ? (
-            <Text>
-              <Text span fw={500}>
-                {t('label.createDate')}
-              </Text>{' '}
-              {dayjs(item.creationDate).format(FULL_DATE_TIME_FORMAT)}
-            </Text>
+            <Group gap="xs" wrap="nowrap">
+              <Text>
+                <Text span fw={500}>
+                  {t('label.createDate')}
+                </Text>{' '}
+                {dayjs(item.creationDate).format(FULL_DATE_TIME_FORMAT)}
+              </Text>
+              {canEdit ? <PolicyBadge mode={item.policyMode} /> : null}
+            </Group>
           ) : null}
         </Stack>
       </Card.Section>

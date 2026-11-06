@@ -13,6 +13,7 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal } from '@/common/utils/modalUtils';
 import { createUUID } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
+import CloseButton from '@/components/buttons/CloseButton';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import RegionCombobox from '@/components/inputs/combobox/RegionCombobox';
 import FieldInput from '@/components/inputs/FieldInput';
@@ -284,7 +285,7 @@ export default createMantineModal<ConnectModalProps, false>(
               >
                 {t('title')}
               </Title>
-              <Modal.CloseButton size="md" aria-label={t('common:button.close')} />
+              <CloseButton tooltip={t('common:button.close')} onClick={mantine.props.onClose} />
             </Modal.Header>
 
             <Divider />

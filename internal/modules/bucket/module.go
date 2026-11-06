@@ -420,8 +420,9 @@ func (m *Module) GetListBucket(
 }
 
 // CheckBucketAccess returns the Inaccessible / ReadOnly flags of input.BucketNames, probing the buckets whose
-// access is not cached. A bucket the probe could not settle in time comes back with AccessPending. ctx is the call
-// context.
+// access is not cached. A bucket the probe could not settle in time comes back with AccessPending. With
+// input.WithPolicy it also reads PolicyMode of the buckets not cached (ListBucket and SearchBucket only return the
+// cached ones). ctx is the call context.
 func (m *Module) CheckBucketAccess(
 	ctx context.Context,
 	input models.CheckBucketAccessInput,

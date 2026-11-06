@@ -7,6 +7,7 @@ import { type PolicyMode, validateBucketName, validatePolicy } from '@/common/ut
 import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal, ModalProps } from '@/common/utils/modalUtils';
 import Button from '@/components/buttons/Button';
+import CloseButton from '@/components/buttons/CloseButton';
 import BucketPolicyInput from '@/components/inputs/BucketPolicyInput';
 import RegionCombobox from '@/components/inputs/combobox/RegionCombobox';
 import FieldInput from '@/components/inputs/FieldInput';
@@ -104,7 +105,7 @@ export default createMantineModal<CreateBucketModalProps, boolean>(
               <FolderPlus />
               <Title order={4}>{t('title')}</Title>
             </Group>
-            <Modal.CloseButton size="md" aria-label={t('common:button.close')} />
+            <CloseButton tooltip={t('common:button.close')} onClick={mantine.props.onClose} />
           </Modal.Header>
 
           <Divider />

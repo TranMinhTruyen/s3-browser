@@ -1,11 +1,11 @@
 import { Group } from '@mantine/core';
 import { Events, Window } from '@wailsio/runtime';
-import { Copy, Minus, Square, X } from 'lucide-react';
+import { Copy, Minus, Square } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { tintedColor } from '@/common/theme/tintedColor';
 import ActionIcon from '@/components/buttons/ActionIcon';
-import classes from '@/components/layouts/window/WindowControls.module.css';
+import CloseButton from '@/components/buttons/CloseButton';
 
 const MAXIMISE_EVENTS = [
   Events.Types.Common.WindowMaximise,
@@ -55,14 +55,7 @@ function WindowControls() {
         {isMaximised ? <Copy size={14} /> : <Square size={14} />}
       </ActionIcon>
 
-      <ActionIcon
-        tooltip={t('window.close')}
-        {...tintedColor('red', 'ai')}
-        className={classes.closeButton}
-        onClick={onClickClose}
-      >
-        <X size={16} />
-      </ActionIcon>
+      <CloseButton size="lg" tooltip={t('window.close')} onClick={onClickClose} />
     </Group>
   );
 }

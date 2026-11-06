@@ -1,4 +1,4 @@
-import { act, screen } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useModalStackStore } from '@/common/stores/modalStackStore';
@@ -31,6 +31,20 @@ describe('ConfirmModal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'OK' }));
 
     await expect(result).resolves.toBe(true);
+  });
+
+  it('resolves null when closed with the X button', async () => {
+    renderWithProviders(<div />);
+    let result: Promise<boolean | null> | undefined;
+    act(() => {
+      result = ConfirmModal.show({ type: 'info', confirmCode: 'C000006', params: { object: 'dir' } });
+    });
+    await flush();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    await expect(result).resolves.toBeNull();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it('puts Cancel on the left and OK on the right of a non-wrapping footer', async () => {

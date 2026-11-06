@@ -10,6 +10,7 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal } from '@/common/utils/modalUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
+import CloseButton from '@/components/buttons/CloseButton';
 import TruncatedText from '@/components/display/TruncatedText';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 import { MODAL_CHROME_HEIGHT } from '@/components/modals/modalLayout';
@@ -177,7 +178,7 @@ export default createMantineModal<{}, false>(props => {
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
             <Title order={4}>{t('title')}</Title>
           </Group>
-          <Modal.CloseButton size="md" aria-label={t('common:button.close')} />
+          <CloseButton tooltip={t('common:button.close')} onClick={mantine.props.onClose} />
         </Modal.Header>
 
         <Divider />

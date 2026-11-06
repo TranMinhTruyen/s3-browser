@@ -18,6 +18,9 @@ type Bucket struct {
 	// DeleteDenied is set only for MinIO with credentials when the account is known not to be allowed to
 	// delete the bucket (s3:DeleteBucket).
 	DeleteDenied bool `json:"deleteDenied,omitempty"`
+	// PolicyMode is "private", "public" or "custom"; "unknown" when the policy can't be read. Empty means not
+	// known yet (only CheckBucketAccess with WithPolicy reads it) or an anonymous connection.
+	PolicyMode string `json:"policyMode,omitempty"`
 }
 
 // ListBucketOutput is one page of buckets; NextCursor is nil on the last page.
