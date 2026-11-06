@@ -10,17 +10,38 @@ import { chromium } from 'playwright';
 
 const docsDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 /** Supported languages and the heading shown above the table of contents. */
-const LANGS = { en: 'Contents', vi: 'Mục lục', ja: '目次' };
+const LANGS = {
+  en: 'Contents',
+  vi: 'Mục lục',
+  ja: '目次',
+  'zh-CN': '目录',
+  'zh-TW': '目錄',
+  ru: 'Содержание',
+  de: 'Inhalt',
+};
 const FONT_CSS = [
   '@fontsource/noto-sans/400.css',
   '@fontsource/noto-sans/700.css',
   '@fontsource/noto-sans-jp/400.css',
   '@fontsource/noto-sans-jp/700.css',
+  '@fontsource/noto-sans-sc/400.css',
+  '@fontsource/noto-sans-sc/700.css',
+  '@fontsource/noto-sans-tc/400.css',
+  '@fontsource/noto-sans-tc/700.css',
 ];
+/** Fallback font for Han characters per language (must match the :lang() rules in theme.css). */
+const HAN_FONT = { ja: 'Noto Sans JP', 'zh-CN': 'Noto Sans SC', 'zh-TW': 'Noto Sans TC' };
 const TOC_MARKER = '${toc}';
 
-/** One slug function for heading ids and TOC links; keeps Vietnamese and Japanese characters. */
-const slugify = text => encodeURIComponent(String(text).trim().toLowerCase().replace(/\s+/g, '-'));
+/** One slug function for heading ids and TOC links; keeps letters (incl. Vietnamese, CJK), drops punctuation like GitHub. */
+const slugify = text =>
+  encodeURIComponent(
+    String(text)
+      .trim()
+      .toLowerCase()
+      .replace(/[^\p{L}\p{M}\p{N}\s_-]/gu, '')
+      .replace(/\s+/g, '-')
+  );
 
 const md = new MarkdownIt({ html: true, linkify: true })
   .use(anchor, { slugify })
@@ -46,9 +67,10 @@ function buildHtml(source, lang, fontCss, themeCss) {
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><style>${fontCss}\n${themeCss}</style></head><body>${body}</body></html>`;
 }
 
-const FOOTER_FONT = "font:8pt 'Noto Sans','Noto Sans JP',sans-serif;color:#52606d;";
-const headerTemplate = title => `<div style="width:100%;padding:0 18mm;${FOOTER_FONT}">${title}</div>`;
-const footerTemplate = `<div style="width:100%;padding:0 18mm;${FOOTER_FONT}text-align:right;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>`;
+const footerFont = lang => `font:8pt 'Noto Sans','${HAN_FONT[lang] ?? 'Noto Sans JP'}',sans-serif;color:#52606d;`;
+const headerTemplate = (title, lang) => `<div style="width:100%;padding:0 18mm;${footerFont(lang)}">${title}</div>`;
+const footerTemplate = lang =>
+  `<div style="width:100%;padding:0 18mm;${footerFont(lang)}text-align:right;"><span class="pageNumber"></span> / <span class="totalPages"></span></div>`;
 
 async function buildLang(browser, lang, fontCss, themeCss) {
   const dir = join(docsDir, 'user-guide', lang);
@@ -72,8 +94,8 @@ async function buildLang(browser, lang, fontCss, themeCss) {
       format: 'A4',
       printBackground: true,
       displayHeaderFooter: true,
-      headerTemplate: headerTemplate(title),
-      footerTemplate,
+      headerTemplate: headerTemplate(title, lang),
+      footerTemplate: footerTemplate(lang),
       margin: { top: '20mm', bottom: '18mm', left: '18mm', right: '18mm' },
     });
     await page.close();

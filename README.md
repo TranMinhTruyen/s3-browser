@@ -1,8 +1,8 @@
 # S3Browser
 
-**English** | [Tiếng Việt](README.vi.md) | [日本語](README.ja.md)
+**English** | [Tiếng Việt](README.vi.md) | [日本語](README.ja.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md) | [Русский](README.ru.md) | [Deutsch](README.de.md)
 
-![Version](https://img.shields.io/badge/version-0.0.1--beta.1-blue)
+![Version](https://img.shields.io/github/v/release/TranMinhTruyen/s3-browser?include_prereleases&label=version)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 
@@ -12,21 +12,26 @@ S3Browser is a desktop application built with **Wails v3** (Go backend, React + 
 
 ## Features
 
-- Save connection profiles (secrets are stored encrypted) and connect to several accounts at once, one tab per connection.
-- Support for AWS S3 and MinIO (custom endpoint, region, path style).
-- Browse buckets, folders and objects with paginated lists.
-- Search buckets and objects with paginated results.
-- View the details of an object.
+- Save connection profiles (secrets are stored encrypted) and connect to several accounts at once, one tab per connection. Tabs can be reordered by drag and drop and are remembered between sessions.
+- AWS S3 and MinIO (custom endpoint, region, path style), with many authentication methods: access key, AWS CLI profile, assume role (with MFA), AWS SSO, default credential chain, anonymous, MinIO STS, LDAP, OpenID Connect (OIDC) and TLS client certificate. An extra CA certificate file can be set for MinIO servers with a self-signed certificate.
+- Browse buckets, folders and objects with paginated, virtualized lists; search buckets and objects.
+- View the details of a bucket (region, ARN, policy, Block Public Access, versioning, encryption, Object Lock, tags) and of an object.
+- Create buckets with a permission (private, public read-only or a custom JSON policy), edit the permission later, and delete buckets (including their objects and versions). A badge on each bucket shows its policy type.
 - Upload files and folders from a dialog or by drag and drop, with limits and a live progress window.
 - Download one or several objects with parallel ranged downloads, a progress window, cancel, and a persistent download history.
 - Delete objects and folders (with confirmation).
-- Interface in English, Vietnamese and Japanese.
 - Settings dialog: theme (light / dark / follow system), font, language and launch on Windows startup; saved in `settings.json` and loaded before the UI appears.
+- Interface in English, Vietnamese, Japanese, Simplified Chinese, Traditional Chinese, Russian and German.
+- Automatic updates from GitHub Releases (installed Windows build), with an optional beta channel.
 - Portable build that runs without installation.
 
 | Objects | Upload |
 | --- | --- |
 | ![Object list](docs/user-guide/en/images/08-object-list.png) | ![Upload](docs/user-guide/en/images/13-upload-modal.png) |
+
+| Create a bucket with a permission | Bucket details |
+| --- | --- |
+| ![Create bucket](docs/user-guide/en/images/31-bucket-create.png) | ![Bucket details](docs/user-guide/en/images/30-bucket-detail.png) |
 
 ## System requirements
 
@@ -35,10 +40,17 @@ S3Browser is a desktop application built with **Wails v3** (Go backend, React + 
 
 ## Installation
 
-Build the artifacts as described in [Build from source](#build-from-source).
+Download the installer from the [GitHub Releases](https://github.com/TranMinhTruyen/s3-browser/releases) page:
 
-- **Installer (NSIS)**: `go tool wails3 task package` creates `build/windows/nsis/S3Browser-installer.exe`. Run it and follow the steps.
-- **Portable**: `go tool wails3 task build:portable WEBVIEW2_DIR=<folder>` creates the folder `build/bin/S3Browser-portable` containing `S3Browser.exe`, `data/` and `webview2/`. Copy the folder anywhere and run `S3Browser.exe`. All data stays in `data/` next to the exe, and the WebView2 Fixed Version runtime in `webview2/` is used. Do not move these folders away from the exe.
+- **Latest** release: the stable version, built from `master`.
+- **Pre-release**: the beta version, built from `staging`.
+
+Run `S3Browser-<version>-windows-amd64-installer.exe` and follow the steps. The release also has `checksums.txt` (SHA-256) to verify the download. The installed application checks for updates by itself and can be switched to the beta channel in Settings.
+
+The portable build is not published: build it from source (see [Build from source](#build-from-source)).
+
+- **Installer (NSIS)**: `go tool wails3 task package` creates `build/bin/S3Browser-amd64-installer.exe`.
+- **Portable**: `go tool wails3 task build:portable WEBVIEW2_DIR=<folder>` creates the folder `build/bin/S3Browser-portable` containing `S3Browser.exe`, `data/` and `webview2/`. Copy the folder anywhere and run `S3Browser.exe`. All data stays in `data/` next to the exe, and the WebView2 Fixed Version runtime in `webview2/` is used. Do not move these folders away from the exe. The portable build does not update itself.
 
 ## Build from source
 
@@ -86,7 +98,7 @@ go vet ./...
 go tool golangci-lint run ./...
 ```
 
-Generate the user guide PDFs (en, vi, ja):
+Generate the user guide PDFs (one per language that has a `user-guide.md`):
 
 ```bash
 bun install --cwd docs
@@ -98,11 +110,11 @@ bun run --cwd docs build:pdf
 
 ```
 main.go            Wails app entry, registers services
-internal/          Go backend: handlers, modules (bucket, profile, master, global, setting), pkg (db, logger, portable...)
+internal/          Go backend: handlers, modules (bucket, profile, master, global, setting, update), pkg (db, logger, portable...)
 models/            Input/output models shared with the frontend
-frontend/          React 19 + TypeScript UI (src, bindings generated by Wails)
+frontend/          React 19 + TypeScript UI (src/pages/tab holds the tab page with the bucket and object views, bindings generated by Wails)
 build/             Wails build assets and platform Taskfiles (windows, darwin)
-docs/              Architecture notes, user guide, tools to build the PDFs
+docs/              Architecture notes, user guide, tools to build the PDFs and take the screenshots
 sprints/           Requirements and plans per sprint
 ```
 
