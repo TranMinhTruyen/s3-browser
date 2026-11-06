@@ -6,7 +6,8 @@
 
 - Cập nhật: 2026-11-06.
 - Sprint-15 (cập nhật README, user guide, ARCHITECTURE, CHANGELOG 0.1.0, mở rộng `docs/scripts/shots.mjs` chụp ảnh tự động cho bản release v0.1): đã có `sprints/sprint-15/requirement.md`, chưa lập plan; còn câu hỏi mở trong file (thêm 4 ngôn ngữ docs, server mode với Wails v3.1.0, chụp OIDC/LDAP, chụp với AWS).
-- Sprint-14 (R1 badge policy type, R3 `CloseButton` dùng chung, R2 auto-update từ GitHub Releases): mọi PR đã merge vào `staging` (#7 R1+R3, #10 R2); #8 đưa sprint-12/13/14 R1-R3 lên `master`. Chưa có `report.md`.
+- Sprint-14 (R1 badge policy type, R3 `CloseButton` dùng chung, R2 auto-update từ GitHub Releases): **DONE** 2026-11-06, mọi PR đã merge vào `staging` (#7 R1+R3, #10 R2); #8 đưa sprint-12/13/14 R1-R3 lên `master`. Không có `report.md`.
+- Sprint-16 (export/import profile ra file JSON): đã có `sprints/sprint-16/requirement.md`, mọi câu hỏi đã chốt; chờ sprint-15 DONE mới bắt đầu.
 - Release: version hiện `0.0.1-beta.1.1`; có workflow `release.yml` và `pre-release.yml` (pre-release từ `staging`).
 - Sprint-13 DONE 2026-11-05 (PR #6); sprint-12 DONE 2026-11-04.
 - Repo đã tách khỏi monorepo ngày 2026-11-03 (`TranMinhTruyen/s3-browser`); từ sprint-15 dùng luồng `SP-NN/release` (mục 2).

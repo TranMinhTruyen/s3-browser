@@ -1,5 +1,7 @@
 # Sprint 14: Kiểm tra và cài đặt bản cập nhật từ GitHub Releases
 
+> **Trạng thái:** DONE (2026-11-06). R1 và R3 đã merge vào `staging` qua PR #7, R2 qua PR #10; PR #8 đưa R1, R3 lên `master`.
+
 ## Mục tiêu
 Người dùng biết khi có phiên bản mới và cập nhật app ngay trong app, không phải tự vào GitHub tải về cài lại. App chỉ thoát để cài khi người dùng xác nhận.
 
@@ -12,16 +14,16 @@ Người dùng biết khi có phiên bản mới và cập nhật app ngay trong
 - **Nền tảng:** Không phụ thuộc S3/MinIO (tính năng của app)
 - **Màn hình liên quan:** modal Settings (`components/modals/setting`), toast (sonner), `App.tsx`
 - **Tiêu chí chấp nhận:**
-  - [ ] Settings có switch "Tự động kiểm tra và tải bản cập nhật", lưu trong `settings.json` cùng các setting khác, nhãn i18n đủ 7 ngôn ngữ.
-  - [ ] Nguồn cập nhật là GitHub Releases của `TranMinhTruyen/s3-browser`; so phiên bản theo semver (kể cả pre-release như `0.0.1-beta.1`) với version của app (`build/config.yml` → `info.version`).
-  - [ ] Chọn đúng file của release theo hệ điều hành/kiến trúc và kiểu bản cài (installer hoặc portable).
-  - [ ] Tải ở backend, không chặn UI; frontend hiện thanh tiến trình (phần trăm, dung lượng đã tải/tổng) qua event Wails.
-  - [ ] File tải xong được kiểm toàn vẹn (checksum SHA-256 đi kèm release) trước khi cho cài; sai thì xoá file và báo lỗi.
-  - [ ] Chỉ tải từ URL `https` của GitHub (`api.github.com`, `github.com`, `objects.githubusercontent.com`...).
-  - [ ] Nhấn **Cập nhật**: app chạy bộ cài rồi thoát; chỉ thoát sau khi người dùng xác nhận (cảnh báo nếu đang có upload/download S3 chạy dở).
-  - [ ] Đã mới nhất hoặc lỗi mạng/GitHub giới hạn request khi tự kiểm tra: không hiện toast lỗi (chỉ ghi log); khi người dùng tự bấm kiểm tra thì báo kết quả.
-  - [ ] Chế độ dev (`devmode_dev.go`) không kiểm tra cập nhật.
-  - [ ] Mọi chuỗi UI và message code mới có key đủ 7 ngôn ngữ.
+  - [x] Settings có switch "Tự động kiểm tra và tải bản cập nhật", lưu trong `settings.json` cùng các setting khác, nhãn i18n đủ 7 ngôn ngữ.
+  - [x] Nguồn cập nhật là GitHub Releases của `TranMinhTruyen/s3-browser`; so phiên bản theo semver (kể cả pre-release như `0.0.1-beta.1`) với version của app (`build/config.yml` → `info.version`).
+  - [x] Chọn đúng file của release theo hệ điều hành/kiến trúc và kiểu bản cài (installer hoặc portable).
+  - [x] Tải ở backend, không chặn UI; frontend hiện thanh tiến trình (phần trăm, dung lượng đã tải/tổng) qua event Wails.
+  - [x] File tải xong được kiểm toàn vẹn (checksum SHA-256 đi kèm release) trước khi cho cài; sai thì xoá file và báo lỗi.
+  - [x] Chỉ tải từ URL `https` của GitHub (`api.github.com`, `github.com`, `objects.githubusercontent.com`...).
+  - [x] Nhấn **Cập nhật**: app chạy bộ cài rồi thoát; chỉ thoát sau khi người dùng xác nhận (cảnh báo nếu đang có upload/download S3 chạy dở).
+  - [x] Đã mới nhất hoặc lỗi mạng/GitHub giới hạn request khi tự kiểm tra: không hiện toast lỗi (chỉ ghi log); khi người dùng tự bấm kiểm tra thì báo kết quả.
+  - [x] Chế độ dev (`devmode_dev.go`) không kiểm tra cập nhật.
+  - [x] Mọi chuỗi UI và message code mới có key đủ 7 ngôn ngữ.
 
 ## Ngoài phạm vi
 - Tự build và phát hành release (CI/GitHub Actions) — người dùng tự đưa bản cài lên GitHub Releases.

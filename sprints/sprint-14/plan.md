@@ -1,5 +1,7 @@
 # Plan sprint-14
 
+> **DONE** (2026-11-06): R1, R3 đã merge vào `staging` qua PR #7, R2 qua PR #10. Các dòng trạng thái và checkbox dưới đây là lịch sử lúc lập plan.
+
 ## 1. Tóm tắt yêu cầu
 
 - **R1** (`requirement.md`, **đã commit `e34f6b4`** trên `SP-14/bucket_policy_badge`): mỗi dòng `BucketItem` hiện badge chế độ policy (private / public / custom) cạnh dòng "Create date". Badge load lười: chỉ cho các dòng đang hiện, gộp vào lần gọi `CheckBucketAccess` sẵn có, nên không thêm lượt IPC. Backend đọc song song có giới hạn và cache theo bucket 5 phút. AWS thật đọc theo region của bucket. Trong lúc load hiện skeleton, không đọc được thì không báo lỗi, anonymous ẩn badge. Tạo bucket, lưu policy hoặc xoá bucket thì cache của bucket đó bị xoá. Kết quả `SearchBucket` cũng có badge.
