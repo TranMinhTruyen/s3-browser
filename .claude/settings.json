@@ -38,7 +38,15 @@
       "Bash(wc -l *)",
       "Bash(git fetch origin SP-*)",
       "Bash(gh pr create --base staging --head SP-*)",
-      "Bash(gh pr create --base SP-*)"
+      "Bash(gh pr create --base SP-*)",
+      "Bash(cargo fmt *)",
+      "Bash(cargo clippy *)",
+      "Bash(cargo build *)",
+      "Bash(cargo test *)",
+      "Bash(cargo add *)",
+      "Bash(cargo tree *)",
+      "Bash(cargo llvm-cov *)",
+      "WebFetch(domain:docs.rs)"
     ],
     "deny": [
       "Bash(git reset *)",
@@ -53,6 +61,7 @@
       "Edit(/frontend/node_modules/**)",
       "Edit(/frontend/dist/**)",
       "Edit(/build/bin/**)",
+      "Edit(/rust/target/**)",
       "Edit(/.claude/**)",
       "Edit(/CLAUDE.md)",
       "Edit(/go.sum)",

@@ -36,7 +36,6 @@ S3Browser は **Wails v3**（Go バックエンド、React + TypeScript フロ�
 ## システム要件
 
 - Windows 10/11 (x64) と [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)。ポータブル版には専用の WebView2 が同梱されます。
-- macOS と Linux: ソースからビルドしてください。これらのプラットフォームは未検証です。
 
 ## インストール
 
@@ -113,7 +112,7 @@ main.go            Wails アプリのエントリーポイント、サービス�
 internal/          Go バックエンド: handlers、modules (bucket, profile, master, global, setting, update)、pkg (db, logger, portable など)
 models/            フロントエンドと共有する入出力モデル
 frontend/          React 19 + TypeScript の UI (src/pages/tab にバケットとオブジェクトのビューを持つタブページ、bindings は Wails が生成)
-build/             Wails のビルド資産とプラットフォーム別 Taskfile (windows, darwin)
+build/             Wails のビルド資産とプラットフォーム別 Taskfile (windows)
 docs/              アーキテクチャ文書、ユーザーガイド、PDF とスクリーンショットの生成ツール
 sprints/           スプリントごとの要件と計画
 ```

@@ -36,7 +36,6 @@ S3Browser là ứng dụng desktop viết bằng **Wails v3** (backend Go, front
 ## Yêu cầu hệ thống
 
 - Windows 10/11 (x64) có [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/). Bản portable đã kèm WebView2 riêng.
-- macOS và Linux: build từ source. Các nền tảng này chưa được kiểm tra.
 
 ## Cài đặt
 
@@ -113,7 +112,7 @@ main.go            Điểm vào của app Wails, đăng ký service
 internal/          Backend Go: handlers, modules (bucket, profile, master, global, setting, update), pkg (db, logger, portable...)
 models/            Model input/output dùng chung với frontend
 frontend/          Giao diện React 19 + TypeScript (src/pages/tab chứa trang tab với view bucket và object, bindings do Wails sinh)
-build/             Tài nguyên build Wails và Taskfile theo nền tảng (windows, darwin)
+build/             Tài nguyên build Wails và Taskfile theo nền tảng (windows)
 docs/              Tài liệu kiến trúc, hướng dẫn sử dụng, công cụ tạo PDF và chụp ảnh màn hình
 sprints/           Yêu cầu và plan theo từng sprint
 ```

@@ -11,7 +11,7 @@ Bạn là **lập trình viên Go backend level senior** của S3Browser. Tuân 
 
 ## Đầu vào
 
-Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task (ví dụ `B1, B2`), danh sách file được phép sửa, và (nếu là vòng sửa lỗi) danh sách lỗi từ verifier/reviewer.
+Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task (ví dụ `B1, B2`), danh sách file được phép sửa, mục "API cho Go" của `rust-native` (nếu task gọi Rust), và (nếu là vòng sửa lỗi) danh sách lỗi từ verifier/reviewer.
 
 ## Cách làm
 
@@ -24,6 +24,7 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task (ví dụ `B1, B
    - Event trong `events.go`, đăng ký bằng `application.RegisterEvent[T]` trong `init()`
    - Bảng mới: migration `internal/pkg/db/schemas/NNNNNN_name.sql`, query trong `internal/pkg/db/queries/<domain>/`, rồi chạy `go tool sqlc generate`
 3. Với API Wails, tra https://v3.wails.io/ trước khi dùng.
+3b. Gọi Rust (`internal/modules/db`): theo mục **Rust native** của `CLAUDE.md` và đúng hợp đồng trong "API cho Go". Không dùng cgo; mọi buffer nhận từ `s3b_call` phải `s3b_free` trên mọi nhánh; ctx bị huỷ thì gọi `s3b_cancel`; map mã lỗi Rust sang message `DBE<NNN>`. Hợp đồng thiếu hoặc không khớp thì dừng và báo để `rust-native` sửa, không tự sửa file trong `rust/`.
 4. Không sửa tay `internal/pkg/db/sqlc/**` hay `frontend/bindings/**` (đã bị chặn ghi). Chỉ thay đổi chúng qua lệnh sinh code.
 5. Bạn chỉ sửa code Go, file SQL (migration, query) và `ipcMessage.json` của en/vi/ja. Thêm dependency thì dùng `go get` (không sửa tay `go.sum`). Không sửa file nào khác trong `frontend/`; phần đó do `react-frontend` làm **sau** bạn.
 6. Khi hoàn tất code Go, **luôn** làm theo skill `wails3-bindings` (Phần A rồi Phần B), dù bạn nghĩ signature không đổi, để frontend có bindings mới nhất và biết chỗ nào frontend cần sửa. Nếu skill không được nạp, chạy trực tiếp `go tool wails3 generate bindings -clean=true -ts`. Lệnh lỗi thì sửa cho đến khi chạy được, hoặc báo lỗi về.

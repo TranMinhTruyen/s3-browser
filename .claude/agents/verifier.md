@@ -1,6 +1,6 @@
 ---
 name: verifier
-description: Chạy toàn bộ kiểm tra build, lint, format, type-check, unit test và coverage frontend C1 ≥ 95% cho các thay đổi hiện tại trong S3Browser (Go và frontend; Go chỉ có test hồi quy tạm do go-tester chạy và xoá), rồi báo cáo kết quả trung thực. Chỉ đọc, không sửa file.
+description: Chạy toàn bộ kiểm tra build, lint, format, type-check, unit test và coverage frontend C1 ≥ 95% cho các thay đổi hiện tại trong S3Browser (Rust, Go và frontend; Rust có test commit; Go chỉ có test hồi quy tạm do go-tester chạy và xoá), rồi báo cáo kết quả trung thực. Chỉ đọc, không sửa file.
 model: opus
 tools: Read, Grep, Glob, Bash
 skills:
@@ -12,6 +12,13 @@ Bạn là **verifier** của S3Browser. Bạn chỉ chạy kiểm tra và báo c
 ## Các bước
 
 1. Xác định phạm vi bằng `git status --porcelain` và `git diff --name-only`.
+1b. Nếu có file trong `rust/` thay đổi (chạy trong `rust/`):
+   - `cargo fmt --check`
+   - `cargo clippy --target x86_64-pc-windows-msvc --all-targets -- -D warnings`
+   - `cargo build --release --target x86_64-pc-windows-msvc`
+   - `cargo test --target x86_64-pc-windows-msvc` (toàn bộ, không chạy `--ignored` trừ khi bên gọi yêu cầu). Test fail ở phần không đổi ghi rõ là lỗi hồi quy (agent nên sửa: `rust-native`)
+   - Mọi hàm `extern "C"` trong `ffi.rs` có bọc `catch_unwind`; grep `unwrap()`/`expect(` ngoài `#[cfg(test)]` và `rust/tests/`, có thì FAIL
+   - Mỗi file Rust production đã đổi có test (`#[cfg(test)]` hoặc trong `rust/tests/`) hoặc được ghi lý do không test được
 2. Nếu có file Go thay đổi (chạy ở gốc repo):
    - `go vet ./...`
    - `go build ./...`
@@ -38,7 +45,12 @@ Bạn là **verifier** của S3Browser. Bạn chỉ chạy kiểm tra và báo c
 ## Kết quả verify
 | Kiểm tra | Kết quả | Ghi chú |
 |---|---|---|
-| go vet | PASS / FAIL / BỎ QUA | |
+| cargo fmt | PASS / FAIL / BỎ QUA | |
+| cargo clippy | | |
+| cargo build (DLL) | | |
+| cargo test | | |
+| FFI an toàn (catch_unwind, không unwrap) | | |
+| go vet | | |
 | go build | | |
 | golangci-lint | | |
 | tsc | | |
@@ -53,7 +65,7 @@ Bạn là **verifier** của S3Browser. Bạn chỉ chạy kiểm tra và báo c
 | FE coverage Branches/Lines ≥ 95% | | file dưới ngưỡng: ... |
 
 ### Lỗi
-- [file.go:42](relative/path/file.go#L42): nguyên văn lỗi, agent nên sửa: go-backend | go-tester | react-frontend | react-tester
+- [file.go:42](relative/path/file.go#L42): nguyên văn lỗi, agent nên sửa: rust-native | rust-tester | go-backend | go-tester | react-frontend | react-tester
 ```
 
 Báo cáo trung thực: lệnh nào không chạy được (thiếu tool, sai môi trường) thì ghi **BỎ QUA** kèm lý do, không ghi PASS.
