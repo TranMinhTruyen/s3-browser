@@ -21,9 +21,11 @@
 // Every shot is annotated (red frame, arrow and text drawn over the page just before the screenshot): the targets are
 // in this file, the texts per language in docs/scripts/annotations.json. The script exits before starting when a
 // shot or one of the SHOTS_LANGS has no text there.
-// Not capturable in server mode: native dialogs (file picker, download destination) and drag and drop from the
-// file manager. The picker modal and the download window are therefore filled by dispatching the same Wails
-// events the backend emits (window._wails.dispatchWailsEvent); the upload transfer itself is real.
+// Not capturable in server mode: native dialogs (file picker, download destination, profile export/import file)
+// and drag and drop from the file manager. The picker modal and the download window are therefore filled by
+// dispatching the same Wails events the backend emits (window._wails.dispatchWailsEvent); the upload transfer
+// itself is real. The import password modal opens after the file dialog, so the ChooseImportFile call is answered
+// with a fake file (page.route); nothing is exported or imported.
 import { createWriteStream, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -98,6 +100,10 @@ const IMAGE_NAMES = [
   '34-settings-update',
   '35-update-downloading',
   '36-update-ready',
+  '37-profile-export-menu',
+  '38-profile-export-modal',
+  '39-profile-import-button',
+  '40-profile-import-password',
 ];
 
 /** { image: { noteId: { lang: text } } }; a text may hold {{namespace:key}}, replaced by the app's own label. */
@@ -281,10 +287,12 @@ async function runLang(browser, lang, bigFilePath) {
 
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   const pause = (ms = 700) => page.waitForTimeout(ms);
-  // Toasts are hidden unless the shot is about them; the mouse is parked so no tooltip stays open.
+  // Toasts are hidden unless the shot is about them; the mouse is parked so no tooltip stays open, unless `hover`
+  // (a locator) is set: the mouse then rests on it so its tooltip shows.
   // `notes` ([{ id, target, place }], see drawAnnotations) are drawn on the page for the shot and removed after it.
-  const shot = async (name, { toast = false, notes, ...options } = {}) => {
+  const shot = async (name, { toast = false, notes, hover, ...options } = {}) => {
     await page.mouse.move(640, 760);
+    await hover?.hover();
     await page.evaluate(show => {
       const toaster = document.querySelector('[data-sonner-toaster]');
       if (toaster) toaster.style.display = show ? '' : 'none';
@@ -523,6 +531,71 @@ async function runLang(browser, lang, bigFilePath) {
     notes: [{ id: 'rightClick', target: profileItem(), place: 'right', gap: 80, dy: 60 }],
   });
   await page.keyboard.press('Escape');
+
+  // 37-40 export and import a profile (nothing is written: the export modal is canceled, the file is faked)
+  const CP = 'components/layouts/navbar/connectionProfiles';
+  const EXPORT_MODAL = 'components/modals/exportProfileModal';
+  const IMPORT_MODAL = 'components/modals/importPasswordModal';
+  await openProfileMenu();
+  await shot('37-profile-export-menu', {
+    notes: [
+      {
+        id: 'menu',
+        target: page.getByRole('menuitem', { name: L(CP, 'contextMenu.export'), exact: true }),
+        place: 'right',
+        gap: 80,
+        dy: 60,
+      },
+    ],
+  });
+  await clickMenuItem('contextMenu.export');
+  await page.getByLabel(L(EXPORT_MODAL, 'label.includeSecret')).check();
+  await page.locator('input[type="password"]').first().waitFor();
+  await page.locator('input[type="password"]').nth(0).fill('demo-password');
+  await page.locator('input[type="password"]').nth(1).fill('demo-password');
+  await shot('38-profile-export-modal', {
+    notes: [
+      {
+        id: 'secret',
+        target: page.getByLabel(L(EXPORT_MODAL, 'label.includeSecret')),
+        place: 'left',
+        gap: 40,
+        dy: -30,
+        width: 330,
+      },
+      { id: 'password', target: page.locator('input[type="password"]'), place: 'right', width: 250 },
+    ],
+  });
+  await page.getByRole('button', { name: L('common', 'button.cancel'), exact: true }).click();
+  await pause();
+  const importButton = page.getByRole('button', { name: L(CP, 'tooltip.importProfile'), exact: true });
+  await shot('39-profile-import-button', {
+    hover: importButton,
+    notes: [{ id: 'import', target: importButton, place: 'right', gap: 130, dy: 140, width: 280 }],
+  });
+  // The file dialog is native: answer the ChooseImportFile call with an encrypted demo file.
+  const chooseImportId = readFileSync(
+    join(docsDir, '..', 'frontend', 'bindings', 'S3Browser', 'internal', 'handlers', 'profilehandler.ts'),
+    'utf8'
+  ).match(/ChooseImportFile\(\)[^]*?ByID\((\d+)\)/)[1];
+  await page.route('**/wails/runtime', route => {
+    if (!route.request().postData()?.includes(`"methodID":${chooseImportId}`)) return route.fallback();
+    return route.fulfill({
+      json: {
+        result: true,
+        messageList: [],
+        body: { path: 'C:\\Users\\demo\\Documents\\minio_demo.json', name: 'minio_demo.json', encrypted: true },
+      },
+    });
+  });
+  await importButton.click();
+  await page.getByText(L(IMPORT_MODAL, 'title'), { exact: true }).waitFor();
+  await shot('40-profile-import-password', {
+    notes: [{ id: 'password', target: page.locator('input[type="password"]'), place: 'right', width: 250 }],
+  });
+  await page.getByRole('button', { name: L('common', 'button.cancel'), exact: true }).click();
+  await page.unroute('**/wails/runtime');
+  await pause();
 
   // 06 bucket list
   await page.locator('[aria-haspopup="listbox"]').first().click();

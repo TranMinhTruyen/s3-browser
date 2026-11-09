@@ -116,6 +116,7 @@ Right-click a profile to open its menu.
 - **Connect**: opens the connection. A connected profile shows a green icon.
 - **Disconnect**: closes the connection. Disconnect first before you edit or delete a profile.
 - **Edit**: changes the profile (the window title is again **Connection Profile**, and the button is **Update profile**). You are asked to confirm the update.
+- **Export**: saves the profile to a JSON file; see [4.1 Export a profile](#41-export-a-profile).
 - **Delete**: removes the profile after you confirm.
 
 ![Delete a profile](images/18-profile-delete-confirm.png)
@@ -123,6 +124,49 @@ Right-click a profile to open its menu.
 A profile that still has an upload or a download running cannot be deleted. Wait for the transfers to finish or cancel them first.
 
 The first button above the list (**Connect**) opens the same window with a **Connect** button, to connect once without saving a profile, and the **Refresh connection profile list** button reloads the list.
+
+### 4.1 Export a profile
+
+Export copies a profile to a file, for example to use it on another computer. Right-click the profile and choose **Export**.
+
+![Export in the profile menu](images/37-profile-export-menu.png)
+
+The **Export profile** window opens.
+
+![Export profile window](images/38-profile-export-modal.png)
+
+- Leave **Include secrets** off to export the profile without its secrets (secret key, session token, LDAP password, key passphrase). Before it continues, the application warns you if the profile has saved secrets: "Profile [name] has saved secrets that will NOT be exported. After importing you will need to enter them again. Export without secrets?" Confirm to export, or cancel to go back. After importing, edit the profile and enter the secrets again.
+- Tick **Include secrets** to export the saved secrets as well. Enter a **Password** of at least 8 characters and type it again in **Confirm password**. The secrets are encrypted with this password (PBKDF2 and AES-GCM): they are never written to the file in plain text. The option is disabled ("This profile has no saved secrets.") when the profile has no saved secrets.
+
+Click **Export**. A Windows save dialog opens with a suggested file name made from the profile name: lowercase letters, digits and underscores only, for example `minio_demo.json`. Choose where to save the file. When the file is written, a message tells you so. If you close the save dialog, nothing is written and the **Export profile** window stays open.
+
+The file contains the connection settings of the profile (name, color, provider, endpoint, region, access key, path style, auto connect, authentication method and its options), not internal data such as the profile ID or dates. Only the paths of the certificate and key files are exported, not the files themselves.
+
+Keep the file and the password safe. The password is not stored anywhere: if you forget it, the file cannot be imported. Do not edit a file that contains secrets by hand. If its provider, endpoint or authentication method is changed, importing it fails with "Wrong password, or the file is damaged."
+
+### 4.2 Import a profile
+
+Click the **Import connection profile** button (next to **Create connection profile**, above the profile list).
+
+![Import button](images/39-profile-import-button.png)
+
+A Windows open dialog appears: choose a `.json` file exported by S3Browser (at most 1 MB). The application checks the file before it saves anything. For example, "The file is not a valid S3Browser profile file." means that the file is not a profile exported by S3Browser, and a message also tells you when the version of the file is not supported or the file is too large.
+
+- A file exported without secrets is imported at once.
+- A file exported with secrets opens the **Import profile** window: enter the password that was used when the file was exported, then click **Import**.
+
+![Import profile window](images/40-profile-import-password.png)
+
+If the password is wrong, the message "Wrong password, or the file is damaged." appears and the window stays open, so you can type the password again or click **Cancel**. Nothing is saved until the password is correct.
+
+The imported profile is added to the list as a new profile:
+
+- If a profile with the same name already exists, the new one is named with a number: **name (2)**, **name (3)**, and so on.
+- A path is emptied when the file does not exist on this computer, or when it is a network or device path (such as `\\host\share`, `\\?\` or `\\.\`), even if that path exists. This applies to the CA certificate, the certificate and private key of the **Client certificate** method, and the AWS config and credentials files. One warning lists these fields: "Profile [name] imported. These file paths do not exist on this computer and were cleared: {fields}." Edit the profile and choose the files again before you connect.
+- The profile is not connected by the import, even when **auto connect** is on in the file; auto connect applies the next time the application starts.
+- A profile exported without secrets has no secrets: edit it and enter them.
+
+The Windows save and open dialogs cannot be shown in a screenshot. The image of the **Import profile** window shows the window opened with a sample file.
 
 ## 5. Browse buckets and objects
 
@@ -302,14 +346,16 @@ Click the **Settings** button (gear icon) at the top right, left of the download
 - **Font**: Nunito, System UI, Segoe UI, Arial, Roboto, Be Vietnam Pro, Verdana, Meiryo UI, Monospace or JetBrains Mono.
 - **Language**: English, Tiếng Việt, 日本語, 简体中文, 繁體中文, Русский or Deutsch. The whole interface changes, including messages.
 - **Launch on Windows startup**: start S3Browser when you sign in to Windows. Only shown in the installed Windows version (not the portable one).
-- **Automatically check for and download updates** and **Receive beta (pre-release) versions**: see [Updates](#102-updates).
+- **Automatically check for and download updates** and **Receive beta (pre-release) versions**: see [Updates](#102-updates). These two switches take effect as soon as you change them, without **Apply** or **Save**; only **Save** keeps them after you restart the app.
 
 Every change is previewed immediately. Then choose:
 
 - **Save**: keep the settings, also after restarting the app.
-- **Apply**: keep the settings until you close the app; the dialog stays open. Launch on Windows startup is not changed by Apply.
-- **Cancel** or **X**: undo the changes made since the last Apply or Save.
-- **Reset to default**: put the form back to the defaults (Light, Nunito, English, off). Click **Save** to keep them.
+- **Apply**: keep the settings until you close the app, including the two update switches; the dialog stays open. Launch on Windows startup is not changed by Apply.
+- **Cancel**: undo the changes made since the last Apply or Save, including the two update switches. The dialog closes.
+- **Reset to default**: put the form back to the defaults (Light, Nunito, English, **Launch on Windows startup** off). The two update switches are also reset at once, like a manual change: **Automatically check for and download updates** on and **Receive beta (pre-release) versions** off. Click **Save** to keep the defaults; **Cancel** undoes the reset.
+
+If you close the window with **X**, the Esc key or a click outside it while some changes are neither saved nor applied, the warning **Unsaved settings** appears ("You have settings that are not saved or applied. What do you want to do?"): **Go back** keeps the window open with your changes, **Discard changes** undoes them and closes the window, and **Save** saves them (the window stays open if saving fails). Without changes, the window just closes.
 
 Settings are loaded when the app starts, before the window content appears.
 

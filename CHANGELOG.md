@@ -23,6 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - Optional CA file for MinIO servers whose certificate comes from a private certificate authority.
   - Temporary credentials are refreshed automatically before they expire, and a warning appears when they are about to expire during a transfer.
   - Secrets (including LDAP passwords and key passphrases) are stored encrypted. The OIDC login stays in memory only; the app never stores the token.
+- Export a connection profile to a JSON file (right-click the profile, **Export**) and import it with the **Import connection profile** button. Secrets are optional; when included, they are encrypted with a password. On import, a duplicate name gets a number, file paths that do not exist on the computer or are network/device paths are cleared, and the profile is not connected.
 - Create a bucket (AWS S3 with a region, MinIO), with an optional access mode set at creation.
 - Bucket permission: private (no bucket policy), public read-only, or a custom policy edited as JSON, with a warning when Block Public Access would reject a public policy.
 - Bucket details drawer.
