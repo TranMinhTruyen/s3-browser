@@ -73,5 +73,5 @@ File xoá: `docs/user-guide/{en,vi,ja}/images/02-language-switch.png` (thay bằ
 - Thay đổi ngoài phạm vi sprint (requirement: "không sửa code app; không đổi version") do người dùng tự đưa vào `SP-15/release`:
   - PR #12 tiêu đề `chore(deps): ...` nhưng gồm cả CHANGELOG 0.1.0 (R4) lẫn bump aws-sdk-go-v2, modernc sqlite, i18next 27, react-i18next 18, zustand 5.1, biome, knip, oxlint và `icon.ico`.
   - `cedf08a`: bỏ target macOS/Linux/iOS, đổi version `build/config.yml` `0.0.1-beta.1.1` → `0.0.1-beta.15`, sửa `CLAUDE.md` và `.claude/agents` (thêm `rust-native`, `rust-tester`).
-- CHANGELOG `0.1.0` chưa ghi việc ngừng hỗ trợ macOS/Linux (`cedf08a` có sau PR #12); nên bổ sung trước khi release.
+- CHANGELOG `0.1.0` thiếu dòng ngừng hỗ trợ macOS/Linux (`cedf08a` có sau PR #12): đã bổ sung mục `Removed` ở 7 bản qua PR #16.
 - Sprint-16 R3 (export/import profile) sửa user guide: phải sửa đủ 7 bản và thêm ghi chú ảnh vào `annotations.json` nếu chụp ảnh mới.

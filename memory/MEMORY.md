@@ -5,7 +5,7 @@
 ## 1. Trạng thái hiện tại
 
 - Cập nhật: 2026-11-09.
-- Sprint-15 (tài liệu cho v0.1: README, user guide + PDF, ARCHITECTURE, CHANGELOG 0.1.0, `shots.mjs` chụp ảnh có ghi chú): **DONE** 2026-11-09; PR #11, #12, #13 đã merge vào `SP-15/release`; PR `SP-15/sprint_docs` → release và `SP-15/release` → `staging` chờ người dùng merge. Bản dịch zh-CN/zh-TW/ru/de chưa có người bản ngữ duyệt; CHANGELOG 0.1.0 chưa ghi việc bỏ macOS/Linux.
+- Sprint-15 (tài liệu cho v0.1: README, user guide + PDF, ARCHITECTURE, CHANGELOG 0.1.0, `shots.mjs` chụp ảnh có ghi chú): **DONE** 2026-11-09; PR #11, #12, #13 đã merge vào `SP-15/release`; PR #14 (`SP-15/sprint_docs`), #16 (CHANGELOG ghi bỏ macOS/Linux) vào release và #15 `SP-15/release` → `staging` chờ người dùng merge (#14, #16 trước #15). Bản dịch zh-CN/zh-TW/ru/de chưa có người bản ngữ duyệt.
 - Sprint-14 (R1 badge policy type, R3 `CloseButton` dùng chung, R2 auto-update từ GitHub Releases): **DONE** 2026-11-06, mọi PR đã merge vào `staging` (#7 R1+R3, #10 R2); #8 đưa sprint-12/13/14 R1-R3 lên `master`. Không có `report.md`.
 - Sprint-16 (export/import profile ra file JSON): đã có `sprints/sprint-16/requirement.md`, mọi câu hỏi đã chốt; chờ sprint-15 DONE mới bắt đầu.
 - Release: version hiện `0.0.1-beta.15` (`build/config.yml`), chỉ build Windows (bỏ macOS/Linux/iOS ở `cedf08a`); có workflow `release.yml` và `pre-release.yml` (pre-release từ `staging`).
