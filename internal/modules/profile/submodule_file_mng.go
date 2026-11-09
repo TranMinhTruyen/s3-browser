@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -158,18 +159,57 @@ func buildProfileFile(
 	return json.MarshalIndent(file, "", "  ")
 }
 
-// safeFileName replaces the characters Windows forbids in a file name; it never returns an empty name.
-func safeFileName(name string) string {
-	name = strings.Map(func(r rune) rune {
-		if r < 0x20 || strings.ContainsRune(`<>:"/\|?*`, r) {
-			return '_'
+// asciiFolds maps lower-case accented Latin letters (precomposed, incl. Vietnamese) to their ASCII letter.
+var asciiFolds = func() map[rune]rune {
+	folds := map[rune]rune{'đ': 'd', 'ð': 'd', 'ø': 'o', 'ł': 'l', 'ß': 's', 'æ': 'a', 'œ': 'o'}
+	for base, accented := range map[rune]string{
+		'a': "àáảãạăằắẳẵặâầấẩẫậäåāąǎ",
+		'e': "èéẻẽẹêềếểễệëēęěė",
+		'i': "ìíỉĩịïîīįı",
+		'o': "òóỏõọôồốổỗộơờớởỡợöōőǒ",
+		'u': "ùúủũụưừứửữựüûūůűųǔ",
+		'y': "ỳýỷỹỵÿ",
+		'c': "çćčĉċ",
+		'n': "ñńňņ",
+		's': "śšşŝș",
+		'z': "źžż",
+		'g': "ğĝġģ",
+		'r': "řŕŗ",
+		't': "ťţț",
+		'd': "ďđ",
+		'l': "ĺľļ",
+	} {
+		for _, r := range accented {
+			folds[r] = base
 		}
-		return r
-	}, name)
-	if name = strings.TrimRight(strings.TrimSpace(name), "."); name == "" {
-		return "profile"
 	}
-	return name
+	return folds
+}()
+
+// safeFileName turns a profile name into a snake_case ASCII file name (e.g. "Kết nối thử" -> "ket_noi_thu").
+// Letters that have no ASCII form are dropped; it never returns an empty name.
+func safeFileName(name string) string {
+	var sb strings.Builder
+	lastSep := true // true at the start so no leading "_"
+	for _, r := range strings.ToLower(name) {
+		if base, ok := asciiFolds[r]; ok {
+			r = base
+		}
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			sb.WriteRune(r)
+			lastSep = false
+		case r > unicode.MaxASCII && (unicode.IsLetter(r) || unicode.IsMark(r)):
+			// no ASCII form: drop
+		case !lastSep:
+			sb.WriteByte('_')
+			lastSep = true
+		}
+	}
+	if result := strings.TrimRight(sb.String(), "_"); result != "" {
+		return result
+	}
+	return "profile"
 }
 
 // importedProfile is a profile file ready to be created as a new profile.
