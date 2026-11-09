@@ -3,11 +3,13 @@
     "connect": "接続",
     "disconnect": "切断",
     "edit": "編集",
+    "export": "エクスポート",
     "delete": "削除"
   },
   "tooltip": {
     "connect": "接続",
     "createProfile": "接続プロファイルを作成",
+    "importProfile": "接続プロファイルをインポート",
     "refresh": "接続プロファイル一覧を再読み込み"
   },
   "profile": {

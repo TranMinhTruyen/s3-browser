@@ -1,5 +1,7 @@
 # Sprint 14: Hiển thị policy type trên từng bucket
 
+> **Trạng thái:** DONE (2026-11-06). R1 và R3 đã merge vào `staging` qua PR #7, R2 qua PR #10; PR #8 đưa R1, R3 lên `master`.
+
 ## Mục tiêu
 Người dùng nhìn danh sách bucket là biết ngay bucket nào private, public chỉ đọc hay custom policy, không phải mở "Access permission" hay drawer "Chi tiết" của từng bucket.
 
@@ -10,16 +12,16 @@ Người dùng nhìn danh sách bucket là biết ngay bucket nào private, publ
 - **Nền tảng:** Cả hai
 - **Màn hình liên quan:** trang bucket (`pages/tab/bucket`), `BucketItem`, `BucketListView`
 - **Tiêu chí chấp nhận:**
-  - [ ] Badge dùng đúng 3 chế độ và cách nhận diện của sprint-13 R2 (`readPolicyMode`, so policy theo ngữ nghĩa), cùng nhãn i18n đủ 7 ngôn ngữ.
-  - [ ] Không làm chậm lần hiện danh sách đầu: `ListBuckets` không chờ đọc policy.
-  - [ ] Chỉ đọc policy cho các dòng đang hiện trên màn hình (danh sách đã virtualize), gộp chung vào lần gọi kiểm tra quyền lười sẵn có (`CheckBucketAccess`) để không thêm lượt IPC.
-  - [ ] Backend gọi song song có giới hạn (`errgroup` + `SetLimit`), cache kết quả theo bucket (TTL 5 phút, giống `AccessCache`); cuộn lại không gọi lại.
-  - [ ] AWS thật: đọc policy theo region của bucket (giống sprint-13 Q33), không lỗi 301 với bucket khác region profile.
-  - [ ] Khi đang load: hiện placeholder/skeleton, không nhảy layout dòng (`LIST_ROW_HEIGHT` giữ nguyên).
-  - [ ] Không đọc được (403, không hỗ trợ, lỗi mạng): hiện `-` hoặc ẩn badge, không hiện toast lỗi, không làm hỏng dòng.
-  - [ ] Kết nối anonymous: không đọc policy (ẩn badge).
-  - [ ] Sau khi tạo bucket kèm quyền, lưu policy trong `BucketPolicyModal` hoặc xoá bucket: xoá cache của bucket đó để badge hiện đúng ngay.
-  - [ ] Kết quả tìm kiếm bucket (`SearchBucket`) cũng có badge theo cùng cơ chế.
+  - [x] Badge dùng đúng 3 chế độ và cách nhận diện của sprint-13 R2 (`readPolicyMode`, so policy theo ngữ nghĩa), cùng nhãn i18n đủ 7 ngôn ngữ.
+  - [x] Không làm chậm lần hiện danh sách đầu: `ListBuckets` không chờ đọc policy.
+  - [x] Chỉ đọc policy cho các dòng đang hiện trên màn hình (danh sách đã virtualize), gộp chung vào lần gọi kiểm tra quyền lười sẵn có (`CheckBucketAccess`) để không thêm lượt IPC.
+  - [x] Backend gọi song song có giới hạn (`errgroup` + `SetLimit`), cache kết quả theo bucket (TTL 5 phút, giống `AccessCache`); cuộn lại không gọi lại.
+  - [x] AWS thật: đọc policy theo region của bucket (giống sprint-13 Q33), không lỗi 301 với bucket khác region profile.
+  - [x] Khi đang load: hiện placeholder/skeleton, không nhảy layout dòng (`LIST_ROW_HEIGHT` giữ nguyên).
+  - [x] Không đọc được (403, không hỗ trợ, lỗi mạng): hiện `-` hoặc ẩn badge, không hiện toast lỗi, không làm hỏng dòng.
+  - [x] Kết nối anonymous: không đọc policy (ẩn badge).
+  - [x] Sau khi tạo bucket kèm quyền, lưu policy trong `BucketPolicyModal` hoặc xoá bucket: xoá cache của bucket đó để badge hiện đúng ngay.
+  - [x] Kết quả tìm kiếm bucket (`SearchBucket`) cũng có badge theo cùng cơ chế.
 
 ## Ngoài phạm vi
 - Trạng thái Block Public Access trên badge (xem trong drawer "Chi tiết").

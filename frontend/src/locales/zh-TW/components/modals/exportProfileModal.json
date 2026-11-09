@@ -1,0 +1,15 @@
+{
+  "title": "匯出設定檔",
+  "label": {
+    "includeSecret": "包含密鑰",
+    "password": "密碼",
+    "confirmPassword": "確認密碼"
+  },
+  "hint": {
+    "includeSecret": "密鑰將使用此密碼加密。請妥善保管檔案和密碼：忘記密碼將無法匯入該檔案。",
+    "noSavedSecret": "此設定檔沒有已儲存的密鑰。"
+  },
+  "button": {
+    "export": "匯出"
+  }
+}

@@ -1,0 +1,458 @@
+{
+  "01-main-window": {
+    "createProfile": {
+      "en": "Click here to create a connection profile",
+      "vi": "Nhấp vào đây để tạo hồ sơ kết nối",
+      "ja": "ここをクリックして接続プロファイルを作成",
+      "zh-CN": "点击此处创建连接配置文件",
+      "zh-TW": "按一下此處建立連線設定檔",
+      "ru": "Нажмите здесь, чтобы создать профиль подключения",
+      "de": "Hier klicken, um ein Verbindungsprofil zu erstellen"
+    }
+  },
+  "02-settings": {
+    "language": {
+      "en": "Choose the language, then click \"{{components/modals/settingModal:button.apply}}\" or \"{{components/modals/settingModal:button.save}}\"",
+      "vi": "Chọn ngôn ngữ, rồi nhấp \"{{components/modals/settingModal:button.apply}}\" hoặc \"{{components/modals/settingModal:button.save}}\"",
+      "ja": "言語を選び、「{{components/modals/settingModal:button.apply}}」または「{{components/modals/settingModal:button.save}}」をクリックします",
+      "zh-CN": "选择语言，然后点击“{{components/modals/settingModal:button.apply}}”或“{{components/modals/settingModal:button.save}}”",
+      "zh-TW": "選取語言，然後按一下「{{components/modals/settingModal:button.apply}}」或「{{components/modals/settingModal:button.save}}」",
+      "ru": "Выберите язык и нажмите «{{components/modals/settingModal:button.apply}}» или «{{components/modals/settingModal:button.save}}»",
+      "de": "Sprache wählen, dann „{{components/modals/settingModal:button.apply}}“ oder „{{components/modals/settingModal:button.save}}“ anklicken"
+    }
+  },
+  "03-connect-modal": {
+    "endpoint": {
+      "en": "Enter the endpoint, region and access keys of your storage",
+      "vi": "Nhập endpoint, {{components/inputs/inputs:regionCombobox.label}} và access key của kho lưu trữ",
+      "ja": "ストレージのエンドポイント、リージョン、アクセスキーを入力します",
+      "zh-CN": "输入存储的终端节点、区域和访问密钥",
+      "zh-TW": "輸入儲存空間的端點、區域和存取金鑰",
+      "ru": "Введите конечную точку, регион и ключи доступа",
+      "de": "Endpunkt, Region und Zugriffsschlüssel eingeben"
+    },
+    "save": {
+      "en": "Click \"{{components/modals/connectModal:form.button.createProfile}}\" to save the profile",
+      "vi": "Nhấp \"{{components/modals/connectModal:form.button.createProfile}}\" để lưu hồ sơ",
+      "ja": "「{{components/modals/connectModal:form.button.createProfile}}」をクリックして保存します",
+      "zh-CN": "点击“{{components/modals/connectModal:form.button.createProfile}}”保存配置文件",
+      "zh-TW": "按一下「{{components/modals/connectModal:form.button.createProfile}}」儲存設定檔",
+      "ru": "Нажмите «{{components/modals/connectModal:form.button.createProfile}}», чтобы сохранить профиль",
+      "de": "„{{components/modals/connectModal:form.button.createProfile}}“ anklicken, um das Profil zu speichern"
+    }
+  },
+  "04-profile-created": {
+    "profile": {
+      "en": "The new profile appears here",
+      "vi": "Hồ sơ mới xuất hiện ở đây",
+      "ja": "新しいプロファイルがここに表示されます",
+      "zh-CN": "新配置文件显示在这里",
+      "zh-TW": "新的設定檔會顯示在這裡",
+      "ru": "Новый профиль появится здесь",
+      "de": "Das neue Profil erscheint hier"
+    }
+  },
+  "05-profile-menu": {
+    "rightClick": {
+      "en": "Right-click the profile to open the menu of actions",
+      "vi": "Nhấp chuột phải vào hồ sơ để mở menu thao tác",
+      "ja": "プロファイルを右クリックして操作メニューを開きます",
+      "zh-CN": "右键单击配置文件，打开操作菜单",
+      "zh-TW": "在設定檔上按一下滑鼠右鍵，開啟操作選單",
+      "ru": "Щёлкните профиль правой кнопкой мыши, чтобы открыть меню",
+      "de": "Profil rechtsklicken, um das Aktionsmenü zu öffnen"
+    }
+  },
+  "06-bucket-list": {
+    "profile": {
+      "en": "Select a profile, then click \"{{pages/tab/tabLayout:tooltip.connect}}\" to list its buckets",
+      "vi": "Chọn hồ sơ, rồi nhấp \"{{pages/tab/tabLayout:tooltip.connect}}\" để xem danh sách bucket",
+      "ja": "プロファイルを選び、「{{pages/tab/tabLayout:tooltip.connect}}」をクリックしてバケット一覧を表示します",
+      "zh-CN": "选择配置文件，然后点击“{{pages/tab/tabLayout:tooltip.connect}}”列出存储桶",
+      "zh-TW": "選取設定檔，然後按一下「{{pages/tab/tabLayout:tooltip.connect}}」列出儲存貯體",
+      "ru": "Выберите профиль и нажмите «{{pages/tab/tabLayout:tooltip.connect}}», чтобы увидеть бакеты",
+      "de": "Profil wählen, dann „{{pages/tab/tabLayout:tooltip.connect}}“ anklicken, um die Buckets aufzulisten"
+    }
+  },
+  "07-bucket-search": {
+    "search": {
+      "en": "Type part of a bucket name and press Enter",
+      "vi": "Nhập một phần tên bucket rồi nhấn Enter",
+      "ja": "バケット名の一部を入力して Enter を押します",
+      "zh-CN": "输入存储桶名称的一部分，然后按 Enter",
+      "zh-TW": "輸入儲存貯體名稱的一部分，然後按 Enter",
+      "ru": "Введите часть имени бакета и нажмите Enter",
+      "de": "Teil des Bucket-Namens eingeben und Enter drücken"
+    }
+  },
+  "08-object-list": {
+    "folder": {
+      "en": "Click a folder to open it",
+      "vi": "Nhấp vào thư mục để mở",
+      "ja": "フォルダーをクリックして開きます",
+      "zh-CN": "点击文件夹即可打开",
+      "zh-TW": "按一下資料夾即可開啟",
+      "ru": "Нажмите на папку, чтобы открыть её",
+      "de": "Ordner anklicken, um ihn zu öffnen"
+    }
+  },
+  "09-object-folder": {
+    "file": {
+      "en": "Click a file to see its details",
+      "vi": "Nhấp vào file để xem chi tiết",
+      "ja": "ファイルをクリックして詳細を表示します",
+      "zh-CN": "点击文件查看详情",
+      "zh-TW": "按一下檔案查看詳細資料",
+      "ru": "Нажмите на файл, чтобы увидеть сведения",
+      "de": "Datei anklicken, um Details zu sehen"
+    }
+  },
+  "10-object-detail": {
+    "detail": {
+      "en": "Details of the selected object",
+      "vi": "Chi tiết của object đã chọn",
+      "ja": "選択したオブジェクトの詳細",
+      "zh-CN": "所选对象的详情",
+      "zh-TW": "所選物件的詳細資料",
+      "ru": "Сведения о выбранном объекте",
+      "de": "Details des ausgewählten Objekts"
+    }
+  },
+  "11-object-selection": {
+    "selected": {
+      "en": "Tick the checkboxes to select several objects",
+      "vi": "Tích vào ô chọn để chọn nhiều object",
+      "ja": "チェックボックスをオンにして複数のオブジェクトを選択します",
+      "zh-CN": "勾选复选框以选择多个对象",
+      "zh-TW": "勾選核取方塊以選取多個物件",
+      "ru": "Отметьте флажки, чтобы выбрать несколько объектов",
+      "de": "Kontrollkästchen anhaken, um mehrere Objekte auszuwählen"
+    }
+  },
+  "12-object-search": {
+    "search": {
+      "en": "Type a keyword and press Enter to search the current folder",
+      "vi": "Nhập từ khóa rồi nhấn Enter để tìm trong thư mục hiện tại",
+      "ja": "キーワードを入力して Enter を押すと、現在のフォルダー内を検索します",
+      "zh-CN": "输入关键字并按 Enter，在当前文件夹中搜索",
+      "zh-TW": "輸入關鍵字並按 Enter，在目前的資料夾中搜尋",
+      "ru": "Введите ключевое слово и нажмите Enter для поиска в текущей папке",
+      "de": "Suchbegriff eingeben und Enter drücken, um den aktuellen Ordner zu durchsuchen"
+    }
+  },
+  "13-upload-modal": {
+    "drop": {
+      "en": "Drag and drop files or folders here, or pick them with the buttons",
+      "vi": "Kéo thả file hoặc thư mục vào đây, hoặc chọn bằng các nút",
+      "ja": "ここにファイルやフォルダーをドラッグ＆ドロップするか、ボタンで選択します",
+      "zh-CN": "将文件或文件夹拖放到此处，或使用按钮选择",
+      "zh-TW": "將檔案或資料夾拖放到此處，或使用按鈕選取",
+      "ru": "Перетащите сюда файлы или папки либо выберите их кнопками",
+      "de": "Dateien oder Ordner hierher ziehen oder mit den Schaltflächen wählen"
+    }
+  },
+  "14-upload-modal-files": {
+    "files": {
+      "en": "Check the selected files, then start the upload",
+      "vi": "Kiểm tra các file đã chọn rồi bắt đầu tải lên",
+      "ja": "選択したファイルを確認してから、アップロードを開始します",
+      "zh-CN": "检查所选文件，然后开始上传",
+      "zh-TW": "檢查所選檔案，然後開始上傳",
+      "ru": "Проверьте выбранные файлы и начните загрузку",
+      "de": "Ausgewählte Dateien prüfen, dann das Hochladen starten"
+    }
+  },
+  "15-upload-progress": {
+    "progress": {
+      "en": "Upload progress of each file",
+      "vi": "Tiến độ tải lên của từng file",
+      "ja": "各ファイルのアップロード進捗",
+      "zh-CN": "每个文件的上传进度",
+      "zh-TW": "每個檔案的上傳進度",
+      "ru": "Ход загрузки каждого файла",
+      "de": "Upload-Fortschritt jeder Datei"
+    }
+  },
+  "16-object-uploaded": {
+    "file": {
+      "en": "The uploaded file is now in the bucket",
+      "vi": "File đã tải lên nay nằm trong bucket",
+      "ja": "アップロードしたファイルがバケットに追加されました",
+      "zh-CN": "上传的文件现已在存储桶中",
+      "zh-TW": "上傳的檔案現在已在儲存貯體中",
+      "ru": "Загруженный файл теперь находится в бакете",
+      "de": "Die hochgeladene Datei liegt jetzt im Bucket"
+    }
+  },
+  "17-delete-confirm": {
+    "confirm": {
+      "en": "Click \"{{components/modals/deleteConfirmModal:delete}}\" to confirm the deletion",
+      "vi": "Nhấp \"{{components/modals/deleteConfirmModal:delete}}\" để xác nhận xóa",
+      "ja": "「{{components/modals/deleteConfirmModal:delete}}」をクリックして削除を確定します",
+      "zh-CN": "点击“{{components/modals/deleteConfirmModal:delete}}”确认删除",
+      "zh-TW": "按一下「{{components/modals/deleteConfirmModal:delete}}」確認刪除",
+      "ru": "Нажмите «{{components/modals/deleteConfirmModal:delete}}», чтобы подтвердить удаление",
+      "de": "„{{components/modals/deleteConfirmModal:delete}}“ anklicken, um das Löschen zu bestätigen"
+    }
+  },
+  "18-profile-delete-confirm": {
+    "confirm": {
+      "en": "Click \"{{common:button.OK}}\" to delete the profile",
+      "vi": "Nhấp \"{{common:button.OK}}\" để xóa hồ sơ",
+      "ja": "「{{common:button.OK}}」をクリックしてプロファイルを削除します",
+      "zh-CN": "点击“{{common:button.OK}}”删除配置文件",
+      "zh-TW": "按一下「{{common:button.OK}}」刪除設定檔",
+      "ru": "Нажмите «{{common:button.OK}}», чтобы удалить профиль",
+      "de": "„{{common:button.OK}}“ anklicken, um das Profil zu löschen"
+    }
+  },
+  "19-download-progress": {
+    "progress": {
+      "en": "Download progress of each file",
+      "vi": "Tiến độ tải xuống của từng file",
+      "ja": "各ファイルのダウンロード進捗",
+      "zh-CN": "每个文件的下载进度",
+      "zh-TW": "每個檔案的下載進度",
+      "ru": "Ход скачивания каждого файла",
+      "de": "Download-Fortschritt jeder Datei"
+    }
+  },
+  "21-error-invalid-credentials": {
+    "cause": {
+      "en": "Wrong access key or secret key: check your credentials",
+      "vi": "Access key hoặc secret key sai: hãy kiểm tra thông tin xác thực",
+      "ja": "アクセスキーまたはシークレットキーが違います。認証情報を確認してください",
+      "zh-CN": "访问密钥或秘密密钥错误：请检查凭证",
+      "zh-TW": "存取金鑰或私密金鑰錯誤：請檢查憑證",
+      "ru": "Неверный ключ доступа или секретный ключ: проверьте учётные данные",
+      "de": "Zugriffsschlüssel oder geheimer Schlüssel falsch: Anmeldedaten prüfen"
+    }
+  },
+  "22-error-endpoint": {
+    "cause": {
+      "en": "The endpoint cannot be reached: check the address and the network",
+      "vi": "Không kết nối được tới endpoint: hãy kiểm tra địa chỉ và mạng",
+      "ja": "エンドポイントに接続できません。アドレスとネットワークを確認してください",
+      "zh-CN": "无法连接到终端节点：请检查地址和网络",
+      "zh-TW": "無法連線到端點：請檢查位址和網路",
+      "ru": "Конечная точка недоступна: проверьте адрес и сеть",
+      "de": "Endpunkt nicht erreichbar: Adresse und Netzwerk prüfen"
+    }
+  },
+  "23-auth-types": {
+    "types": {
+      "en": "Choose how to authenticate",
+      "vi": "Chọn cách xác thực",
+      "ja": "認証方式を選びます",
+      "zh-CN": "选择身份验证方式",
+      "zh-TW": "選取驗證方式",
+      "ru": "Выберите способ аутентификации",
+      "de": "Authentifizierungsmethode wählen"
+    }
+  },
+  "24-auth-assume-role": {
+    "type": {
+      "en": "Choose the {{components/modals/connectModal:form.label.authType}}, then fill in its fields below",
+      "vi": "Chọn phương thức xác thực, rồi điền các trường bên dưới",
+      "ja": "認証方式を選び、下の項目を入力します",
+      "zh-CN": "选择身份验证方式，然后填写下方字段",
+      "zh-TW": "選取驗證方式，然後填寫下方欄位",
+      "ru": "Выберите способ аутентификации и заполните поля ниже",
+      "de": "{{components/modals/connectModal:form.label.authType}} wählen, dann die Felder darunter ausfüllen"
+    }
+  },
+  "25-auth-minio-sts": {
+    "type": {
+      "en": "Choose the {{components/modals/connectModal:form.label.authType}}, then fill in its fields below",
+      "vi": "Chọn phương thức xác thực, rồi điền các trường bên dưới",
+      "ja": "認証方式を選び、下の項目を入力します",
+      "zh-CN": "选择身份验证方式，然后填写下方字段",
+      "zh-TW": "選取驗證方式，然後填寫下方欄位",
+      "ru": "Выберите способ аутентификации и заполните поля ниже",
+      "de": "{{components/modals/connectModal:form.label.authType}} wählen, dann die Felder darunter ausfüllen"
+    }
+  },
+  "26-auth-ldap": {
+    "type": {
+      "en": "Choose the {{components/modals/connectModal:form.label.authType}}, then fill in its fields below",
+      "vi": "Chọn phương thức xác thực, rồi điền các trường bên dưới",
+      "ja": "認証方式を選び、下の項目を入力します",
+      "zh-CN": "选择身份验证方式，然后填写下方字段",
+      "zh-TW": "選取驗證方式，然後填寫下方欄位",
+      "ru": "Выберите способ аутентификации и заполните поля ниже",
+      "de": "{{components/modals/connectModal:form.label.authType}} wählen, dann die Felder darunter ausfüllen"
+    }
+  },
+  "27-auth-oidc": {
+    "type": {
+      "en": "Choose the {{components/modals/connectModal:form.label.authType}}, then fill in its fields below",
+      "vi": "Chọn phương thức xác thực, rồi điền các trường bên dưới",
+      "ja": "認証方式を選び、下の項目を入力します",
+      "zh-CN": "选择身份验证方式，然后填写下方字段",
+      "zh-TW": "選取驗證方式，然後填寫下方欄位",
+      "ru": "Выберите способ аутентификации и заполните поля ниже",
+      "de": "{{components/modals/connectModal:form.label.authType}} wählen, dann die Felder darunter ausfüllen"
+    }
+  },
+  "28-auth-certificate": {
+    "type": {
+      "en": "Choose the {{components/modals/connectModal:form.label.authType}}, then fill in its fields below",
+      "vi": "Chọn phương thức xác thực, rồi điền các trường bên dưới",
+      "ja": "認証方式を選び、下の項目を入力します",
+      "zh-CN": "选择身份验证方式，然后填写下方字段",
+      "zh-TW": "選取驗證方式，然後填寫下方欄位",
+      "ru": "Выберите способ аутентификации и заполните поля ниже",
+      "de": "{{components/modals/connectModal:form.label.authType}} wählen, dann die Felder darunter ausfüllen"
+    }
+  },
+  "29-bucket-menu": {
+    "menu": {
+      "en": "Actions of the bucket",
+      "vi": "Các thao tác của bucket",
+      "ja": "バケットの操作",
+      "zh-CN": "存储桶的操作",
+      "zh-TW": "儲存貯體的操作",
+      "ru": "Действия с бакетом",
+      "de": "Aktionen des Buckets"
+    }
+  },
+  "30-bucket-detail": {
+    "detail": {
+      "en": "Details of the bucket",
+      "vi": "Chi tiết của bucket",
+      "ja": "バケットの詳細",
+      "zh-CN": "存储桶的详情",
+      "zh-TW": "儲存貯體的詳細資料",
+      "ru": "Сведения о бакете",
+      "de": "Details des Buckets"
+    }
+  },
+  "31-bucket-create": {
+    "name": {
+      "en": "Enter the new bucket name",
+      "vi": "Nhập tên bucket mới",
+      "ja": "新しいバケットの名前を入力します",
+      "zh-CN": "输入新存储桶的名称",
+      "zh-TW": "輸入新儲存貯體的名稱",
+      "ru": "Введите имя нового бакета",
+      "de": "Namen des neuen Buckets eingeben"
+    },
+    "permission": {
+      "en": "Choose who can access the bucket",
+      "vi": "Chọn ai được truy cập bucket",
+      "ja": "バケットにアクセスできるユーザーを選びます",
+      "zh-CN": "选择谁可以访问存储桶",
+      "zh-TW": "選取誰可以存取儲存貯體",
+      "ru": "Выберите, кто имеет доступ к бакету",
+      "de": "Wählen, wer auf den Bucket zugreifen darf"
+    }
+  },
+  "32-bucket-policy": {
+    "policy": {
+      "en": "Edit the bucket policy as JSON",
+      "vi": "Sửa policy của bucket dưới dạng JSON",
+      "ja": "バケットポリシーを JSON で編集します",
+      "zh-CN": "以 JSON 编辑存储桶策略",
+      "zh-TW": "以 JSON 編輯儲存貯體政策",
+      "ru": "Измените политику бакета в формате JSON",
+      "de": "Bucket-Richtlinie als JSON bearbeiten"
+    }
+  },
+  "33-bucket-delete": {
+    "confirmName": {
+      "en": "Type the bucket name to confirm the deletion",
+      "vi": "Nhập tên bucket để xác nhận xóa",
+      "ja": "削除を確定するには、バケット名を入力します",
+      "zh-CN": "输入存储桶名称以确认删除",
+      "zh-TW": "輸入儲存貯體名稱以確認刪除",
+      "ru": "Введите имя бакета, чтобы подтвердить удаление",
+      "de": "Bucket-Namen eingeben, um das Löschen zu bestätigen"
+    }
+  },
+  "34-settings-update": {
+    "update": {
+      "en": "Check for new versions and update here",
+      "vi": "Kiểm tra phiên bản mới và cập nhật tại đây",
+      "ja": "新しいバージョンの確認と更新はここで行います",
+      "zh-CN": "在此检查新版本并更新",
+      "zh-TW": "在此檢查新版本並更新",
+      "ru": "Проверка новых версий и обновление здесь",
+      "de": "Hier nach neuen Versionen suchen und aktualisieren"
+    }
+  },
+  "35-update-downloading": {
+    "toast": {
+      "en": "The update is downloading",
+      "vi": "Bản cập nhật đang được tải xuống",
+      "ja": "アップデートをダウンロードしています",
+      "zh-CN": "正在下载更新",
+      "zh-TW": "正在下載更新",
+      "ru": "Обновление скачивается",
+      "de": "Das Update wird heruntergeladen"
+    }
+  },
+  "36-update-ready": {
+    "toast": {
+      "en": "The update is ready to install",
+      "vi": "Bản cập nhật đã sẵn sàng để cài đặt",
+      "ja": "アップデートのインストール準備ができました",
+      "zh-CN": "更新已可安装",
+      "zh-TW": "更新已可安裝",
+      "ru": "Обновление готово к установке",
+      "de": "Das Update ist installationsbereit"
+    }
+  },
+  "37-profile-export-menu": {
+    "menu": {
+      "en": "Right-click the profile, then choose \"{{components/layouts/navbar/connectionProfiles:contextMenu.export}}\"",
+      "vi": "Bấm chuột phải vào hồ sơ, rồi chọn \"{{components/layouts/navbar/connectionProfiles:contextMenu.export}}\"",
+      "ja": "プロファイルを右クリックし、「{{components/layouts/navbar/connectionProfiles:contextMenu.export}}」を選びます",
+      "zh-CN": "右键点击配置文件，然后选择“{{components/layouts/navbar/connectionProfiles:contextMenu.export}}”",
+      "zh-TW": "在設定檔上按一下滑鼠右鍵，然後選取「{{components/layouts/navbar/connectionProfiles:contextMenu.export}}」",
+      "ru": "Щёлкните профиль правой кнопкой мыши и выберите «{{components/layouts/navbar/connectionProfiles:contextMenu.export}}»",
+      "de": "Rechtsklicken Sie auf das Profil und wählen Sie „{{components/layouts/navbar/connectionProfiles:contextMenu.export}}“"
+    }
+  },
+  "38-profile-export-modal": {
+    "secret": {
+      "en": "Tick \"{{components/modals/exportProfileModal:label.includeSecret}}\" to export the saved secrets, encrypted with a password",
+      "vi": "Chọn \"{{components/modals/exportProfileModal:label.includeSecret}}\" để xuất cả secret đã lưu, được mã hoá bằng mật khẩu",
+      "ja": "「{{components/modals/exportProfileModal:label.includeSecret}}」をオンにすると、保存済みのシークレットをパスワードで暗号化してエクスポートします",
+      "zh-CN": "勾选“{{components/modals/exportProfileModal:label.includeSecret}}”可导出已保存的密钥，并用密码加密",
+      "zh-TW": "勾選「{{components/modals/exportProfileModal:label.includeSecret}}」可匯出已儲存的密鑰，並以密碼加密",
+      "ru": "Включите «{{components/modals/exportProfileModal:label.includeSecret}}», чтобы экспортировать сохранённые секреты, зашифрованные паролем",
+      "de": "Aktivieren Sie „{{components/modals/exportProfileModal:label.includeSecret}}“, um die gespeicherten Geheimnisse mit einem Passwort verschlüsselt zu exportieren"
+    },
+    "password": {
+      "en": "Enter a password of at least 8 characters, then type it again",
+      "vi": "Nhập mật khẩu có ít nhất 8 ký tự, rồi nhập lại",
+      "ja": "8 文字以上のパスワードを入力し、もう一度入力します",
+      "zh-CN": "输入至少 8 个字符的密码，然后再输入一次",
+      "zh-TW": "輸入至少 8 個字元的密碼，然後再輸入一次",
+      "ru": "Введите пароль не короче 8 символов и повторите его",
+      "de": "Geben Sie ein Passwort mit mindestens 8 Zeichen ein und wiederholen Sie es"
+    }
+  },
+  "39-profile-import-button": {
+    "import": {
+      "en": "Click here to import a profile from a JSON file",
+      "vi": "Nhấp vào đây để nhập hồ sơ từ tệp JSON",
+      "ja": "ここをクリックして JSON ファイルからプロファイルをインポート",
+      "zh-CN": "点击此处从 JSON 文件导入配置文件",
+      "zh-TW": "按一下此處從 JSON 檔案匯入設定檔",
+      "ru": "Нажмите здесь, чтобы импортировать профиль из файла JSON",
+      "de": "Hier klicken, um ein Profil aus einer JSON-Datei zu importieren"
+    }
+  },
+  "40-profile-import-password": {
+    "password": {
+      "en": "Enter the password that was used when the file was exported",
+      "vi": "Nhập mật khẩu đã dùng khi xuất tệp",
+      "ja": "ファイルのエクスポート時に使用したパスワードを入力します",
+      "zh-CN": "输入导出该文件时使用的密码",
+      "zh-TW": "輸入匯出該檔案時使用的密碼",
+      "ru": "Введите пароль, использованный при экспорте файла",
+      "de": "Geben Sie das Passwort ein, das beim Export der Datei verwendet wurde"
+    }
+  }
+}

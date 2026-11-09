@@ -4,25 +4,29 @@
 
 ## 1. Trạng thái hiện tại
 
-- Cập nhật: 2026-11-05.
-- Sprint gần nhất: sprint-13 (tạo bucket, sửa bucket policy, drawer chi tiết, xoá bucket, đặt quyền khi tạo): **DONE** 2026-11-05, R1–R6 merge vào `staging` qua PR #6 (merge commit `47286aa`).
-- Sprint-12 DONE 2026-11-04, mọi PR đã merge vào `staging`.
-- Repo đã tách khỏi monorepo ngày 2026-11-03 (`TranMinhTruyen/s3-browser`); sprint branch tách từ `origin/staging`.
-- Sprint-14 (badge policy type trên từng `BucketItem`, load lười dòng đang hiện, cache 5 phút): đã có `sprints/sprint-14/requirement.md`, chưa lập plan.
-- Lưu ý: các mục test tay của sprint-13 (bucket khác region, Object Lock/versioning khi xoá, xoá file/folder sau khi sửa `batchDeleter`, tạo bucket public trên AWS) chưa ghi nhận kết quả; gặp lỗi thì mở sprint sửa.
-- Việc tiếp theo: làm sprint-14; cập nhật docs ARCHITECTURE và user guide (còn nợ từ sprint-11).
+- Cập nhật: 2026-11-09.
+- Sprint-16 (export/import profile ra file JSON, user guide, công tắc cập nhật có hiệu lực ngay): **DONE** 2026-11-09; PR #17 (R4), #18 (R1+R2), #19 (R3) và commit `a372dbe` (khoảng cách danh sách profile, người dùng commit thẳng) đã nằm trên `SP-16/release` (đỉnh `925ee61`). PR `SP-16/sprint_docs` (requirement, plan, report, memory) vào release và PR `SP-16/release` → `staging` chờ người dùng merge (docs trước, promote sau). Bản dịch vi/ja/zh-CN/zh-TW/ru/de của phần mới chưa có người bản ngữ duyệt.
+- Sprint-15 (tài liệu v0.1: README, user guide + PDF, ARCHITECTURE, CHANGELOG 0.1.0, `shots.mjs` chụp ảnh có ghi chú): **DONE** 2026-11-09, đã lên `staging` (`5570c4d`).
+- Sprint-14 (badge policy type, `CloseButton` dùng chung, auto-update từ GitHub Releases): **DONE** 2026-11-06, đã lên `staging`; #8 đưa sprint-12/13/14 R1-R3 lên `master`. Không có `report.md`.
+- Release: version hiện `0.0.1-beta.15` (`build/config.yml`), chỉ build Windows (bỏ macOS/Linux/iOS ở `cedf08a`); có workflow `release.yml` và `pre-release.yml` (pre-release từ `staging`).
+- Sprint-13 DONE 2026-11-05 (PR #6); sprint-12 DONE 2026-11-04.
+- Repo đã tách khỏi monorepo ngày 2026-11-03 (`TranMinhTruyen/s3-browser`); từ sprint-15 dùng luồng `SP-NN/release` (mục 2).
+- 2026-11-06: thêm agent `go-tester` và quy tắc test hồi quy (xem `CLAUDE.md` mục 4 và 10).
+- Chưa test tay: lưu đè file ở hộp thoại lưu native của Windows, `AddFilter`/`AttachToWindow` của `SaveFile()` (docs Wails 403), tốc độ 600.000 vòng PBKDF2 trên máy yếu; các mục test tay của sprint-13 (bucket khác region, Object Lock/versioning khi xoá, xoá file/folder sau khi sửa `batchDeleter`, tạo bucket public trên AWS) chưa ghi nhận kết quả; gặp lỗi thì mở sprint sửa.
+- Việc tiếp theo: người dùng merge PR sprint_docs rồi PR `SP-16/release` → `staging` (ra bản beta), sau đó mở sprint-17.
 
 ## 2. Quyết định
 
 <!-- Cộng dồn. Mẫu: - YYYY-MM-DD [sprint-NN] quyết định — lý do. Quyết định bị thay thế thì xoá dòng cũ, ghi dòng mới. -->
 
-- 2026-10-28 [quy trình] Mỗi yêu cầu một branch `SP-NN/<slug>` và một PR riêng, tách từ `origin/staging` — PR nhỏ, review và merge độc lập.
+- 2026-11-06 [quy trình] Mỗi sprint có `SP-NN/release` tạo từ `origin/staging`; mỗi yêu cầu một branch `SP-NN/<slug>` tách từ release ngay khi tới lượt (không chờ merge), tự push + PR vào release không hỏi; feature không PR vào `staging` — gom code sprint, chỉ đưa lên staging khi đã test.
+- 2026-11-06 [quy trình] Sprint DONE (người dùng báo sau khi test, `sprint-NN DONE`): branch `SP-NN/sprint_docs` PR docs + memory vào release, rồi PR `SP-NN/release` → `staging` để ra bản beta — cần người dùng đồng ý.
 - 2026-10-28 [quy trình] Agent không bao giờ merge PR; người dùng tự merge — giữ quyền kiểm soát master.
 - 2026-10-27 [quy trình] Commit message và PR bằng tiếng Anh, Conventional Commits — thống nhất lịch sử git.
-- 2026-10-28 [testing] Backend Go không viết unit test; chỉ frontend, C1 ≥ 95% mỗi file đã đổi — người dùng bỏ go-tester.
+- 2026-11-06 [testing] Mọi function đã sửa (FE và Go) phải test hồi quy; Go dùng test tạm do `go-tester` viết, chạy xong xoá, không commit `*_test.go`; FE giữ C1 ≥ 95% và chạy toàn bộ vitest — người dùng muốn chặn bug hồi quy nhưng không giữ test Go trong repo (thay quyết định 2026-10-28 bỏ go-tester).
 - 2026-10-27 [testing] Test FE đặt trong `frontend/src/test/` theo cây `src/`, import qua `@/` — tách test khỏi code.
 - 2026-10-30 [sprint-11] Giữ SQLite cho profile (cột JSON `auth_config`, `auth_secret` mã hoá), không chuyển sang file JSON.
-- 2026-11-01 [quy trình] Memory này chỉ orchestrator ghi ở B5, commit cùng branch cuối của sprint — tránh conflict giữa các PR và không chặn `git-flow` tách branch.
+- 2026-11-01 [quy trình] Memory này chỉ orchestrator ghi ở B5, commit trên `SP-NN/sprint_docs` khi sprint DONE — tránh conflict giữa các PR và không chặn `git-flow` tách branch.
 - 2026-11-02 [quy trình] Harness chặn subagent ghi `report.md`; orchestrator soạn nội dung, session chính ghi `report.md` + `MEMORY.md` khi người dùng đồng ý.
 - 2026-11-02 [sprint-11] OIDC chỉ public client + PKCE; phiên đăng nhập chỉ ở RAM, dùng lại tới min(exp, 10 phút), FE chỉ giữ sessionId — không lưu token.
 - 2026-11-02 [sprint-11] URL IdP (issuer, endpoint discovery) chỉ https hoặc http loopback (`utils.IsSecureUrl`) — chặn MITM/scheme lạ khi mở trình duyệt.
@@ -31,7 +35,7 @@
 - 2026-11-02 [sprint-11] madmin đọc credential qua provider từ SwapCreds — Reauth có hiệu lực ngay.
 - 2026-11-02 [quy trình] Môi trường test (`test-env/` ở gốc repo, gồm `test-profiles.txt`) dùng chung cho mọi sprint — chuyển ra khỏi `sprints/sprint-11/` để sprint sau dùng lại tài khoản test.
 - 2026-11-02 [sprint-11] Badge/Button variant light truyền màu gốc `var(--mantine-color-<c>-6)`; `-light-color` chỉ cho chữ/viền.
-- 2026-11-04 [quy trình] Branch sprint tách từ `origin/staging`, `master` chỉ qua PR staging -> master do người dùng tạo — repo tách khỏi monorepo, master là branch release.
+- 2026-11-04 [quy trình] `master` chỉ qua PR staging -> master do người dùng tạo — repo tách khỏi monorepo, master là branch release.
 - 2026-11-04 [sprint-12] Sprint dừng đo tay theo nhóm: (R5,R6,R1), (R2,R4,R3), (R7a,R7b), (R8c,R8d,R8e) — người dùng kiểm hiệu năng thủ công trước khi sang nhóm sau.
 - 2026-11-04 [sprint-12] Key i18n chỉ xoá khi grep toàn FE không còn dùng, kể cả key động (`authType.*`, `form.button.${mode}`, `confirmCode.*`) — tránh hiện key thô.
 - 2026-11-04 [sprint-12] Export chỉ test dùng (knip --production báo) không coi là code chết — CLAUDE.md mục 8.
@@ -50,6 +54,14 @@
 - 2026-11-05 [sprint-13] Đặt quyền khi tạo bucket: backend một call, kiểm JSON trước khi tạo; đặt policy lỗi thì giữ bucket, `Result=true` + `S3W012` (BPA chặn policy public) hoặc `S3W011` (lỗi khác), không rollback (Q24, Q26); AWS retry `NoSuchBucket` 3 lần x 1 giây (Q27).
 - 2026-11-05 [sprint-13] Get/put bucket policy dùng region của bucket (`readBucketRegion`) với AWS thật — tránh lỗi 301 với bucket khác region profile (Q33).
 - 2026-11-05 [frontend] Toast sonner mặc định tự ẩn sau 10 giây (`duration` ở `<Toaster>` trong `App.tsx`); toast credential sắp hết hạn giữ `Infinity` — người dùng chọn.
+- 2026-11-06 [docs] Mọi tài liệu (README, CHANGELOG, ARCHITECTURE, user guide + PDF + ảnh) viết đủ 7 ngôn ngữ, tên file theo mã locale app (`README.zh-CN.md`, `docs/user-guide/<mã>/`); viết `en` trước rồi dịch, nhãn UI lấy nguyên văn từ locale app — sprint-15 Q1-B, Q20, Q21. Sprint sau sửa tài liệu phải sửa đủ 7 bản.
+- 2026-11-08 [docs] Ảnh docs luôn có ghi chú do `shots.mjs` vẽ (khung theo `boundingBox()`), chuỗi trong `docs/scripts/annotations.json` đủ 7 ngôn ngữ; ảnh mới phải thêm khoá, script tự thoát nếu thiếu; README dùng chung ảnh có ghi chú — sprint-15 Q25–Q27, Q30.
+- 2026-11-09 [sprint-16] Export profile: PBKDF2-SHA256 600.000 vòng, salt 16 byte, AES-256-GCM nonce 12 byte (stdlib, không đổi `go.mod`), mật khẩu tối thiểu 8 ký tự (đếm code point), file ghi quyền 0o600, import tối đa 1 MB; định dạng `{"format":"s3browser-profile","version":1,...}` — người dùng chốt, `version` giữ 1 vì chưa phát hành.
+- 2026-11-09 [sprint-16] AAD của AES-GCM = JSON `["s3browser-profile", provider, endpoint, authType]`; sửa một trong ba trường thì import báo `PFE014` như sai mật khẩu, sửa name/color vẫn mở được — chặn gắn secret vào profile khác.
+- 2026-11-09 [sprint-16] Import không tự kết nối (kể cả `autoConnect`), tên trùng thêm ` (2)`, ` (3)`; đường dẫn file (CA, cert, key, config, credentials) không tồn tại hoặc là đường dẫn mạng/thiết bị bị xoá trống, vẫn nhập và cảnh báo `PFW001` (Q6=A), chỉ một toast `PFW001` thay vì kèm `PFS001`.
+- 2026-11-09 [sprint-16] Export không kèm secret mà profile có secret đã lưu thì xác nhận bằng `ConfirmModal` mã `C000011`; tên file gợi ý snake_case ASCII (bảng ở `internal/pkg/cnst/file_name.go`) — người dùng yêu cầu giữa sprint.
+- 2026-11-09 [sprint-16] Công tắc `betaUpdate`/`autoUpdate` trong Settings có hiệu lực ngay với updater (không ghi `settings.json`), Apply giữ chúng, Cancel/Bỏ thay đổi revert; đóng modal khi còn thay đổi chưa lưu thì hiện cảnh báo 3 nút; Cancel ở footer không cảnh báo — người dùng chốt.
+- 2026-11-09 [quy trình] Người dùng có thể commit thẳng lên `SP-NN/release` (sprint-16: `a372dbe`) và cho `git-flow` ngoại lệ mang `requirement.md` (M) và `plan.md` (??) sang branch mới — hai file đó chỉ vào branch `sprint_docs`, không vào branch feature.
 
 ## 3. Lỗi và bẫy đã gặp
 
@@ -84,6 +96,20 @@
 - 2026-11-05 [test] `WarningIcon.test.tsx` fail khi chạy cả bộ lúc máy tải nặng (`findByRole('tooltip')` quá thời gian), pass khi chạy riêng — nghi flaky, ngoài sprint-13.
 - 2026-11-05 [wails] Docs https://v3.wails.io/ trả 403 cho agent — tránh dùng API Wails mới, ghi "chưa xác minh" trong plan.
 - 2026-11-05 [quy trình] Orchestrator chạy làm subagent của session chính được (gọi được agent con), nhận B3 do session chính chuyển; dừng do rate limit thì SendMessage để chạy tiếp.
+- 2026-11-09 [docs] Server mode không điều khiển được hộp thoại native, kéo thả, đăng nhập OIDC ngoài, updater (bản portable) — `shots.mjs` tiêm event Wails qua `window._wails.dispatchWailsEvent` để có UI thật với dữ liệu giả.
+- 2026-11-09 [quy trình] Commit/PR do người dùng tự đưa vào `SP-NN/release` có thể nằm ngoài phạm vi sprint (sprint-15: bump deps trong PR #12, bỏ macOS/Linux + đổi version ở `cedf08a`) — khi đóng sprint so `origin/staging..origin/SP-NN/release` và ghi vào report.
+- 2026-11-09 [sprint-16] Đường dẫn UNC (`\\host`, `\\?\`, `\\.\`, `//host`) bị `os.Stat` có thể làm lộ NTLM qua SMB — chỉ `Stat` đường dẫn tương đối hoặc dạng ổ đĩa `X:`; `isUnsafePath` là allowlist, các dạng mạng/thiết bị bị xoá mà không `Stat`.
+- 2026-11-09 [sprint-16] Cờ bỏ qua thiếu cert/key khi import quá rộng (đường dẫn vốn rỗng vẫn qua) — chỉ bỏ qua khi `certFile`/`keyFile` vừa bị xoá trống.
+- 2026-11-09 [sprint-16] Ghép AAD bằng nối chuỗi với `|` mơ hồ — dùng `json.Marshal([]string{...})`.
+- 2026-11-09 [sprint-16] Đếm độ dài mật khẩu bằng UTF-16 làm FE lệch backend — FE dùng `[...value].length` (code point).
+- 2026-11-09 [test] v8 coverage tính sai nhánh if không có else ở cuối khối async/try (HeaderButtonGroup chỉ 87,5%) — tách hàm đồng bộ riêng.
+- 2026-11-09 [test] Test Go package `profile` cần `-tags portable` (KeyManager ghi file `key` cạnh exe test) và không dùng được `-race` (không có cgo); `application.New(application.Options{})` chạy được không cần cửa sổ.
+- 2026-11-09 [test] Thỉnh thoảng `ENOENT` trong `node_modules` khi tiến trình khác ghi cùng lúc — chạy lại; `WarningIcon.test.tsx` đôi khi fail khi chạy cả bộ, pass khi chạy riêng.
+- 2026-11-09 [git] Branch tách từ `origin/SP-NN/release` có upstream trỏ release — push phải `git push -u origin <branch>`; `frontend/bindings` bị gitignore nên đổi branch xong phải sinh lại bindings (branch R1+R2 không có `SetUpdateOptions` của R4 cho tới khi merge).
+- 2026-11-09 [quy trình] `git-flow` chế độ `branch` từ chối khi working tree có thay đổi ngoài `??` dưới `sprints/sprint-NN/` (kể cả `requirement.md` đã track bị sửa) — cần người dùng cho ngoại lệ rõ ràng.
+- 2026-11-09 [docs] Sửa câu trong user guide bằng cách thay dòng làm sót câu cũ (ru dòng 167 bị lặp) và vế "kể cả khi tồn tại" đặt sai vị trí ở ja/zh — sau khi sửa 7 bản phải đọc lại từng bản; build PDF `bun run build:pdf` luôn sinh lại cả 7.
+- 2026-11-09 [docs] Ảnh chụp: image `quay.io/minio/minio` kéo về bị 401 — dùng image local `minio/minio:RELEASE.2025-04-22T22-12-26Z`; `shots.mjs` không chạy riêng từng ảnh, chạy lại cả 7 ngôn ngữ rồi khôi phục các ảnh không đổi để diff gọn.
+- 2026-11-09 [wails] `ChooseImportFile` và hộp thoại lưu/mở file native không chụp được ở server mode — `shots.mjs` giả bằng `page.route` theo method id đọc từ bindings lúc chạy.
 
 ## 4. Tóm tắt cũ
 

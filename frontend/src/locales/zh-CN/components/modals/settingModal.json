@@ -4,7 +4,9 @@
     "theme": "主题",
     "font": "字体",
     "language": "语言",
-    "launchOnStartup": "随 Windows 启动"
+    "launchOnStartup": "随 Windows 启动",
+    "autoUpdate": "自动检查并下载更新",
+    "betaUpdate": "接收测试版 (预发布版本)"
   },
   "option": {
     "theme": {
@@ -30,6 +32,28 @@
     "cancel": "取消",
     "apply": "应用",
     "reset": "恢复默认"
+  },
+  "update": {
+    "title": "更新",
+    "currentVersion": "当前版本：{{version}}",
+    "check": "检查更新",
+    "download": "下载",
+    "install": "立即更新",
+    "viewRelease": "在 GitHub 上查看",
+    "status": {
+      "idle": "尚未检查更新。",
+      "checking": "正在检查更新...",
+      "upToDate": "已是最新版本。",
+      "available": "有新版本 {{version}} 可用。",
+      "downloading": "正在下载版本 {{version}}...",
+      "ready": "版本 {{version}} 已下载完成，可以安装。",
+      "error": "更新失败。"
+    }
+  },
+  "unsaved": {
+    "title": "设置尚未保存",
+    "message": "有设置尚未保存或应用。您要怎么做？",
+    "button": { "back": "返回", "discard": "放弃更改", "save": "保存" }
   },
   "message": {
     "saved": "设置已保存。",

@@ -104,9 +104,17 @@
     "PFE007": "Profil [{name}] hat laufende Uploads oder Downloads und kann nicht gelöscht werden.",
     "PFE008": "Die Authentifizierungsmethode {authType} ist für den Anbieter {provider} nicht gültig.",
     "PFE009": "Die Authentifizierungseinstellungen sind ungültig.",
+    "PFE010": "Das Profil [{name}] kann nicht exportiert werden.",
+    "PFE011": "Die Profildatei kann nicht gelesen werden (sie ist möglicherweise größer als 1 MB).",
+    "PFE012": "Die Datei ist keine gültige S3Browser-Profildatei.",
+    "PFE013": "Die Version {version} der Profildatei wird nicht unterstützt.",
+    "PFE014": "Falsches Passwort oder die Datei ist beschädigt.",
+    "PFE015": "Geben Sie ein Passwort mit mindestens 8 Zeichen ein.",
     "PFS001": "Neues Profil [{name}] erfolgreich hinzugefügt.",
     "PFS002": "Profil [{name}] erfolgreich aktualisiert.",
-    "PFS003": "Profil [{name}] erfolgreich gelöscht."
+    "PFS003": "Profil [{name}] erfolgreich gelöscht.",
+    "PFS004": "Profil [{name}] erfolgreich exportiert.",
+    "PFW001": "Profil [{name}] importiert. Diese Dateipfade existieren auf diesem Computer nicht und wurden geleert: {fields}."
   },
   "setting": {
     "STE001": "Fehler beim Laden der Einstellungen.",
@@ -116,5 +124,14 @@
     "STE005": "Fehler beim Laden der Tabs.",
     "STE006": "Fehler beim Speichern der Tabs.",
     "STE007": "Ungültige Tab-Daten."
+  },
+  "update": {
+    "UPE001": "Updates konnten nicht geprüft werden.",
+    "UPE002": "GitHub begrenzt die Anfragen, bitte später erneut versuchen.",
+    "UPE003": "Das Update konnte nicht heruntergeladen werden.",
+    "UPE004": "Das Update hat keine Prüfsumme oder die Prüfsumme stimmt nicht überein, die Datei wurde gelöscht.",
+    "UPE005": "Das Installationsprogramm konnte nicht ausgeführt werden oder die Administratorberechtigung wurde verweigert.",
+    "UPE006": "Für Version {version} gibt es kein Installationsprogramm für diesen Computer.",
+    "UPS001": "Sie verwenden bereits die neueste Version {version}."
   }
 }

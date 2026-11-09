@@ -8,6 +8,7 @@ import (
 	"S3Browser/models/master"
 	"S3Browser/models/profile"
 	"S3Browser/models/setting"
+	"S3Browser/models/update"
 )
 
 type (
@@ -142,6 +143,12 @@ type (
 	ConnectionProfileOutput = profile.ConnectionProfileOutput
 	// GetAllConnectionProfileOutput re-exports profile.GetAllConnectionProfileOutput.
 	GetAllConnectionProfileOutput = profile.GetAllConnectionProfileOutput
+	// ExportProfileInput re-exports profile.ExportProfileInput.
+	ExportProfileInput = profile.ExportProfileInput
+	// ImportProfileInput re-exports profile.ImportProfileInput.
+	ImportProfileInput = profile.ImportProfileInput
+	// ImportFileOutput re-exports profile.ImportFileOutput.
+	ImportFileOutput = profile.ImportFileOutput
 	// AuthConfig re-exports profile.AuthConfig.
 	AuthConfig = profile.AuthConfig
 	// AuthSecret re-exports profile.AuthSecret.
@@ -176,4 +183,9 @@ type (
 	TabState = setting.TabState
 	// SaveTabStateInput re-exports setting.SaveTabStateInput.
 	SaveTabStateInput = setting.SaveTabStateInput
+)
+
+type (
+	// UpdateStateOutput re-exports update.UpdateStateOutput.
+	UpdateStateOutput = update.UpdateStateOutput
 )

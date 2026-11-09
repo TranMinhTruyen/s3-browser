@@ -13,9 +13,9 @@
 
 /* Hide next to the active tab, after the last tab, and around the hovered tab. */
 .wrapper:last-child::after,
+.wrapper:hover::after,
 .wrapper:has([data-active])::after,
 .wrapper:has(+ .wrapper [data-active])::after,
-.wrapper:hover::after,
 .wrapper:has(+ .wrapper:hover)::after {
   display: none;
 }

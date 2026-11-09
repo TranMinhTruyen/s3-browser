@@ -1,0 +1,72 @@
+# Tự tạo GitHub pre-release khi staging thay đổi (bản beta cho người bật "Nhận bản beta").
+# Version lấy từ build/config.yml (info.version), phải có hậu tố pre-release (vd. 0.0.1-beta.2);
+# version stable thì bỏ qua vì bản stable chỉ ra từ master (release.yml).
+# Tag v<version> đã có thì bỏ qua, nên muốn ra bản beta mới phải tăng version trên staging.
+# Tên asset và checksums.txt theo quy ước mà module update tìm.
+name: pre-release
+
+on:
+  push:
+    branches: [staging]
+
+permissions:
+  contents: write
+
+# Không chạy 2 lượt cùng lúc khi push liên tiếp
+concurrency: pre-release
+
+jobs:
+  pre-release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: ver
+        run: |
+          v=$(sed -nE 's/^\s+version:\s*"([^"]+)".*/\1/p' build/config.yml | head -1)
+          if [ -z "$v" ]; then echo "::error::Không đọc được info.version trong build/config.yml"; exit 1; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if [[ "$v" != *-* ]]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::v$v là version stable, bỏ qua (stable chỉ release từ master)"
+          elif gh release view "v$v" >/dev/null 2>&1; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Release v$v đã tồn tại, bỏ qua (tăng info.version để ra bản mới)"
+          fi
+
+      - if: steps.ver.outputs.skip != 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - if: steps.ver.outputs.skip != 'true'
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install NSIS
+        if: steps.ver.outputs.skip != 'true'
+        # choco không thêm NSIS vào PATH, phải tự thêm cho các bước sau (makensis)
+        run: |
+          choco install nsis -y --no-progress
+          echo "C:\\Program Files (x86)\\NSIS" >> "$GITHUB_PATH"
+
+      # Build exe + installer NSIS -> build/bin/S3Browser-amd64-installer.exe
+      - name: Build installer
+        if: steps.ver.outputs.skip != 'true'
+        run: go tool wails3 task windows:package
+
+      - name: Create pre-release
+        if: steps.ver.outputs.skip != 'true'
+        run: |
+          v="${{ steps.ver.outputs.version }}"
+          f="S3Browser-$v-windows-amd64-installer.exe"
+          mkdir dist
+          cp build/bin/S3Browser-amd64-installer.exe "dist/$f"
+          (cd dist && sha256sum "$f" > checksums.txt)
+          gh release create "v$v" dist/* --target "$GITHUB_SHA" --title "v$v" --generate-notes --prerelease

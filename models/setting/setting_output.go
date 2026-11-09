@@ -6,6 +6,8 @@ type AppSettings struct {
 	Font            string `json:"font"`
 	Language        string `json:"language"`
 	LaunchOnStartup bool   `json:"launchOnStartup"`
+	AutoUpdate      bool   `json:"autoUpdate"`
+	BetaUpdate      bool   `json:"betaUpdate"`
 }
 
 // SettingsOutput is the settings plus whether "launch on startup" can be used on this build and OS.

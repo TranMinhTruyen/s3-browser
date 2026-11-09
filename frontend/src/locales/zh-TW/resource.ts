@@ -2,6 +2,7 @@ import { ResourceLanguage } from 'i18next';
 import common from '@/locales/zh-TW/common.json';
 import bucketPicker from '@/locales/zh-TW/components/inputs/bucketPicker.json';
 import inputs from '@/locales/zh-TW/components/inputs/inputs.json';
+import appUpdate from '@/locales/zh-TW/components/layouts/appUpdate.json';
 import connectionProfiles from '@/locales/zh-TW/components/layouts/navbar/connectionProfiles.json';
 import downloaderWindow from '@/locales/zh-TW/components/layouts/transfer/downloaderWindow.json';
 import uploaderWindow from '@/locales/zh-TW/components/layouts/transfer/uploaderWindow.json';
@@ -13,7 +14,9 @@ import credentialExpiring from '@/locales/zh-TW/components/modals/credentialExpi
 import deleteBucketModal from '@/locales/zh-TW/components/modals/deleteBucketModal.json';
 import deleteConfirmModal from '@/locales/zh-TW/components/modals/deleteConfirmModal.json';
 import deleteResultModal from '@/locales/zh-TW/components/modals/deleteResultModal.json';
+import exportProfileModal from '@/locales/zh-TW/components/modals/exportProfileModal.json';
 import historyModal from '@/locales/zh-TW/components/modals/historyModal.json';
+import importPasswordModal from '@/locales/zh-TW/components/modals/importPasswordModal.json';
 import settingModal from '@/locales/zh-TW/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/zh-TW/components/modals/uploadLimitModal.json';
 import uploadPickerModal from '@/locales/zh-TW/components/modals/uploadPickerModal.json';
@@ -37,10 +40,13 @@ const traditionalChineseResource: ResourceLanguage = {
   deleteBucketModal: deleteBucketModal,
   deleteConfirmModal: deleteConfirmModal,
   deleteResultModal: deleteResultModal,
+  exportProfileModal: exportProfileModal,
   historyModal: historyModal,
+  importPasswordModal: importPasswordModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,
   uploadPickerModal: uploadPickerModal,
+  appUpdate: appUpdate,
   bucketPicker: bucketPicker,
   connectionProfiles: connectionProfiles,
   bucket: {

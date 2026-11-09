@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, getFontFamily } from '@/common/cnst/settingConst';
-import { applySettings, normalizeSettings, settingColorSchemeManager } from '@/common/utils/settingUtils';
+import {
+  applySettings,
+  isSettingDirty,
+  isUpdateOptionsChanged,
+  normalizeSettings,
+  settingColorSchemeManager,
+} from '@/common/utils/settingUtils';
 import i18n, { loadLanguage } from '@/locales/i18n';
 
 vi.mock('@/locales/i18n', async importOriginal => ({
@@ -21,12 +27,39 @@ describe('normalizeSettings', () => {
   });
 
   it('keeps valid values', () => {
-    const raw = { theme: 'dark', font: 'jetbrains-mono', language: 'ja', launchOnStartup: true };
+    const raw = {
+      theme: 'dark',
+      font: 'jetbrains-mono',
+      language: 'ja',
+      launchOnStartup: true,
+      autoUpdate: false,
+      betaUpdate: true,
+    };
     expect(normalizeSettings(raw)).toEqual(raw);
   });
 
   it.each(['zh-CN', 'zh-TW', 'ru', 'de'])('accepts the language %s', language => {
     expect(normalizeSettings({ language }).language).toBe(language);
+  });
+
+  it.each([
+    [undefined, true],
+    [true, true],
+    [false, false],
+    ['no', true],
+    [0, true],
+  ])('reads autoUpdate %j as %s (on unless explicitly false)', (autoUpdate, expected) => {
+    expect(normalizeSettings({ autoUpdate }).autoUpdate).toBe(expected);
+  });
+
+  it.each([
+    [true, true],
+    [false, false],
+    [undefined, false],
+    ['true', false],
+    [1, false],
+  ])('reads betaUpdate %j as %s (on only when exactly true)', (betaUpdate, expected) => {
+    expect(normalizeSettings({ betaUpdate }).betaUpdate).toBe(expected);
   });
 
   it('replaces unknown values with the defaults', () => {
@@ -325,5 +358,34 @@ describe('getFontFamily', () => {
   it('keeps the font stack of each font before the fallback', () => {
     expect(getFontFamily('monospace', 'en')).toMatch(/^ui-monospace, "Cascadia Mono", Consolas, monospace, /);
     expect(getFontFamily('segoe-ui', 'zh-CN')).toMatch(/^"Segoe UI", "Microsoft YaHei UI"/);
+  });
+});
+
+describe('isSettingDirty', () => {
+  it('is false when every field is the same', () => {
+    expect(isSettingDirty({ ...DEFAULT_SETTINGS }, { ...DEFAULT_SETTINGS })).toBe(false);
+  });
+
+  it.each([
+    ['theme', 'dark'],
+    ['font', 'arial'],
+    ['language', 'vi'],
+    ['launchOnStartup', true],
+    ['autoUpdate', false],
+    ['betaUpdate', true],
+  ] as const)('is true when only %s differs', (key, value) => {
+    expect(isSettingDirty({ ...DEFAULT_SETTINGS, [key]: value }, DEFAULT_SETTINGS)).toBe(true);
+  });
+});
+
+describe('isUpdateOptionsChanged', () => {
+  it.each([
+    [{}, false],
+    [{ theme: 'dark' }, false],
+    [{ launchOnStartup: true }, false],
+    [{ autoUpdate: false }, true],
+    [{ betaUpdate: true }, true],
+  ] as const)('compares only the update switches (%j -> %s)', (patch, expected) => {
+    expect(isUpdateOptionsChanged({ ...DEFAULT_SETTINGS, ...patch }, DEFAULT_SETTINGS)).toBe(expected);
   });
 });

@@ -14,13 +14,17 @@ import {
   type ThemeKey,
 } from '@/common/cnst/settingConst';
 import { useSettingStore } from '@/common/stores/settingStore';
+import { useUpdateStore } from '@/common/stores/updateStore';
 import { tintedColor } from '@/common/theme/tintedColor';
 import { createMantineModal } from '@/common/utils/modalUtils';
+import { isSettingDirty } from '@/common/utils/settingUtils';
 import Button from '@/components/buttons/Button';
 import CloseButton from '@/components/buttons/CloseButton';
 import SelectInput from '@/components/inputs/SelectInput';
 import SwitchInput from '@/components/inputs/SwitchInput';
+import { showUnsavedSettingModal } from '@/components/modals/lazyModals';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
+import UpdateSection from '@/components/modals/setting/UpdateSection';
 
 /** Resolves true when the settings were saved, false/null when dismissed. */
 export default createMantineModal<{}, boolean>(props => {
@@ -31,7 +35,9 @@ export default createMantineModal<{}, boolean>(props => {
   const [saving, setSaving] = useState(false);
 
   const draft = useSettingStore(useShallow(s => s.draft));
+  const applied = useSettingStore(useShallow(s => s.applied));
   const autostartSupported = useSettingStore(s => s.autostartSupported);
+  const updateSupported = useUpdateStore(s => s.supported);
   const setDraft = useSettingStore(s => s.setDraft);
   const save = useSettingStore(s => s.save);
   const apply = useSettingStore(s => s.apply);
@@ -66,6 +72,16 @@ export default createMantineModal<{}, boolean>(props => {
     [setDraft]
   );
 
+  const onChangeAutoUpdate = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => setDraft({ autoUpdate: e.currentTarget.checked }),
+    [setDraft]
+  );
+
+  const onChangeBetaUpdate = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => setDraft({ betaUpdate: e.currentTarget.checked }),
+    [setDraft]
+  );
+
   // Each font option is previewed in its own font.
   const renderFontOption = useCallback(
     ({ option }: { option: { value: string; label: string } }) => (
@@ -73,12 +89,6 @@ export default createMantineModal<{}, boolean>(props => {
     ),
     [draft.language]
   );
-
-  // Closing without saving undoes the preview (back to the last applied values).
-  const onCloseModal = useCallback(() => {
-    revert();
-    mantine.props.onClose();
-  }, [revert, mantine.props]);
 
   const onClickCancel = useCallback(() => {
     revert();
@@ -108,6 +118,22 @@ export default createMantineModal<{}, boolean>(props => {
     mantine.handler.hide();
   }, [save, t, mantine.handler]);
 
+  // X, Esc and click outside: close at once when nothing changed, otherwise ask what to do with the changes.
+  const onCloseModal = useCallback(async () => {
+    if (!isSettingDirty(draft, applied)) {
+      revert();
+      mantine.props.onClose();
+      return;
+    }
+    const choice = await showUnsavedSettingModal();
+    if (choice === 'save') {
+      await onClickSave();
+    } else if (choice === 'discard') {
+      revert();
+      mantine.props.onClose();
+    }
+  }, [draft, applied, revert, mantine.props, onClickSave]);
+
   return (
     <Modal.Root
       {...mantine.props}
@@ -135,42 +161,59 @@ export default createMantineModal<{}, boolean>(props => {
         <Divider />
 
         <Modal.Body p="8px">
-          <Paper withBorder p="8px">
-            <Stack>
-              <SelectInput
-                label={t('label.theme')}
-                data={themeOptions}
-                value={draft.theme}
-                onChange={onChangeTheme}
-                allowDeselect={false}
-                comboboxProps={comboboxProps}
-              />
-              <SelectInput
-                label={t('label.font')}
-                data={fontOptions}
-                value={draft.font}
-                onChange={onChangeFont}
-                renderOption={renderFontOption}
-                allowDeselect={false}
-                comboboxProps={comboboxProps}
-              />
-              <SelectInput
-                label={t('label.language')}
-                data={languageOptions}
-                value={draft.language}
-                onChange={onChangeLanguage}
-                allowDeselect={false}
-                comboboxProps={comboboxProps}
-              />
-              {autostartSupported ? (
-                <SwitchInput
-                  label={t('label.launchOnStartup')}
-                  checked={draft.launchOnStartup}
-                  onChange={onChangeLaunchOnStartup}
+          <Stack gap="8px">
+            <Paper withBorder p="8px">
+              <Stack>
+                <SelectInput
+                  label={t('label.theme')}
+                  data={themeOptions}
+                  value={draft.theme}
+                  onChange={onChangeTheme}
+                  allowDeselect={false}
+                  comboboxProps={comboboxProps}
                 />
-              ) : null}
-            </Stack>
-          </Paper>
+                <SelectInput
+                  label={t('label.font')}
+                  data={fontOptions}
+                  value={draft.font}
+                  onChange={onChangeFont}
+                  renderOption={renderFontOption}
+                  allowDeselect={false}
+                  comboboxProps={comboboxProps}
+                />
+                <SelectInput
+                  label={t('label.language')}
+                  data={languageOptions}
+                  value={draft.language}
+                  onChange={onChangeLanguage}
+                  allowDeselect={false}
+                  comboboxProps={comboboxProps}
+                />
+                {autostartSupported ? (
+                  <SwitchInput
+                    label={t('label.launchOnStartup')}
+                    checked={draft.launchOnStartup}
+                    onChange={onChangeLaunchOnStartup}
+                  />
+                ) : null}
+                {updateSupported ? (
+                  <>
+                    <SwitchInput
+                      label={t('label.autoUpdate')}
+                      checked={draft.autoUpdate}
+                      onChange={onChangeAutoUpdate}
+                    />
+                    <SwitchInput
+                      label={t('label.betaUpdate')}
+                      checked={draft.betaUpdate}
+                      onChange={onChangeBetaUpdate}
+                    />
+                  </>
+                ) : null}
+              </Stack>
+            </Paper>
+            <UpdateSection />
+          </Stack>
         </Modal.Body>
 
         <Divider />

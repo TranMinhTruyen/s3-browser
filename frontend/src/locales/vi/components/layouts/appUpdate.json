@@ -1,0 +1,11 @@
+{
+  "available": "Có phiên bản mới {{version}}",
+  "downloading": "Đang tải phiên bản {{version}}",
+  "progress": "{{percent}}% · {{written}} / {{total}}",
+  "progressUnknown": "{{written}}",
+  "ready": "Phiên bản {{version}} sẵn sàng để cài đặt",
+  "button": {
+    "download": "Tải xuống",
+    "install": "Cập nhật"
+  }
+}

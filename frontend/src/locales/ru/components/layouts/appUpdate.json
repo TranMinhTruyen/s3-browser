@@ -1,0 +1,11 @@
+{
+  "available": "Доступна версия {{version}}",
+  "downloading": "Скачивание версии {{version}}",
+  "progress": "{{percent}}% · {{written}} / {{total}}",
+  "progressUnknown": "{{written}}",
+  "ready": "Версия {{version}} готова к установке",
+  "button": {
+    "download": "Скачать",
+    "install": "Обновить"
+  }
+}

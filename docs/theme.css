@@ -25,6 +25,19 @@ body {
   overflow-wrap: anywhere;
 }
 
+/* Han characters fall back to the font of the page language. */
+:lang(ja) body {
+  font-family: 'Noto Sans', 'Noto Sans JP', sans-serif;
+}
+
+:lang(zh-CN) body {
+  font-family: 'Noto Sans', 'Noto Sans SC', sans-serif;
+}
+
+:lang(zh-TW) body {
+  font-family: 'Noto Sans', 'Noto Sans TC', sans-serif;
+}
+
 h1,
 h2,
 h3,

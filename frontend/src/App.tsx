@@ -7,6 +7,7 @@ import { useTabPersistence } from '@/common/hooks/useTabPersistence';
 import { useMasterDataStore } from '@/common/stores/masterDataStore';
 import { useProfileStore } from '@/common/stores/profileStore';
 import { normalizeTabProfilesFromDisk } from '@/common/utils/tabPersistence';
+import AppUpdateToast from '@/components/layouts/AppUpdateToast';
 import MainLayout from '@/components/layouts/MainLayout';
 import RouterItems from '@/components/router/RouterItem';
 import i18n from '@/locales/i18n';
@@ -46,6 +47,7 @@ function App() {
           </Route>
         </Routes>
         <Toaster position={'top-center'} richColors={true} closeButton={true} duration={10000} />
+        <AppUpdateToast />
       </I18nextProvider>
     </BrowserRouter>
   );

@@ -2,6 +2,7 @@ import { ResourceLanguage } from 'i18next';
 import common from '@/locales/ja/common.json';
 import bucketPicker from '@/locales/ja/components/inputs/bucketPicker.json';
 import inputs from '@/locales/ja/components/inputs/inputs.json';
+import appUpdate from '@/locales/ja/components/layouts/appUpdate.json';
 import connectionProfiles from '@/locales/ja/components/layouts/navbar/connectionProfiles.json';
 import downloaderWindow from '@/locales/ja/components/layouts/transfer/downloaderWindow.json';
 import uploaderWindow from '@/locales/ja/components/layouts/transfer/uploaderWindow.json';
@@ -13,7 +14,9 @@ import credentialExpiring from '@/locales/ja/components/modals/credentialExpirin
 import deleteBucketModal from '@/locales/ja/components/modals/deleteBucketModal.json';
 import deleteConfirmModal from '@/locales/ja/components/modals/deleteConfirmModal.json';
 import deleteResultModal from '@/locales/ja/components/modals/deleteResultModal.json';
+import exportProfileModal from '@/locales/ja/components/modals/exportProfileModal.json';
 import historyModal from '@/locales/ja/components/modals/historyModal.json';
+import importPasswordModal from '@/locales/ja/components/modals/importPasswordModal.json';
 import settingModal from '@/locales/ja/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/ja/components/modals/uploadLimitModal.json';
 import uploadPickerModal from '@/locales/ja/components/modals/uploadPickerModal.json';
@@ -37,10 +40,13 @@ const japaneseResource: ResourceLanguage = {
   deleteBucketModal: deleteBucketModal,
   deleteConfirmModal: deleteConfirmModal,
   deleteResultModal: deleteResultModal,
+  exportProfileModal: exportProfileModal,
   historyModal: historyModal,
+  importPasswordModal: importPasswordModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,
   uploadPickerModal: uploadPickerModal,
+  appUpdate: appUpdate,
   bucketPicker: bucketPicker,
   connectionProfiles: connectionProfiles,
   bucket: {

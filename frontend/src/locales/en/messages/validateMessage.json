@@ -8,5 +8,7 @@
   "V000007": "{0} must not contain two adjacent dots",
   "V000008": "{0} must not be formatted as an IP address",
   "V000009": "{0} must not start with a reserved prefix",
-  "V000010": "{0} must not end with a reserved suffix"
+  "V000010": "{0} must not end with a reserved suffix",
+  "V000011": "{0} does not match",
+  "V000012": "{0} must be at least {1} characters"
 }

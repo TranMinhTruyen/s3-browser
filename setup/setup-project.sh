@@ -12,6 +12,9 @@ GO_MIN_VERSION="1.27"
 WAILS3_VERSION="${WAILS3_VERSION:-latest}"
 SQLC_VERSION="${SQLC_VERSION:-latest}"
 PACKAGE_MANAGER="${PACKAGE_MANAGER:-bun}"
+# Set to 0 to skip the knowledge graph (graphify-out/) or the Docker test containers (test-env/).
+SETUP_GRAPHIFY="${SETUP_GRAPHIFY:-1}"
+SETUP_TEST_ENV="${SETUP_TEST_ENV:-1}"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -227,6 +230,98 @@ install_webview() {
 }
 
 # ---------------------------------------------------------------------------
+# 5. graphify knowledge graph (graphify-out/, AST only, no LLM / API cost)
+# ---------------------------------------------------------------------------
+setup_graphify() {
+  if ! command -v graphify >/dev/null 2>&1; then
+    echo "==> graphify not found, installing (Python package graphifyy)..."
+    if command -v uv >/dev/null 2>&1; then
+      uv tool install graphifyy
+    elif command -v pipx >/dev/null 2>&1; then
+      pipx install graphifyy
+    elif command -v python3 >/dev/null 2>&1 || command -v python >/dev/null 2>&1; then
+      "$(command -v python3 || command -v python)" -m pip install --user graphifyy
+    else
+      echo "WARNING: Python not found, skipping graphify. Install Python 3 and run: pip install graphifyy"
+      return 0
+    fi
+  fi
+
+  if ! command -v graphify >/dev/null 2>&1; then
+    echo "WARNING: graphify installed but not on PATH (check the Python user Scripts/bin dir). Skipping."
+    return 0
+  fi
+
+  echo "==> Building knowledge graph into graphify-out/..."
+  graphify update "$PROJECT_ROOT"
+}
+
+# ---------------------------------------------------------------------------
+# 6. Docker test containers (see test-env/README.txt)
+# ---------------------------------------------------------------------------
+# Wait until a one-shot init container exits; fail if it exits non-zero.
+wait_init() {
+  local name="$1" code
+  echo "    waiting for $name..."
+  code="$(docker wait "$name")"
+  if [[ "$code" != "0" ]]; then
+    echo "WARNING: $name exited with code $code. Check: docker logs $name"
+    return 1
+  fi
+}
+
+setup_test_env() {
+  local env_dir="$PROJECT_ROOT/test-env"
+
+  if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
+    echo "WARNING: Docker is not installed or not running, skipping test-env."
+    echo "         Start Docker Desktop and re-run with SETUP_TEST_ENV=1, or follow test-env/README.txt."
+    return 0
+  fi
+
+  cd "$env_dir"
+
+  # Certificates for MinIO TLS / mTLS (needs openssl); generated once, kept out of git.
+  if [[ ! -f certs/ca.pem ]]; then
+    # gen-certs.sh writes into certs/ relative to test-env/.
+    if command -v openssl >/dev/null 2>&1; then
+      echo "==> Generating test certificates (test-env/certs)..."
+      sh scripts/gen-certs.sh
+    else
+      echo "WARNING: openssl not found, skipping certificates and the MinIO TLS stack."
+    fi
+  fi
+
+  echo "==> Starting MinIO + LDAP..."
+  docker compose -f docker-compose-minio.yml -p s3b-minio-test up -d
+  wait_init s3b-test-minio-init || true
+
+  echo "==> Starting Floci (AWS emulator)..."
+  docker compose -f docker-compose-floci.yml -p s3b-floci-test up -d
+  wait_init s3b-test-floci-init || true
+
+  echo "==> Starting Keycloak (OIDC)..."
+  docker compose -f docker-compose-keycloak.yml -p s3b-keycloak-test up -d
+
+  # MinIO TLS needs Keycloak up first, otherwise it hangs on "Unable to initialize OpenID".
+  if [[ -f certs/ca.pem ]]; then
+    local realm="http://localhost:${KEYCLOAK_PORT:-8180}/realms/s3browser" i
+    echo "    waiting for Keycloak ($realm)..."
+    for i in $(seq 1 60); do
+      curl -fs "$realm" >/dev/null 2>&1 && break
+      sleep 3
+    done
+    echo "==> Starting MinIO TLS..."
+    docker compose -f docker-compose-minio-tls.yml -p s3b-minio-tls-test up -d
+    wait_init s3b-test-minio-tls-init || true
+  fi
+
+  cd "$PROJECT_ROOT"
+  echo "==> Test containers are up. Profiles to create in the app: test-env/test-profiles.txt"
+  echo "    Floci keys: test-env/generated/floci-config, floci-credentials (copy to ~/.aws, see README)."
+}
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 echo "==> Project root: $PROJECT_ROOT"
@@ -267,6 +362,17 @@ echo
 echo "==> Building the application (frontend + Go binary)..."
 # `wails3 task build` re-runs the frontend build and binding generation as deps.
 wails3 task build PACKAGE_MANAGER="$PACKAGE_MANAGER"
+
+if [[ "$SETUP_GRAPHIFY" == "1" ]]; then
+  echo
+  setup_graphify
+fi
+
+if [[ "$SETUP_TEST_ENV" == "1" ]]; then
+  echo
+  # A failing stack (e.g. port already in use) must not fail the whole setup.
+  setup_test_env || echo "WARNING: test-env setup did not finish, see test-env/README.txt."
+fi
 
 echo
 echo "==> Setup complete."

@@ -1,0 +1,15 @@
+{
+  "title": "Profil exportieren",
+  "label": {
+    "includeSecret": "Geheimnisse einschließen",
+    "password": "Passwort",
+    "confirmPassword": "Passwort bestätigen"
+  },
+  "hint": {
+    "includeSecret": "Geheimnisse werden mit diesem Passwort verschlüsselt. Bewahren Sie Datei und Passwort sicher auf: Ohne das Passwort kann die Datei nicht importiert werden.",
+    "noSavedSecret": "Dieses Profil hat keine gespeicherten Geheimnisse."
+  },
+  "button": {
+    "export": "Exportieren"
+  }
+}

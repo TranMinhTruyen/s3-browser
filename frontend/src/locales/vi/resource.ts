@@ -2,6 +2,7 @@ import { ResourceLanguage } from 'i18next';
 import common from '@/locales/vi/common.json';
 import bucketPicker from '@/locales/vi/components/inputs/bucketPicker.json';
 import inputs from '@/locales/vi/components/inputs/inputs.json';
+import appUpdate from '@/locales/vi/components/layouts/appUpdate.json';
 import connectionProfiles from '@/locales/vi/components/layouts/navbar/connectionProfiles.json';
 import downloaderWindow from '@/locales/vi/components/layouts/transfer/downloaderWindow.json';
 import uploaderWindow from '@/locales/vi/components/layouts/transfer/uploaderWindow.json';
@@ -13,7 +14,9 @@ import credentialExpiring from '@/locales/vi/components/modals/credentialExpirin
 import deleteBucketModal from '@/locales/vi/components/modals/deleteBucketModal.json';
 import deleteConfirmModal from '@/locales/vi/components/modals/deleteConfirmModal.json';
 import deleteResultModal from '@/locales/vi/components/modals/deleteResultModal.json';
+import exportProfileModal from '@/locales/vi/components/modals/exportProfileModal.json';
 import historyModal from '@/locales/vi/components/modals/historyModal.json';
+import importPasswordModal from '@/locales/vi/components/modals/importPasswordModal.json';
 import settingModal from '@/locales/vi/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/vi/components/modals/uploadLimitModal.json';
 import uploadPickerModal from '@/locales/vi/components/modals/uploadPickerModal.json';
@@ -37,10 +40,13 @@ const vietnameseResource: ResourceLanguage = {
   deleteBucketModal: deleteBucketModal,
   deleteConfirmModal: deleteConfirmModal,
   deleteResultModal: deleteResultModal,
+  exportProfileModal: exportProfileModal,
   historyModal: historyModal,
+  importPasswordModal: importPasswordModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,
   uploadPickerModal: uploadPickerModal,
+  appUpdate: appUpdate,
   bucketPicker: bucketPicker,
   connectionProfiles: connectionProfiles,
   bucket: {

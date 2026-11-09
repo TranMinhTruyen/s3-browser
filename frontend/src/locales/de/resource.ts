@@ -2,6 +2,7 @@ import { ResourceLanguage } from 'i18next';
 import common from '@/locales/de/common.json';
 import bucketPicker from '@/locales/de/components/inputs/bucketPicker.json';
 import inputs from '@/locales/de/components/inputs/inputs.json';
+import appUpdate from '@/locales/de/components/layouts/appUpdate.json';
 import connectionProfiles from '@/locales/de/components/layouts/navbar/connectionProfiles.json';
 import downloaderWindow from '@/locales/de/components/layouts/transfer/downloaderWindow.json';
 import uploaderWindow from '@/locales/de/components/layouts/transfer/uploaderWindow.json';
@@ -13,7 +14,9 @@ import credentialExpiring from '@/locales/de/components/modals/credentialExpirin
 import deleteBucketModal from '@/locales/de/components/modals/deleteBucketModal.json';
 import deleteConfirmModal from '@/locales/de/components/modals/deleteConfirmModal.json';
 import deleteResultModal from '@/locales/de/components/modals/deleteResultModal.json';
+import exportProfileModal from '@/locales/de/components/modals/exportProfileModal.json';
 import historyModal from '@/locales/de/components/modals/historyModal.json';
+import importPasswordModal from '@/locales/de/components/modals/importPasswordModal.json';
 import settingModal from '@/locales/de/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/de/components/modals/uploadLimitModal.json';
 import uploadPickerModal from '@/locales/de/components/modals/uploadPickerModal.json';
@@ -37,10 +40,13 @@ const germanResource: ResourceLanguage = {
   deleteBucketModal: deleteBucketModal,
   deleteConfirmModal: deleteConfirmModal,
   deleteResultModal: deleteResultModal,
+  exportProfileModal: exportProfileModal,
   historyModal: historyModal,
+  importPasswordModal: importPasswordModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,
   uploadPickerModal: uploadPickerModal,
+  appUpdate: appUpdate,
   bucketPicker: bucketPicker,
   connectionProfiles: connectionProfiles,
   bucket: {

@@ -1,0 +1,11 @@
+{
+  "available": "バージョン {{version}} が利用できます",
+  "downloading": "バージョン {{version}} をダウンロード中",
+  "progress": "{{percent}}% · {{written}} / {{total}}",
+  "progressUnknown": "{{written}}",
+  "ready": "バージョン {{version}} をインストールできます",
+  "button": {
+    "download": "ダウンロード",
+    "install": "アップデート"
+  }
+}

@@ -11,12 +11,13 @@ body {
 
 body {
   margin: 0;
+
   /* --mantine-font-family is set from the saved setting before the first render. */
   font-family: var(--mantine-font-family, "Nunito", sans-serif);
 }
 
 @font-face {
-  font-family: "Nunito";
+  font-family: Nunito;
   font-style: normal;
   font-weight: 400;
   font-display: swap;
@@ -60,7 +61,7 @@ body {
 /* Roboto (variable 400-700) and Be Vietnam Pro: Google Fonts subsets, unicode-range loads only the files a page needs. */
 
 @font-face {
-  font-family: "Roboto";
+  font-family: Roboto;
   font-style: normal;
   font-weight: 400 700;
   font-display: swap;
@@ -70,7 +71,7 @@ body {
 }
 
 @font-face {
-  font-family: "Roboto";
+  font-family: Roboto;
   font-style: normal;
   font-weight: 400 700;
   font-display: swap;
@@ -80,7 +81,7 @@ body {
 }
 
 @font-face {
-  font-family: "Roboto";
+  font-family: Roboto;
   font-style: normal;
   font-weight: 400 700;
   font-display: swap;
@@ -90,7 +91,7 @@ body {
 }
 
 @font-face {
-  font-family: "Roboto";
+  font-family: Roboto;
   font-style: normal;
   font-weight: 400 700;
   font-display: swap;

@@ -4,7 +4,9 @@
     "theme": "Giao diện",
     "font": "Phông chữ",
     "language": "Ngôn ngữ",
-    "launchOnStartup": "Khởi động cùng Windows"
+    "launchOnStartup": "Khởi động cùng Windows",
+    "autoUpdate": "Tự động kiểm tra và tải bản cập nhật",
+    "betaUpdate": "Nhận bản beta (thử nghiệm)"
   },
   "option": {
     "theme": { "light": "Sáng", "dark": "Tối", "auto": "Theo hệ thống" },
@@ -22,5 +24,27 @@
     }
   },
   "button": { "save": "Lưu", "cancel": "Hủy", "apply": "Áp dụng", "reset": "Đặt lại mặc định" },
+  "update": {
+    "title": "Cập nhật",
+    "currentVersion": "Phiên bản hiện tại: {{version}}",
+    "check": "Kiểm tra cập nhật",
+    "download": "Tải xuống",
+    "install": "Cập nhật ngay",
+    "viewRelease": "Xem trên GitHub",
+    "status": {
+      "idle": "Chưa kiểm tra cập nhật.",
+      "checking": "Đang kiểm tra cập nhật...",
+      "upToDate": "Bạn đang dùng phiên bản mới nhất.",
+      "available": "Có phiên bản mới {{version}}.",
+      "downloading": "Đang tải phiên bản {{version}}...",
+      "ready": "Phiên bản {{version}} đã tải xong, sẵn sàng cài đặt.",
+      "error": "Cập nhật thất bại."
+    }
+  },
+  "unsaved": {
+    "title": "Cài đặt chưa được lưu",
+    "message": "Bạn có thay đổi cài đặt chưa được lưu hoặc áp dụng. Bạn muốn làm gì?",
+    "button": { "back": "Quay lại", "discard": "Bỏ thay đổi", "save": "Lưu" }
+  },
   "message": { "saved": "Đã lưu cài đặt.", "applied": "Đã áp dụng cài đặt đến khi đóng app." }
 }

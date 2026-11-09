@@ -100,7 +100,7 @@ describe('ConnectionProfileItem', () => {
     ])('uses the matching text color for %s', (_n, color, expected) => {
       renderItem({ color });
 
-      expect(card()).toHaveStyle({ color: expected });
+      expect(card().style.color).toBe(expected);
     });
 
     it('uses the profile color as background when set, the body color otherwise', () => {
@@ -131,7 +131,7 @@ describe('ConnectionProfileItem', () => {
         scheme.value = 'dark';
         renderItem({ color });
 
-        expect(card()).toHaveStyle({ color: 'var(--mantine-color-text)' });
+        expect(card().style.color).toBe('var(--mantine-color-text)');
       });
 
       it('mixes the profile color into the body color for the name background', () => {

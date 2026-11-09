@@ -4,7 +4,9 @@
     "theme": "Design",
     "font": "Schriftart",
     "language": "Sprache",
-    "launchOnStartup": "Beim Windows-Start starten"
+    "launchOnStartup": "Beim Windows-Start starten",
+    "autoUpdate": "Updates automatisch suchen und herunterladen",
+    "betaUpdate": "Beta-Versionen (Vorabversionen) erhalten"
   },
   "option": {
     "theme": {
@@ -30,6 +32,28 @@
     "cancel": "Abbrechen",
     "apply": "Übernehmen",
     "reset": "Zurücksetzen"
+  },
+  "update": {
+    "title": "Update",
+    "currentVersion": "Aktuelle Version: {{version}}",
+    "check": "Nach Updates suchen",
+    "download": "Herunterladen",
+    "install": "Jetzt aktualisieren",
+    "viewRelease": "Auf GitHub ansehen",
+    "status": {
+      "idle": "Es wurde noch nicht nach Updates gesucht.",
+      "checking": "Suche nach Updates...",
+      "upToDate": "Sie verwenden die neueste Version.",
+      "available": "Version {{version}} ist verfügbar.",
+      "downloading": "Version {{version}} wird heruntergeladen...",
+      "ready": "Version {{version}} ist heruntergeladen und bereit zur Installation.",
+      "error": "Das Update ist fehlgeschlagen."
+    }
+  },
+  "unsaved": {
+    "title": "Nicht gespeicherte Einstellungen",
+    "message": "Es gibt Einstellungen, die weder gespeichert noch angewendet wurden. Was möchten Sie tun?",
+    "button": { "back": "Zurück", "discard": "Änderungen verwerfen", "save": "Speichern" }
   },
   "message": {
     "saved": "Einstellungen gespeichert.",

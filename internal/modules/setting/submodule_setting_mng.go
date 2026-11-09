@@ -20,7 +20,7 @@ var (
 
 // defaultSettings is what the app uses when nothing is saved, and the fallback for any unknown value.
 func defaultSettings() models.AppSettings {
-	return models.AppSettings{Theme: "light", Font: "nunito", Language: "en"}
+	return models.AppSettings{Theme: "light", Font: "nunito", Language: "en", AutoUpdate: true}
 }
 
 // sanitize replaces each unknown value with its default, so an old or edited file never breaks startup.

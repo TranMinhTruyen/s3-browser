@@ -1,5 +1,6 @@
 import { GetSettings, SaveSettings } from '@wails/S3Browser/internal/handlers/settinghandler';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { SetUpdateOptions } from '@wails/S3Browser/internal/handlers/updatehandler';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '@/common/cnst/settingConst';
 import { useSettingStore } from '@/common/stores/settingStore';
 import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
@@ -11,15 +12,36 @@ vi.mock('@/common/utils/settingUtils', async importOriginal => ({
   applySettings: vi.fn(),
 }));
 vi.mock('@wails/S3Browser/internal/handlers/settinghandler', () => ({ GetSettings: vi.fn(), SaveSettings: vi.fn() }));
+vi.mock('@wails/S3Browser/internal/handlers/updatehandler', () => ({ SetUpdateOptions: vi.fn() }));
 
 const callIPCMock = vi.mocked(callIPC);
 const state = () => useSettingStore.getState();
-const dark = { theme: 'dark', font: 'arial', language: 'vi', launchOnStartup: true } as const;
+const updaterCalls = () => callIPCMock.mock.calls.filter(call => call[0] === SetUpdateOptions);
+/** Lets the store's updater promise chain run; callIPC is a mock, so a few microtasks are enough. */
+const settle = async () => {
+  for (let i = 0; i < 10; i++) {
+    await Promise.resolve();
+  }
+};
+const dark = {
+  theme: 'dark',
+  font: 'arial',
+  language: 'vi',
+  launchOnStartup: true,
+  autoUpdate: true,
+  betaUpdate: true,
+} as const;
 
 describe('settingStore', () => {
   beforeEach(() => {
     state().reset();
     vi.clearAllMocks();
+    callIPCMock.mockReset();
+    callIPCMock.mockResolvedValue(null);
+  });
+
+  afterEach(async () => {
+    await settle();
   });
 
   describe('load', () => {
@@ -87,6 +109,74 @@ describe('settingStore', () => {
     expect(applySettings).toHaveBeenCalledWith({ ...DEFAULT_SETTINGS, theme: 'dark' });
   });
 
+  describe('setDraft and the updater', () => {
+    it('does not call SetUpdateOptions when only theme, font, language or launchOnStartup change', async () => {
+      state().setDraft({ theme: 'dark', font: 'arial', language: 'vi', launchOnStartup: true });
+      await settle();
+
+      expect(updaterCalls()).toHaveLength(0);
+    });
+
+    it('does not call SetUpdateOptions when an update switch is set to its current value', async () => {
+      state().setDraft({ autoUpdate: true, betaUpdate: false });
+      await settle();
+
+      expect(updaterCalls()).toHaveLength(0);
+    });
+
+    it.each([
+      [{ autoUpdate: false }, [false, false]],
+      [{ betaUpdate: true }, [true, true]],
+    ] as const)('sends both switch values (beta, auto) when %j changes', async (patch, args) => {
+      state().setDraft(patch);
+      await settle();
+
+      expect(callIPCMock).toHaveBeenCalledWith(SetUpdateOptions, args, {
+        scope: 'Setting/syncUpdater',
+        showMessage: false,
+      });
+      expect(updaterCalls()).toHaveLength(1);
+    });
+
+    it('sends the calls in order and waits for the previous one before the next', async () => {
+      const finishers: (() => void)[] = [];
+      callIPCMock.mockImplementation(() => new Promise(resolve => finishers.push(() => resolve(null))) as never);
+
+      state().setDraft({ betaUpdate: true });
+      state().setDraft({ autoUpdate: false });
+      state().setDraft({ betaUpdate: false });
+      await settle();
+      expect(updaterCalls().map(call => call[1])).toEqual([[true, true]]);
+
+      finishers[0]();
+      await settle();
+      expect(updaterCalls().map(call => call[1])).toEqual([
+        [true, true],
+        [true, false],
+      ]);
+
+      finishers[1]();
+      await settle();
+      finishers[2]();
+      await settle();
+      expect(updaterCalls().map(call => call[1])).toEqual([
+        [true, true],
+        [true, false],
+        [false, false],
+      ]);
+    });
+
+    it('keeps the chain going when a call rejects', async () => {
+      callIPCMock.mockRejectedValueOnce(new Error('boom'));
+      state().setDraft({ betaUpdate: true });
+      await settle();
+      state().setDraft({ betaUpdate: false });
+      await settle();
+
+      expect(updaterCalls()).toHaveLength(2);
+    });
+  });
+
   describe('save', () => {
     it('sends the draft and follows the settings the backend returns', async () => {
       state().setDraft({ theme: 'dark', launchOnStartup: true });
@@ -123,6 +213,39 @@ describe('settingStore', () => {
     expect(applySettings).toHaveBeenCalledWith(DEFAULT_SETTINGS);
   });
 
+  it('resetDraft pushes the default update switches to the updater when they differ from the draft', async () => {
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, autoUpdate: false, betaUpdate: true } });
+    state().resetDraft();
+    await settle();
+
+    expect(updaterCalls().map(call => call[1])).toEqual([[false, true]]);
+  });
+
+  it('resetDraft does not call the updater when the switches already match the defaults', async () => {
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, theme: 'dark' } });
+    state().resetDraft();
+    await settle();
+
+    expect(updaterCalls()).toHaveLength(0);
+  });
+
+  it('revert sends the applied update switches to the updater when the draft differs', async () => {
+    const applied = { ...DEFAULT_SETTINGS, autoUpdate: false };
+    useSettingStore.setState({ applied, draft: { ...applied, autoUpdate: true, betaUpdate: true } });
+    state().revert();
+    await settle();
+
+    expect(updaterCalls().map(call => call[1])).toEqual([[false, false]]);
+  });
+
+  it('revert does not call the updater when the update switches are the same', async () => {
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, theme: 'dark' } });
+    state().revert();
+    await settle();
+
+    expect(updaterCalls()).toHaveLength(0);
+  });
+
   it('revert restores the applied values into the draft', () => {
     useSettingStore.setState({ saved: DEFAULT_SETTINGS, applied: dark, draft: DEFAULT_SETTINGS });
     state().revert();
@@ -137,10 +260,41 @@ describe('settingStore', () => {
       state().setDraft({ theme: 'dark', font: 'arial', language: 'vi', launchOnStartup: true });
       state().apply();
 
-      expect(state().applied).toEqual({ theme: 'dark', font: 'arial', language: 'vi', launchOnStartup: false });
+      expect(state().applied).toEqual({
+        theme: 'dark',
+        font: 'arial',
+        language: 'vi',
+        launchOnStartup: false,
+        autoUpdate: true,
+        betaUpdate: false,
+      });
       expect(state().saved).toEqual(DEFAULT_SETTINGS);
       expect(state().draft.launchOnStartup).toBe(true);
       expect(callIPCMock).not.toHaveBeenCalled();
+    });
+
+    // Intended behaviour change (sprint-16 R4): Apply now keeps the draft's update switches.
+    it('keeps the draft autoUpdate (already sent to the updater) and leaves saved untouched', async () => {
+      state().setDraft({ theme: 'dark', autoUpdate: false });
+      await settle();
+      state().apply();
+      await settle();
+
+      expect(state().applied).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark', autoUpdate: false });
+      expect(state().draft.autoUpdate).toBe(false);
+      expect(state().saved.autoUpdate).toBe(true);
+      expect(updaterCalls()).toHaveLength(1);
+      expect(callIPCMock).not.toHaveBeenCalledWith(SaveSettings, expect.anything(), expect.anything());
+    });
+
+    it('keeps the draft betaUpdate', async () => {
+      useSettingStore.setState({ applied: { ...DEFAULT_SETTINGS, betaUpdate: true } });
+      state().setDraft({ theme: 'dark', betaUpdate: false });
+      await settle();
+      state().apply();
+
+      expect(state().applied).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark', betaUpdate: false });
+      expect(state().draft.betaUpdate).toBe(false);
     });
 
     it('keeps the previous applied launchOnStartup', () => {
@@ -160,6 +314,19 @@ describe('settingStore', () => {
       expect(state().draft).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark' });
       expect(applySettings).toHaveBeenLastCalledWith({ ...DEFAULT_SETTINGS, theme: 'dark' });
     });
+  });
+
+  it('save sends the draft including betaUpdate and follows the returned betaUpdate', async () => {
+    state().setDraft({ betaUpdate: true });
+    await settle();
+    callIPCMock.mockResolvedValueOnce({ settings: { ...DEFAULT_SETTINGS, betaUpdate: true } });
+    await expect(state().save()).resolves.toBe(true);
+
+    // The save call is no longer calls[0]: setDraft calls SetUpdateOptions first (sprint-16 R4).
+    const saveCall = callIPCMock.mock.calls.find(call => call[0] === SaveSettings);
+    expect(saveCall?.[1]).toEqual([expect.objectContaining({ betaUpdate: true })]);
+    expect(state().saved.betaUpdate).toBe(true);
+    expect(state().applied.betaUpdate).toBe(true);
   });
 
   it('save and load also set applied', async () => {
