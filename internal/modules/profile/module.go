@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"errors"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -308,7 +309,8 @@ func (m *Module) ChooseImportFile() models.Output[models.ImportFileOutput] {
 }
 
 // ImportProfile saves the profile of a profile file as a new profile with a new id and its secrets encrypted
-// again. A taken name gets " (2)", " (3)"... and a file path that does not exist here is cleared (PFW001).
+// again. A taken name gets " (2)", " (3)"... and a file path that does not exist here is cleared; then PFW001
+// replaces the success message PFS001.
 // The file is checked again, and nothing is written when it is invalid or the password is wrong.
 // It never connects, even with AutoConnect.
 func (m *Module) ImportProfile(input models.ImportProfileInput) models.Output[models.ConnectionProfileOutput] {
@@ -320,6 +322,10 @@ func (m *Module) ImportProfile(input models.ImportProfileInput) models.Output[mo
 
 	output := m.createProfile(imported.input, imported.allowMissingCertKey)
 	if output.Result && len(imported.clearedFields) > 0 {
+		// PFW001 already says the profile was imported, so it replaces the PFS001 toast.
+		output.MessageList = slices.DeleteFunc(output.MessageList, func(msg models.Message) bool {
+			return msg.MessageCode == PFS001
+		})
 		output.AddMessage(models.NewParamsMessage(cnst.MessageTypeWarn, cnst.Profile, PFW001, "", map[string]any{
 			"name":   output.Body.Name,
 			"fields": strings.Join(imported.clearedFields, ", "),
