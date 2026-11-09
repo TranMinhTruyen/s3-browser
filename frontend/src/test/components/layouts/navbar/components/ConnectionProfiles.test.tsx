@@ -23,17 +23,20 @@ vi.mock('@tanstack/react-virtual', () => ({
     count: number;
     getItemKey: (i: number) => string;
     estimateSize: () => number;
+    gap?: number;
     getScrollElement: () => unknown;
   }) => {
-    virtual.options = { ...options, estimate: options.estimateSize() };
+    const size = options.estimateSize();
+    const gap = options.gap ?? 0;
+    virtual.options = { ...options, estimate: size };
     return {
       getVirtualItems: () =>
         Array.from({ length: options.count }, (_, index) => ({
           key: options.getItemKey(index),
           index,
-          start: index * 76,
+          start: index * (size + gap),
         })).filter(row => !virtual.hidden.has(String(row.key))),
-      getTotalSize: () => options.count * 76,
+      getTotalSize: () => Math.max(0, options.count * size + (options.count - 1) * gap),
     };
   },
 }));
@@ -157,7 +160,7 @@ describe('ConnectionProfiles', () => {
   });
 
   describe('virtualization', () => {
-    it('keys rows by profile id, uses a fixed 76px row, and attaches the scroll container', () => {
+    it('keys rows by profile id, uses a 68px card with an 8px gap, and attaches the scroll container', () => {
       renderProfiles({ a: profile('a'), b: profile('b') });
 
       const opts = virtual.options as {
@@ -170,19 +173,19 @@ describe('ConnectionProfiles', () => {
         getItemKey: (i: number) => string;
       };
       expect(opts.count).toBe(2);
-      expect(opts.gap).toBeUndefined();
+      expect(opts.gap).toBe(8);
       expect(opts.measureElement).toBeUndefined();
       expect(opts.overscan).toBe(10);
-      expect(opts.estimate).toBe(76);
+      expect(opts.estimate).toBe(68);
       expect(opts.getItemKey(1)).toBe('b');
       expect(opts.getScrollElement()).toContainElement(screen.getByText('a-name'));
     });
 
-    it('sizes the list by rows x 76 and positions fixed-height rows without measuring them', () => {
+    it('sizes the list by cards plus gaps only between them (none after the last) and positions fixed-height rows without measuring them', () => {
       renderProfiles({ a: profile('a'), b: profile('b'), c: profile('c') });
 
       const row = (name: string) => card(name).parentElement as HTMLElement;
-      expect(row('b-name').parentElement).toHaveStyle({ height: '228px' });
+      expect(row('b-name').parentElement).toHaveStyle({ height: '220px' });
       expect(row('a-name')).toHaveStyle({ height: '68px', transform: 'translateY(0px)' });
       expect(row('c-name')).toHaveStyle({ height: '68px', transform: 'translateY(152px)' });
       expect(card('a-name')).not.toHaveAttribute('data-index');

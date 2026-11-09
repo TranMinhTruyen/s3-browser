@@ -18,9 +18,8 @@ import ConnectionProfileItem, { CARD_HEIGHT } from '@/components/layouts/navbar/
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import { showConnectModal, showExportProfileModal } from '@/components/modals/lazyModals';
 
+// Gap between cards only (none after the last one), so the list has the same 8px space at the top and bottom.
 const ROW_GAP = 8;
-// Fixed row height (card + gap): the virtualizer never measures, so the scroll size stays stable while scrolling.
-const ITEM_HEIGHT = CARD_HEIGHT + ROW_GAP;
 
 // The delete only needs the identity of the profile.
 const toDeleteInput = ({ id, name, version, authConfig }: ConnectionProfile): ConnectionProfileInput => ({
@@ -211,7 +210,9 @@ function ConnectionProfiles() {
   const virtualizer = useVirtualizer({
     count: keys.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ITEM_HEIGHT,
+    // Fixed card height: the virtualizer never measures, so the scroll size stays stable while scrolling.
+    estimateSize: () => CARD_HEIGHT,
+    gap: ROW_GAP,
     getItemKey: idx => keys[idx],
     overscan: 10,
   });
