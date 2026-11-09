@@ -401,5 +401,58 @@
       "ru": "Обновление готово к установке",
       "de": "Das Update ist installationsbereit"
     }
+  },
+  "37-profile-export-menu": {
+    "menu": {
+      "en": "Right-click the profile, then choose \"{{components/layouts/navbar/connectionProfiles:contextMenu.export}}\"",
+      "vi": "Bấm chuột phải vào hồ sơ, rồi chọn \"{{components/layouts/navbar/connectionProfiles:contextMenu.export}}\"",
+      "ja": "プロファイルを右クリックし、「{{components/layouts/navbar/connectionProfiles:contextMenu.export}}」を選びます",
+      "zh-CN": "右键点击配置文件，然后选择“{{components/layouts/navbar/connectionProfiles:contextMenu.export}}”",
+      "zh-TW": "在設定檔上按一下滑鼠右鍵，然後選取「{{components/layouts/navbar/connectionProfiles:contextMenu.export}}」",
+      "ru": "Щёлкните профиль правой кнопкой мыши и выберите «{{components/layouts/navbar/connectionProfiles:contextMenu.export}}»",
+      "de": "Rechtsklicken Sie auf das Profil und wählen Sie „{{components/layouts/navbar/connectionProfiles:contextMenu.export}}“"
+    }
+  },
+  "38-profile-export-modal": {
+    "secret": {
+      "en": "Tick \"{{components/modals/exportProfileModal:label.includeSecret}}\" to export the saved secrets, encrypted with a password",
+      "vi": "Chọn \"{{components/modals/exportProfileModal:label.includeSecret}}\" để xuất cả secret đã lưu, được mã hoá bằng mật khẩu",
+      "ja": "「{{components/modals/exportProfileModal:label.includeSecret}}」をオンにすると、保存済みのシークレットをパスワードで暗号化してエクスポートします",
+      "zh-CN": "勾选“{{components/modals/exportProfileModal:label.includeSecret}}”可导出已保存的密钥，并用密码加密",
+      "zh-TW": "勾選「{{components/modals/exportProfileModal:label.includeSecret}}」可匯出已儲存的密鑰，並以密碼加密",
+      "ru": "Включите «{{components/modals/exportProfileModal:label.includeSecret}}», чтобы экспортировать сохранённые секреты, зашифрованные паролем",
+      "de": "Aktivieren Sie „{{components/modals/exportProfileModal:label.includeSecret}}“, um die gespeicherten Geheimnisse mit einem Passwort verschlüsselt zu exportieren"
+    },
+    "password": {
+      "en": "Enter a password of at least 8 characters, then type it again",
+      "vi": "Nhập mật khẩu có ít nhất 8 ký tự, rồi nhập lại",
+      "ja": "8 文字以上のパスワードを入力し、もう一度入力します",
+      "zh-CN": "输入至少 8 个字符的密码，然后再输入一次",
+      "zh-TW": "輸入至少 8 個字元的密碼，然後再輸入一次",
+      "ru": "Введите пароль не короче 8 символов и повторите его",
+      "de": "Geben Sie ein Passwort mit mindestens 8 Zeichen ein und wiederholen Sie es"
+    }
+  },
+  "39-profile-import-button": {
+    "import": {
+      "en": "Click here to import a profile from a JSON file",
+      "vi": "Nhấp vào đây để nhập hồ sơ từ tệp JSON",
+      "ja": "ここをクリックして JSON ファイルからプロファイルをインポート",
+      "zh-CN": "点击此处从 JSON 文件导入配置文件",
+      "zh-TW": "按一下此處從 JSON 檔案匯入設定檔",
+      "ru": "Нажмите здесь, чтобы импортировать профиль из файла JSON",
+      "de": "Hier klicken, um ein Profil aus einer JSON-Datei zu importieren"
+    }
+  },
+  "40-profile-import-password": {
+    "password": {
+      "en": "Enter the password that was used when the file was exported",
+      "vi": "Nhập mật khẩu đã dùng khi xuất tệp",
+      "ja": "ファイルのエクスポート時に使用したパスワードを入力します",
+      "zh-CN": "输入导出该文件时使用的密码",
+      "zh-TW": "輸入匯出該檔案時使用的密碼",
+      "ru": "Введите пароль, использованный при экспорте файла",
+      "de": "Geben Sie das Passwort ein, das beim Export der Datei verwendet wurde"
+    }
   }
 }

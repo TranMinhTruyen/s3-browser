@@ -124,6 +124,49 @@ Hồ sơ đang có tác vụ tải lên hoặc tải xuống thì không thể x
 
 Nút đầu tiên phía trên danh sách (**Kết nối**) mở cùng cửa sổ này nhưng có nút **Kết nối**, dùng để kết nối một lần mà không lưu hồ sơ; nút **Làm mới danh sách hồ sơ kết nối** tải lại danh sách.
 
+### 4.1 Xuất hồ sơ
+
+Xuất sao chép hồ sơ ra một tệp, ví dụ để dùng trên máy tính khác. Bấm chuột phải vào hồ sơ rồi chọn **Xuất**.
+
+![Mục Xuất trong menu hồ sơ](images/37-profile-export-menu.png)
+
+Cửa sổ **Xuất hồ sơ** mở ra.
+
+![Cửa sổ Xuất hồ sơ](images/38-profile-export-modal.png)
+
+- Để **Kèm secret** ở trạng thái tắt để xuất hồ sơ không kèm secret (secret key, session token, mật khẩu LDAP, cụm mật khẩu của khóa). Trước khi tiếp tục, ứng dụng cảnh báo nếu hồ sơ có secret đã lưu: "Profile [tên] có secret đã lưu sẽ KHÔNG được xuất. Sau khi nhập, bạn cần nhập lại chúng. Xuất không kèm secret?" Xác nhận để xuất, hoặc hủy để quay lại. Sau khi nhập hồ sơ, hãy chỉnh sửa hồ sơ và nhập lại secret.
+- Chọn **Kèm secret** để xuất cả secret đã lưu. Nhập **Mật khẩu** có ít nhất 8 ký tự và nhập lại vào **Xác nhận mật khẩu**. Secret được mã hóa bằng mật khẩu này (PBKDF2 và AES-GCM): chúng không bao giờ được ghi vào tệp dưới dạng văn bản thường. Tùy chọn này bị tắt ("Hồ sơ này không lưu secret nào.") khi hồ sơ không có secret đã lưu.
+
+Bấm **Xuất**. Hộp thoại lưu tệp của Windows mở ra với tên tệp gợi ý lấy từ tên hồ sơ: chỉ gồm chữ thường, chữ số và dấu gạch dưới, ví dụ `minio_demo.json`. Chọn nơi lưu tệp. Khi tệp được ghi xong, một thông báo cho bạn biết. Nếu đóng hộp thoại lưu, không có gì được ghi và cửa sổ **Xuất hồ sơ** vẫn mở.
+
+Tệp chứa các thiết lập kết nối của hồ sơ (tên, màu, nhà cung cấp, endpoint, region, access key, path style, tự động kết nối, phương thức xác thực và các tùy chọn của nó), không chứa dữ liệu nội bộ như ID hay ngày giờ của hồ sơ. Chỉ đường dẫn của tệp chứng chỉ và khóa được xuất, không xuất chính các tệp đó.
+
+Hãy giữ tệp và mật khẩu cẩn thận. Mật khẩu không được lưu ở đâu cả: quên mật khẩu thì không thể nhập tệp. Đừng sửa tay tệp có chứa secret. Nếu nhà cung cấp, endpoint hoặc phương thức xác thực bị đổi, việc nhập tệp sẽ lỗi với thông báo "Sai mật khẩu hoặc tệp bị hỏng."
+
+### 4.2 Nhập hồ sơ
+
+Bấm nút **Nhập hồ sơ kết nối** (cạnh nút **Tạo hồ sơ kết nối**, phía trên danh sách hồ sơ).
+
+![Nút Nhập](images/39-profile-import-button.png)
+
+Hộp thoại mở tệp của Windows xuất hiện: chọn tệp `.json` do S3Browser xuất (tối đa 1 MB). Ứng dụng kiểm tra tệp trước khi lưu bất cứ thứ gì. Ví dụ, "Tệp không phải là tệp hồ sơ S3Browser hợp lệ." nghĩa là tệp không phải hồ sơ do S3Browser xuất; cũng có thông báo khi phiên bản của tệp không được hỗ trợ hoặc tệp quá lớn.
+
+- Tệp xuất không kèm secret được nhập ngay.
+- Tệp xuất kèm secret sẽ mở cửa sổ **Nhập hồ sơ**: nhập mật khẩu đã dùng khi xuất tệp, rồi bấm **Nhập**.
+
+![Cửa sổ Nhập hồ sơ](images/40-profile-import-password.png)
+
+Nếu mật khẩu sai, thông báo "Sai mật khẩu hoặc tệp bị hỏng." xuất hiện và cửa sổ vẫn mở để bạn nhập lại mật khẩu hoặc bấm **Hủy**. Không có gì được lưu cho tới khi mật khẩu đúng.
+
+Hồ sơ được nhập sẽ thêm vào danh sách như một hồ sơ mới:
+
+- Nếu đã có hồ sơ cùng tên, hồ sơ mới được đặt tên kèm số: **tên (2)**, **tên (3)**, v.v.
+- Đường dẫn tới tệp không tồn tại trên máy tính này (tệp chứng chỉ CA, chứng chỉ hoặc khóa của máy khách, tệp config hoặc credentials của AWS) sẽ bị để trống, và một cảnh báo liệt kê các trường đó: "Đã nhập hồ sơ [tên]. Các đường dẫn tệp sau không tồn tại trên máy này và đã được xóa trống: {fields}." Hãy chỉnh sửa hồ sơ và chọn lại các tệp trước khi kết nối. Điều này cũng áp dụng cho chứng chỉ và khóa của phương thức chứng chỉ TLS máy khách.
+- Việc nhập không tự kết nối hồ sơ, kể cả khi tệp bật tự động kết nối; tự động kết nối có hiệu lực từ lần khởi động ứng dụng sau.
+- Hồ sơ xuất không kèm secret thì không có secret: hãy chỉnh sửa và nhập chúng.
+
+Hộp thoại lưu và mở tệp của Windows không thể hiện trong ảnh chụp màn hình. Ảnh của cửa sổ **Nhập hồ sơ** cho thấy cửa sổ mở ra với một tệp mẫu.
+
 ## 5. Duyệt bucket và object
 
 Mỗi tab làm việc với một hồ sơ. Để dùng hồ sơ trong tab, chọn nó ở ô chọn phía trên bên trái của tab, rồi bấm nút **Kết nối** bên cạnh (nếu hồ sơ chưa kết nối). Bấm nút **+** (**Thêm tab**) để mở thêm tab, ví dụ cho tài khoản thứ hai. Kéo một tab để đổi vị trí (hoặc nhấn Ctrl+Shift+Trái/Phải); các tab đang mở được ghi nhớ cho lần mở ứng dụng sau.
@@ -302,14 +345,16 @@ Bấm nút **Cài đặt** (biểu tượng bánh răng) ở góc trên bên ph�
 - **Phông chữ**: Nunito, System UI, Segoe UI, Arial, Roboto, Be Vietnam Pro, Verdana, Meiryo UI, Monospace hoặc JetBrains Mono.
 - **Ngôn ngữ**: English, Tiếng Việt, 日本語, 简体中文, 繁體中文, Русский hoặc Deutsch. Toàn bộ giao diện, kể cả thông báo, đổi theo.
 - **Khởi động cùng Windows**: mở S3Browser khi đăng nhập Windows. Chỉ hiện ở bản cài đặt trên Windows (không có ở bản portable).
-- **Tự động kiểm tra và tải bản cập nhật** và **Nhận bản beta (thử nghiệm)**: xem [Cập nhật](#102-cập-nhật).
+- **Tự động kiểm tra và tải bản cập nhật** và **Nhận bản beta (thử nghiệm)**: xem [Cập nhật](#102-cập-nhật). Hai công tắc này có hiệu lực ngay khi bạn gạt, không cần **Áp dụng** hay **Lưu**; chỉ **Lưu** mới giữ chúng sau khi mở lại app.
 
 Mọi thay đổi được xem trước ngay. Sau đó chọn:
 
 - **Lưu**: giữ cài đặt, kể cả sau khi mở lại app.
-- **Áp dụng**: giữ cài đặt đến khi đóng app; hộp thoại vẫn mở. Áp dụng không thay đổi tùy chọn Khởi động cùng Windows.
-- **Hủy** hoặc **X**: bỏ các thay đổi kể từ lần Áp dụng hoặc Lưu gần nhất.
+- **Áp dụng**: giữ cài đặt đến khi đóng app, gồm cả hai công tắc cập nhật; hộp thoại vẫn mở. Áp dụng không thay đổi tùy chọn Khởi động cùng Windows.
+- **Hủy**: bỏ các thay đổi kể từ lần Áp dụng hoặc Lưu gần nhất, gồm cả hai công tắc cập nhật. Hộp thoại đóng lại.
 - **Đặt lại mặc định**: đưa form về mặc định (Sáng, Nunito, English, tắt). Bấm **Lưu** để giữ.
+
+Nếu bạn đóng cửa sổ bằng **X**, phím Esc hoặc nhấp ra ngoài khi còn thay đổi chưa lưu và chưa áp dụng, cảnh báo **Cài đặt chưa được lưu** xuất hiện ("Bạn có thay đổi cài đặt chưa được lưu hoặc áp dụng. Bạn muốn làm gì?"): **Quay lại** giữ cửa sổ mở cùng các thay đổi, **Bỏ thay đổi** hoàn tác chúng và đóng cửa sổ, **Lưu** lưu chúng (cửa sổ vẫn mở nếu lưu lỗi). Không có thay đổi thì cửa sổ đóng ngay.
 
 Cài đặt được nạp khi app khởi động, trước khi nội dung cửa sổ hiện ra.
 
