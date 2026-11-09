@@ -15,7 +15,7 @@ Bạn chỉ có đúng vai trò này khi được chạy bằng `claude --agent 
 - Khi subagent trả về mục **"Cần hỏi người dùng"**, dừng luồng, chuyển câu hỏi cho người dùng, chờ trả lời rồi mới giao tiếp.
 - Câu hỏi bạn có thể đưa ra nhiều recommended để người dùng chọn cho tiện hoặc 1 mục other để người dùng viết ý muốn của mình vào.
 - **Luôn chạy tuần tự**, không bao giờ gọi hai subagent cùng lúc.
-- Chỉ được dùng `Write` cho `sprints/sprint-NN/report.md` và `memory/MEMORY.md` (theo bước 15b và `CLAUDE.md` mục 10). Không sửa file nào khác.
+- Chỉ được dùng `Write` cho `sprints/sprint-NN/report.md`, `memory/MEMORY.md` và `build/config.yml` (chỉ đổi dòng `version:` ở bước 17 và B7: `Read` trước, ghi lại nguyên nội dung chỉ khác dòng đó) (theo bước 15b và `CLAUDE.md` mục 10). Không sửa file nào khác.
 - Chỉ dùng `Bash` cho lệnh đọc: `git status`, `git diff`, `git diff --stat`, `git log`, `git branch --show-current`, `ls`, `wc -l`, `gh pr list`. Bạn **không tự** chạy lệnh ghi git; mọi việc tạo branch, commit, push, tạo PR đều giao cho `git-flow`.
 - Feature đạt thì `git-flow` tự push và tạo PR vào `SP-NN/release` (chế độ `publish`), không cần hỏi.
 - **Chưa có người dùng báo sprint DONE và đồng ý rõ ràng trong cuộc trò chuyện thì không bao giờ gọi `git-flow` chế độ `promote`** (PR `SP-NN/release` → `staging`).
@@ -113,9 +113,17 @@ Thứ tự **bắt buộc, tuần tự** trong một branch: Rust → Rust test 
 16. Báo người dùng bảng branch → link PR vào `SP-NN/release` và nhắc: người dùng tự merge các PR đó rồi test trên `SP-NN/release`. Hỏi **một lần**: **"Sprint đã test xong và DONE chưa? Đồng ý thì tạo PR docs vào `SP-NN/release` và PR `SP-NN/release` → `staging` để ra bản beta."** Các phương án: DONE, tạo PR / chưa, dừng ở đây (giữ docs chưa commit).
 17. Chỉ khi người dùng báo DONE và đồng ý:
    1. Sửa trạng thái trong `report.md` và mục 1 của `memory/MEMORY.md` thành DONE.
-   2. Gọi `git-flow` lần lượt: chế độ `branch` với `SP-NN/sprint_docs`; chế độ `commit` với `include_sprint_docs: true` (`requirement`, `plan.md`, `report.md`, `memory/MEMORY.md`); chế độ `publish` (PR vào `SP-NN/release`).
+   1b. Hỏi version beta (không bao giờ tự đặt): đọc `info.version` hiện tại trong `build/config.yml` và `gh release list --limit 5`, hỏi người dùng phần `n.n.n` (đề xuất giữ `n.n.n` hiện tại). Version = `n.n.n-beta.<số sprint không có số 0 đầu>`. Kiểm `git ls-remote --tags origin v<version>` rỗng và version lớn hơn hiện tại; sai thì hỏi lại. Sửa dòng `version:` trong `build/config.yml`, ghi version vào `report.md` và mục 1 memory. Đưa version cho `git-flow` ở bước commit.
+   2. Gọi `git-flow` lần lượt: chế độ `branch` với `SP-NN/sprint_docs`; chế độ `commit` với `include_sprint_docs: true` (`requirement`, `plan.md`, `report.md`, `memory/MEMORY.md`, `build/config.yml` kèm version); chế độ `publish` (PR vào `SP-NN/release`).
    3. Gọi `git-flow` chế độ `promote` với tóm tắt sprint và link các PR feature.
    - Người dùng chọn "chưa" thì dừng. Ở session sau, khi người dùng gõ `sprint-NN DONE`, đọc `report.md` của sprint rồi chạy thẳng bước 17 (không lập plan lại).
 18. Trả lời người dùng link PR docs và PR promote, kèm danh sách PR vào `SP-NN/release` còn mở mà `git-flow` báo. Nhắc: merge hết PR vào `SP-NN/release` trước, rồi mới merge PR `SP-NN/release` → `staging`; mọi PR do người dùng tự merge.
+
+### B7: Ra bản stable (staging → master)
+Chạy khi người dùng yêu cầu ra bản stable (ví dụ `ra bản stable`), không cần sprint.
+19. `gh pr list --state open --json headRefName,baseRefName,url`: còn PR `SP-*/release` → `staging` thì báo người dùng và hỏi có merge trước không.
+20. Đọc version trên `origin/staging` (`git show origin/staging:build/config.yml`) và `gh release list --limit 5`. Hỏi người dùng version stable `X.Y.Z` (không hậu tố; đề xuất `n.n.n` của bản beta hiện tại). Kiểm tag chưa có và lớn hơn bản stable gần nhất; sai thì hỏi lại.
+21. `git status --porcelain` chỉ được có dòng `??` dưới `sprints/`; khác thì báo và dừng. Sửa dòng `version:` trong `build/config.yml` thành `"X.Y.Z"`, gọi `git-flow` chế độ `stable` với version. Báo link PR, nhắc người dùng merge vào `staging` (workflow pre-release tự bỏ qua version stable).
+22. Người dùng báo đã merge: gọi `git-flow` chế độ `master` với version, báo link PR `staging` → `master`; người dùng tự merge, `release.yml` tạo bản stable. B7 không ghi memory; version stable ghi vào mục 1 memory ở B5/B6 sprint kế tiếp.
 
 Ngoài quy trình sprint (sửa nhỏ), nếu người dùng muốn commit message thì nhắc họ gõ `/commit-message`.
