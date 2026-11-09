@@ -1,7 +1,7 @@
 # Sprint 16: Export và import profile kết nối
 
 ## Mục tiêu
-Người dùng xuất profile kết nối ra một file JSON và nhập lại vào app trên máy khác, khỏi phải tạo lại profile bằng tay.
+Người dùng xuất profile kết nối ra một file JSON và nhập lại vào app trên máy khác, khỏi phải tạo lại profile bằng tay. Kèm sửa bug switch cập nhật trong modal cài đặt phải Save mới có hiệu lực (R4).
 
 ## Yêu cầu
 
@@ -47,6 +47,22 @@ Người dùng xuất profile kết nối ra một file JSON và nhập lại v�
   - [ ] Có ảnh minh hoạ: mục Export trong menu profile, modal export, nút Import, modal nhập mật khẩu (chụp bằng `docs/scripts/shots.mjs`; màn hình chỉ có hộp thoại native thì ghi rõ không chụp được)
   - [ ] PDF sinh lại bằng `bun run --cwd docs build:pdf`
 
+### R4: Bug: switch cập nhật trong modal cài đặt phải Save mới có hiệu lực
+- **Mô tả:** Hiện tại bật switch **Nhận bản pre-release** (`betaUpdate`) hay **Tự động kiểm tra và tải bản cập nhật** (`autoUpdate`) trong `SettingModal` rồi bấm **Kiểm tra cập nhật** thì app vẫn kiểm tra theo giá trị cũ, vì backend chỉ nhận giá trị mới khi Save (`SettingHandler.SaveSettings` gọi `SetBeta`/`SetAutoUpdate`); Apply cũng giữ nguyên giá trị cũ của hai switch (`settingStore.apply`). Sửa để gạt switch là có hiệu lực ngay với updater, không cần bấm Apply hay Save. Khi người dùng đóng modal mà chưa bấm Apply/Save thì hiện modal cảnh báo setting chưa được lưu.
+- **Nền tảng:** Cả hai (chỉ bản có updater: `updateSupported`)
+- **Màn hình liên quan:** `components/modals/setting/SettingModal.tsx`, `UpdateSection.tsx`, `common/stores/settingStore.ts`, `internal/handlers/setting_handler.go`, `internal/modules/update`
+- **Tiêu chí chấp nhận:**
+  - [ ] Bật switch pre-release rồi bấm Kiểm tra cập nhật (chưa Apply/Save) thì kiểm tra theo kênh pre-release; tắt thì theo kênh stable
+  - [ ] Gạt switch auto update có hiệu lực ngay: bật thì chạy kiểm tra định kỳ (và tự tải bản đã tìm thấy như hành vi `setAutoUpdate` hiện có), tắt thì dừng kiểm tra định kỳ
+  - [ ] Gạt switch không ghi `settings.json`; chỉ Save mới lưu (khởi động lại app dùng giá trị đã Save)
+  - [ ] Bấm Apply thì giữ giá trị hai switch cho phiên hiện tại (không còn bỏ qua `autoUpdate`/`betaUpdate` như `apply` hiện tại)
+  - [ ] Đóng modal (nút X, Esc, click ngoài) khi còn thay đổi chưa Apply/Save thì hiện modal cảnh báo chưa lưu setting; không có thay đổi thì đóng luôn, không cảnh báo
+  - [ ] Modal cảnh báo có 3 nút: **Quay lại** (đóng cảnh báo, giữ modal cài đặt và draft), **Bỏ thay đổi** (draft và updater trở về giá trị `betaUpdate`/`autoUpdate` đã apply rồi đóng modal cài đặt), **Lưu** (Save như nút Save; lỗi thì giữ modal cài đặt mở)
+  - [ ] Nút Huỷ ở footer không hiện cảnh báo, vẫn revert (kể cả trả updater về giá trị đã apply) rồi đóng
+  - [ ] Đổi switch pre-release không tự chạy kiểm tra cập nhật; tắt auto update khi đang tải thì vẫn giữ lượt tải
+  - [ ] Hành vi cũ giữ nguyên: Save vẫn lưu đủ mọi setting, preview theme/font/ngôn ngữ vẫn chạy live, `launchOnStartup` vẫn chỉ đổi khi Save
+  - [ ] Chuỗi UI mới của modal cảnh báo có đủ 7 ngôn ngữ; test hồi quy `settingStore`, `SettingModal`, `setting_handler`/module update theo CLAUDE.md mục 10
+
 ## Ngoài phạm vi
 - Không export nhiều profile một lần (export chỉ từ menu của từng profile).
 - Không đồng bộ profile qua cloud hay giữa các máy tự động.
@@ -72,5 +88,12 @@ Người dùng xuất profile kết nối ra một file JSON và nhập lại v�
 - Q6 quên mật khẩu thì không cho import (không có lựa chọn bỏ qua secret).
 - Q7 file là một object profile.
 - Q8 sprint-16 chờ sprint-15 DONE (merge `SP-15/release` → `staging`) rồi mới bắt đầu; user guide viết trong sprint-16 (R3).
+
+Đã chốt R4 (2026-11-09):
+- Q9 cảnh báo chưa lưu áp dụng cho mọi thay đổi trong modal (theme, font, ngôn ngữ, launch on startup, 2 switch update), so draft với giá trị đã apply.
+- Q10 modal cảnh báo có 3 nút: **Quay lại** (giữ modal cài đặt), **Bỏ thay đổi** (revert rồi đóng), **Lưu** (Save như nút Save rồi đóng).
+- Q11 nút **Huỷ** ở footer không hiện cảnh báo (chủ ý bỏ thay đổi); chỉ X/Esc/click ngoài mới cảnh báo.
+- Q12 bật auto update rồi tắt trong modal khi backend đã bắt đầu tải thì vẫn giữ lượt tải (như `setAutoUpdate` hiện tại).
+- Q13 đổi switch pre-release không tự chạy kiểm tra cập nhật; chỉ khi người dùng bấm hoặc theo vòng định kỳ.
 
 Còn mở: không.
