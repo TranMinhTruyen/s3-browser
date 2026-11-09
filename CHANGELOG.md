@@ -50,6 +50,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - macOS and Linux builds. S3Browser is now released for Windows 10/11 (x64) only.
 
+### Known issues
+
+- Deleting files or folders in a bucket with versioning only adds delete markers; older versions stay in the bucket. Deleting the bucket itself removes every version.
+- A public read-only bucket policy whose statements are in a different order (for example written by another tool) is shown as Custom.
+- At most 50 files per folder are ticked in one upload (4 large files, 1,000 files in total); files picked with the file dialog count as one folder.
+- File sizes are computed in units of 1,024 but labelled KB / MB / GB.
+
 ## [0.0.1-beta.1] - 2026-10-28
 
 First beta release.

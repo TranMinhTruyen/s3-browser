@@ -50,6 +50,13 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 - Builds für macOS und Linux. S3Browser erscheint jetzt nur noch für Windows 10/11 (x64).
 
+### Bekannte Probleme
+
+- Beim Löschen von Dateien oder Ordnern in einem Bucket mit Versionierung werden nur Löschmarkierungen gesetzt; ältere Versionen bleiben im Bucket. Wird der Bucket selbst gelöscht, werden alle Versionen entfernt.
+- Eine öffentliche, schreibgeschützte Bucket-Richtlinie, deren Anweisungen in anderer Reihenfolge stehen (zum Beispiel von einem anderen Tool geschrieben), wird als „Benutzerdefiniert“ angezeigt.
+- Pro Upload werden höchstens 50 Dateien je Ordner automatisch ausgewählt (4 große Dateien, insgesamt 1.000 Dateien); im Dateidialog gewählte Dateien zählen als ein Ordner.
+- Dateigrößen werden in Einheiten von 1.024 berechnet, aber als KB / MB / GB angezeigt.
+
 ## [0.0.1-beta.1] - 2026-10-28
 
 Erste Beta-Version.
