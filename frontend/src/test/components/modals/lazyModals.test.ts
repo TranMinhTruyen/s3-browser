@@ -5,6 +5,7 @@ type ModalKey =
   | 'mfaCode'
   | 'history'
   | 'setting'
+  | 'unsavedSetting'
   | 'uploadPicker'
   | 'uploadLimit'
   | 'deleteResult'
@@ -26,6 +27,7 @@ for (const key of [
   'mfaCode',
   'history',
   'setting',
+  'unsavedSetting',
   'uploadPicker',
   'uploadLimit',
   'deleteResult',
@@ -48,6 +50,7 @@ const CHUNKS: [string, ModalKey][] = [
   ['connect/MfaCodeModal', 'mfaCode'],
   ['history/HistoryModal', 'history'],
   ['setting/SettingModal', 'setting'],
+  ['setting/UnsavedSettingModal', 'unsavedSetting'],
   ['upload/UploadPickerModal', 'uploadPicker'],
   ['upload/UploadLimitModal', 'uploadLimit'],
   ['delete/DeleteConfirmModal', 'deleteConfirm'],
@@ -71,6 +74,7 @@ const wrappers: [ModalKey, (m: LazyModals) => Promise<unknown>][] = [
   ['mfaCode', m => m.showMfaCodeModal({ connectionId: 'c', profileName: 'n' })],
   ['history', m => m.showHistoryModal()],
   ['setting', m => m.showSettingModal()],
+  ['unsavedSetting', m => m.showUnsavedSettingModal()],
   ['uploadPicker', m => m.showUploadPickerModal(PROPS.picker)],
   ['uploadLimit', m => m.showUploadLimitModal(PROPS.limit)],
   ['deleteConfirm', m => m.showDeleteConfirmModal(PROPS.confirm)],

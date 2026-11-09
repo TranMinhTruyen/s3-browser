@@ -33,6 +33,11 @@ func (h *UpdateHandler) DownloadUpdate() models.Output[models.UpdateStateOutput]
 	return h.update.Download()
 }
 
+// SetUpdateOptions applies the beta and auto update switches to the updater now, without saving settings.
+func (h *UpdateHandler) SetUpdateOptions(betaUpdate, autoUpdate bool) models.Output[models.UpdateStateOutput] {
+	return h.update.SetOptions(betaUpdate, autoUpdate)
+}
+
 // InstallUpdate runs the downloaded installer and quits the app.
 func (h *UpdateHandler) InstallUpdate() models.Output[models.UpdateStateOutput] {
 	return h.update.Install()

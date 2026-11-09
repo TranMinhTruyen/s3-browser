@@ -20,7 +20,7 @@ const TOAST_ID = 'app-update';
 export function useAppUpdate() {
   const { t } = useTranslation('appUpdate');
 
-  const autoUpdate = useSettingStore(s => s.saved.autoUpdate);
+  const autoUpdate = useSettingStore(s => s.applied.autoUpdate);
   const { supported, state, version, written, total } = useUpdateStore(
     useShallow(s => ({
       supported: s.supported,

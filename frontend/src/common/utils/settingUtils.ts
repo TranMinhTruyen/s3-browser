@@ -28,6 +28,14 @@ export function normalizeSettings(raw?: Partial<Record<keyof AppSettingValues, u
   };
 }
 
+/** True when any setting differs between the two values. */
+export const isSettingDirty = (draft: AppSettingValues, applied: AppSettingValues): boolean =>
+  (Object.keys(DEFAULT_SETTINGS) as (keyof AppSettingValues)[]).some(key => draft[key] !== applied[key]);
+
+/** True when the update switches (auto update, beta channel) differ between the two values. */
+export const isUpdateOptionsChanged = (a: AppSettingValues, b: AppSettingValues): boolean =>
+  a.autoUpdate !== b.autoUpdate || a.betaUpdate !== b.betaUpdate;
+
 let onSchemeChange: ((scheme: MantineColorScheme) => void) | null = null;
 let currentScheme: MantineColorScheme = DEFAULT_SETTINGS.theme;
 

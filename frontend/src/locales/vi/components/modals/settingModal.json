@@ -41,5 +41,10 @@
       "error": "Cập nhật thất bại."
     }
   },
+  "unsaved": {
+    "title": "Cài đặt chưa được lưu",
+    "message": "Bạn có thay đổi cài đặt chưa được lưu hoặc áp dụng. Bạn muốn làm gì?",
+    "button": { "back": "Quay lại", "discard": "Bỏ thay đổi", "save": "Lưu" }
+  },
   "message": { "saved": "Đã lưu cài đặt.", "applied": "Đã áp dụng cài đặt đến khi đóng app." }
 }

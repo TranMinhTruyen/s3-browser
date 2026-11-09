@@ -1,8 +1,9 @@
 import { GetSettings, SaveSettings } from '@wails/S3Browser/internal/handlers/settinghandler';
+import { SetUpdateOptions } from '@wails/S3Browser/internal/handlers/updatehandler';
 import { type AppSettingValues, DEFAULT_SETTINGS } from '@/common/cnst/settingConst';
 import { createAppStore } from '@/common/stores/createStore';
 import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
-import { applySettings, normalizeSettings } from '@/common/utils/settingUtils';
+import { applySettings, isUpdateOptionsChanged, normalizeSettings } from '@/common/utils/settingUtils';
 
 interface SettingState {
   /** Values persisted in settings.json. */
@@ -17,11 +18,11 @@ interface SettingState {
 interface SettingAction {
   /** Loads settings.json and applies it; keeps the defaults when loading fails. */
   load: () => Promise<void>;
-  /** Updates the draft and previews it. */
+  /** Updates the draft and previews it; the update switches reach the updater at once (not saved). */
   setDraft: (patch: Partial<AppSettingValues>) => void;
   /** Saves the draft; resolves true on success. */
   save: () => Promise<boolean>;
-  /** Keeps theme, font and language of the draft for this session only (not saved, autostart untouched). */
+  /** Keeps the draft for this session only (not saved); launchOnStartup stays, only Save changes it. */
   apply: () => void;
   /** Puts the draft back to the defaults (previewed, not saved). */
   resetDraft: () => void;
@@ -32,6 +33,24 @@ interface SettingAction {
 }
 
 const SCOPE = 'Setting';
+
+/** Updater calls run one after another, so toggling switches fast cannot make them arrive out of order. */
+let updaterQueue: Promise<unknown> = Promise.resolve();
+
+/** Sends both update switches to the updater (not saved) when `next` changes them compared to `previous`. */
+const syncUpdater = (previous: AppSettingValues, next: AppSettingValues) => {
+  if (!isUpdateOptionsChanged(previous, next)) {
+    return;
+  }
+  updaterQueue = updaterQueue
+    .then(() =>
+      callIPC(SetUpdateOptions, [next.betaUpdate, next.autoUpdate], {
+        scope: `${SCOPE}/syncUpdater`,
+        showMessage: false,
+      })
+    )
+    .catch(() => null);
+};
 
 /** App settings (theme, font, language, launch on startup). */
 export const useSettingStore = createAppStore<SettingState & SettingAction>((set, get) => {
@@ -62,9 +81,11 @@ export const useSettingStore = createAppStore<SettingState & SettingAction>((set
     },
 
     setDraft: patch => {
-      const draft = { ...get().draft, ...patch };
+      const previous = get().draft;
+      const draft = { ...previous, ...patch };
       set({ draft }, undefined, `${SCOPE}/setDraft`);
       applySettings(draft);
+      syncUpdater(previous, draft);
     },
 
     save: async () => {
@@ -79,21 +100,23 @@ export const useSettingStore = createAppStore<SettingState & SettingAction>((set
 
     apply: () => {
       const { draft, applied } = get();
-      // launchOnStartup (registry), autoUpdate and betaUpdate (updater) are backend state, so they only change on Save.
-      const { launchOnStartup, autoUpdate, betaUpdate } = applied;
-      set({ applied: { ...draft, launchOnStartup, autoUpdate, betaUpdate } }, undefined, `${SCOPE}/apply`);
+      // launchOnStartup is registry state, so it only changes on Save.
+      set({ applied: { ...draft, launchOnStartup: applied.launchOnStartup } }, undefined, `${SCOPE}/apply`);
     },
 
     resetDraft: () => {
+      const previous = get().draft;
       const draft = { ...DEFAULT_SETTINGS };
       set({ draft }, undefined, `${SCOPE}/resetDraft`);
       applySettings(draft);
+      syncUpdater(previous, draft);
     },
 
     revert: () => {
-      const { applied } = get();
+      const { applied, draft } = get();
       set({ draft: applied }, undefined, `${SCOPE}/revert`);
       applySettings(applied);
+      syncUpdater(draft, applied);
     },
 
     reset: () => {

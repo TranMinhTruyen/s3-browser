@@ -43,7 +43,7 @@ const setUpdate = (patch: Partial<UpdateStateOutput>) =>
 describe('useAppUpdate', () => {
   beforeEach(() => {
     useUpdateStore.getState().reset();
-    useSettingStore.setState({ saved: { ...DEFAULT_SETTINGS, autoUpdate: false } });
+    useSettingStore.setState({ applied: { ...DEFAULT_SETTINGS, autoUpdate: false } });
     vi.clearAllMocks();
     vi.mocked(Events.On).mockReturnValue(unsubscribe);
     useUpdateStore.setState({ load, download, install });
@@ -124,8 +124,30 @@ describe('useAppUpdate', () => {
       expect(download).toHaveBeenCalledTimes(1);
     });
 
+    it('follows applied.autoUpdate, not saved.autoUpdate', () => {
+      useSettingStore.setState({
+        saved: { ...DEFAULT_SETTINGS, autoUpdate: false },
+        applied: { ...DEFAULT_SETTINGS, autoUpdate: true },
+      });
+      setUpdate({ state: 'available' });
+      renderHook(() => useAppUpdate());
+
+      expect(lastToast().options.action).toBeUndefined();
+    });
+
+    it('shows the Download button when applied.autoUpdate is off even if saved is on', () => {
+      useSettingStore.setState({
+        saved: { ...DEFAULT_SETTINGS, autoUpdate: true },
+        applied: { ...DEFAULT_SETTINGS, autoUpdate: false },
+      });
+      setUpdate({ state: 'available' });
+      renderHook(() => useAppUpdate());
+
+      expect(lastToast().options.action?.label).toBe('Download');
+    });
+
     it('has no button for an available version when auto update is on', () => {
-      useSettingStore.setState({ saved: { ...DEFAULT_SETTINGS, autoUpdate: true } });
+      useSettingStore.setState({ applied: { ...DEFAULT_SETTINGS, autoUpdate: true } });
       setUpdate({ state: 'available' });
       renderHook(() => useAppUpdate());
 
