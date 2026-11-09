@@ -50,6 +50,11 @@
       "error": "更新失敗。"
     }
   },
+  "unsaved": {
+    "title": "設定尚未儲存",
+    "message": "有設定尚未儲存或套用。您要怎麼做？",
+    "button": { "back": "返回", "discard": "捨棄變更", "save": "儲存" }
+  },
   "message": {
     "saved": "設定已儲存。",
     "applied": "設定已套用，關閉應用程式後失效。"

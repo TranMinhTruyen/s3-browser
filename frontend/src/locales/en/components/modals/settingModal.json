@@ -41,5 +41,10 @@
       "error": "The update failed."
     }
   },
+  "unsaved": {
+    "title": "Unsaved settings",
+    "message": "You have settings that are not saved or applied. What do you want to do?",
+    "button": { "back": "Go back", "discard": "Discard changes", "save": "Save" }
+  },
   "message": { "saved": "Settings saved.", "applied": "Settings applied until the app is closed." }
 }

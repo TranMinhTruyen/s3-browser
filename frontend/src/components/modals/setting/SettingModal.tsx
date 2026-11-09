@@ -17,10 +17,12 @@ import { useSettingStore } from '@/common/stores/settingStore';
 import { useUpdateStore } from '@/common/stores/updateStore';
 import { tintedColor } from '@/common/theme/tintedColor';
 import { createMantineModal } from '@/common/utils/modalUtils';
+import { isSettingDirty } from '@/common/utils/settingUtils';
 import Button from '@/components/buttons/Button';
 import CloseButton from '@/components/buttons/CloseButton';
 import SelectInput from '@/components/inputs/SelectInput';
 import SwitchInput from '@/components/inputs/SwitchInput';
+import { showUnsavedSettingModal } from '@/components/modals/lazyModals';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 import UpdateSection from '@/components/modals/setting/UpdateSection';
 
@@ -33,6 +35,7 @@ export default createMantineModal<{}, boolean>(props => {
   const [saving, setSaving] = useState(false);
 
   const draft = useSettingStore(useShallow(s => s.draft));
+  const applied = useSettingStore(useShallow(s => s.applied));
   const autostartSupported = useSettingStore(s => s.autostartSupported);
   const updateSupported = useUpdateStore(s => s.supported);
   const setDraft = useSettingStore(s => s.setDraft);
@@ -87,12 +90,6 @@ export default createMantineModal<{}, boolean>(props => {
     [draft.language]
   );
 
-  // Closing without saving undoes the preview (back to the last applied values).
-  const onCloseModal = useCallback(() => {
-    revert();
-    mantine.props.onClose();
-  }, [revert, mantine.props]);
-
   const onClickCancel = useCallback(() => {
     revert();
     mantine.handler.resolve(false);
@@ -120,6 +117,22 @@ export default createMantineModal<{}, boolean>(props => {
     mantine.handler.resolve(true);
     mantine.handler.hide();
   }, [save, t, mantine.handler]);
+
+  // X, Esc and click outside: close at once when nothing changed, otherwise ask what to do with the changes.
+  const onCloseModal = useCallback(async () => {
+    if (!isSettingDirty(draft, applied)) {
+      revert();
+      mantine.props.onClose();
+      return;
+    }
+    const choice = await showUnsavedSettingModal();
+    if (choice === 'save') {
+      await onClickSave();
+    } else if (choice === 'discard') {
+      revert();
+      mantine.props.onClose();
+    }
+  }, [draft, applied, revert, mantine.props, onClickSave]);
 
   return (
     <Modal.Root

@@ -50,6 +50,11 @@
       "error": "更新失败。"
     }
   },
+  "unsaved": {
+    "title": "设置尚未保存",
+    "message": "有设置尚未保存或应用。您要怎么做？",
+    "button": { "back": "返回", "discard": "放弃更改", "save": "保存" }
+  },
   "message": {
     "saved": "设置已保存。",
     "applied": "设置已应用，关闭应用后失效。"

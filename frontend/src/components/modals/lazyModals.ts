@@ -46,6 +46,9 @@ export const showHistoryModal = async () =>
 export const showSettingModal = async () =>
   (await loadModal(() => import('@/components/modals/setting/SettingModal')))?.default.show();
 
+export const showUnsavedSettingModal = async () =>
+  (await loadModal(() => import('@/components/modals/setting/UnsavedSettingModal')))?.default.show();
+
 export const showUploadPickerModal = async (
   props: Parameters<typeof import('@/components/modals/upload/UploadPickerModal')['default']['show']>[0]
 ) => (await loadModal(() => import('@/components/modals/upload/UploadPickerModal')))?.default.show(props);

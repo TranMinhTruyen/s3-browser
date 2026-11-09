@@ -50,6 +50,11 @@
       "error": "Das Update ist fehlgeschlagen."
     }
   },
+  "unsaved": {
+    "title": "Nicht gespeicherte Einstellungen",
+    "message": "Es gibt Einstellungen, die weder gespeichert noch angewendet wurden. Was möchten Sie tun?",
+    "button": { "back": "Zurück", "discard": "Änderungen verwerfen", "save": "Speichern" }
+  },
   "message": {
     "saved": "Einstellungen gespeichert.",
     "applied": "Einstellungen gelten, bis die App geschlossen wird."
