@@ -1,6 +1,6 @@
 // Seeds demo buckets and small fake objects into a local S3-compatible server (MinIO) for the user-guide screenshots.
 // Credentials and endpoint come from the environment only; nothing is stored in the repo.
-//   S3_ENDPOINT=http://localhost:10010 S3_ACCESS_KEY=... S3_SECRET_KEY=... node docs/seed/seed.mjs
+//   S3_ENDPOINT=http://localhost:10030 S3_ACCESS_KEY=... S3_SECRET_KEY=... node docs/seed/seed.mjs
 // Existing buckets are never touched; only the demo-* buckets below are created and filled (idempotent).
 import { createHash, createHmac } from 'node:crypto';
 import { deflateSync } from 'node:zlib';
@@ -16,8 +16,8 @@ const sha256 = data => createHash('sha256').update(data).digest('hex');
 const hmac = (key, data) => createHmac('sha256', key).update(data).digest();
 const encodePath = path => path.split('/').map(s => encodeURIComponent(s)).join('/');
 
-/** Sends a SigV4-signed request (path-style) and throws on non-2xx. */
-async function s3(method, path, body = Buffer.alloc(0), contentType) {
+/** Sends a SigV4-signed request (path-style) and throws on non-2xx. `query` is a single value-less sub-resource such as `policy`. */
+async function s3(method, path, body = Buffer.alloc(0), contentType, query = '') {
   const url = new URL(endpoint);
   const canonicalPath = encodePath(path);
   const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
@@ -29,7 +29,7 @@ async function s3(method, path, body = Buffer.alloc(0), contentType) {
   const canonical = [
     method,
     canonicalPath,
-    '',
+    query ? `${query}=` : '',
     ...names.map(n => `${n}:${headers[n]}`),
     '',
     names.join(';'),
@@ -41,7 +41,7 @@ async function s3(method, path, body = Buffer.alloc(0), contentType) {
   const key = hmac(hmac(hmac(kDate, region), 's3'), 'aws4_request');
   const signature = createHmac('sha256', key).update(toSign).digest('hex');
   headers.authorization = `AWS4-HMAC-SHA256 Credential=${accessKey}/${scope}, SignedHeaders=${names.join(';')}, Signature=${signature}`;
-  const res = await fetch(`${url.origin}${canonicalPath}`, { method, headers, body: method === 'PUT' ? body : undefined });
+  const res = await fetch(`${url.origin}${canonicalPath}${query ? `?${query}` : ''}`, { method, headers, body: method === 'PUT' ? body : undefined });
   if (!res.ok && res.status !== 409) throw new Error(`${method} ${path} -> ${res.status}`);
 }
 
@@ -118,10 +118,25 @@ const demo = {
   },
 };
 
+/** Bucket policies so the policy badge shows every type: public read-only, custom, and none (private). */
+const publicRead = bucket => ({
+  Version: '2012-10-17',
+  Statement: [
+    { Effect: 'Allow', Principal: '*', Action: ['s3:GetBucketLocation', 's3:ListBucket'], Resource: `arn:aws:s3:::${bucket}` },
+    { Effect: 'Allow', Principal: '*', Action: ['s3:GetObject'], Resource: `arn:aws:s3:::${bucket}/*` },
+  ],
+});
+const customPolicy = bucket => ({
+  Version: '2012-10-17',
+  Statement: [{ Effect: 'Allow', Principal: '*', Action: ['s3:GetObject'], Resource: `arn:aws:s3:::${bucket}/2026/*` }],
+});
+const policies = { 'demo-photos': publicRead('demo-photos'), 'demo-reports': customPolicy('demo-reports') };
+
 for (const [bucket, files] of Object.entries(demo)) {
   await s3('PUT', `/${bucket}`);
   for (const [key, body] of Object.entries(files)) {
     await s3('PUT', `/${bucket}/${key}`, body, types[key.split('.').pop()]);
   }
+  if (policies[bucket]) await s3('PUT', `/${bucket}`, text(JSON.stringify(policies[bucket])), 'application/json', 'policy');
   console.log(`[seed] ${bucket}: ${Object.keys(files).length} objects`);
 }

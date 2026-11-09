@@ -7,13 +7,16 @@ Version 0.0.1-beta.1
 S3 Browser is a desktop application for browsing and managing buckets and objects on **AWS S3** and on S3-compatible servers such as **MinIO**. With it you can:
 
 - save connection profiles and connect to several accounts at the same time (one tab per connection);
+- sign in with an access key, an assumed role, AWS SSO, MinIO STS, LDAP, OpenID Connect (OIDC) or a client certificate;
 - browse buckets, folders and objects, and search them;
+- create, inspect, change the permission of and delete buckets;
 - see the details of an object;
 - upload files and folders (drag and drop or a dialog), with a live progress window;
 - download objects and review the download history;
-- delete objects and whole folders.
+- delete objects and whole folders;
+- keep the application up to date from GitHub Releases.
 
-The interface is available in English, Vietnamese and Japanese.
+The interface is available in English, Vietnamese, Japanese, Simplified Chinese, Traditional Chinese, Russian and German.
 
 ![Main window](images/01-main-window.png)
 
@@ -25,34 +28,80 @@ The window has three areas: the **profile list** on the left, the **tabs** on th
 
 There are two ways to get the application on Windows.
 
-- **Installer**: run the installer and follow the steps. The application is then available from the Start menu. Profiles and the download history are stored in your user profile.
+- **Installer**: download `S3Browser-<version>-windows-amd64-installer.exe` from the [GitHub Releases](https://github.com/TranMinhTruyen/s3-browser/releases) page and run it, then follow the steps. The **Latest** release is the stable version; versions marked **Pre-release** are betas. The application is then available from the Start menu. Profiles and the download history are stored in your user profile. Only the installed version can update itself (see [Updates](#102-updates)).
 - **Portable**: copy the portable folder anywhere (for example a USB drive) and run `S3Browser.exe`. It uses the WebView2 runtime shipped in the `webview2` folder and keeps its data in the `data` folder next to the program, so nothing is written elsewhere. Do not move the `webview2` and `data` folders away from the program.
 
 ## 3. Connect to AWS S3 or MinIO
 
 Click the **Create connection profile** button (the second button above the profile list). The **Connection Profile** window opens.
 
+### 3.1 Profile form
+
 ![Connection profile form](images/03-connect-modal.png)
 
 | Field | Description |
 | --- | --- |
-| AWS / MinIO | Choose the type of server. MinIO switches **Path style** on automatically. |
+| AWS / MinIO | Choose the type of server. MinIO switches **Path style** on automatically. The authentication methods offered depend on it. |
 | Profile name | The name shown in the profile list and in the tab. |
 | Profile color | The color of the profile in the list. |
-| Endpoint | The address of the server, for example `https://s3.amazonaws.com` or `http://localhost:9000`. Required. |
-| Region | The region of your account, for example `North Virginia [us-east-1]`. Required. |
-| Access key | The access key of your account. Required. |
+| Endpoint | The address of the server, for example `https://s3.amazonaws.com` or `http://localhost:9000`. |
+| Region | The region of your account, for example `North Virginia [us-east-1]`. Required, except for some methods that read it from the AWS configuration. |
+| Authentication method | How the application signs in (see [Authentication methods](#32-authentication-methods)). The fields below it change with the method. |
+| Access key | The access key of your account. |
 | Secret key | The secret key of your account. Click the eye icon to show it. |
+| Session token (optional) | The session token of temporary credentials. |
+| CA certificate file (optional) | See [CA certificate for MinIO](#33-ca-certificate-for-minio). |
 | Path style | Addresses buckets as `endpoint/bucket` instead of `bucket.endpoint`. Needed by MinIO and most self-hosted servers. |
-| Save secret key | Stores the secret key (encrypted) in the profile. Without it you must type the secret key every time you connect. |
-| Auto connect | Connects the profile when the application starts. Available only when **Save secret key** is ticked. |
+| Save secrets | Stores the secrets (encrypted) in the profile. Without it you must type them every time you connect. |
+| Auto connect | Connects the profile when the application starts. Available only when **Save secrets** is ticked, and not for methods that need input on every connect (for example OIDC or an MFA code). |
 
 Two buttons are available at the bottom:
 
-- **Test connection** checks the values without saving anything. A green message tells you the test succeeded; a red message explains the problem (see [Troubleshooting](#9-troubleshooting)).
+- **Test connection** checks the values without saving anything. Saved secrets are never shown again, so type them again for the test. A green message tells you the test succeeded; a red message explains the problem (see [Troubleshooting](#11-troubleshooting)).
 - **Create profile** saves the profile (when you open the window from an existing profile, the button reads **Update profile**).
 
 > Never share a screenshot that shows your secret key. The key fields in this guide contain placeholder values only.
+
+### 3.2 Authentication methods
+
+Choose the method in **Authentication method**. The list depends on the server type.
+
+![Authentication methods](images/23-auth-types.png)
+
+| Method | Server | What to enter |
+| --- | --- | --- |
+| Access key | AWS, MinIO | Access key, secret key and an optional session token. |
+| AWS CLI profile | AWS | A profile of the AWS CLI files (`~/.aws`), with optional paths of the **AWS config file** and **AWS credentials file** (defaults: `~/.aws/config`, `~/.aws/credentials`). |
+| Assume role | AWS | **Role ARN**, the credentials used to assume it (**Access key** or **AWS CLI profile**) and, optionally, **External ID**, **Session name**, **Duration (seconds)** and **MFA device serial (optional)**. The **MFA code** is asked at connect time and is never saved. |
+| AWS SSO | AWS | An AWS CLI profile that is already signed in. Run `aws sso login --profile <profile>` first. |
+| Default chain | AWS | Nothing: uses the credentials found in the environment (environment variables, shared files or the instance role). |
+| Anonymous | AWS, MinIO | Only the names of the public buckets to open (an anonymous user cannot list buckets). |
+| MinIO STS | MinIO | Access key, secret key and, optionally, **Role ARN (optional)**, **Duration (seconds, optional)** and **Inline policy (JSON, optional)**. |
+| LDAP | MinIO | **LDAP username** and **LDAP password** and, optionally, **Duration (seconds, optional)** and **Inline policy (JSON, optional)**. |
+| OIDC | MinIO | **Client ID**, **Issuer URL**, an optional **Scope** and the **Callback port**. |
+| Client certificate | MinIO | **Client certificate file** and **Private key file**; tick **The private key has a password** if needed. The endpoint must use `https://`. |
+
+The methods that need more fields are shown below (the values are placeholders).
+
+![Assume role](images/24-auth-assume-role.png)
+
+![MinIO STS](images/25-auth-minio-sts.png)
+
+![LDAP](images/26-auth-ldap.png)
+
+**OIDC.** Copy the **Redirect URI** shown in the form (**Copy** button) and register it as a redirect URI of the client in your identity provider. Click **Sign in**: your web browser opens and you sign in there. The form shows **Waiting for the sign-in in your browser...** and then **Signed in, valid until ...**; **Cancel sign-in** stops waiting. The sign-in is used once and is never saved. When it expires the form says **The sign-in has expired, sign in again**. The browser window cannot be shown in a screenshot.
+
+![OIDC](images/27-auth-oidc.png)
+
+**Client certificate.** Click **Choose file...** next to a file field and pick the file in the dialog of your system (the dialog cannot be shown in a screenshot); **Clear file** empties the field. The files are read when you connect and their content is not saved.
+
+![Client certificate](images/28-auth-certificate.png)
+
+Some credentials expire. Shortly before that, the application asks you to renew them: with an MFA code (assume role), by signing in again (OIDC, SSO), or by disconnecting and connecting again.
+
+### 3.3 CA certificate for MinIO
+
+A MinIO server with a self-signed or internal certificate needs an extra trusted CA. In **CA certificate file (optional)**, click **Choose file...** and pick the CA certificate (`.pem` or `.crt`). Leave the field empty to use the certificates of your operating system. The file applies to the connection to MinIO only, not to the OIDC identity provider.
 
 ## 4. Manage profiles
 
@@ -77,7 +126,7 @@ The first button above the list (**Connect**) opens the same window with a **Con
 
 ## 5. Browse buckets and objects
 
-Each tab works with one profile. To use a profile in a tab, choose it in the drop-down at the top left of the tab, then click the **Connect** button next to it (if the profile is not connected yet). Use the **+** button (**Add tab**) to open another tab, for example for a second account.
+Each tab works with one profile. To use a profile in a tab, choose it in the drop-down at the top left of the tab, then click the **Connect** button next to it (if the profile is not connected yet). Use the **+** button (**Add tab**) to open another tab, for example for a second account. Drag a tab to reorder it (or press Ctrl+Shift+Left/Right); the open tabs are remembered the next time you start the application.
 
 The list of buckets is shown:
 
@@ -110,9 +159,75 @@ Click a file to open the **Object details** panel on the right. It shows the nam
 
 ![Object details](images/10-object-detail.png)
 
-## 8. Transfer and delete objects
+## 8. Manage buckets
 
-### 8.1 Upload
+### 8.1 Policy badge and bucket menu
+
+Each bucket in the list shows a badge with its policy type: **Private** (no bucket policy), **Public** (anyone can read and list objects) or **Custom** (a custom policy). Point at the badge to read what it means. A bucket you cannot access is marked as such.
+
+Open the **More actions** menu (three dots) at the end of a bucket row:
+
+![Bucket menu](images/29-bucket-menu.png)
+
+- **Details**: opens the bucket details.
+- **Access permission**: changes who can access the bucket.
+- **Delete**: deletes the bucket.
+
+**Access permission** and **Delete** are hidden when the account is not allowed to use them; with the **Anonymous** method only **Details** is offered.
+
+### 8.2 Bucket details
+
+Choose **Details** to open the **Bucket details** panel on the right.
+
+![Bucket details](images/30-bucket-detail.png)
+
+- **Basic**: **Name**, **Create date**, **Region**, **ARN** and **Endpoint URL**.
+- **Access**: **Policy** (**Private**, **Public (read-only)** or **Custom**) and **Block Public Access** (**On** or **Off**).
+- **Configuration**: **Versioning**, **Default encryption**, **Object lock**, **Tags** and **Objects at root**. The count of objects at the root stops at 10,000 and then shows `10,000+`.
+
+If the details cannot be loaded, click **Retry**. Close the panel with the **Close** button.
+
+### 8.3 Create a bucket
+
+Click the **Create bucket** button above the bucket list.
+
+![Create a bucket](images/31-bucket-create.png)
+
+- **Bucket name**: 3-63 characters: lowercase letters, numbers, dots and hyphens.
+- **Permission**: **Private**, **Public (read-only)** or **Custom** (then type the policy as JSON).
+- On AWS, new buckets block public access by default, so a public policy may be rejected until Block Public Access is turned off. The bucket is still created and a warning tells you the permission was not applied.
+- On AWS there is also a **Region** field to choose the region of the new bucket (the profile region by default); this cannot be shown in a screenshot because it needs a real AWS account.
+
+Click **Create**. The bucket list refreshes.
+
+### 8.4 Change the permission
+
+Choose **Access permission** in the bucket menu.
+
+![Bucket permission](images/32-bucket-policy.png)
+
+| Mode | Meaning |
+| --- | --- |
+| Private | No bucket policy. Only authorized users can access this bucket. |
+| Public (read-only) | Anyone can list and read the objects of this bucket. Make sure it holds no private data. |
+| Custom | Edit the bucket policy as JSON. |
+
+The window warns you when Block Public Access is on for the bucket (a public policy will be rejected) or when your account is not allowed to change the permission. Click **Save**.
+
+### 8.5 Delete a bucket
+
+Choose **Delete** in the bucket menu.
+
+![Delete a bucket](images/33-bucket-delete.png)
+
+- Type the name of the bucket to confirm, then click **Delete**.
+- A bucket that is not empty is emptied first: **all its objects are deleted** (with versioning, every version and delete marker too). This cannot be undone.
+- A bucket that has Object Lock and is not empty cannot be deleted.
+- The deletion cannot be cancelled, and the window cannot be closed until it ends; this can take a long time for a large bucket. Only the current tab is refreshed afterwards.
+
+## 9. Transfer and delete objects
+
+### 9.1 Upload
 
 There are two ways to upload to the folder (or bucket) you are looking at.
 
@@ -148,7 +263,7 @@ When the upload is done, click **Refresh** to see the new objects.
 
 ![The new object in the list](images/16-object-uploaded.png)
 
-### 8.2 Download
+### 9.2 Download
 
 - For one object, open the **More actions** menu (three dots) at the end of its row and choose **Download**. A dialog asks where to save the file.
 - For several objects, tick them (up to 5), then click **Download selected** in the toolbar. A dialog asks for the destination folder.
@@ -161,28 +276,33 @@ The **Downloading** window shows the progress of each file (**Downloaded** and *
 
 Click the clock button at the top right to open the **Download history**: every download with its size, time, status and destination path.
 
-### 8.3 Select several objects
+### 9.3 Select several objects
 
 Tick the check boxes at the start of the rows. The toolbar then shows **Clear selected**, **Download selected** and **Delete selected**. You can select at most 5 objects at a time for download or delete.
 
 ![Selected objects](images/11-object-selection.png)
 
-### 8.4 Delete
+### 9.4 Delete
 
-Open the **More actions** menu of the object and choose **Delete**, or select objects and click **Delete selected**. A confirmation window shows what will be deleted; click **OK** to confirm.
+Open the **More actions** menu of the object and choose **Delete**, or select objects and click **Delete selected**. A confirmation window shows what will be deleted; click **Delete (n)** to confirm, where n is the number of selected items.
 
 ![Delete confirmation](images/17-delete-confirm.png)
 
 Deleting a **folder** removes the folder **and everything inside it**. The confirmation says so, and the action cannot be undone. If some objects cannot be deleted, the message tells you how many failed and how many were deleted.
 
-## 9. Settings (theme, font, language)
+## 10. Settings and updates
+
+### 10.1 Settings
 
 Click the **Settings** button (gear icon) at the top right, left of the download history button.
 
+![Settings](images/02-settings.png)
+
 - **Theme**: Light, Dark or Follow system.
 - **Font**: Nunito, System UI, Segoe UI, Arial, Roboto, Be Vietnam Pro, Verdana, Meiryo UI, Monospace or JetBrains Mono.
-- **Language**: English, Tiếng Việt or 日本語. The whole interface changes, including messages.
+- **Language**: English, Tiếng Việt, 日本語, 简体中文, 繁體中文, Русский or Deutsch. The whole interface changes, including messages.
 - **Launch on Windows startup**: start S3Browser when you sign in to Windows. Only shown in the installed Windows version (not the portable one).
+- **Automatically check for and download updates** and **Receive beta (pre-release) versions**: see [Updates](#102-updates).
 
 Every change is previewed immediately. Then choose:
 
@@ -193,7 +313,26 @@ Every change is previewed immediately. Then choose:
 
 Settings are loaded when the app starts, before the window content appears.
 
-## 10. Troubleshooting
+### 10.2 Updates
+
+The installed version can update itself from GitHub Releases. The **Update** section of the Settings window is shown there; the portable version does not update itself.
+
+![Update section of the Settings window](images/34-settings-update.png)
+
+- **Automatically check for and download updates**: when on, the application checks for a new version and downloads it in the background.
+- **Receive beta (pre-release) versions**: also offers the versions marked Pre-release.
+- **Check for updates** checks now. The line below **Current version** tells you the result (for example **Version ... is available.** or **You are on the latest version.**).
+- **Download** downloads the new version, **Update now** installs it once it is downloaded, and **View on GitHub** opens the release page.
+
+When a new version is available, a notice at the top of the window offers **Download**; while downloading it shows the progress, and once the download is finished it offers **Update**. The downloaded file is checked before it is installed.
+
+![Downloading an update](images/35-update-downloading.png)
+
+![Update ready to install](images/36-update-ready.png)
+
+A real update cannot be shown in a screenshot: the images above show the notice with sample values.
+
+## 11. Troubleshooting
 
 Messages appear at the top of the window. These are the ones you may meet most often.
 
@@ -206,7 +345,7 @@ Messages appear at the top of the window. These are the ones you may meet most o
 | Get list bucket error / Get list object error | The account may not be allowed to list buckets or the bucket, or the connection was lost. Check the permissions of the keys and reconnect. |
 | Access bucket is limited. | Your account cannot list all buckets. Ask for the missing permission, or open a bucket you are allowed to use. |
 | Another upload is running, please wait until it finishes. | Only one upload runs at a time. Wait for it, or cancel it from the **Uploading** window. |
-| Folder ... has more than 50 files to upload. / Upload at most 1000 files at a time. | See the limits in section 8.1. Split the upload or choose fewer files. |
+| Folder ... has more than 50 files to upload. / Upload at most 1000 files at a time. | See the limits in section 9.1. Split the upload or choose fewer files. |
 | Profile [{name}] has uploads or downloads in progress, cannot delete. | Wait for the transfers to finish or cancel them, then delete the profile. |
 | Please disconnect before action! | Disconnect the profile (right-click, **Disconnect**) before editing or deleting it. |
 | Maximum item selected is 5! | Select at most 5 objects for download or delete. |

@@ -33,6 +33,15 @@ Bạn là reviewer senior cho S3Browser. Toàn bộ quy ước code (backend, fr
 - Sự kiện tần suất cao (tiến độ upload/download) ghi thẳng vào store ở mỗi lần nhận mà không gộp/throttle, làm re-render cả danh sách.
 - Tính toán nặng (sort/filter/group cả danh sách object) chạy lại mỗi render thay vì `useMemo` hoặc làm ở backend.
 
+**Rust native và ranh giới FFI** (theo mục **Rust native** của `CLAUDE.md`)
+- Hàm `extern "C"` thiếu `catch_unwind`, hoặc panic có thể thoát qua ranh giới C; `unwrap`/`expect`/index không kiểm ngoài test.
+- Buffer cấp ở Rust nhưng không giải phóng qua `s3b_free`, giải phóng hai lần, hoặc Rust giữ con trỏ do Go truyền vào sau khi hàm trả về.
+- Phía Go: không gọi `s3b_free` trên mọi nhánh (kể cả lỗi), không gọi `s3b_cancel` khi ctx bị huỷ, load DLL không bằng đường dẫn tuyệt đối.
+- Chặn tokio runtime (`block_on` lồng trong async, IO đồng bộ trong task async), tạo runtime mới mỗi lần gọi.
+- Đọc cả kết quả query vào RAM thay vì cursor/trang; dựng `serde_json::Value` cho cả trang lớn khi có thể ghi thẳng.
+- Cursor/connection không được đóng khi đóng tab hoặc khi request bị huỷ (leak trong process app, không có restart).
+- Log password, connection string có secret hoặc dữ liệu truy vấn.
+
 **Hiệu năng (Go backend)**
 - Liệt kê object: luôn phân trang bằng `ListObjectsV2` với `MaxKeys` và continuation token; không gom toàn bộ bucket vào bộ nhớ rồi mới trả về.
 - File lớn: upload/download phải stream (`io.Reader`/`io.Copy`, multipart như `submodule_s3_upload.go`); không `io.ReadAll`/`os.ReadFile` cả file vào RAM.
@@ -49,6 +58,7 @@ Bạn là reviewer senior cho S3Browser. Toàn bộ quy ước code (backend, fr
 - Test độc lập, không flaky: không `time.Sleep`/`setTimeout` thật để chờ, không phụ thuộc thứ tự chạy, store được reset, goroutine có timeout.
 - Không gọi mạng, Wails runtime hay MinIO thật; fake/mock dùng lại helper sẵn có thay vì tạo trùng.
 - Tester không sửa code production.
+- Rust: test FFI thật sự gọi qua hàm export (JSON hỏng, panic, free, cancel), test PostgreSQL/MongoDB cần server thật phải có `#[ignore]`.
 
 **Tính nhất quán với `CLAUDE.md`**
 - Vi phạm bất kỳ quy ước nào trong `CLAUDE.md` (đặt tên handler `on…`, hàm không bọc `useCallback`, chuỗi hard-code, thiếu key en/vi/ja, thiếu re-export `alias.go`, sửa tay code sinh tự động, dùng tool format khác biome/oxlint...).
@@ -70,7 +80,7 @@ Nhóm các phát hiện theo mức độ nghiêm trọng, nặng nhất trước
 4. **Vị trí**: hiện vị trí theo format `[file.tsx:42](relative/path/file.tsx#L42)`
 5. **Nên cải thiện**: khả năng bảo trì, tính nhất quán
 
-Với mỗi phát hiện, nêu: vị trí có thể click, sai ở đâu, một kịch bản cụ thể gây ra lỗi, cách sửa ngắn gọn (kèm code snippet nếu hữu ích), và **agent nên sửa** (`go-backend`, `react-frontend` hoặc `react-tester`). Nêu rõ mức độ ảnh hưởng với kích thước dữ liệu hiện tại (ví dụ `limit: 10`) so với sau này.
+Với mỗi phát hiện, nêu: vị trí có thể click, sai ở đâu, một kịch bản cụ thể gây ra lỗi, cách sửa ngắn gọn (kèm code snippet nếu hữu ích), và **agent nên sửa** (`rust-native`, `rust-tester`, `go-backend`, `go-tester`, `react-frontend` hoặc `react-tester`). Nêu rõ mức độ ảnh hưởng với kích thước dữ liệu hiện tại (ví dụ `limit: 10`) so với sau này.
 
 Chỉ báo cáo những gì đã kiểm chứng. Đánh dấu điều chưa chắc chắn là "chưa xác minh". Nếu không tìm thấy vấn đề đáng kể, hãy nói thẳng, không độn thêm cho dài danh sách.
 
