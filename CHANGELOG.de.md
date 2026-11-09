@@ -7,7 +7,7 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unveröffentlicht]
 
-## [0.1.0] - Unveröffentlicht
+## [1.0.0] - 2026-11-09
 
 ### Hinzugefügt
 
@@ -32,7 +32,9 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 - Buckets, auf die nicht zugegriffen werden kann oder die für das aktuelle Konto schreibgeschützt sind, werden in der Liste markiert.
 - Ergebnisdialog nach dem Löschen mehrerer Objekte mit einer Liste der nicht löschbaren Einträge.
 - Update-Prüfung und Installation über GitHub Releases: eine Einstellung zum automatischen Suchen und Herunterladen von Updates, ein Fortschrittsbalken für den Download, SHA-256-Prüfung der heruntergeladenen Datei und eine Bestätigung, bevor die App zum Ausführen des Installers beendet wird. Ein Beta-Schalter ermöglicht den Empfang von Vorabversionen.
+- Die Schalter für automatische Updates und Beta-Versionen in den Einstellungen wirken sofort, ohne **Speichern**. Beim Schließen der Einstellungen mit nicht gespeicherten Änderungen fragt die App nach **Zurück**, **Änderungen verwerfen** oder **Speichern**.
 - Oberfläche auf Chinesisch (vereinfacht und traditionell), Russisch und Deutsch, zusätzlich zu Englisch, Vietnamesisch und Japanisch (insgesamt 7 Sprachen). Sprachen werden bei Bedarf geladen.
+- Dokumentation in allen 7 Sprachen: README, Benutzerhandbuch (mit PDF), Architekturnotizen und dieses Änderungsprotokoll.
 
 ### Geändert
 
