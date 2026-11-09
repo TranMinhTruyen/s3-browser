@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-## [0.1.0] - Unreleased
+## [1.0.0] - 2026-11-09
 
 ### Added
 
@@ -32,7 +32,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Buckets that cannot be accessed, or are read-only for the current account, are flagged in the list.
 - Result dialog after deleting several objects, listing what could not be deleted.
 - Update check and install from GitHub Releases: a setting to check for and download updates automatically, a download progress bar, SHA-256 verification of the downloaded file, and a confirmation before the app closes to run the installer. A beta switch lets you receive pre-release versions.
+- The automatic update and beta switches in Settings take effect immediately, without pressing **Save**. Closing Settings with unsaved changes asks you to **Go back**, **Discard changes** or **Save**.
 - Interface in Simplified Chinese, Traditional Chinese, Russian and German, in addition to English, Vietnamese and Japanese (7 languages in total). Languages are loaded on demand.
+- Documentation in all 7 languages: README, user guide (with PDF), architecture notes and this changelog.
 
 ### Changed
 

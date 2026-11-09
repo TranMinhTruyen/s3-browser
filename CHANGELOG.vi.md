@@ -7,7 +7,7 @@ Mọi thay đổi đáng chú ý của dự án được ghi trong file này.
 
 ## [Chưa phát hành]
 
-## [0.1.0] - Chưa phát hành
+## [1.0.0] - 2026-11-09
 
 ### Thêm mới
 
@@ -32,7 +32,9 @@ Mọi thay đổi đáng chú ý của dự án được ghi trong file này.
 - Bucket không truy cập được, hoặc chỉ đọc với tài khoản hiện tại, được đánh dấu trong danh sách.
 - Hộp thoại kết quả sau khi xoá nhiều object, liệt kê những mục không xoá được.
 - Kiểm tra và cài đặt bản cập nhật từ GitHub Releases: có cài đặt tự động kiểm tra và tải bản cập nhật, thanh tiến trình tải, kiểm tra SHA-256 của file đã tải, và xác nhận trước khi app thoát để chạy bộ cài. Công tắc beta cho phép nhận các bản thử nghiệm.
+- Công tắc tự động cập nhật và nhận bản beta trong Cài đặt có hiệu lực ngay, không cần bấm **Lưu**. Đóng Cài đặt khi còn thay đổi chưa lưu thì app hỏi **Quay lại**, **Bỏ thay đổi** hay **Lưu**.
 - Giao diện tiếng Trung giản thể, tiếng Trung phồn thể, tiếng Nga và tiếng Đức, bên cạnh tiếng Anh, tiếng Việt và tiếng Nhật (tổng cộng 7 ngôn ngữ). Ngôn ngữ được tải khi cần.
+- Tài liệu đủ 7 ngôn ngữ: README, hướng dẫn sử dụng (kèm PDF), ghi chú kiến trúc và changelog này.
 
 ### Thay đổi
 
