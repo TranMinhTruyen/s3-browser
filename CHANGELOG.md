@@ -46,6 +46,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The database file is backed up before a migration runs.
 - Internal cleanup of the backend and frontend (shared helpers, removal of dead code), with more unit tests.
 
+### Removed
+
+- macOS and Linux builds. S3Browser is now released for Windows 10/11 (x64) only.
+
 ## [0.0.1-beta.1] - 2026-10-28
 
 First beta release.
