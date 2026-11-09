@@ -118,6 +118,7 @@ Klicken Sie mit der rechten Maustaste auf ein Profil, um sein Menü zu öffnen.
 - **Verbinden**: öffnet die Verbindung. Ein verbundenes Profil zeigt ein grünes Symbol.
 - **Trennen**: schließt die Verbindung. Trennen Sie die Verbindung zuerst, bevor Sie ein Profil bearbeiten oder löschen.
 - **Bearbeiten**: ändert das Profil (der Fenstertitel lautet wieder **Verbindungsprofil**, die Schaltfläche **Profil aktualisieren**). Sie werden gebeten, die Aktualisierung zu bestätigen.
+- **Exportieren**: speichert das Profil in einer JSON-Datei; siehe [4.1 Ein Profil exportieren](#41-ein-profil-exportieren).
 - **Löschen**: entfernt das Profil nach Ihrer Bestätigung.
 
 ![Ein Profil löschen](images/18-profile-delete-confirm.png)
@@ -163,8 +164,8 @@ Ist das Passwort falsch, erscheint die Meldung „Falsches Passwort oder die Dat
 Das importierte Profil wird als neues Profil zur Liste hinzugefügt:
 
 - Gibt es bereits ein Profil mit demselben Namen, erhält das neue eine Nummer: **Name (2)**, **Name (3)** und so weiter.
-- Ein Pfad zu einer Datei, die auf diesem Computer nicht existiert (CA-Zertifikat, Client-Zertifikat oder -Schlüssel, AWS-config- oder -credentials-Datei), wird geleert, und eine Warnung listet diese Felder auf: „Profil [Name] importiert. Diese Dateipfade existieren auf diesem Computer nicht und wurden geleert: {fields}.“ Bearbeiten Sie das Profil und wählen Sie die Dateien erneut aus, bevor Sie sich verbinden. Das gilt auch für Zertifikat und Schlüssel der Methode TLS-Client-Zertifikat.
-- Der Import verbindet das Profil nicht, auch wenn in der Datei **automatisches Verbinden** aktiviert ist; das automatische Verbinden gilt ab dem nächsten Start der Anwendung.
+- Ein Pfad wird geleert, wenn die Datei auf diesem Computer nicht existiert oder wenn es ein Netzwerk- oder Gerätepfad ist (etwa `\\host\share`, `\\?\` oder `\\.\`), auch wenn dieser Pfad existiert. Das gilt für das CA-Zertifikat, das Zertifikat und den privaten Schlüssel der Methode **Clientzertifikat** sowie die AWS-config- und -credentials-Dateien. Eine Warnung listet diese Felder auf: „Profil [Name] importiert. Diese Dateipfade existieren auf diesem Computer nicht und wurden geleert: {fields}.“ Bearbeiten Sie das Profil und wählen Sie die Dateien erneut aus, bevor Sie sich verbinden.
+- Der Import verbindet das Profil nicht, auch wenn in der Datei **Automatisch verbinden** aktiviert ist; das automatische Verbinden gilt ab dem nächsten Start der Anwendung.
 - Ein ohne Geheimnisse exportiertes Profil hat keine Geheimnisse: Bearbeiten Sie es und geben Sie sie ein.
 
 Die Windows-Dialoge zum Speichern und Öffnen lassen sich nicht in einem Screenshot zeigen. Das Bild des Fensters **Profil importieren** zeigt das Fenster, geöffnet mit einer Beispieldatei.
@@ -354,7 +355,7 @@ Jede Änderung wird sofort als Vorschau angezeigt. Wählen Sie dann:
 - **Speichern**: behält die Einstellungen, auch nach einem Neustart der App.
 - **Übernehmen**: behält die Einstellungen, bis Sie die App schließen, einschließlich der beiden Update-Schalter; der Dialog bleibt geöffnet. „Beim Windows-Start starten“ wird durch Übernehmen nicht geändert.
 - **Abbrechen**: macht die Änderungen seit dem letzten Übernehmen oder Speichern rückgängig, einschließlich der beiden Update-Schalter. Der Dialog wird geschlossen.
-- **Zurücksetzen**: setzt das Formular auf die Standardwerte zurück (Hell, Nunito, English, aus). Klicken Sie auf **Speichern**, um sie zu behalten.
+- **Zurücksetzen**: setzt das Formular auf die Standardwerte zurück (Hell, Nunito, English, **Beim Windows-Start starten** aus). Die beiden Update-Schalter werden ebenfalls sofort zurückgesetzt, wie bei manuellem Umschalten: **Updates automatisch suchen und herunterladen** an und **Beta-Versionen (Vorabversionen) erhalten** aus. Klicken Sie auf **Speichern**, um die Standardwerte zu behalten; **Abbrechen** macht das Zurücksetzen rückgängig.
 
 Wenn Sie das Fenster mit **X**, der Esc-Taste oder einem Klick außerhalb schließen, während es Änderungen gibt, die weder gespeichert noch übernommen wurden, erscheint die Warnung **Nicht gespeicherte Einstellungen** („Es gibt Einstellungen, die weder gespeichert noch angewendet wurden. Was möchten Sie tun?“): **Zurück** lässt das Fenster mit Ihren Änderungen geöffnet, **Änderungen verwerfen** macht sie rückgängig und schließt das Fenster, **Speichern** speichert sie (schlägt das Speichern fehl, bleibt das Fenster geöffnet). Ohne Änderungen wird das Fenster einfach geschlossen.
 

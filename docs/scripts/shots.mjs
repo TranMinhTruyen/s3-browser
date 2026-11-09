@@ -287,10 +287,12 @@ async function runLang(browser, lang, bigFilePath) {
 
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   const pause = (ms = 700) => page.waitForTimeout(ms);
-  // Toasts are hidden unless the shot is about them; the mouse is parked so no tooltip stays open.
+  // Toasts are hidden unless the shot is about them; the mouse is parked so no tooltip stays open, unless `hover`
+  // (a locator) is set: the mouse then rests on it so its tooltip shows.
   // `notes` ([{ id, target, place }], see drawAnnotations) are drawn on the page for the shot and removed after it.
-  const shot = async (name, { toast = false, notes, ...options } = {}) => {
+  const shot = async (name, { toast = false, notes, hover, ...options } = {}) => {
     await page.mouse.move(640, 760);
+    await hover?.hover();
     await page.evaluate(show => {
       const toaster = document.querySelector('[data-sonner-toaster]');
       if (toaster) toaster.style.display = show ? '' : 'none';
@@ -568,7 +570,8 @@ async function runLang(browser, lang, bigFilePath) {
   await pause();
   const importButton = page.getByRole('button', { name: L(CP, 'tooltip.importProfile'), exact: true });
   await shot('39-profile-import-button', {
-    notes: [{ id: 'import', target: importButton, place: 'bottom', gap: 120, width: 200 }],
+    hover: importButton,
+    notes: [{ id: 'import', target: importButton, place: 'right', gap: 130, dy: 140, width: 280 }],
   });
   // The file dialog is native: answer the ChooseImportFile call with an encrypted demo file.
   const chooseImportId = readFileSync(

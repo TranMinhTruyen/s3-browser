@@ -23,6 +23,7 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
   - Optionale CA-Datei für MinIO-Server, deren Zertifikat von einer privaten Zertifizierungsstelle stammt.
   - Temporäre Anmeldeinformationen werden vor dem Ablauf automatisch erneuert, und eine Warnung erscheint, wenn sie während einer Übertragung bald ablaufen.
   - Geheimnisse (einschließlich LDAP-Passwörtern und Schlüssel-Passphrasen) werden verschlüsselt gespeichert. Die OIDC-Anmeldung bleibt nur im Arbeitsspeicher; die App speichert den Token nie.
+- Ein Verbindungsprofil in eine JSON-Datei exportieren (Rechtsklick auf das Profil, **Exportieren**) und mit der Schaltfläche **Verbindungsprofil importieren** importieren. Geheimnisse sind optional; wenn sie enthalten sind, werden sie mit einem Passwort verschlüsselt. Beim Import erhält ein doppelter Name eine Nummer, Dateipfade, die auf dem Computer nicht existieren oder Netzwerk-/Gerätepfade sind, werden geleert, und das Profil wird nicht verbunden.
 - Bucket erstellen (AWS S3 mit Region, MinIO), optional mit Zugriffsmodus bei der Erstellung.
 - Bucket-Berechtigung: privat (keine Bucket-Richtlinie), öffentlich nur Lesen oder eine benutzerdefinierte, als JSON bearbeitete Richtlinie, mit Warnung, wenn „Öffentlichen Zugriff blockieren“ eine öffentliche Richtlinie ablehnen würde.
 - Seitenleiste mit Bucket-Details.

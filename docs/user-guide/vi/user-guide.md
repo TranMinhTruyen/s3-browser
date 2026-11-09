@@ -116,6 +116,7 @@ Bấm chuột phải vào hồ sơ để mở menu.
 - **Kết nối**: mở kết nối. Hồ sơ đang kết nối có biểu tượng màu xanh lá.
 - **Ngắt kết nối**: đóng kết nối. Cần ngắt kết nối trước khi chỉnh sửa hoặc xóa hồ sơ.
 - **Chỉnh sửa**: sửa hồ sơ (tiêu đề cửa sổ vẫn là **Hồ sơ kết nối**, nút là **Cập nhật hồ sơ**). Bạn được yêu cầu xác nhận việc cập nhật.
+- **Xuất**: lưu hồ sơ ra tệp JSON; xem [4.1 Xuất hồ sơ](#41-xuất-hồ-sơ).
 - **Xóa**: xóa hồ sơ sau khi bạn xác nhận.
 
 ![Xóa hồ sơ](images/18-profile-delete-confirm.png)
@@ -161,7 +162,7 @@ Nếu mật khẩu sai, thông báo "Sai mật khẩu hoặc tệp bị hỏng."
 Hồ sơ được nhập sẽ thêm vào danh sách như một hồ sơ mới:
 
 - Nếu đã có hồ sơ cùng tên, hồ sơ mới được đặt tên kèm số: **tên (2)**, **tên (3)**, v.v.
-- Đường dẫn tới tệp không tồn tại trên máy tính này (tệp chứng chỉ CA, chứng chỉ hoặc khóa của máy khách, tệp config hoặc credentials của AWS) sẽ bị để trống, và một cảnh báo liệt kê các trường đó: "Đã nhập hồ sơ [tên]. Các đường dẫn tệp sau không tồn tại trên máy này và đã được xóa trống: {fields}." Hãy chỉnh sửa hồ sơ và chọn lại các tệp trước khi kết nối. Điều này cũng áp dụng cho chứng chỉ và khóa của phương thức chứng chỉ TLS máy khách.
+- Đường dẫn bị để trống khi tệp không tồn tại trên máy tính này, hoặc khi đó là đường dẫn mạng hay thiết bị (như `\\host\share`, `\\?\` hay `\\.\`), kể cả khi đường dẫn đó tồn tại. Điều này áp dụng cho chứng chỉ CA, chứng chỉ và khóa riêng của phương thức **Chứng chỉ client**, cùng tệp config và credentials của AWS. Một cảnh báo liệt kê các trường đó: "Đã nhập hồ sơ [tên]. Các đường dẫn tệp sau không tồn tại trên máy này và đã được xóa trống: {fields}." Hãy chỉnh sửa hồ sơ và chọn lại các tệp trước khi kết nối.
 - Việc nhập không tự kết nối hồ sơ, kể cả khi tệp bật tự động kết nối; tự động kết nối có hiệu lực từ lần khởi động ứng dụng sau.
 - Hồ sơ xuất không kèm secret thì không có secret: hãy chỉnh sửa và nhập chúng.
 
@@ -352,7 +353,7 @@ Mọi thay đổi được xem trước ngay. Sau đó chọn:
 - **Lưu**: giữ cài đặt, kể cả sau khi mở lại app.
 - **Áp dụng**: giữ cài đặt đến khi đóng app, gồm cả hai công tắc cập nhật; hộp thoại vẫn mở. Áp dụng không thay đổi tùy chọn Khởi động cùng Windows.
 - **Hủy**: bỏ các thay đổi kể từ lần Áp dụng hoặc Lưu gần nhất, gồm cả hai công tắc cập nhật. Hộp thoại đóng lại.
-- **Đặt lại mặc định**: đưa form về mặc định (Sáng, Nunito, English, tắt). Bấm **Lưu** để giữ.
+- **Đặt lại mặc định**: đưa form về mặc định (Sáng, Nunito, English, **Khởi động cùng Windows** tắt). Hai công tắc cập nhật cũng được đặt lại ngay, như khi bạn gạt tay: **Tự động kiểm tra và tải bản cập nhật** bật và **Nhận bản beta (thử nghiệm)** tắt. Bấm **Lưu** để giữ mặc định; **Hủy** hoàn tác việc đặt lại.
 
 Nếu bạn đóng cửa sổ bằng **X**, phím Esc hoặc nhấp ra ngoài khi còn thay đổi chưa lưu và chưa áp dụng, cảnh báo **Cài đặt chưa được lưu** xuất hiện ("Bạn có thay đổi cài đặt chưa được lưu hoặc áp dụng. Bạn muốn làm gì?"): **Quay lại** giữ cửa sổ mở cùng các thay đổi, **Bỏ thay đổi** hoàn tác chúng và đóng cửa sổ, **Lưu** lưu chúng (cửa sổ vẫn mở nếu lưu lỗi). Không có thay đổi thì cửa sổ đóng ngay.
 

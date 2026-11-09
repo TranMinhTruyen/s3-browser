@@ -23,6 +23,7 @@ Mọi thay đổi đáng chú ý của dự án được ghi trong file này.
   - File CA tuỳ chọn cho máy chủ MinIO có chứng chỉ do một tổ chức cấp chứng chỉ riêng cấp.
   - Credential tạm thời được làm mới tự động trước khi hết hạn, và hiện cảnh báo khi sắp hết hạn trong lúc đang truyền file.
   - Secret (gồm mật khẩu LDAP và passphrase của key) được lưu mã hoá. Phiên đăng nhập OIDC chỉ nằm trong bộ nhớ; app không bao giờ lưu token.
+- Xuất hồ sơ kết nối ra tệp JSON (bấm chuột phải vào hồ sơ, **Xuất**) và nhập lại bằng nút **Nhập hồ sơ kết nối**. Secret là tuỳ chọn; nếu có kèm theo thì được mã hoá bằng mật khẩu. Khi nhập, tên trùng được thêm số, đường dẫn tệp không tồn tại trên máy tính hoặc là đường dẫn mạng/thiết bị bị xoá trống, và hồ sơ không tự kết nối.
 - Tạo bucket (AWS S3 có chọn region, MinIO), có thể đặt chế độ truy cập ngay khi tạo.
 - Quyền của bucket: riêng tư (không có bucket policy), công khai chỉ đọc, hoặc policy tuỳ chỉnh sửa dạng JSON, có cảnh báo khi Block Public Access sẽ từ chối policy công khai.
 - Ngăn chi tiết bucket.

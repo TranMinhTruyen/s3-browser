@@ -116,6 +116,7 @@ Right-click a profile to open its menu.
 - **Connect**: opens the connection. A connected profile shows a green icon.
 - **Disconnect**: closes the connection. Disconnect first before you edit or delete a profile.
 - **Edit**: changes the profile (the window title is again **Connection Profile**, and the button is **Update profile**). You are asked to confirm the update.
+- **Export**: saves the profile to a JSON file; see [4.1 Export a profile](#41-export-a-profile).
 - **Delete**: removes the profile after you confirm.
 
 ![Delete a profile](images/18-profile-delete-confirm.png)
@@ -161,7 +162,7 @@ If the password is wrong, the message "Wrong password, or the file is damaged." 
 The imported profile is added to the list as a new profile:
 
 - If a profile with the same name already exists, the new one is named with a number: **name (2)**, **name (3)**, and so on.
-- A path to a file that does not exist on this computer (the CA certificate, the client certificate or key, the AWS config or credentials file) is emptied, and one warning lists these fields: "Profile [name] imported. These file paths do not exist on this computer and were cleared: {fields}." Edit the profile and choose the files again before you connect. This also applies to the certificate and key of the TLS client certificate method.
+- A path is emptied when the file does not exist on this computer, or when it is a network or device path (such as `\\host\share`, `\\?\` or `\\.\`), even if that path exists. This applies to the CA certificate, the certificate and private key of the **Client certificate** method, and the AWS config and credentials files. One warning lists these fields: "Profile [name] imported. These file paths do not exist on this computer and were cleared: {fields}." Edit the profile and choose the files again before you connect.
 - The profile is not connected by the import, even when **auto connect** is on in the file; auto connect applies the next time the application starts.
 - A profile exported without secrets has no secrets: edit it and enter them.
 
@@ -352,7 +353,7 @@ Every change is previewed immediately. Then choose:
 - **Save**: keep the settings, also after restarting the app.
 - **Apply**: keep the settings until you close the app, including the two update switches; the dialog stays open. Launch on Windows startup is not changed by Apply.
 - **Cancel**: undo the changes made since the last Apply or Save, including the two update switches. The dialog closes.
-- **Reset to default**: put the form back to the defaults (Light, Nunito, English, off). Click **Save** to keep them.
+- **Reset to default**: put the form back to the defaults (Light, Nunito, English, **Launch on Windows startup** off). The two update switches are also reset at once, like a manual change: **Automatically check for and download updates** on and **Receive beta (pre-release) versions** off. Click **Save** to keep the defaults; **Cancel** undoes the reset.
 
 If you close the window with **X**, the Esc key or a click outside it while some changes are neither saved nor applied, the warning **Unsaved settings** appears ("You have settings that are not saved or applied. What do you want to do?"): **Go back** keeps the window open with your changes, **Discard changes** undoes them and closes the window, and **Save** saves them (the window stays open if saving fails). Without changes, the window just closes.
 
