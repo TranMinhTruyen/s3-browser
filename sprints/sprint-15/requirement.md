@@ -10,42 +10,42 @@ Tài liệu cho người dùng và README trên GitHub phản ánh đúng tính 
 - **Nền tảng:** Cả hai
 - **Màn hình liên quan:** Không (tài liệu)
 - **Tiêu chí chấp nhận:**
-  - [ ] Danh sách tính năng khớp app hiện tại (sprint-01 → sprint-14)
-  - [ ] Hướng dẫn cài đặt và build từ source chạy đúng
-  - [ ] Ba bản ngôn ngữ cùng nội dung
+  - [x] Danh sách tính năng khớp app hiện tại (sprint-01 → sprint-14)
+  - [x] Hướng dẫn cài đặt và build từ source chạy đúng (đối chiếu nội dung, chưa chạy lại lệnh build khi đóng sprint)
+  - [x] Ba bản ngôn ngữ cùng nội dung (mở rộng thành 7 bản, Q1-B)
 
 ### R2: User guide
 - **Mô tả:** Cập nhật `docs/user-guide/{en,vi,ja}/user-guide.md`: kết nối AWS/MinIO (access key, STS/LDAP, OIDC, file CA), tạo/xoá bucket, bucket policy, drawer chi tiết bucket, badge policy type, upload/download, cài đặt (ngôn ngữ, theme, kênh cập nhật).
 - **Nền tảng:** Cả hai
 - **Màn hình liên quan:** Toàn app
 - **Tiêu chí chấp nhận:**
-  - [ ] Mỗi tính năng có mục hướng dẫn kèm ảnh
-  - [ ] Ảnh chụp lại theo UI hiện tại (bằng `shots.mjs`, xem R5)
-  - [ ] PDF sinh lại bằng `bun run --cwd docs build:pdf`
+  - [x] Mỗi tính năng có mục hướng dẫn kèm ảnh
+  - [x] Ảnh chụp lại theo UI hiện tại (bằng `shots.mjs`, xem R5)
+  - [x] PDF sinh lại bằng `bun run --cwd docs build:pdf`
 
 ### R3: Tài liệu kiến trúc (ARCHITECTURE)
 - **Mô tả:** Cập nhật `docs/ARCHITECTURE{,.vi,.ja}.md` theo code hiện tại (còn nợ từ sprint-11).
 - **Nền tảng:** Cả hai
 - **Màn hình liên quan:** Không (tài liệu)
 - **Tiêu chí chấp nhận:**
-  - [ ] Module, luồng xác thực, auto-update được mô tả đúng với code
+  - [x] Module, luồng xác thực, auto-update được mô tả đúng với code
 
 ### R4: CHANGELOG 0.1.0
 - **Mô tả:** Thêm mục `0.1.0` vào `CHANGELOG.md`, `CHANGELOG.vi.md`, `CHANGELOG.ja.md`.
 - **Nền tảng:** Cả hai
 - **Màn hình liên quan:** Không (tài liệu)
 - **Tiêu chí chấp nhận:**
-  - [ ] Có mục 0.1.0 ở cả 3 ngôn ngữ
+  - [x] Có mục 0.1.0 ở cả 3 ngôn ngữ (mở rộng thành 7 bản, Q1-B)
 
 ### R5: Mở rộng script chụp màn hình tự động
 - **Mô tả:** Bổ sung bước vào `docs/scripts/shots.mjs` (Playwright, app chạy server mode) cho các màn hình mới từ sprint-08 trở đi: modal kết nối (STS/LDAP, OIDC, file CA), tạo bucket kèm quyền, sửa bucket policy, drawer chi tiết bucket, badge policy type, xoá bucket, cài đặt kênh cập nhật. Cập nhật `docs/seed/seed.mjs` nếu cần dữ liệu demo mới (ví dụ bucket có policy public/custom). Agent tự chạy script để chụp lại toàn bộ ảnh cho mọi ngôn ngữ tài liệu.
 - **Nền tảng:** MinIO local (`test-env/`)
 - **Màn hình liên quan:** Toàn app
 - **Tiêu chí chấp nhận:**
-  - [ ] Một lần chạy `bun run --cwd docs shots` chụp đủ ảnh cho R1, R2
-  - [ ] Profile demo được tạo rồi xoá trong script, không để lại dữ liệu
-  - [ ] Credential chỉ truyền qua env, không ghi ra file hay hiện trong ảnh
-  - [ ] Màn hình không chụp được ở server mode (hộp thoại native, kéo thả, bước đăng nhập trên trình duyệt ngoài) được ghi rõ trong report
+  - [x] Một lần chạy `bun run --cwd docs shots` chụp đủ ảnh cho R1, R2
+  - [x] Profile demo được tạo rồi xoá trong script, không để lại dữ liệu
+  - [x] Credential chỉ truyền qua env, không ghi ra file hay hiện trong ảnh
+  - [x] Màn hình không chụp được ở server mode (hộp thoại native, kéo thả, bước đăng nhập trên trình duyệt ngoài) được ghi rõ trong report
 
 ## Ngoài phạm vi
 - Không sửa code app; không thay đổi version hay workflow release.

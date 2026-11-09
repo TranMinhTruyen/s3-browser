@@ -1,6 +1,6 @@
 # Plan sprint-15
 
-> **Trạng thái: ĐÃ DUYỆT** (2026-11-06; bổ sung R6 đã duyệt 2026-11-08). Người dùng đã chốt mọi câu hỏi Q1–Q28 (mục 2.1) và đồng ý triển khai. R1–R5 (D1–D15) đã làm; R3, R4 đã có PR #11, #12. R6 (D16–D18) chưa làm, còn chờ Q29 (chặn việc tách branch) và Q30 (mục 2.2).
+> **Trạng thái: DONE** (2026-11-09). Đã duyệt 2026-11-06 (R6 duyệt 2026-11-08). R1–R6 (D1–D18) đã làm và merge vào `SP-15/release`: R1, R2, R5 qua commit `f53b870`; R3 qua PR #11, R4 qua PR #12, R6 qua PR #13. Q29, Q30 đã có đáp án theo thực tế (mục 2.2). Kết quả xem `report.md`.
 >
 > Sprint chỉ sửa tài liệu và script trong `docs/` cùng `README*`, `CHANGELOG*` ở gốc repo; **không sửa code app** (requirement mục "Ngoài phạm vi"). Vì vậy không có task backend/frontend theo nghĩa code app, các task được ghi ở mục 4 dưới dạng task tài liệu/script (D).
 >
@@ -116,8 +116,8 @@ Khối lượng chữ cần viết tăng khoảng 7/3 ≈ 2,3 lần; thời gian
 ### 2.2 Câu hỏi chưa rõ
 | # | Câu hỏi | Đề xuất | Trả lời |
 |---|---|---|---|
-| Q29 | R6 sửa `shots.mjs` bản người dùng sửa ở commit `f53b870` và ghi đè ảnh/PDF do commit đó sinh ra. Commit này có trong lịch sử branch `SP-15/changelog_v0_1_0` (PR #12); planner chưa xác minh nó đã nằm trong `origin/SP-15/release` chưa. Nếu chưa, branch R6 tách từ release sẽ có `shots.mjs` cũ, thiếu 4 user guide mới và sẽ conflict nhị phân (PNG/PDF) với PR chứa `f53b870`. | Trước khi tách branch, `git-flow` kiểm `git merge-base --is-ancestor f53b870 origin/SP-15/release`. Có: tách như Q28. Không: dừng R6, người dùng merge PR chứa `f53b870` vào `SP-15/release` trước rồi mới tách. Không cherry-pick sang branch R6 (trùng commit giữa hai PR). | (chờ người dùng) |
-| Q30 | `README*.md` dùng chung 5 ảnh (`01`, `08`, `13`, `30`, `31`) với user guide. Giữ tên file theo yêu cầu thì README cũng hiện ảnh có ghi chú. | Chấp nhận README dùng ảnh có ghi chú (một bộ ảnh, không thêm file). Nếu muốn README ảnh sạch thì phải chụp thêm bộ không ghi chú (thêm file và thời gian chạy), cần người dùng quyết. | (chờ người dùng) |
+| Q29 | R6 sửa `shots.mjs` bản người dùng sửa ở commit `f53b870` và ghi đè ảnh/PDF do commit đó sinh ra. Commit này có trong lịch sử branch `SP-15/changelog_v0_1_0` (PR #12); planner chưa xác minh nó đã nằm trong `origin/SP-15/release` chưa. Nếu chưa, branch R6 tách từ release sẽ có `shots.mjs` cũ, thiếu 4 user guide mới và sẽ conflict nhị phân (PNG/PDF) với PR chứa `f53b870`. | Trước khi tách branch, `git-flow` kiểm `git merge-base --is-ancestor f53b870 origin/SP-15/release`. Có: tách như Q28. Không: dừng R6, người dùng merge PR chứa `f53b870` vào `SP-15/release` trước rồi mới tách. Không cherry-pick sang branch R6 (trùng commit giữa hai PR). | Đã giải quyết: `f53b870` đã nằm trong `SP-15/release` trước khi tách branch R6; PR #13 merge không conflict. |
+| Q30 | `README*.md` dùng chung 5 ảnh (`01`, `08`, `13`, `30`, `31`) với user guide. Giữ tên file theo yêu cầu thì README cũng hiện ảnh có ghi chú. | Chấp nhận README dùng ảnh có ghi chú (một bộ ảnh, không thêm file). Nếu muốn README ảnh sạch thì phải chụp thêm bộ không ghi chú (thêm file và thời gian chạy), cần người dùng quyết. | Đã chốt theo thực tế: README dùng chung ảnh có ghi chú, không thêm bộ ảnh sạch. |
 
 ## 3. Task backend (go-backend)
 Không có. Sprint không sửa code Go.
@@ -255,21 +255,21 @@ Riêng `SP-15/annotated_screenshots` (R6): trước bước 1, `git-flow` kiểm
 | 23 | Dung lượng PNG tăng nhẹ do khung/chữ; thời gian chạy 7 ngôn ngữ dài (file 700 MB upload mỗi ngôn ngữ) | low | Chấp nhận; D18 báo dung lượng trước–sau; chạy lại từng ngôn ngữ lỗi qua `SHOTS_LANGS` |
 
 ## 8. Tiêu chí hoàn thành
-- [ ] Không có thay đổi nào ngoài `docs/`, `README*`, `CHANGELOG*` (không sửa code app, locale app, version, workflow)
-- [ ] Unit test: không áp dụng (Q12)
-- [ ] Một lần `bun run --cwd docs shots` chụp đủ ảnh cho R1, R2 ở cả 7 ngôn ngữ (ngôn ngữ lỗi tạm dùng ảnh `en`, ghi report); không để lại profile/bucket demo
-- [ ] Credential chỉ qua env, không có trong file hay ảnh
-- [ ] Danh sách màn hình/ngôn ngữ không chụp được ở server mode (hộp thoại native chọn file/CA/nơi lưu, kéo thả, đăng nhập OIDC trên trình duyệt ngoài, region AWS, ...) được đưa vào `report.md`
-- [ ] 7 user guide có cùng tập mục, kèm ảnh cho mỗi tính năng của R2; 7 PDF sinh bằng `bun run --cwd docs build:pdf`, chữ Hán/Cyrillic hiển thị đúng font
-- [ ] 7 README cùng nội dung, tính năng khớp sprint-01 → sprint-14, lệnh cài/build đúng
-- [ ] 7 ARCHITECTURE mô tả đúng module, luồng xác thực, auto-update so với code
-- [ ] 7 CHANGELOG có mục `0.1.0`, bản mới dịch toàn bộ file
-- [ ] Mọi tài liệu có thanh chuyển ngôn ngữ 7 mục; không còn câu "UI 3 ngôn ngữ"
-- [ ] Mọi link tương đối trong tài liệu trỏ tới file có thật
-- [ ] `report.md` ghi rõ bản dịch zh-CN/zh-TW/ru/de chưa có người bản ngữ duyệt (Q20-A)
-- [ ] (R6) `shots.mjs` vẽ ghi chú tự động từ `boundingBox()` của phần tử thật, không toạ độ cứng; lớp phủ gỡ sau mỗi ảnh (Q25)
-- [ ] (R6) `docs/scripts/annotations.json` đủ 35 ảnh × 7 ngôn ngữ, script tự kiểm đủ khoá trước khi chạy; tên nút/menu trùng nguyên văn locale app; không sửa locale app (Q26)
-- [ ] (R6) Đủ 245 ảnh (35 × 7), mỗi ảnh ≥ 1 khung đỏ + ≥ 1 dòng chữ đỏ đậm viền trắng, mũi tên từ khung tới chữ; chữ đúng ngôn ngữ, Hán/Cyrillic không ô vuông; không che nội dung chính; tên file ảnh giữ nguyên (Q27)
-- [ ] (R6) Đã kiểm bằng mắt đủ 35 ảnh `en` và ≥ 5 ảnh mỗi ngôn ngữ còn lại trước khi commit; ngôn ngữ lỗi được ghi vào `report.md`
-- [ ] (R6) 7 PDF sinh lại bằng `bun run --cwd docs build:pdf`; mọi link ảnh trong 7 user guide và 7 README trỏ đúng file
-- [ ] (R6) Không lộ credential/endpoint thật trong ảnh, script hay JSON; branch `SP-15/annotated_screenshots` PR vào `SP-15/release`, không đụng PR #11, #12 (Q28)
+- [ ] Không có thay đổi nào ngoài `docs/`, `README*`, `CHANGELOG*` (không sửa code app, locale app, version, workflow): **không đạt**, người dùng tự đưa thêm thay đổi ngoài phạm vi vào release (bump dependency ở PR #12, bỏ target macOS/Linux/iOS và đổi version ở `cedf08a`), xem `report.md`
+- [x] Unit test: không áp dụng (Q12)
+- [x] Một lần `bun run --cwd docs shots` chụp đủ ảnh cho R1, R2 ở cả 7 ngôn ngữ (ngôn ngữ lỗi tạm dùng ảnh `en`, ghi report); không để lại profile/bucket demo
+- [x] Credential chỉ qua env, không có trong file hay ảnh
+- [x] Danh sách màn hình/ngôn ngữ không chụp được ở server mode (hộp thoại native chọn file/CA/nơi lưu, kéo thả, đăng nhập OIDC trên trình duyệt ngoài, region AWS, ...) được đưa vào `report.md`
+- [x] 7 user guide có cùng tập mục, kèm ảnh cho mỗi tính năng của R2; 7 PDF sinh bằng `bun run --cwd docs build:pdf`, chữ Hán/Cyrillic hiển thị đúng font
+- [x] 7 README cùng nội dung, tính năng khớp sprint-01 → sprint-14, lệnh cài/build đúng
+- [x] 7 ARCHITECTURE mô tả đúng module, luồng xác thực, auto-update so với code
+- [x] 7 CHANGELOG có mục `0.1.0`, bản mới dịch toàn bộ file
+- [x] Mọi tài liệu có thanh chuyển ngôn ngữ 7 mục; không còn câu "UI 3 ngôn ngữ"
+- [x] Mọi link tương đối trong tài liệu trỏ tới file có thật
+- [x] `report.md` ghi rõ bản dịch zh-CN/zh-TW/ru/de chưa có người bản ngữ duyệt (Q20-A)
+- [x] (R6) `shots.mjs` vẽ ghi chú tự động từ `boundingBox()` của phần tử thật, không toạ độ cứng; lớp phủ gỡ sau mỗi ảnh (Q25)
+- [x] (R6) `docs/scripts/annotations.json` đủ 35 ảnh × 7 ngôn ngữ, script tự kiểm đủ khoá trước khi chạy; tên nút/menu trùng nguyên văn locale app; không sửa locale app (Q26)
+- [x] (R6) Đủ 245 ảnh (35 × 7), mỗi ảnh ≥ 1 khung đỏ + ≥ 1 dòng chữ đỏ đậm viền trắng, mũi tên từ khung tới chữ; chữ đúng ngôn ngữ, Hán/Cyrillic không ô vuông; không che nội dung chính; tên file ảnh giữ nguyên (Q27)
+- [x] (R6) Đã kiểm bằng mắt đủ 35 ảnh `en` và ≥ 5 ảnh mỗi ngôn ngữ còn lại trước khi commit; ngôn ngữ lỗi được ghi vào `report.md`
+- [x] (R6) 7 PDF sinh lại bằng `bun run --cwd docs build:pdf`; mọi link ảnh trong 7 user guide và 7 README trỏ đúng file
+- [x] (R6) Không lộ credential/endpoint thật trong ảnh, script hay JSON; branch `SP-15/annotated_screenshots` PR vào `SP-15/release`, không đụng PR #11, #12 (Q28)

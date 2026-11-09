@@ -4,16 +4,16 @@
 
 ## 1. Trạng thái hiện tại
 
-- Cập nhật: 2026-11-06.
-- Sprint-15 (cập nhật README, user guide, ARCHITECTURE, CHANGELOG 0.1.0, mở rộng `docs/scripts/shots.mjs` chụp ảnh tự động cho bản release v0.1): đã có `sprints/sprint-15/requirement.md`, chưa lập plan; còn câu hỏi mở trong file (thêm 4 ngôn ngữ docs, server mode với Wails v3.1.0, chụp OIDC/LDAP, chụp với AWS).
+- Cập nhật: 2026-11-09.
+- Sprint-15 (tài liệu cho v0.1: README, user guide + PDF, ARCHITECTURE, CHANGELOG 0.1.0, `shots.mjs` chụp ảnh có ghi chú): **DONE** 2026-11-09; PR #11, #12, #13 đã merge vào `SP-15/release`; PR #14 (`SP-15/sprint_docs`), #16 (CHANGELOG ghi bỏ macOS/Linux) vào release và #15 `SP-15/release` → `staging` chờ người dùng merge (#14, #16 trước #15). Bản dịch zh-CN/zh-TW/ru/de chưa có người bản ngữ duyệt.
 - Sprint-14 (R1 badge policy type, R3 `CloseButton` dùng chung, R2 auto-update từ GitHub Releases): **DONE** 2026-11-06, mọi PR đã merge vào `staging` (#7 R1+R3, #10 R2); #8 đưa sprint-12/13/14 R1-R3 lên `master`. Không có `report.md`.
 - Sprint-16 (export/import profile ra file JSON): đã có `sprints/sprint-16/requirement.md`, mọi câu hỏi đã chốt; chờ sprint-15 DONE mới bắt đầu.
-- Release: version hiện `0.0.1-beta.1.1`; có workflow `release.yml` và `pre-release.yml` (pre-release từ `staging`).
+- Release: version hiện `0.0.1-beta.15` (`build/config.yml`), chỉ build Windows (bỏ macOS/Linux/iOS ở `cedf08a`); có workflow `release.yml` và `pre-release.yml` (pre-release từ `staging`).
 - Sprint-13 DONE 2026-11-05 (PR #6); sprint-12 DONE 2026-11-04.
 - Repo đã tách khỏi monorepo ngày 2026-11-03 (`TranMinhTruyen/s3-browser`); từ sprint-15 dùng luồng `SP-NN/release` (mục 2).
 - 2026-11-06: thêm agent `go-tester` và quy tắc test hồi quy (xem `CLAUDE.md` mục 9).
 - Lưu ý: các mục test tay của sprint-13 (bucket khác region, Object Lock/versioning khi xoá, xoá file/folder sau khi sửa `batchDeleter`, tạo bucket public trên AWS) chưa ghi nhận kết quả; gặp lỗi thì mở sprint sửa.
-- Việc tiếp theo: làm sprint-15 (`claude --agent orchestrator`, `làm sprint-15`).
+- Việc tiếp theo: người dùng merge 2 PR của sprint-15, rồi làm sprint-16 (`claude --agent orchestrator`, `làm sprint-16`).
 
 ## 2. Quyết định
 
@@ -54,6 +54,8 @@
 - 2026-11-05 [sprint-13] Đặt quyền khi tạo bucket: backend một call, kiểm JSON trước khi tạo; đặt policy lỗi thì giữ bucket, `Result=true` + `S3W012` (BPA chặn policy public) hoặc `S3W011` (lỗi khác), không rollback (Q24, Q26); AWS retry `NoSuchBucket` 3 lần x 1 giây (Q27).
 - 2026-11-05 [sprint-13] Get/put bucket policy dùng region của bucket (`readBucketRegion`) với AWS thật — tránh lỗi 301 với bucket khác region profile (Q33).
 - 2026-11-05 [frontend] Toast sonner mặc định tự ẩn sau 10 giây (`duration` ở `<Toaster>` trong `App.tsx`); toast credential sắp hết hạn giữ `Infinity` — người dùng chọn.
+- 2026-11-06 [docs] Mọi tài liệu (README, CHANGELOG, ARCHITECTURE, user guide + PDF + ảnh) viết đủ 7 ngôn ngữ, tên file theo mã locale app (`README.zh-CN.md`, `docs/user-guide/<mã>/`); viết `en` trước rồi dịch, nhãn UI lấy nguyên văn từ locale app — sprint-15 Q1-B, Q20, Q21. Sprint sau sửa tài liệu phải sửa đủ 7 bản.
+- 2026-11-08 [docs] Ảnh docs luôn có ghi chú do `shots.mjs` vẽ (khung theo `boundingBox()`), chuỗi trong `docs/scripts/annotations.json` đủ 7 ngôn ngữ; ảnh mới phải thêm khoá, script tự thoát nếu thiếu; README dùng chung ảnh có ghi chú — sprint-15 Q25–Q27, Q30.
 
 ## 3. Lỗi và bẫy đã gặp
 
@@ -88,6 +90,8 @@
 - 2026-11-05 [test] `WarningIcon.test.tsx` fail khi chạy cả bộ lúc máy tải nặng (`findByRole('tooltip')` quá thời gian), pass khi chạy riêng — nghi flaky, ngoài sprint-13.
 - 2026-11-05 [wails] Docs https://v3.wails.io/ trả 403 cho agent — tránh dùng API Wails mới, ghi "chưa xác minh" trong plan.
 - 2026-11-05 [quy trình] Orchestrator chạy làm subagent của session chính được (gọi được agent con), nhận B3 do session chính chuyển; dừng do rate limit thì SendMessage để chạy tiếp.
+- 2026-11-09 [docs] Server mode không điều khiển được hộp thoại native, kéo thả, đăng nhập OIDC ngoài, updater (bản portable) — `shots.mjs` tiêm event Wails qua `window._wails.dispatchWailsEvent` để có UI thật với dữ liệu giả.
+- 2026-11-09 [quy trình] Commit/PR do người dùng tự đưa vào `SP-NN/release` có thể nằm ngoài phạm vi sprint (sprint-15: bump deps trong PR #12, bỏ macOS/Linux + đổi version ở `cedf08a`) — khi đóng sprint so `origin/staging..origin/SP-NN/release` và ghi vào report.
 
 ## 4. Tóm tắt cũ
 
