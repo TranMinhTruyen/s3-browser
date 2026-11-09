@@ -16,6 +16,7 @@ import deleteConfirmModal from '@/locales/vi/components/modals/deleteConfirmModa
 import deleteResultModal from '@/locales/vi/components/modals/deleteResultModal.json';
 import exportProfileModal from '@/locales/vi/components/modals/exportProfileModal.json';
 import historyModal from '@/locales/vi/components/modals/historyModal.json';
+import importPasswordModal from '@/locales/vi/components/modals/importPasswordModal.json';
 import settingModal from '@/locales/vi/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/vi/components/modals/uploadLimitModal.json';
 import uploadPickerModal from '@/locales/vi/components/modals/uploadPickerModal.json';
@@ -41,6 +42,7 @@ const vietnameseResource: ResourceLanguage = {
   deleteResultModal: deleteResultModal,
   exportProfileModal: exportProfileModal,
   historyModal: historyModal,
+  importPasswordModal: importPasswordModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,
   uploadPickerModal: uploadPickerModal,

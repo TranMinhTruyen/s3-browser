@@ -12,7 +12,8 @@ type ModalKey =
   | 'createBucket'
   | 'bucketPolicy'
   | 'deleteBucket'
-  | 'exportProfile';
+  | 'exportProfile'
+  | 'importPassword';
 type LazyModals = typeof import('@/components/modals/lazyModals');
 
 // The chunk factories wait for `gate` and throw when `fail` is set, which makes the dynamic `import()` reject.
@@ -35,6 +36,7 @@ for (const key of [
   'bucketPolicy',
   'deleteBucket',
   'exportProfile',
+  'importPassword',
 ])
   h.show[key] = vi.fn();
 
@@ -58,6 +60,7 @@ const CHUNKS: [string, ModalKey][] = [
   ['bucket/BucketPolicyModal', 'bucketPolicy'],
   ['bucket/DeleteBucketModal', 'deleteBucket'],
   ['profile/ExportProfileModal', 'exportProfile'],
+  ['profile/ImportPasswordModal', 'importPassword'],
 ];
 
 const PROPS = {
@@ -69,6 +72,7 @@ const PROPS = {
   policy: { connectionId: 'c', profileName: 'n', bucket: 'b' } as never,
   deleteBucket: { connectionId: 'c', profileName: 'n', bucket: 'b' } as never,
   exportProfile: { profile: { id: 'p', name: 'n' } } as never,
+  importPassword: { path: 'p.json', name: 'p.json' } as never,
 };
 const wrappers: [ModalKey, (m: LazyModals) => Promise<unknown>][] = [
   ['connect', m => m.showConnectModal({ mode: 'editProfile' })],
@@ -83,6 +87,7 @@ const wrappers: [ModalKey, (m: LazyModals) => Promise<unknown>][] = [
   ['bucketPolicy', m => m.showBucketPolicyModal(PROPS.policy)],
   ['deleteBucket', m => m.showDeleteBucketModal(PROPS.deleteBucket)],
   ['exportProfile', m => m.showExportProfileModal(PROPS.exportProfile)],
+  ['importPassword', m => m.showImportPasswordModal(PROPS.importPassword)],
 ];
 
 // What MfaCodeModal imports besides modalUtils; stubbed by the string-failure test.

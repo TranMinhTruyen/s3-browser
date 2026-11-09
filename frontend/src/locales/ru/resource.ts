@@ -16,6 +16,7 @@ import deleteConfirmModal from '@/locales/ru/components/modals/deleteConfirmModa
 import deleteResultModal from '@/locales/ru/components/modals/deleteResultModal.json';
 import exportProfileModal from '@/locales/ru/components/modals/exportProfileModal.json';
 import historyModal from '@/locales/ru/components/modals/historyModal.json';
+import importPasswordModal from '@/locales/ru/components/modals/importPasswordModal.json';
 import settingModal from '@/locales/ru/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/ru/components/modals/uploadLimitModal.json';
 import uploadPickerModal from '@/locales/ru/components/modals/uploadPickerModal.json';
@@ -41,6 +42,7 @@ const russianResource: ResourceLanguage = {
   deleteResultModal: deleteResultModal,
   exportProfileModal: exportProfileModal,
   historyModal: historyModal,
+  importPasswordModal: importPasswordModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,
   uploadPickerModal: uploadPickerModal,

@@ -16,6 +16,7 @@ import deleteConfirmModal from '@/locales/de/components/modals/deleteConfirmModa
 import deleteResultModal from '@/locales/de/components/modals/deleteResultModal.json';
 import exportProfileModal from '@/locales/de/components/modals/exportProfileModal.json';
 import historyModal from '@/locales/de/components/modals/historyModal.json';
+import importPasswordModal from '@/locales/de/components/modals/importPasswordModal.json';
 import settingModal from '@/locales/de/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/de/components/modals/uploadLimitModal.json';
 import uploadPickerModal from '@/locales/de/components/modals/uploadPickerModal.json';
@@ -41,6 +42,7 @@ const germanResource: ResourceLanguage = {
   deleteResultModal: deleteResultModal,
   exportProfileModal: exportProfileModal,
   historyModal: historyModal,
+  importPasswordModal: importPasswordModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,
   uploadPickerModal: uploadPickerModal,

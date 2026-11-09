@@ -9,6 +9,7 @@
   "tooltip": {
     "connect": "连接",
     "createProfile": "创建连接配置文件",
+    "importProfile": "导入连接配置文件",
     "refresh": "刷新连接配置文件列表"
   },
   "profile": {

@@ -45,7 +45,8 @@ export default createMantineModal<ExportProfileModalProps, boolean>(
         password: (value, values) => {
           if (!values.includeSecret) return null;
           if (!value) return 'V000001';
-          return value.length < MIN_PASSWORD_LENGTH ? `V000012:${MIN_PASSWORD_LENGTH}` : null;
+          // Count code points (not UTF-16 units) to match the backend, which counts runes.
+          return [...value].length < MIN_PASSWORD_LENGTH ? `V000012:${MIN_PASSWORD_LENGTH}` : null;
         },
         confirmPassword: (value, values) => (values.includeSecret && value !== values.password ? 'V000011' : null),
       },

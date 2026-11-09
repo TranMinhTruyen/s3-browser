@@ -16,6 +16,7 @@ import deleteConfirmModal from '@/locales/zh-CN/components/modals/deleteConfirmM
 import deleteResultModal from '@/locales/zh-CN/components/modals/deleteResultModal.json';
 import exportProfileModal from '@/locales/zh-CN/components/modals/exportProfileModal.json';
 import historyModal from '@/locales/zh-CN/components/modals/historyModal.json';
+import importPasswordModal from '@/locales/zh-CN/components/modals/importPasswordModal.json';
 import settingModal from '@/locales/zh-CN/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/zh-CN/components/modals/uploadLimitModal.json';
 import uploadPickerModal from '@/locales/zh-CN/components/modals/uploadPickerModal.json';
@@ -41,6 +42,7 @@ const simplifiedChineseResource: ResourceLanguage = {
   deleteResultModal: deleteResultModal,
   exportProfileModal: exportProfileModal,
   historyModal: historyModal,
+  importPasswordModal: importPasswordModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,
   uploadPickerModal: uploadPickerModal,

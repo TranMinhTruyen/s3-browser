@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"errors"
 	"log/slog"
+	"strings"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -153,9 +154,17 @@ func warnMessage(err error) models.Message {
 func (m *Module) CreateProfile(
 	input models.ConnectionProfileInput,
 ) models.Output[models.ConnectionProfileOutput] {
+	return m.createProfile(input, false)
+}
+
+// createProfile is CreateProfile; allowMissingCertKey is only set by the import (see prepare).
+func (m *Module) createProfile(
+	input models.ConnectionProfileInput,
+	allowMissingCertKey bool,
+) models.Output[models.ConnectionProfileOutput] {
 	output := models.NewOutput[models.ConnectionProfileOutput]()
 
-	auth, failure := m.submoduleAuthMng.prepare(input, nil)
+	auth, failure := m.submoduleAuthMng.prepare(input, nil, allowMissingCertKey)
 	if failure != nil {
 		return output.ThrowError(*failure)
 	}
@@ -208,7 +217,7 @@ func (m *Module) UpdateProfileById(input models.ConnectionProfileInput) models.O
 		stored = &row
 	}
 
-	auth, failure := m.submoduleAuthMng.prepare(input, stored)
+	auth, failure := m.submoduleAuthMng.prepare(input, stored, false)
 	if failure != nil {
 		return output.ThrowError(*failure)
 	}
@@ -290,6 +299,33 @@ func (m *Module) DeleteProfileById(input models.ConnectionProfileInput) models.O
 // the file holds no secret. The body is empty, with no message, when the user cancels the dialog.
 func (m *Module) ExportProfile(input models.ExportProfileInput) models.Output[string] {
 	return m.submoduleFileMng.exportAction(input)
+}
+
+// ChooseImportFile opens a native dialog to pick a profile file and checks it (size, format, version).
+// The body tells whether the file holds secrets (so a password is needed); its path is empty when cancelled.
+func (m *Module) ChooseImportFile() models.Output[models.ImportFileOutput] {
+	return m.submoduleFileMng.chooseImportAction()
+}
+
+// ImportProfile saves the profile of a profile file as a new profile with a new id and its secrets encrypted
+// again. A taken name gets " (2)", " (3)"... and a file path that does not exist here is cleared (PFW001).
+// The file is checked again, and nothing is written when it is invalid or the password is wrong.
+// It never connects, even with AutoConnect.
+func (m *Module) ImportProfile(input models.ImportProfileInput) models.Output[models.ConnectionProfileOutput] {
+	imported, failure := m.submoduleFileMng.importAction(input)
+	if failure != nil {
+		output := models.NewOutput[models.ConnectionProfileOutput]()
+		return output.ThrowError(*failure)
+	}
+
+	output := m.createProfile(imported.input, imported.allowMissingCertKey)
+	if output.Result && len(imported.clearedFields) > 0 {
+		output.AddMessage(models.NewParamsMessage(cnst.MessageTypeWarn, cnst.Profile, PFW001, "", map[string]any{
+			"name":   output.Body.Name,
+			"fields": strings.Join(imported.clearedFields, ", "),
+		}))
+	}
+	return output
 }
 
 // GetConnectionProfileById returns a profile; its secrets are not included, only the names in SavedSecrets.

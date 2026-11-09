@@ -9,6 +9,7 @@
   "tooltip": {
     "connect": "連線",
     "createProfile": "建立連線設定檔",
+    "importProfile": "匯入連線設定檔",
     "refresh": "重新整理連線設定檔清單"
   },
   "profile": {

@@ -45,3 +45,15 @@ func (h *ProfileHandler) GetAllConnectionProfile() models.Output[models.GetAllCo
 func (h *ProfileHandler) ExportProfile(input models.ExportProfileInput) models.Output[string] {
 	return h.profile.ExportProfile(input)
 }
+
+// ChooseImportFile opens a dialog to pick a profile file and returns its path (empty when cancelled).
+func (h *ProfileHandler) ChooseImportFile() models.Output[models.ImportFileOutput] {
+	return h.profile.ChooseImportFile()
+}
+
+// ImportProfile saves the profile in a profile file as a new profile.
+func (h *ProfileHandler) ImportProfile(
+	input models.ImportProfileInput,
+) models.Output[models.ConnectionProfileOutput] {
+	return h.profile.ImportProfile(input)
+}

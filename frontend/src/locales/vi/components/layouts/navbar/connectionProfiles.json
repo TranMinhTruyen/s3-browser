@@ -9,6 +9,7 @@
   "tooltip": {
     "connect": "Kết nối",
     "createProfile": "Tạo hồ sơ kết nối",
+    "importProfile": "Nhập hồ sơ kết nối",
     "refresh": "Làm mới danh sách hồ sơ kết nối"
   },
   "profile": {

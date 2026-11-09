@@ -129,6 +129,21 @@ describe('ExportProfileModal', () => {
     expect(callIPCMock).not.toHaveBeenCalled();
   });
 
+  it('counts code points: 4 emoji (8 UTF-16 units) are rejected as too short', async () => {
+    const { user } = await open();
+    const emoji4 = '\u{1F600}'.repeat(4);
+
+    await user.click(checkbox());
+    await user.click(password());
+    await user.paste(emoji4);
+    await user.click(confirm());
+    await user.paste(emoji4);
+    await user.click(exportBtn());
+
+    expect(await screen.findByText('Password must be at least 8 characters')).toBeInTheDocument();
+    expect(callIPCMock).not.toHaveBeenCalled();
+  });
+
   it('requires the confirmation to match', async () => {
     const { user } = await open();
 

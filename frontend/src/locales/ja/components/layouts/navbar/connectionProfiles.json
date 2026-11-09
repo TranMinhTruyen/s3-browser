@@ -9,6 +9,7 @@
   "tooltip": {
     "connect": "接続",
     "createProfile": "接続プロファイルを作成",
+    "importProfile": "接続プロファイルをインポート",
     "refresh": "接続プロファイル一覧を再読み込み"
   },
   "profile": {
