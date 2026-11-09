@@ -14,7 +14,9 @@ import credentialExpiring from '@/locales/zh-TW/components/modals/credentialExpi
 import deleteBucketModal from '@/locales/zh-TW/components/modals/deleteBucketModal.json';
 import deleteConfirmModal from '@/locales/zh-TW/components/modals/deleteConfirmModal.json';
 import deleteResultModal from '@/locales/zh-TW/components/modals/deleteResultModal.json';
+import exportProfileModal from '@/locales/zh-TW/components/modals/exportProfileModal.json';
 import historyModal from '@/locales/zh-TW/components/modals/historyModal.json';
+import importPasswordModal from '@/locales/zh-TW/components/modals/importPasswordModal.json';
 import settingModal from '@/locales/zh-TW/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/zh-TW/components/modals/uploadLimitModal.json';
 import uploadPickerModal from '@/locales/zh-TW/components/modals/uploadPickerModal.json';
@@ -38,7 +40,9 @@ const traditionalChineseResource: ResourceLanguage = {
   deleteBucketModal: deleteBucketModal,
   deleteConfirmModal: deleteConfirmModal,
   deleteResultModal: deleteResultModal,
+  exportProfileModal: exportProfileModal,
   historyModal: historyModal,
+  importPasswordModal: importPasswordModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,
   uploadPickerModal: uploadPickerModal,

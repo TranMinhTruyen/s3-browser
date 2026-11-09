@@ -10,7 +10,7 @@ import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ConnectionProfiles from '@/components/layouts/navbar/components/ConnectionProfiles';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
-import { showConnectModal } from '@/components/modals/lazyModals';
+import { showConnectModal, showExportProfileModal } from '@/components/modals/lazyModals';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 // jsdom has no layout, so render every row except the keys listed in `hidden` (scrolled out of the range).
@@ -47,11 +47,16 @@ vi.mock('@wails/S3Browser/internal/handlers/profilehandler', () => ({
 }));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
 vi.mock('@/components/modals/confirm/ConfirmModal', () => ({ default: { show: vi.fn() } }));
-vi.mock('@/components/modals/lazyModals', () => ({ showConnectModal: vi.fn(), showHistoryModal: vi.fn() }));
+vi.mock('@/components/modals/lazyModals', () => ({
+  showConnectModal: vi.fn(),
+  showExportProfileModal: vi.fn(),
+  showHistoryModal: vi.fn(),
+}));
 
 const callIPCMock = vi.mocked(callIPC);
 const confirmMock = vi.mocked(ConfirmModal.show);
 const connectModalMock = vi.mocked(showConnectModal);
+const exportModalMock = vi.mocked(showExportProfileModal);
 const flush = () => act(async () => {});
 
 const profile = (id: string, extra: Partial<ConnectionProfileOutput> = {}) =>
@@ -438,8 +443,8 @@ describe('ConnectionProfiles', () => {
     });
 
     it.each([
-      ['a connected profile', true, ['Disconnect', 'Delete']],
-      ['a disconnected profile', false, ['Connect', 'Edit', 'Delete']],
+      ['a connected profile', true, ['Disconnect', 'Export', 'Delete']],
+      ['a disconnected profile', false, ['Connect', 'Edit', 'Export', 'Delete']],
     ])('offers the matching actions for %s', async (_n, isConnected, expected) => {
       renderProfiles({ p: profile('p', { isConnected }) });
 
@@ -458,6 +463,7 @@ describe('ConnectionProfiles', () => {
       await waitFor(() =>
         expect(screen.getAllByRole('menuitem', { hidden: true }).map(i => i.textContent)).toEqual([
           'Disconnect',
+          'Export',
           'Delete',
         ])
       );
@@ -473,6 +479,36 @@ describe('ConnectionProfiles', () => {
       await clickMenuItem(user, 'a-name', 'Edit');
 
       expect(connectModalMock).toHaveBeenCalledWith({ mode: 'editProfile', connectionProfile: { ...off } });
+    });
+  });
+
+  describe('export', () => {
+    it.each([
+      ['a disconnected profile', false],
+      ['a connected profile', true],
+    ])('opens the export modal with the stored profile for %s', async (_n, isConnected) => {
+      const user = userEvent.setup();
+      const stored = profile('a', { isConnected });
+      renderProfiles({ a: stored });
+
+      await clickMenuItem(user, 'a-name', 'Export');
+
+      expect(exportModalMock).toHaveBeenCalledTimes(1);
+      expect(exportModalMock).toHaveBeenCalledWith({ profile: profiles().a });
+      expect(callIPCMock).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when the profile of the menu is no longer in the store', async () => {
+      const user = userEvent.setup();
+      renderProfiles({ a: profile('a') });
+      fireEvent.contextMenu(card('a-name'));
+      const items = await screen.findAllByRole('menuitem');
+      const exportItem = items.find(i => i.textContent === 'Export')!;
+      act(() => useProfileStore.setState({ connectionProfiles: {} }));
+
+      await user.click(exportItem);
+
+      expect(exportModalMock).not.toHaveBeenCalled();
     });
   });
 
@@ -603,7 +639,7 @@ describe('ConnectionProfiles', () => {
 
       fireEvent.contextMenu(card('b-name'));
       const items = await screen.findAllByRole('menuitem');
-      expect(items.map(i => i.textContent)).toEqual(['Disconnect', 'Delete']);
+      expect(items.map(i => i.textContent)).toEqual(['Disconnect', 'Export', 'Delete']);
     });
 
     it('does not open a menu, and suppresses the native one, on the empty area of the list', async () => {
@@ -672,13 +708,19 @@ describe('ConnectionProfiles', () => {
       renderProfiles({ a: profile('a'), b: profile('b', { isConnected: true }) });
 
       fireEvent.contextMenu(card('a-name'));
-      expect((await screen.findAllByRole('menuitem')).map(i => i.textContent)).toEqual(['Connect', 'Edit', 'Delete']);
+      expect((await screen.findAllByRole('menuitem')).map(i => i.textContent)).toEqual([
+        'Connect',
+        'Edit',
+        'Export',
+        'Delete',
+      ]);
 
       fireEvent.contextMenu(card('b-name'));
       // The dropdown is re-positioned for the new row, so it is not exposed to the accessibility tree meanwhile.
       await waitFor(() =>
         expect(screen.getAllByRole('menuitem', { hidden: true }).map(i => i.textContent)).toEqual([
           'Disconnect',
+          'Export',
           'Delete',
         ])
       );

@@ -3,11 +3,13 @@
     "connect": "Verbinden",
     "disconnect": "Trennen",
     "edit": "Bearbeiten",
+    "export": "Exportieren",
     "delete": "Löschen"
   },
   "tooltip": {
     "connect": "Verbinden",
     "createProfile": "Verbindungsprofil erstellen",
+    "importProfile": "Verbindungsprofil importieren",
     "refresh": "Liste der Verbindungsprofile neu laden"
   },
   "profile": {

@@ -77,6 +77,14 @@ export const showBucketPolicyModal = async (
   props: Parameters<typeof import('@/components/modals/bucket/BucketPolicyModal')['default']['show']>[0]
 ) => (await loadModal(() => import('@/components/modals/bucket/BucketPolicyModal')))?.default.show(props);
 
+export const showExportProfileModal = async (
+  props: Parameters<typeof import('@/components/modals/profile/ExportProfileModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/components/modals/profile/ExportProfileModal')))?.default.show(props);
+
+export const showImportPasswordModal = async (
+  props: Parameters<typeof import('@/components/modals/profile/ImportPasswordModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/components/modals/profile/ImportPasswordModal')))?.default.show(props);
+
 export const showDeleteBucketModal = async (
   props: Parameters<typeof import('@/components/modals/bucket/DeleteBucketModal')['default']['show']>[0]
 ) => (await loadModal(() => import('@/components/modals/bucket/DeleteBucketModal')))?.default.show(props);
