@@ -4,13 +4,17 @@ import { ExportProfile } from '@wails/S3Browser/internal/handlers/profilehandler
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useModalStackStore } from '@/common/stores/modalStackStore';
 import { callIPC } from '@/common/utils/ipcUtils';
+import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import ExportProfileModal from '@/components/modals/profile/ExportProfileModal';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 vi.mock('@wails/S3Browser/internal/handlers/profilehandler', () => ({ ExportProfile: vi.fn() }));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
 
+vi.mock('@/components/modals/confirm/ConfirmModal', () => ({ default: { show: vi.fn() } }));
+
 const callIPCMock = vi.mocked(callIPC);
+const confirmShowMock = vi.mocked(ConfirmModal.show);
 const flush = () => act(async () => {});
 
 type Profile = Parameters<typeof ExportProfileModal.show>[0]['profile'];
@@ -41,6 +45,8 @@ describe('ExportProfileModal', () => {
     useModalStackStore.getState().reset();
     callIPCMock.mockReset();
     callIPCMock.mockResolvedValue('C:/out/p.json' as never);
+    confirmShowMock.mockReset();
+    confirmShowMock.mockResolvedValue(true as never);
   });
 
   it('shows the title, with Cancel on the left and Export on the right', async () => {
@@ -105,6 +111,66 @@ describe('ExportProfileModal', () => {
       [{ id: 'p1', includeSecret: true, password: 'password1' }],
       { signal: expect.any(AbortSignal) }
     );
+  });
+
+  it('asks to confirm when saved secrets exist but are not included, then exports on OK', async () => {
+    const { user, result } = await open();
+
+    await user.click(exportBtn());
+
+    await expect(result).resolves.toBe(true);
+    expect(confirmShowMock).toHaveBeenCalledExactlyOnceWith({
+      type: 'warning',
+      confirmCode: 'C000011',
+      params: { name: 'Prod' },
+    });
+    expect(callIPCMock).toHaveBeenCalledExactlyOnceWith(
+      ExportProfile,
+      [{ id: 'p1', includeSecret: false, password: undefined }],
+      { signal: expect.any(AbortSignal) }
+    );
+  });
+
+  it.each([
+    ['false', false],
+    ['undefined', undefined],
+  ])('keeps the modal open and does not export when the confirm returns %s', async (_n, value) => {
+    confirmShowMock.mockResolvedValue(value as never);
+    const { user, settled } = await open();
+
+    await user.click(exportBtn());
+    await flush();
+
+    expect(confirmShowMock).toHaveBeenCalledTimes(1);
+    expect(callIPCMock).not.toHaveBeenCalled();
+    expect(title()).toBeInTheDocument();
+    expect(settled.value).toBeUndefined();
+    expect(exportBtn()).toBeEnabled();
+  });
+
+  it('does not ask to confirm when secrets are included', async () => {
+    const { user, result } = await open();
+
+    await user.click(checkbox());
+    await user.type(password(), 'password1');
+    await user.type(confirm(), 'password1');
+    await user.click(exportBtn());
+
+    await expect(result).resolves.toBe(true);
+    expect(confirmShowMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['an empty list', []],
+    ['no list', undefined],
+  ])('does not ask to confirm for %s of saved secrets', async (_n, savedSecrets) => {
+    const { user, result } = await open({ id: 'p1', name: 'Prod', savedSecrets } as Profile);
+
+    await user.click(exportBtn());
+
+    await expect(result).resolves.toBe(true);
+    expect(confirmShowMock).not.toHaveBeenCalled();
+    expect(callIPCMock).toHaveBeenCalledTimes(1);
   });
 
   it('requires a password when secrets are included', async () => {

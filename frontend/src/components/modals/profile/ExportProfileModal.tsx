@@ -12,6 +12,7 @@ import Button from '@/components/buttons/Button';
 import CloseButton from '@/components/buttons/CloseButton';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import FieldInput from '@/components/inputs/FieldInput';
+import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 
 type ExportProfileModalProps = {
@@ -54,6 +55,15 @@ export default createMantineModal<ExportProfileModalProps, boolean>(
 
     const onSubmitExport = useCallback(
       async ({ includeSecret, password }: ExportProfileForm) => {
+        // Saved secrets are not exported unless ticked: confirm first; canceling keeps this modal open.
+        if (hasSecret && !includeSecret) {
+          const confirmed = await ConfirmModal.show({
+            type: 'warning',
+            confirmCode: 'C000011',
+            params: { name: profile.name },
+          });
+          if (!confirmed) return;
+        }
         const path = await callIPC(
           ExportProfile,
           [{ id: profile.id, includeSecret, password: includeSecret ? password : undefined }],
@@ -64,7 +74,7 @@ export default createMantineModal<ExportProfileModalProps, boolean>(
         resolve(true);
         hide();
       },
-      [profile.id, getSignal, resolve, hide]
+      [profile.id, profile.name, hasSecret, getSignal, resolve, hide]
     );
 
     const onSubmitForm = useCallback(

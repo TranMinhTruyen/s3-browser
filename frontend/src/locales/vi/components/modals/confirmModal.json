@@ -12,6 +12,7 @@
     "C000007": "Có thể bạn không truy cập được bucket [{bucket}] (không có quyền hoặc bucket không tồn tại). Vẫn tiếp tục?",
     "C000008": "Có thể bạn không có quyền upload vào bucket [{bucket}]. Vẫn tiếp tục?",
     "C000009": "Ứng dụng sẽ đóng, cài bản mới rồi tự mở lại. Tiếp tục?",
-    "C000010": "Đang có {count} tác vụ tải lên/tải xuống, chúng sẽ bị hủy. Ứng dụng sẽ đóng, cài bản mới rồi tự mở lại. Tiếp tục?"
+    "C000010": "Đang có {count} tác vụ tải lên/tải xuống, chúng sẽ bị hủy. Ứng dụng sẽ đóng, cài bản mới rồi tự mở lại. Tiếp tục?",
+    "C000011": "Profile [{name}] có secret đã lưu sẽ KHÔNG được xuất. Sau khi nhập, bạn cần nhập lại chúng. Xuất không kèm secret?"
   }
 }
