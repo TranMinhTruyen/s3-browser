@@ -46,6 +46,17 @@ Mọi thay đổi đáng chú ý của dự án được ghi trong file này.
 - File cơ sở dữ liệu được sao lưu trước khi chạy migration.
 - Dọn dẹp nội bộ backend và frontend (gom hàm dùng chung, xoá code chết), bổ sung thêm unit test.
 
+### Loại bỏ
+
+- Bản build cho macOS và Linux. S3Browser giờ chỉ phát hành cho Windows 10/11 (x64).
+
+### Vấn đề đã biết
+
+- Xoá file hoặc folder trong bucket bật versioning chỉ thêm delete marker; các phiên bản cũ vẫn còn trong bucket. Xoá chính bucket thì mọi phiên bản đều bị xoá.
+- Bucket policy công khai chỉ đọc nhưng các statement theo thứ tự khác (ví dụ do công cụ khác ghi) được hiển thị là Tuỳ chỉnh.
+- Mỗi lần upload chỉ tự chọn tối đa 50 file mỗi folder (4 file lớn, tổng 1.000 file); các file chọn qua hộp thoại chọn file được tính là một folder.
+- Dung lượng file được tính theo đơn vị 1.024 nhưng hiển thị là KB / MB / GB.
+
 ## [0.0.1-beta.1] - 2026-10-28
 
 Bản beta đầu tiên.
