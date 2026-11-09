@@ -3,6 +3,7 @@
     "connect": "Connect",
     "disconnect": "Disconnect",
     "edit": "Edit",
+    "export": "Export",
     "delete": "Delete"
   },
   "tooltip": {

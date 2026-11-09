@@ -1,0 +1,15 @@
+{
+  "title": "Xuất hồ sơ",
+  "label": {
+    "includeSecret": "Kèm secret",
+    "password": "Mật khẩu",
+    "confirmPassword": "Xác nhận mật khẩu"
+  },
+  "hint": {
+    "includeSecret": "Secret được mã hoá bằng mật khẩu này. Hãy giữ file và mật khẩu cẩn thận: quên mật khẩu thì không thể nhập file.",
+    "noSavedSecret": "Hồ sơ này không lưu secret nào."
+  },
+  "button": {
+    "export": "Xuất"
+  }
+}

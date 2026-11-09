@@ -3,6 +3,7 @@
     "connect": "Kết nối",
     "disconnect": "Ngắt kết nối",
     "edit": "Chỉnh sửa",
+    "export": "Xuất",
     "delete": "Xóa"
   },
   "tooltip": {

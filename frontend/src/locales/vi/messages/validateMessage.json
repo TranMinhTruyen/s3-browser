@@ -8,5 +8,7 @@
   "V000007": "{0} không được chứa hai dấu chấm liền nhau",
   "V000008": "{0} không được có dạng địa chỉ IP",
   "V000009": "{0} không được bắt đầu bằng tiền tố dành riêng",
-  "V000010": "{0} không được kết thúc bằng hậu tố dành riêng"
+  "V000010": "{0} không được kết thúc bằng hậu tố dành riêng",
+  "V000011": "{0} không khớp",
+  "V000012": "{0} phải có ít nhất {1} ký tự"
 }

@@ -14,6 +14,7 @@ import credentialExpiring from '@/locales/en/components/modals/credentialExpirin
 import deleteBucketModal from '@/locales/en/components/modals/deleteBucketModal.json';
 import deleteConfirmModal from '@/locales/en/components/modals/deleteConfirmModal.json';
 import deleteResultModal from '@/locales/en/components/modals/deleteResultModal.json';
+import exportProfileModal from '@/locales/en/components/modals/exportProfileModal.json';
 import historyModal from '@/locales/en/components/modals/historyModal.json';
 import settingModal from '@/locales/en/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/en/components/modals/uploadLimitModal.json';
@@ -38,6 +39,7 @@ const englishResource: ResourceLanguage = {
   deleteBucketModal: deleteBucketModal,
   deleteConfirmModal: deleteConfirmModal,
   deleteResultModal: deleteResultModal,
+  exportProfileModal: exportProfileModal,
   historyModal: historyModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,

@@ -3,6 +3,7 @@
     "connect": "接続",
     "disconnect": "切断",
     "edit": "編集",
+    "export": "エクスポート",
     "delete": "削除"
   },
   "tooltip": {

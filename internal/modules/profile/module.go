@@ -39,6 +39,24 @@ var (
 	// PFE009 - Authentication settings are invalid.
 	PFE009 = "PFE009"
 
+	// PFE010 - Cannot export profile [{name}].
+	PFE010 = "PFE010"
+
+	// PFE011 - Cannot read the profile file (it may be larger than 1 MB).
+	PFE011 = "PFE011"
+
+	// PFE012 - The file is not a valid S3Browser profile file.
+	PFE012 = "PFE012"
+
+	// PFE013 - Profile file version {version} is not supported.
+	PFE013 = "PFE013"
+
+	// PFE014 - Wrong password, or the file is damaged.
+	PFE014 = "PFE014"
+
+	// PFE015 - Enter a password of at least 8 characters.
+	PFE015 = "PFE015"
+
 	// PFS001 - Add new profile [{name}] success
 	PFS001 = "PFS001"
 
@@ -47,6 +65,12 @@ var (
 
 	// PFS003 - Delete profile [{name}] success
 	PFS003 = "PFS003"
+
+	// PFS004 - Export profile [{name}] success
+	PFS004 = "PFS004"
+
+	// PFW001 - Profile [{name}] imported. These file paths do not exist on this computer and were cleared: {fields}.
+	PFW001 = "PFW001"
 )
 
 // Module stores connection profiles in the database.
@@ -57,6 +81,7 @@ type Module struct {
 	q      *sqlc.Queries
 
 	submoduleAuthMng *submoduleAuthMng
+	submoduleFileMng *submoduleFileMng
 }
 
 // NewModule creates the profile module.
@@ -67,13 +92,17 @@ func NewModule(
 	db *sql.DB,
 	km *utils.KeyManager,
 ) *Module {
+	q := sqlc.New(db)
+	auth := newSubmoduleAuthMng(km)
+
 	return &Module{
 		logger: logger.With("component", "profiles_module"),
 		app:    app,
 		global: global,
-		q:      sqlc.New(db),
+		q:      q,
 
-		submoduleAuthMng: newSubmoduleAuthMng(km),
+		submoduleAuthMng: auth,
+		submoduleFileMng: newSubmoduleFileMng(app, logger, q, auth),
 	}
 }
 
@@ -254,6 +283,13 @@ func (m *Module) DeleteProfileById(input models.ConnectionProfileInput) models.O
 	output.AddMessage(nameMessage(cnst.MessageTypeSuccess, PFS003, input.Name, ""))
 
 	return output
+}
+
+// ExportProfile writes a profile to a JSON file chosen in a native save dialog and returns the written path.
+// With IncludeSecret the saved secrets are sealed with Password (at least 8 characters, else PFE015); without it
+// the file holds no secret. The body is empty, with no message, when the user cancels the dialog.
+func (m *Module) ExportProfile(input models.ExportProfileInput) models.Output[string] {
+	return m.submoduleFileMng.exportAction(input)
 }
 
 // GetConnectionProfileById returns a profile; its secrets are not included, only the names in SavedSecrets.

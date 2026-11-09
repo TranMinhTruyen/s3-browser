@@ -40,3 +40,8 @@ func (h *ProfileHandler) DeleteProfileById(input models.ConnectionProfileInput) 
 func (h *ProfileHandler) GetAllConnectionProfile() models.Output[models.GetAllConnectionProfileOutput] {
 	return h.profile.GetAllConnectionProfile()
 }
+
+// ExportProfile saves a profile to a JSON file and returns its path (empty when the dialog is cancelled).
+func (h *ProfileHandler) ExportProfile(input models.ExportProfileInput) models.Output[string] {
+	return h.profile.ExportProfile(input)
+}

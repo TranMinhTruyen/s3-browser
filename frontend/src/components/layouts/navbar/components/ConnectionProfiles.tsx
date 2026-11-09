@@ -4,7 +4,7 @@ import { Disconnect } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { DeleteProfileById } from '@wails/S3Browser/internal/handlers/profilehandler';
 import type { ConnectionProfileInput } from '@wails/S3Browser/models';
 import { Events } from '@wailsio/runtime';
-import { PlugZap, SquarePen, Trash, Unplug } from 'lucide-react';
+import { FileDown, PlugZap, SquarePen, Trash, Unplug } from 'lucide-react';
 import type { MouseEvent } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +16,7 @@ import { needsManualInput } from '@/common/utils/authUtils';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ConnectionProfileItem, { CARD_HEIGHT } from '@/components/layouts/navbar/components/ConnectionProfileItem';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
-import { showConnectModal } from '@/components/modals/lazyModals';
+import { showConnectModal, showExportProfileModal } from '@/components/modals/lazyModals';
 
 const ROW_GAP = 8;
 // Fixed row height (card + gap): the virtualizer never measures, so the scroll size stays stable while scrolling.
@@ -197,6 +197,10 @@ function ConnectionProfiles() {
   const onClickMenuConnect = useCallback(() => menuKey && onClickConnect(menuKey), [menuKey, onClickConnect]);
   const onClickMenuDisconnect = useCallback(() => menuKey && onClickDisconnect(menuKey), [menuKey, onClickDisconnect]);
   const onClickMenuEdit = useCallback(() => menuKey && onClickEditProfile(menuKey), [menuKey, onClickEditProfile]);
+  const onClickMenuExport = useCallback(() => {
+    const profile = getConnectionProfileById(menuKey);
+    if (profile) void showExportProfileModal({ profile });
+  }, [menuKey, getConnectionProfileById]);
   const onClickMenuDelete = useCallback(
     () => menuKey && onClickDeleteProfile(menuKey),
     [menuKey, onClickDeleteProfile]
@@ -274,6 +278,9 @@ function ConnectionProfiles() {
               {t('contextMenu.edit')}
             </Menu.Item>
           )}
+          <Menu.Item leftSection={<FileDown size="16px" />} onClick={onClickMenuExport}>
+            {t('contextMenu.export')}
+          </Menu.Item>
           <Menu.Divider />
           <Menu.Item leftSection={<Trash size="16px" />} color="var(--mantine-color-red-6)" onClick={onClickMenuDelete}>
             {t('contextMenu.delete')}

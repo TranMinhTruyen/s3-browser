@@ -14,6 +14,7 @@ import credentialExpiring from '@/locales/ja/components/modals/credentialExpirin
 import deleteBucketModal from '@/locales/ja/components/modals/deleteBucketModal.json';
 import deleteConfirmModal from '@/locales/ja/components/modals/deleteConfirmModal.json';
 import deleteResultModal from '@/locales/ja/components/modals/deleteResultModal.json';
+import exportProfileModal from '@/locales/ja/components/modals/exportProfileModal.json';
 import historyModal from '@/locales/ja/components/modals/historyModal.json';
 import settingModal from '@/locales/ja/components/modals/settingModal.json';
 import uploadLimitModal from '@/locales/ja/components/modals/uploadLimitModal.json';
@@ -38,6 +39,7 @@ const japaneseResource: ResourceLanguage = {
   deleteBucketModal: deleteBucketModal,
   deleteConfirmModal: deleteConfirmModal,
   deleteResultModal: deleteResultModal,
+  exportProfileModal: exportProfileModal,
   historyModal: historyModal,
   settingModal: settingModal,
   uploadLimitModal: uploadLimitModal,
