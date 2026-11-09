@@ -1,0 +1,15 @@
+{
+  "title": "Export profile",
+  "label": {
+    "includeSecret": "Include secrets",
+    "password": "Password",
+    "confirmPassword": "Confirm password"
+  },
+  "hint": {
+    "includeSecret": "Secrets are encrypted with this password. Keep the file and the password safe: if you forget the password, the file cannot be imported.",
+    "noSavedSecret": "This profile has no saved secrets."
+  },
+  "button": {
+    "export": "Export"
+  }
+}

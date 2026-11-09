@@ -104,9 +104,17 @@
     "PFE007": "Profile [{name}] has uploads or downloads in progress, cannot delete.",
     "PFE008": "Authentication method {authType} is not valid for provider {provider}.",
     "PFE009": "Authentication settings are invalid.",
+    "PFE010": "Cannot export profile [{name}].",
+    "PFE011": "Cannot read the profile file (it may be larger than 1 MB).",
+    "PFE012": "The file is not a valid S3Browser profile file.",
+    "PFE013": "Profile file version {version} is not supported.",
+    "PFE014": "Wrong password, or the file is damaged.",
+    "PFE015": "Enter a password of at least 8 characters.",
     "PFS001": "Add new profile [{name}] success.",
     "PFS002": "Update profile [{name}] success.",
-    "PFS003": "Delete profile [{name}] success."
+    "PFS003": "Delete profile [{name}] success.",
+    "PFS004": "Export profile [{name}] success.",
+    "PFW001": "Profile [{name}] imported. These file paths do not exist on this computer and were cleared: {fields}."
   },
   "setting": {
     "STE001": "Error while loading settings.",

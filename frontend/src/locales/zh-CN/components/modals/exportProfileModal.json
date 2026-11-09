@@ -1,0 +1,15 @@
+{
+  "title": "导出配置文件",
+  "label": {
+    "includeSecret": "包含密钥",
+    "password": "密码",
+    "confirmPassword": "确认密码"
+  },
+  "hint": {
+    "includeSecret": "密钥将使用此密码加密。请妥善保管文件和密码：忘记密码将无法导入该文件。",
+    "noSavedSecret": "此配置文件没有已保存的密钥。"
+  },
+  "button": {
+    "export": "导出"
+  }
+}

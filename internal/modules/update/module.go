@@ -123,6 +123,15 @@ func (m *Module) SetBeta(enabled bool) {
 	m.mng.setBeta(enabled)
 }
 
+// SetOptions applies both update switches at once, without saving them, and returns the resulting state.
+func (m *Module) SetOptions(beta, autoUpdate bool) models.Output[models.UpdateStateOutput] {
+	output := models.NewOutput[models.UpdateStateOutput]()
+	m.mng.setBeta(beta)
+	m.mng.setAutoUpdate(autoUpdate)
+	output.Body = m.mng.snapshot()
+	return output
+}
+
 // Close stops the periodic check and any download.
 func (m *Module) Close() {
 	m.mng.close()

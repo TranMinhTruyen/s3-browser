@@ -15,6 +15,7 @@ S3Browser ist eine Desktop-Anwendung auf Basis von **Wails v3** (Go-Backend, Rea
 ## Funktionen
 
 - Verbindungsprofile speichern (Geheimnisse werden verschlüsselt abgelegt) und sich gleichzeitig mit mehreren Konten verbinden, ein Tab pro Verbindung. Tabs lassen sich per Drag-and-drop umsortieren und werden zwischen den Sitzungen gespeichert.
+- Ein Verbindungsprofil in eine JSON-Datei exportieren und auf einem anderen Computer importieren. Geheimnisse sind optional; wenn sie enthalten sind, werden sie mit einem von Ihnen gewählten Passwort verschlüsselt.
 - AWS S3 und MinIO (eigener Endpunkt, Region, Path style) mit vielen Authentifizierungsmethoden: Zugriffsschlüssel, AWS-CLI-Profil, Rolle übernehmen (mit MFA), AWS SSO, Standardkette für Anmeldedaten, anonym, MinIO STS, LDAP, OpenID Connect (OIDC) und TLS-Clientzertifikat. Für MinIO-Server mit selbstsigniertem Zertifikat kann eine zusätzliche CA-Zertifikatsdatei angegeben werden.
 - Buckets, Ordner und Objekte in seitenweise geladenen, virtualisierten Listen durchsuchen; Buckets und Objekte suchen.
 - Details eines Buckets (Region, ARN, Richtlinie, Öffentlichen Zugriff blockieren, Versionierung, Verschlüsselung, Objektsperre, Tags) und eines Objekts ansehen.

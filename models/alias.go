@@ -143,6 +143,12 @@ type (
 	ConnectionProfileOutput = profile.ConnectionProfileOutput
 	// GetAllConnectionProfileOutput re-exports profile.GetAllConnectionProfileOutput.
 	GetAllConnectionProfileOutput = profile.GetAllConnectionProfileOutput
+	// ExportProfileInput re-exports profile.ExportProfileInput.
+	ExportProfileInput = profile.ExportProfileInput
+	// ImportProfileInput re-exports profile.ImportProfileInput.
+	ImportProfileInput = profile.ImportProfileInput
+	// ImportFileOutput re-exports profile.ImportFileOutput.
+	ImportFileOutput = profile.ImportFileOutput
 	// AuthConfig re-exports profile.AuthConfig.
 	AuthConfig = profile.AuthConfig
 	// AuthSecret re-exports profile.AuthSecret.

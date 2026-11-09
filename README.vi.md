@@ -13,6 +13,7 @@ S3Browser là ứng dụng desktop viết bằng **Wails v3** (backend Go, front
 ## Tính năng
 
 - Lưu hồ sơ kết nối (secret được mã hoá khi lưu) và kết nối nhiều tài khoản cùng lúc, mỗi kết nối một tab. Có thể kéo thả để đổi vị trí tab, và các tab được ghi nhớ giữa các lần mở app.
+- Xuất hồ sơ kết nối ra tệp JSON và nhập lại trên máy tính khác. Secret là tuỳ chọn; nếu có kèm theo thì được mã hoá bằng mật khẩu bạn chọn.
 - Hỗ trợ AWS S3 và MinIO (endpoint tuỳ chỉnh, region, path style) với nhiều phương thức xác thực: access key, AWS CLI profile, assume role (kèm MFA), AWS SSO, default credential chain, ẩn danh, MinIO STS, LDAP, OpenID Connect (OIDC) và chứng chỉ client TLS. Có thể đặt thêm file chứng chỉ CA cho máy chủ MinIO dùng chứng chỉ tự ký.
 - Duyệt bucket, thư mục và object với danh sách phân trang và virtualize; tìm kiếm bucket và object.
 - Xem chi tiết bucket (region, ARN, policy, Block Public Access, versioning, mã hoá, Object Lock, tag) và chi tiết object.

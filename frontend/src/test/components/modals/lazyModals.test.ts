@@ -5,13 +5,16 @@ type ModalKey =
   | 'mfaCode'
   | 'history'
   | 'setting'
+  | 'unsavedSetting'
   | 'uploadPicker'
   | 'uploadLimit'
   | 'deleteResult'
   | 'deleteConfirm'
   | 'createBucket'
   | 'bucketPolicy'
-  | 'deleteBucket';
+  | 'deleteBucket'
+  | 'exportProfile'
+  | 'importPassword';
 type LazyModals = typeof import('@/components/modals/lazyModals');
 
 // The chunk factories wait for `gate` and throw when `fail` is set, which makes the dynamic `import()` reject.
@@ -26,6 +29,7 @@ for (const key of [
   'mfaCode',
   'history',
   'setting',
+  'unsavedSetting',
   'uploadPicker',
   'uploadLimit',
   'deleteResult',
@@ -33,6 +37,8 @@ for (const key of [
   'createBucket',
   'bucketPolicy',
   'deleteBucket',
+  'exportProfile',
+  'importPassword',
 ])
   h.show[key] = vi.fn();
 
@@ -48,6 +54,7 @@ const CHUNKS: [string, ModalKey][] = [
   ['connect/MfaCodeModal', 'mfaCode'],
   ['history/HistoryModal', 'history'],
   ['setting/SettingModal', 'setting'],
+  ['setting/UnsavedSettingModal', 'unsavedSetting'],
   ['upload/UploadPickerModal', 'uploadPicker'],
   ['upload/UploadLimitModal', 'uploadLimit'],
   ['delete/DeleteConfirmModal', 'deleteConfirm'],
@@ -55,6 +62,8 @@ const CHUNKS: [string, ModalKey][] = [
   ['bucket/CreateBucketModal', 'createBucket'],
   ['bucket/BucketPolicyModal', 'bucketPolicy'],
   ['bucket/DeleteBucketModal', 'deleteBucket'],
+  ['profile/ExportProfileModal', 'exportProfile'],
+  ['profile/ImportPasswordModal', 'importPassword'],
 ];
 
 const PROPS = {
@@ -65,12 +74,15 @@ const PROPS = {
   create: { connectionId: 'c', withRegion: true, defaultRegion: 'eu-west-1' } as never,
   policy: { connectionId: 'c', profileName: 'n', bucket: 'b' } as never,
   deleteBucket: { connectionId: 'c', profileName: 'n', bucket: 'b' } as never,
+  exportProfile: { profile: { id: 'p', name: 'n' } } as never,
+  importPassword: { path: 'p.json', name: 'p.json' } as never,
 };
 const wrappers: [ModalKey, (m: LazyModals) => Promise<unknown>][] = [
   ['connect', m => m.showConnectModal({ mode: 'editProfile' })],
   ['mfaCode', m => m.showMfaCodeModal({ connectionId: 'c', profileName: 'n' })],
   ['history', m => m.showHistoryModal()],
   ['setting', m => m.showSettingModal()],
+  ['unsavedSetting', m => m.showUnsavedSettingModal()],
   ['uploadPicker', m => m.showUploadPickerModal(PROPS.picker)],
   ['uploadLimit', m => m.showUploadLimitModal(PROPS.limit)],
   ['deleteConfirm', m => m.showDeleteConfirmModal(PROPS.confirm)],
@@ -78,6 +90,8 @@ const wrappers: [ModalKey, (m: LazyModals) => Promise<unknown>][] = [
   ['createBucket', m => m.showCreateBucketModal(PROPS.create)],
   ['bucketPolicy', m => m.showBucketPolicyModal(PROPS.policy)],
   ['deleteBucket', m => m.showDeleteBucketModal(PROPS.deleteBucket)],
+  ['exportProfile', m => m.showExportProfileModal(PROPS.exportProfile)],
+  ['importPassword', m => m.showImportPasswordModal(PROPS.importPassword)],
 ];
 
 // What MfaCodeModal imports besides modalUtils; stubbed by the string-failure test.
@@ -185,6 +199,7 @@ describe('lazyModals', () => {
     await lazy.showCreateBucketModal(PROPS.create);
     await lazy.showBucketPolicyModal(PROPS.policy);
     await lazy.showDeleteBucketModal(PROPS.deleteBucket);
+    await lazy.showExportProfileModal(PROPS.exportProfile);
 
     expect(h.show.connect).toHaveBeenCalledWith({ mode: 'manualconnect' });
     expect(h.show.uploadPicker).toHaveBeenCalledWith(PROPS.picker);
@@ -194,6 +209,7 @@ describe('lazyModals', () => {
     expect(h.show.createBucket).toHaveBeenCalledWith(PROPS.create);
     expect(h.show.bucketPolicy).toHaveBeenCalledWith(PROPS.policy);
     expect(h.show.deleteBucket).toHaveBeenCalledWith(PROPS.deleteBucket);
+    expect(h.show.exportProfile).toHaveBeenCalledWith(PROPS.exportProfile);
   });
 
   it('passes the connection to the MFA code modal', async () => {

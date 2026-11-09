@@ -76,9 +76,11 @@ func newSubmoduleAuthMng(km *utils.KeyManager) *submoduleAuthMng {
 // prepare validates input and builds the auth columns to store; a non-nil message means it was rejected.
 // stored is the current row on update (nil on create). Secrets are stored only with SavePassword (otherwise
 // all stored secrets are cleared), and an empty input secret keeps the stored one when the authType is unchanged.
+// allowMissingCertKey (import only) accepts a minioCert profile without certificate or key file.
 func (m *submoduleAuthMng) prepare(
 	input models.ConnectionProfileInput,
 	stored *sqlc.ConnectionProfile,
+	allowMissingCertKey bool,
 ) (authColumns, *models.Message) {
 	if input.AuthType == "" {
 		input.AuthType = cnst.AuthStatic
@@ -99,7 +101,7 @@ func (m *submoduleAuthMng) prepare(
 		}
 	}
 
-	if err := validateAuthConfig(input); err != nil {
+	if err := validateAuthConfig(input, allowMissingCertKey); err != nil {
 		return authColumns{}, errMessage(PFE009, err)
 	}
 	if input.Provider != cnst.ProviderMinio {
@@ -146,7 +148,8 @@ func (m *submoduleAuthMng) prepare(
 }
 
 // validateAuthConfig checks the fields the OIDC and certificate methods cannot connect without.
-func validateAuthConfig(input models.ConnectionProfileInput) error {
+// With allowMissingCertKey a minioCert profile may lack the certificate and key file.
+func validateAuthConfig(input models.ConnectionProfileInput, allowMissingCertKey bool) error {
 	cfg := input.AuthConfig
 	switch input.AuthType {
 	case cnst.AuthMinioOidc:
@@ -160,7 +163,7 @@ func validateAuthConfig(input models.ConnectionProfileInput) error {
 			return fmt.Errorf("OIDC callback port must be between %d and %d", minCallbackPort, maxCallbackPort)
 		}
 	case cnst.AuthMinioCert:
-		if cfg.CertFile == "" || cfg.KeyFile == "" {
+		if !allowMissingCertKey && (cfg.CertFile == "" || cfg.KeyFile == "") {
 			return errors.New("certificate authentication needs a certificate file and a key file")
 		}
 		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(input.Endpoint)), "http://") {

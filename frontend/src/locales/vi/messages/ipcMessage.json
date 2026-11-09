@@ -104,9 +104,17 @@
     "PFE007": "Hồ sơ [{name}] đang có tác vụ tải lên/tải xuống, không thể xóa",
     "PFE008": "Phương thức xác thực {authType} không hợp lệ với nhà cung cấp {provider}.",
     "PFE009": "Cấu hình xác thực không hợp lệ.",
+    "PFE010": "Không thể xuất hồ sơ [{name}].",
+    "PFE011": "Không thể đọc tệp hồ sơ (có thể lớn hơn 1 MB).",
+    "PFE012": "Tệp không phải là tệp hồ sơ S3Browser hợp lệ.",
+    "PFE013": "Phiên bản tệp hồ sơ {version} không được hỗ trợ.",
+    "PFE014": "Sai mật khẩu hoặc tệp bị hỏng.",
+    "PFE015": "Nhập mật khẩu có ít nhất 8 ký tự.",
     "PFS001": "Thêm hồ sơ [{name}] thành công",
     "PFS002": "Cập nhật hồ sơ [{name}] thành công",
-    "PFS003": "Xóa hồ sơ [{name}] thành công"
+    "PFS003": "Xóa hồ sơ [{name}] thành công",
+    "PFS004": "Xuất hồ sơ [{name}] thành công",
+    "PFW001": "Đã nhập hồ sơ [{name}]. Các đường dẫn tệp sau không tồn tại trên máy này và đã được xóa trống: {fields}."
   },
   "setting": {
     "STE001": "Lỗi khi tải cài đặt",

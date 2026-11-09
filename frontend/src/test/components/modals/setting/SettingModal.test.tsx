@@ -1,14 +1,16 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SaveSettings } from '@wails/S3Browser/internal/handlers/settinghandler';
+import { SetUpdateOptions } from '@wails/S3Browser/internal/handlers/updatehandler';
 import { toast } from 'sonner';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '@/common/cnst/settingConst';
 import { useModalStackStore } from '@/common/stores/modalStackStore';
 import { useSettingStore } from '@/common/stores/settingStore';
 import { useUpdateStore } from '@/common/stores/updateStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { applySettings } from '@/common/utils/settingUtils';
+import { showUnsavedSettingModal } from '@/components/modals/lazyModals';
 import SettingModal from '@/components/modals/setting/SettingModal';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
@@ -19,8 +21,11 @@ vi.mock('@/common/utils/settingUtils', async importOriginal => ({
 }));
 vi.mock('@wails/S3Browser/internal/handlers/settinghandler', () => ({ GetSettings: vi.fn(), SaveSettings: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('@/components/modals/lazyModals', () => ({ showUnsavedSettingModal: vi.fn() }));
 
 const callIPCMock = vi.mocked(callIPC);
+const unsavedMock = vi.mocked(showUnsavedSettingModal);
+const updaterCalls = () => callIPCMock.mock.calls.filter(call => call[0] === SetUpdateOptions);
 const flush = () => act(async () => {});
 const state = () => useSettingStore.getState();
 const AUTO_UPDATE_LABEL = 'Automatically check for and download updates';
@@ -48,6 +53,11 @@ describe('SettingModal', () => {
     state().reset();
     useUpdateStore.getState().reset();
     vi.clearAllMocks();
+    unsavedMock.mockResolvedValue('back');
+  });
+
+  afterEach(async () => {
+    await flush();
   });
 
   it('shows the draft values in the selects', async () => {
@@ -123,7 +133,13 @@ describe('SettingModal', () => {
     expect(state().draft.autoUpdate).toBe(false);
     expect(state().saved.autoUpdate).toBe(true);
     expect(autoUpdate).not.toBeChecked();
-    expect(callIPCMock).not.toHaveBeenCalled();
+    // Reaches the updater at once, but is not saved to settings.json.
+    await waitFor(() => expect(updaterCalls()).toHaveLength(1));
+    expect(callIPCMock).toHaveBeenCalledWith(SetUpdateOptions, [false, false], {
+      scope: 'Setting/syncUpdater',
+      showMessage: false,
+    });
+    expect(callIPCMock).not.toHaveBeenCalledWith(SaveSettings, expect.anything(), expect.anything());
   });
 
   it('shows a beta switch that only changes the draft when updates are supported', async () => {
@@ -140,7 +156,9 @@ describe('SettingModal', () => {
     expect(state().draft.betaUpdate).toBe(true);
     expect(state().saved.betaUpdate).toBe(false);
     expect(beta).toBeChecked();
-    expect(callIPCMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(updaterCalls()).toHaveLength(1));
+    expect(callIPCMock).toHaveBeenCalledWith(SetUpdateOptions, [true, true], expect.anything());
+    expect(callIPCMock).not.toHaveBeenCalledWith(SaveSettings, expect.anything(), expect.anything());
   });
 
   it('previews each change through the store without saving', async () => {
@@ -438,16 +456,183 @@ describe('SettingModal', () => {
     });
   });
 
-  it('closing with the close button undoes the preview and resolves null', async () => {
+  it('closing with the close button when nothing changed resolves null without a warning', async () => {
+    const user = userEvent.setup();
+    const result = open();
+    await flush();
+
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+
+    await expect(result).resolves.toBeNull();
+    expect(unsavedMock).not.toHaveBeenCalled();
+    expect(state().draft).toEqual(DEFAULT_SETTINGS);
+    expect(callIPCMock).not.toHaveBeenCalled();
+  });
+
+  it('closing with Escape when nothing changed resolves null without a warning', async () => {
+    const user = userEvent.setup();
+    const result = open();
+    await flush();
+
+    await user.keyboard('{Escape}');
+
+    await expect(result).resolves.toBeNull();
+    expect(unsavedMock).not.toHaveBeenCalled();
+  });
+
+  it('does not warn after Apply because the draft equals the applied values', async () => {
     const user = userEvent.setup();
     const result = open();
     await flush();
 
     await pickOption(user, 'Theme', 'Dark');
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
     await user.click(screen.getByRole('button', { name: 'Close' }));
 
     await expect(result).resolves.toBeNull();
-    expect(state().draft).toEqual(DEFAULT_SETTINGS);
-    expect(callIPCMock).not.toHaveBeenCalled();
+    expect(unsavedMock).not.toHaveBeenCalled();
+    expect(state().draft.theme).toBe('dark');
+  });
+
+  describe('unsaved changes', () => {
+    it.each([
+      [
+        'the close button',
+        async (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole('button', { name: 'Close' })),
+      ],
+      ['Escape', async (user: ReturnType<typeof userEvent.setup>) => user.keyboard('{Escape}')],
+      [
+        'a click outside',
+        async (user: ReturnType<typeof userEvent.setup>) =>
+          user.click(document.querySelector('.mantine-Modal-overlay') as Element),
+      ],
+    ])('asks what to do when %s is used with a changed draft', async (_name, close) => {
+      const user = userEvent.setup();
+      open();
+      await flush();
+
+      await pickOption(user, 'Theme', 'Dark');
+      await close(user);
+      await flush();
+
+      expect(unsavedMock).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+    });
+
+    it('back keeps the modal open and the draft untouched', async () => {
+      const user = userEvent.setup();
+      let settled = false;
+      open().then(() => (settled = true));
+      await flush();
+
+      await pickOption(user, 'Theme', 'Dark');
+      unsavedMock.mockResolvedValue('back');
+      await user.click(screen.getByRole('button', { name: 'Close' }));
+      await flush();
+
+      expect(settled).toBe(false);
+      expect(state().draft.theme).toBe('dark');
+      expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue('Dark');
+      expect(callIPCMock).not.toHaveBeenCalled();
+    });
+
+    it('a null answer (modal dismissed) keeps the modal open too', async () => {
+      const user = userEvent.setup();
+      let settled = false;
+      open().then(() => (settled = true));
+      await flush();
+
+      await pickOption(user, 'Theme', 'Dark');
+      unsavedMock.mockResolvedValue(undefined);
+      await user.click(screen.getByRole('button', { name: 'Close' }));
+      await flush();
+
+      expect(settled).toBe(false);
+      expect(state().draft.theme).toBe('dark');
+    });
+
+    it('discard reverts the draft, the updater and closes with null', async () => {
+      const user = userEvent.setup();
+      const result = open();
+      await flush();
+
+      await pickOption(user, 'Theme', 'Dark');
+      useUpdateStore.setState({ supported: true, currentVersion: '1.0.0' });
+      await flush();
+      await user.click(screen.getByRole('switch', { name: BETA_LABEL }));
+      await waitFor(() => expect(updaterCalls()).toHaveLength(1));
+
+      unsavedMock.mockResolvedValue('discard');
+      await user.click(screen.getByRole('button', { name: 'Close' }));
+
+      await expect(result).resolves.toBeNull();
+      expect(state().draft).toEqual(DEFAULT_SETTINGS);
+      expect(applySettings).toHaveBeenLastCalledWith(DEFAULT_SETTINGS);
+      await waitFor(() => expect(updaterCalls()).toHaveLength(2));
+      expect(updaterCalls()[1][1]).toEqual([false, true]);
+      expect(callIPCMock).not.toHaveBeenCalledWith(SaveSettings, expect.anything(), expect.anything());
+    });
+
+    it('save runs the normal save flow: toast and resolves true', async () => {
+      const user = userEvent.setup();
+      callIPCMock.mockResolvedValueOnce({ settings: { ...DEFAULT_SETTINGS, theme: 'dark' } });
+      const result = open();
+      await flush();
+
+      await pickOption(user, 'Theme', 'Dark');
+      unsavedMock.mockResolvedValue('save');
+      await user.click(screen.getByRole('button', { name: 'Close' }));
+
+      await expect(result).resolves.toBe(true);
+      expect(callIPCMock).toHaveBeenCalledWith(SaveSettings, [{ ...DEFAULT_SETTINGS, theme: 'dark' }], {
+        scope: 'Setting/save',
+      });
+      expect(toast.success).toHaveBeenCalledWith('Settings saved.');
+      expect(state().saved.theme).toBe('dark');
+    });
+
+    it('save that fails keeps the modal open without a toast', async () => {
+      const user = userEvent.setup();
+      callIPCMock.mockResolvedValueOnce(null);
+      let settled = false;
+      open().then(() => (settled = true));
+      await flush();
+
+      await pickOption(user, 'Theme', 'Dark');
+      unsavedMock.mockResolvedValue('save');
+      await user.click(screen.getByRole('button', { name: 'Close' }));
+      await flush();
+
+      expect(callIPCMock).toHaveBeenCalledWith(SaveSettings, expect.anything(), expect.anything());
+      expect(settled).toBe(false);
+      expect(toast.success).not.toHaveBeenCalled();
+      expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+      expect(state().draft.theme).toBe('dark');
+    });
+
+    it('the footer Cancel button reverts without a warning even when dirty', async () => {
+      const user = userEvent.setup();
+      const result = open();
+      await flush();
+
+      await pickOption(user, 'Theme', 'Dark');
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      await expect(result).resolves.toBe(false);
+      expect(unsavedMock).not.toHaveBeenCalled();
+      expect(state().draft).toEqual(DEFAULT_SETTINGS);
+    });
+
+    it('a changed update switch alone counts as dirty', async () => {
+      const user = userEvent.setup();
+      useUpdateStore.setState({ supported: true, currentVersion: '1.0.0' });
+      open();
+      await flush();
+
+      await user.click(screen.getByRole('switch', { name: AUTO_UPDATE_LABEL }));
+      await user.click(screen.getByRole('button', { name: 'Close' }));
+
+      expect(unsavedMock).toHaveBeenCalledTimes(1);
+    });
   });
 });

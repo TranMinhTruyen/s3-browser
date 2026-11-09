@@ -10,6 +10,8 @@ import (
 	"database/sql"
 	"errors"
 	"log/slog"
+	"slices"
+	"strings"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -39,6 +41,24 @@ var (
 	// PFE009 - Authentication settings are invalid.
 	PFE009 = "PFE009"
 
+	// PFE010 - Cannot export profile [{name}].
+	PFE010 = "PFE010"
+
+	// PFE011 - Cannot read the profile file (it may be larger than 1 MB).
+	PFE011 = "PFE011"
+
+	// PFE012 - The file is not a valid S3Browser profile file.
+	PFE012 = "PFE012"
+
+	// PFE013 - Profile file version {version} is not supported.
+	PFE013 = "PFE013"
+
+	// PFE014 - Wrong password, or the file is damaged.
+	PFE014 = "PFE014"
+
+	// PFE015 - Enter a password of at least 8 characters.
+	PFE015 = "PFE015"
+
 	// PFS001 - Add new profile [{name}] success
 	PFS001 = "PFS001"
 
@@ -47,6 +67,12 @@ var (
 
 	// PFS003 - Delete profile [{name}] success
 	PFS003 = "PFS003"
+
+	// PFS004 - Export profile [{name}] success
+	PFS004 = "PFS004"
+
+	// PFW001 - Profile [{name}] imported. These file paths do not exist on this computer and were cleared: {fields}.
+	PFW001 = "PFW001"
 )
 
 // Module stores connection profiles in the database.
@@ -57,6 +83,7 @@ type Module struct {
 	q      *sqlc.Queries
 
 	submoduleAuthMng *submoduleAuthMng
+	submoduleFileMng *submoduleFileMng
 }
 
 // NewModule creates the profile module.
@@ -67,13 +94,17 @@ func NewModule(
 	db *sql.DB,
 	km *utils.KeyManager,
 ) *Module {
+	q := sqlc.New(db)
+	auth := newSubmoduleAuthMng(km)
+
 	return &Module{
 		logger: logger.With("component", "profiles_module"),
 		app:    app,
 		global: global,
-		q:      sqlc.New(db),
+		q:      q,
 
-		submoduleAuthMng: newSubmoduleAuthMng(km),
+		submoduleAuthMng: auth,
+		submoduleFileMng: newSubmoduleFileMng(app, logger, q, auth),
 	}
 }
 
@@ -124,9 +155,17 @@ func warnMessage(err error) models.Message {
 func (m *Module) CreateProfile(
 	input models.ConnectionProfileInput,
 ) models.Output[models.ConnectionProfileOutput] {
+	return m.createProfile(input, false)
+}
+
+// createProfile is CreateProfile; allowMissingCertKey is only set by the import (see prepare).
+func (m *Module) createProfile(
+	input models.ConnectionProfileInput,
+	allowMissingCertKey bool,
+) models.Output[models.ConnectionProfileOutput] {
 	output := models.NewOutput[models.ConnectionProfileOutput]()
 
-	auth, failure := m.submoduleAuthMng.prepare(input, nil)
+	auth, failure := m.submoduleAuthMng.prepare(input, nil, allowMissingCertKey)
 	if failure != nil {
 		return output.ThrowError(*failure)
 	}
@@ -179,7 +218,7 @@ func (m *Module) UpdateProfileById(input models.ConnectionProfileInput) models.O
 		stored = &row
 	}
 
-	auth, failure := m.submoduleAuthMng.prepare(input, stored)
+	auth, failure := m.submoduleAuthMng.prepare(input, stored, false)
 	if failure != nil {
 		return output.ThrowError(*failure)
 	}
@@ -253,6 +292,45 @@ func (m *Module) DeleteProfileById(input models.ConnectionProfileInput) models.O
 	output.Body = true
 	output.AddMessage(nameMessage(cnst.MessageTypeSuccess, PFS003, input.Name, ""))
 
+	return output
+}
+
+// ExportProfile writes a profile to a JSON file chosen in a native save dialog and returns the written path.
+// With IncludeSecret the saved secrets are sealed with Password (at least 8 characters, else PFE015); without it
+// the file holds no secret. The body is empty, with no message, when the user cancels the dialog.
+func (m *Module) ExportProfile(input models.ExportProfileInput) models.Output[string] {
+	return m.submoduleFileMng.exportAction(input)
+}
+
+// ChooseImportFile opens a native dialog to pick a profile file and checks it (size, format, version).
+// The body tells whether the file holds secrets (so a password is needed); its path is empty when cancelled.
+func (m *Module) ChooseImportFile() models.Output[models.ImportFileOutput] {
+	return m.submoduleFileMng.chooseImportAction()
+}
+
+// ImportProfile saves the profile of a profile file as a new profile with a new id and its secrets encrypted
+// again. A taken name gets " (2)", " (3)"... and a file path that does not exist here is cleared; then PFW001
+// replaces the success message PFS001.
+// The file is checked again, and nothing is written when it is invalid or the password is wrong.
+// It never connects, even with AutoConnect.
+func (m *Module) ImportProfile(input models.ImportProfileInput) models.Output[models.ConnectionProfileOutput] {
+	imported, failure := m.submoduleFileMng.importAction(input)
+	if failure != nil {
+		output := models.NewOutput[models.ConnectionProfileOutput]()
+		return output.ThrowError(*failure)
+	}
+
+	output := m.createProfile(imported.input, imported.allowMissingCertKey)
+	if output.Result && len(imported.clearedFields) > 0 {
+		// PFW001 already says the profile was imported, so it replaces the PFS001 toast.
+		output.MessageList = slices.DeleteFunc(output.MessageList, func(msg models.Message) bool {
+			return msg.MessageCode == PFS001
+		})
+		output.AddMessage(models.NewParamsMessage(cnst.MessageTypeWarn, cnst.Profile, PFW001, "", map[string]any{
+			"name":   output.Body.Name,
+			"fields": strings.Join(imported.clearedFields, ", "),
+		}))
+	}
 	return output
 }
 
