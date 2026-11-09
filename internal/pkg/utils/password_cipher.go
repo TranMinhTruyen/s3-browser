@@ -21,9 +21,6 @@ const (
 	passwordKeySize   = 32
 )
 
-// passwordAAD binds the ciphertext to its purpose and format version.
-var passwordAAD = []byte("s3browser-profile-v1")
-
 var (
 	// ErrWrongPassword is returned by OpenWithPassword when authentication fails: wrong password or damaged data.
 	ErrWrongPassword = errors.New("wrong password or damaged data")
@@ -41,8 +38,9 @@ type PasswordSealed struct {
 	Data       []byte `json:"data"`
 }
 
-// SealWithPassword encrypts plain under password, with a fresh random salt and nonce.
-func SealWithPassword(plain []byte, password string) (PasswordSealed, error) {
+// SealWithPassword encrypts plain under password, with a fresh random salt and nonce. aad is authenticated but not
+// encrypted: OpenWithPassword needs the same aad, so it binds the ciphertext to the data the caller passes.
+func SealWithPassword(plain []byte, password string, aad []byte) (PasswordSealed, error) {
 	sealed := PasswordSealed{
 		KDF:        kdfPBKDF2SHA256,
 		Iterations: kdfIterations,
@@ -60,13 +58,14 @@ func SealWithPassword(plain []byte, password string) (PasswordSealed, error) {
 	if err != nil {
 		return PasswordSealed{}, err
 	}
-	sealed.Data = gcm.Seal(nil, sealed.Nonce, plain, passwordAAD)
+	sealed.Data = gcm.Seal(nil, sealed.Nonce, plain, aad)
 	return sealed, nil
 }
 
 // OpenWithPassword reverses SealWithPassword. Parameters outside the accepted range give ErrInvalidSealed
-// before any key is derived; a failed authentication gives ErrWrongPassword.
-func OpenWithPassword(s PasswordSealed, password string) ([]byte, error) {
+// before any key is derived; a failed authentication (wrong password,
+// damaged data or a different aad) gives ErrWrongPassword.
+func OpenWithPassword(s PasswordSealed, password string, aad []byte) ([]byte, error) {
 	if s.KDF != kdfPBKDF2SHA256 || s.Iterations < minKdfIterations || s.Iterations > maxKdfIterations ||
 		len(s.Salt) != passwordSaltSize || len(s.Nonce) != passwordNonceSize {
 		return nil, ErrInvalidSealed
@@ -76,7 +75,7 @@ func OpenWithPassword(s PasswordSealed, password string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	plain, err := gcm.Open(nil, s.Nonce, s.Data, passwordAAD)
+	plain, err := gcm.Open(nil, s.Nonce, s.Data, aad)
 	if err != nil {
 		return nil, ErrWrongPassword
 	}

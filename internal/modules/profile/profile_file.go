@@ -23,7 +23,15 @@ func (e unsupportedVersionError) Error() string {
 	return fmt.Sprintf("profile file version %d is not supported", e.version)
 }
 
-// profileFile is the content of an exported profile file. It has no id, timestamps or DB version.
+// secretAAD returns the additional authenticated data of the sealed secrets: the format name and the provider,
+// endpoint and authType of the profile, as JSON so the fields cannot run into each other. Editing one of them in
+// the file makes the secrets impossible to open (PFE014); other fields (name, color...) can still change.
+func secretAAD(p *fileProfile) []byte {
+	aad, _ := json.Marshal([]string{profileFileFormat, p.Provider, p.Endpoint, p.AuthType})
+	return aad
+}
+
+// profileFile is the content of an exported profile file (version 1). It has no id, timestamps or DB version.
 // Version is the format version, not the optimistic-lock one.
 type profileFile struct {
 	Format  string                `json:"format"`

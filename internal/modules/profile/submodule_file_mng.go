@@ -149,7 +149,7 @@ func buildProfileFile(
 		if err != nil {
 			return nil, err
 		}
-		sealed, err := utils.SealWithPassword(plain, password)
+		sealed, err := utils.SealWithPassword(plain, password, secretAAD(file.Profile))
 		if err != nil {
 			return nil, err
 		}
@@ -241,7 +241,7 @@ func (m *submoduleFileMng) importAction(input models.ImportProfileInput) (import
 		if len([]rune(input.Password)) < minExportPasswordLen {
 			return importedProfile{}, errMessage(PFE015, errors.New("password needed"))
 		}
-		plain, err := utils.OpenWithPassword(*file.Secret, input.Password)
+		plain, err := utils.OpenWithPassword(*file.Secret, input.Password, secretAAD(file.Profile))
 		if err == nil {
 			err = json.Unmarshal(plain, &secret)
 		}
