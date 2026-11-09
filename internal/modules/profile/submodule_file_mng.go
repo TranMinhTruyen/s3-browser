@@ -159,40 +159,14 @@ func buildProfileFile(
 	return json.MarshalIndent(file, "", "  ")
 }
 
-// asciiFolds maps lower-case accented Latin letters (precomposed, incl. Vietnamese) to their ASCII letter.
-var asciiFolds = func() map[rune]rune {
-	folds := map[rune]rune{'đ': 'd', 'ð': 'd', 'ø': 'o', 'ł': 'l', 'ß': 's', 'æ': 'a', 'œ': 'o'}
-	for base, accented := range map[rune]string{
-		'a': "àáảãạăằắẳẵặâầấẩẫậäåāąǎ",
-		'e': "èéẻẽẹêềếểễệëēęěė",
-		'i': "ìíỉĩịïîīįı",
-		'o': "òóỏõọôồốổỗộơờớởỡợöōőǒ",
-		'u': "ùúủũụưừứửữựüûūůűųǔ",
-		'y': "ỳýỷỹỵÿ",
-		'c': "çćčĉċ",
-		'n': "ñńňņ",
-		's': "śšşŝș",
-		'z': "źžż",
-		'g': "ğĝġģ",
-		'r': "řŕŗ",
-		't': "ťţț",
-		'd': "ďđ",
-		'l': "ĺľļ",
-	} {
-		for _, r := range accented {
-			folds[r] = base
-		}
-	}
-	return folds
-}()
-
 // safeFileName turns a profile name into a snake_case ASCII file name (e.g. "Kết nối thử" -> "ket_noi_thu").
-// Letters that have no ASCII form are dropped; it never returns an empty name.
+// Letters that have no ASCII form are dropped and Windows device names get a "_" suffix; it never returns
+// an empty name.
 func safeFileName(name string) string {
 	var sb strings.Builder
 	lastSep := true // true at the start so no leading "_"
 	for _, r := range strings.ToLower(name) {
-		if base, ok := asciiFolds[r]; ok {
+		if base, ok := cnst.ASCIIFolds[r]; ok {
 			r = base
 		}
 		switch {
@@ -206,10 +180,14 @@ func safeFileName(name string) string {
 			lastSep = true
 		}
 	}
-	if result := strings.TrimRight(sb.String(), "_"); result != "" {
-		return result
+	result := strings.TrimRight(sb.String(), "_")
+	if result == "" {
+		return "profile"
 	}
-	return "profile"
+	if cnst.WindowsReservedNames[result] {
+		return result + "_" // e.g. "con" -> "con_"
+	}
+	return result
 }
 
 // importedProfile is a profile file ready to be created as a new profile.
