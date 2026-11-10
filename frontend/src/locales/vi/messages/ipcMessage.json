@@ -86,6 +86,7 @@
     "S3E061": "Bucket {bucket} không rỗng (có object mới được thêm), chưa được xoá.",
     "S3E062": "Bucket {bucket} chưa được xoá: không xoá được {failed} object.",
     "S3E063": "Bucket {bucket} có Object Lock và không rỗng nên không thể xoá.",
+    "S3E064": "Bucket {bucket} chưa được xoá: còn các phiên bản cũ mà máy chủ này không cho liệt kê.",
     "S3W008": "Thông tin xác thực của hồ sơ {name} sẽ hết hạn sau {minutes} phút và không thể tự động gia hạn.",
     "S3W009": "Không thể truy cập bucket {bucket} bằng chế độ ẩn danh.",
     "S3W010": "Thông tin xác thực của hồ sơ {name} sắp hết hạn, hãy nhập mã MFA mới để giữ kết nối.",
