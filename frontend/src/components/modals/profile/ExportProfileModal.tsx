@@ -91,7 +91,13 @@ export default createMantineModal<ExportProfileModalProps, boolean>(
     }, [resolve, hide]);
 
     return (
-      <Modal.Root {...mantine.props} centered size="md">
+      <Modal.Root
+        {...mantine.props}
+        closeOnEscape={mantine.props.closeOnEscape && !form.submitting}
+        closeOnClickOutside={mantine.props.closeOnClickOutside && !form.submitting}
+        centered
+        size="md"
+      >
         <Modal.Overlay />
         <form onSubmit={onSubmitForm}>
           <Modal.Content>
@@ -108,7 +114,9 @@ export default createMantineModal<ExportProfileModalProps, boolean>(
                 <FileDown />
                 <Title order={4}>{t('title')}</Title>
               </Group>
-              <CloseButton tooltip={t('common:button.close')} onClick={mantine.props.onClose} />
+              {form.submitting ? null : (
+                <CloseButton tooltip={t('common:button.close')} onClick={mantine.props.onClose} />
+              )}
             </Modal.Header>
 
             <Divider />
@@ -148,7 +156,7 @@ export default createMantineModal<ExportProfileModalProps, boolean>(
             <Divider />
 
             <Group p="8px" justify="space-between" wrap="nowrap">
-              <Button type="button" color="red" onClick={onClickCancel}>
+              <Button type="button" color="red" onClick={onClickCancel} disabled={form.submitting}>
                 {t('common:button.cancel')}
               </Button>
               <Button type="submit" loading={form.submitting}>

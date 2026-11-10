@@ -90,7 +90,7 @@ describe('HistoryModal', () => {
     expect(screen.getByText('Download history')).toBeInTheDocument();
     expect(screen.getByText('a.bin')).toBeInTheDocument();
     expect(screen.getByText('b.bin')).toBeInTheDocument();
-    expect(screen.getByText('2.00 KB')).toBeInTheDocument();
+    expect(screen.getByText('2.00 KiB')).toBeInTheDocument();
     expect(screen.getByText('0 bytes')).toBeInTheDocument();
     expect(screen.getAllByText(dayjs('2026-01-02T03:04:05.000Z').format(FULL_DATE_TIME_FORMAT))).toHaveLength(2);
     expect(screen.getAllByText('DONE')).toHaveLength(2);

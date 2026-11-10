@@ -1,4 +1,4 @@
-import { GetSettings, SaveSettings } from '@wails/S3Browser/internal/handlers/settinghandler';
+import { GetSettings, SaveSettings, SetLaunchOnStartup } from '@wails/S3Browser/internal/handlers/settinghandler';
 import { SetUpdateOptions } from '@wails/S3Browser/internal/handlers/updatehandler';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '@/common/cnst/settingConst';
@@ -11,7 +11,11 @@ vi.mock('@/common/utils/settingUtils', async importOriginal => ({
   ...(await importOriginal<typeof import('@/common/utils/settingUtils')>()),
   applySettings: vi.fn(),
 }));
-vi.mock('@wails/S3Browser/internal/handlers/settinghandler', () => ({ GetSettings: vi.fn(), SaveSettings: vi.fn() }));
+vi.mock('@wails/S3Browser/internal/handlers/settinghandler', () => ({
+  GetSettings: vi.fn(),
+  SaveSettings: vi.fn(),
+  SetLaunchOnStartup: vi.fn(),
+}));
 vi.mock('@wails/S3Browser/internal/handlers/updatehandler', () => ({ SetUpdateOptions: vi.fn() }));
 
 const callIPCMock = vi.mocked(callIPC);
@@ -256,28 +260,79 @@ describe('settingStore', () => {
   });
 
   describe('apply', () => {
-    it('keeps theme, font and language of the draft but the old launchOnStartup, without IPC or saving', () => {
+    // Intended behaviour change (sprint-17 Q2=A): Apply writes launchOnStartup at once through SetLaunchOnStartup.
+    it('writes a changed launchOnStartup at once and follows the value the backend returns', async () => {
+      callIPCMock.mockResolvedValueOnce({ settings: { ...DEFAULT_SETTINGS, launchOnStartup: true } });
       state().setDraft({ theme: 'dark', font: 'arial', language: 'vi', launchOnStartup: true });
-      state().apply();
 
+      await expect(state().apply()).resolves.toBe(true);
+
+      expect(callIPCMock).toHaveBeenCalledExactlyOnceWith(SetLaunchOnStartup, [true], { scope: 'Setting/apply' });
       expect(state().applied).toEqual({
         theme: 'dark',
         font: 'arial',
         language: 'vi',
-        launchOnStartup: false,
+        launchOnStartup: true,
         autoUpdate: true,
         betaUpdate: false,
       });
-      expect(state().saved).toEqual(DEFAULT_SETTINGS);
+      expect(state().saved).toEqual({ ...DEFAULT_SETTINGS, launchOnStartup: true });
       expect(state().draft.launchOnStartup).toBe(true);
-      expect(callIPCMock).not.toHaveBeenCalled();
+      expect(callIPCMock).not.toHaveBeenCalledWith(SaveSettings, expect.anything(), expect.anything());
     });
 
-    // Intended behaviour change (sprint-16 R4): Apply now keeps the draft's update switches.
+    it('keeps the old launchOnStartup when the backend returns it (STE003)', async () => {
+      useSettingStore.setState({ applied: { ...DEFAULT_SETTINGS, launchOnStartup: true } });
+      callIPCMock.mockResolvedValueOnce({ settings: { ...DEFAULT_SETTINGS, launchOnStartup: true } });
+      state().setDraft({ theme: 'dark', launchOnStartup: false });
+
+      await expect(state().apply()).resolves.toBe(true);
+
+      expect(callIPCMock).toHaveBeenCalledWith(SetLaunchOnStartup, [false], { scope: 'Setting/apply' });
+      expect(state().applied).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark', launchOnStartup: true });
+      expect(state().saved.launchOnStartup).toBe(true);
+      expect(state().draft.launchOnStartup).toBe(true);
+      expect(state().draft.theme).toBe('dark');
+    });
+
+    it('treats a missing settings object in the output as launchOnStartup false', async () => {
+      useSettingStore.setState({ applied: { ...DEFAULT_SETTINGS, launchOnStartup: true } });
+      callIPCMock.mockResolvedValueOnce({});
+      state().setDraft({ launchOnStartup: false });
+
+      await expect(state().apply()).resolves.toBe(true);
+
+      expect(state().applied.launchOnStartup).toBe(false);
+      expect(state().saved.launchOnStartup).toBe(false);
+    });
+
+    it('returns false and changes nothing when the IPC returns null', async () => {
+      state().setDraft({ theme: 'dark', launchOnStartup: true });
+      const before = { applied: state().applied, saved: state().saved, draft: state().draft };
+
+      await expect(state().apply()).resolves.toBe(false);
+
+      expect(callIPCMock).toHaveBeenCalledExactlyOnceWith(SetLaunchOnStartup, [true], { scope: 'Setting/apply' });
+      expect(state().applied).toEqual(before.applied);
+      expect(state().saved).toEqual(before.saved);
+      expect(state().draft).toEqual(before.draft);
+    });
+
+    it('does not call the IPC when launchOnStartup is unchanged', async () => {
+      state().setDraft({ theme: 'dark', font: 'arial', language: 'vi' });
+
+      await expect(state().apply()).resolves.toBe(true);
+
+      expect(callIPCMock).not.toHaveBeenCalled();
+      expect(state().applied).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark', font: 'arial', language: 'vi' });
+      expect(state().saved).toEqual(DEFAULT_SETTINGS);
+    });
+
+    // Intended behaviour change (sprint-16 R4): Apply keeps the draft's update switches.
     it('keeps the draft autoUpdate (already sent to the updater) and leaves saved untouched', async () => {
       state().setDraft({ theme: 'dark', autoUpdate: false });
       await settle();
-      state().apply();
+      await state().apply();
       await settle();
 
       expect(state().applied).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark', autoUpdate: false });
@@ -291,28 +346,32 @@ describe('settingStore', () => {
       useSettingStore.setState({ applied: { ...DEFAULT_SETTINGS, betaUpdate: true } });
       state().setDraft({ theme: 'dark', betaUpdate: false });
       await settle();
-      state().apply();
+      await state().apply();
 
       expect(state().applied).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark', betaUpdate: false });
       expect(state().draft.betaUpdate).toBe(false);
     });
 
-    it('keeps the previous applied launchOnStartup', () => {
-      useSettingStore.setState({ applied: { ...DEFAULT_SETTINGS, launchOnStartup: true } });
-      state().setDraft({ theme: 'dark', launchOnStartup: false });
-      state().apply();
-
-      expect(state().applied).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark', launchOnStartup: true });
-    });
-
-    it('makes a later revert return to the applied values', () => {
+    it('makes a later revert return to the applied values', async () => {
       state().setDraft({ theme: 'dark' });
-      state().apply();
+      await state().apply();
       state().setDraft({ theme: 'light', font: 'arial' });
       state().revert();
 
       expect(state().draft).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark' });
       expect(applySettings).toHaveBeenLastCalledWith({ ...DEFAULT_SETTINGS, theme: 'dark' });
+    });
+
+    it('revert after apply does not undo the written launchOnStartup', async () => {
+      callIPCMock.mockResolvedValueOnce({ settings: { ...DEFAULT_SETTINGS, launchOnStartup: true } });
+      state().setDraft({ launchOnStartup: true });
+      await state().apply();
+      state().setDraft({ launchOnStartup: false, theme: 'dark' });
+      state().revert();
+
+      expect(state().draft.launchOnStartup).toBe(true);
+      expect(state().applied.launchOnStartup).toBe(true);
+      expect(state().saved.launchOnStartup).toBe(true);
     });
   });
 

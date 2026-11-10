@@ -345,7 +345,8 @@ func samePolicy(a, b string) bool {
 	return okA && okB && reflect.DeepEqual(x, y)
 }
 
-// canonicalPolicy parses a policy and rewrites Principal, Action and Resource of each statement to sorted lists.
+// canonicalPolicy parses a policy, rewrites Principal, Action and Resource of each statement to sorted lists
+// and sorts the statements themselves.
 func canonicalPolicy(raw string) (map[string]any, bool) {
 	var pol map[string]any
 	if json.Unmarshal([]byte(raw), &pol) != nil || pol == nil {
@@ -377,6 +378,12 @@ func canonicalPolicy(raw string) (map[string]any, bool) {
 			}
 		}
 	}
+	// json.Marshal sorts map keys, so the marshaled statement is a stable sort key.
+	slices.SortFunc(statements, func(x, y any) int {
+		jx, _ := json.Marshal(x)
+		jy, _ := json.Marshal(y)
+		return bytes.Compare(jx, jy)
+	})
 	pol["Statement"] = statements
 	return pol, true
 }

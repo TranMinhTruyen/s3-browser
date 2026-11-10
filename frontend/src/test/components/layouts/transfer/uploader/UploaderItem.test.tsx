@@ -34,7 +34,7 @@ describe('UploaderItem', () => {
     expect(screen.getByText('Object: a.bin')).toBeInTheDocument();
     expect(screen.getByText('25%')).toBeInTheDocument();
     expect(screen.getByText('512 bytes')).toBeInTheDocument();
-    expect(screen.getByText('1.50 KB')).toBeInTheDocument();
+    expect(screen.getByText('1.50 KiB')).toBeInTheDocument();
   });
 
   it('caps the percentage at 99 while nearly complete and not yet finalizing', () => {
@@ -69,7 +69,7 @@ describe('UploaderItem', () => {
     expect(container.querySelector('.mantine-Loader-root')).not.toBeNull();
     expect(screen.queryByText(/%/)).not.toBeInTheDocument();
     expect(screen.getByText('Finalizing…')).toBeInTheDocument();
-    expect(screen.getByText('2.00 KB')).toBeInTheDocument();
+    expect(screen.getByText('2.00 KiB')).toBeInTheDocument();
     expect(screen.queryByText('Uploaded')).not.toBeInTheDocument();
     expect(screen.queryByText('Remaining')).not.toBeInTheDocument();
   });

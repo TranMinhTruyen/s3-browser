@@ -302,7 +302,7 @@ func (m *submoduleFileMng) readFile(path string) (profileFile, *models.Message) 
 	data, err := io.ReadAll(io.LimitReader(f, maxImportFileSize+1))
 	if err != nil || len(data) > maxImportFileSize {
 		if err == nil {
-			err = errors.New("file is larger than 1 MB")
+			err = errors.New("file is larger than 1 MiB")
 		}
 		m.logger.Error("import: read file failed", "error", err)
 		return profileFile{}, errMessage(PFE011, err)
