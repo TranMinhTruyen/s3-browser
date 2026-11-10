@@ -10,7 +10,10 @@ const MIN_DURATION_SECONDS = 900;
 const MAX_DURATION_SECONDS = 43200;
 const DURATION_ERROR = `V000003:${MIN_DURATION_SECONDS},${MAX_DURATION_SECONDS}`;
 const ROLE_ARN_REGEX = /^arn:aws[\w-]*:iam::\d{12}:role\/\S+$/;
-const LOOPBACK_HOST_REGEX = /^(localhost|127(\.\d{1,3}){3}|\[::1\])$/i;
+const OCTET = String.raw`(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)`;
+const LOOPBACK_HOST_REGEX = new RegExp(String.raw`^(localhost|127(\.${OCTET}){3}|\[::1\])$`, 'i');
+// Host of the raw URL (no userinfo/port), read before `new URL` normalises forms like `127.1`.
+const RAW_HOST_REGEX = /^[a-z]+:\/\/(?:[^/\\?#@]*@)?(\[[^\]/\\?#]*\]|[^/\\?#:@]*)/i;
 
 export const DEFAULT_CALLBACK_PORT = 48765;
 const MIN_CALLBACK_PORT = 1024;
@@ -21,7 +24,11 @@ const PORT_ERROR = `V000003:${MIN_CALLBACK_PORT},${MAX_CALLBACK_PORT}`;
 export const isSecureIssuerUrl = (value: string): boolean => {
   try {
     const { protocol, hostname } = new URL(value);
-    return protocol === 'https:' ? hostname !== '' : protocol === 'http:' && LOOPBACK_HOST_REGEX.test(hostname);
+    if (protocol === 'https:') return hostname !== '';
+    if (protocol !== 'http:') return false;
+    // Go's url.Parse rejects a backslash in the authority, which the URL API would silently treat as a slash.
+    if ((/^[a-z]+:\/\/([^/?#]*)/i.exec(value.trim())?.[1] ?? '').includes('\\')) return false;
+    return LOOPBACK_HOST_REGEX.test(RAW_HOST_REGEX.exec(value.trim())?.[1] ?? '');
   } catch {
     return false;
   }
