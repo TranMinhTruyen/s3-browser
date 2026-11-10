@@ -1,9 +1,10 @@
-import { screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { MantineProvider } from '@mantine/core';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import WarningIcon from '@/components/display/WarningIcon';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
+// env="test" makes Mantine render transitions at once (no timers, no portal animation).
 describe('WarningIcon', () => {
   it('labels the icon and uses the default size of 16', () => {
     renderWithProviders(<WarningIcon label="Careful" />);
@@ -18,8 +19,15 @@ describe('WarningIcon', () => {
   });
 
   it('shows the label in a tooltip on hover', async () => {
-    renderWithProviders(<WarningIcon label="Careful" />);
-    await userEvent.hover(screen.getByLabelText('Careful'));
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('Careful');
+    render(
+      <MantineProvider env="test">
+        <WarningIcon label="Careful" />
+      </MantineProvider>
+    );
+    const icon = screen.getByLabelText('Careful');
+    fireEvent.pointerEnter(icon, { pointerType: 'mouse' });
+    fireEvent.mouseEnter(icon);
+    await act(async () => {});
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Careful');
   });
 });
