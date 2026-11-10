@@ -351,7 +351,7 @@ Bấm nút **Cài đặt** (biểu tượng bánh răng) ở góc trên bên ph�
 Mọi thay đổi được xem trước ngay. Sau đó chọn:
 
 - **Lưu**: giữ cài đặt, kể cả sau khi mở lại app.
-- **Áp dụng**: giữ cài đặt đến khi đóng app, gồm cả hai công tắc cập nhật; hộp thoại vẫn mở. Áp dụng không thay đổi tùy chọn Khởi động cùng Windows.
+- **Áp dụng**: giữ cài đặt đến khi đóng app, gồm cả hai công tắc cập nhật; hộp thoại vẫn mở. Áp dụng ghi tùy chọn Khởi động cùng Windows vào Windows ngay, và Hủy không hoàn tác được.
 - **Hủy**: bỏ các thay đổi kể từ lần Áp dụng hoặc Lưu gần nhất, gồm cả hai công tắc cập nhật. Hộp thoại đóng lại.
 - **Đặt lại mặc định**: đưa form về mặc định (Sáng, Nunito, English, **Khởi động cùng Windows** tắt). Hai công tắc cập nhật cũng được đặt lại ngay, như khi bạn gạt tay: **Tự động kiểm tra và tải bản cập nhật** bật và **Nhận bản beta (thử nghiệm)** tắt. Bấm **Lưu** để giữ mặc định; **Hủy** hoàn tác việc đặt lại.
 

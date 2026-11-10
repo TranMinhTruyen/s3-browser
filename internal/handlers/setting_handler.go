@@ -35,6 +35,11 @@ func (h *SettingHandler) SaveSettings(input models.SaveSettingInput) models.Outp
 	return output
 }
 
+// SetLaunchOnStartup writes only launch on startup (used by Apply); the output holds the value actually kept.
+func (h *SettingHandler) SetLaunchOnStartup(enabled bool) models.Output[models.SettingsOutput] {
+	return h.setting.SetLaunchOnStartup(enabled)
+}
+
 // GetTabState returns the remembered tabs.
 func (h *SettingHandler) GetTabState() models.Output[models.TabState] {
 	return h.setting.GetTabState()
