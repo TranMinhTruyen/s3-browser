@@ -188,6 +188,12 @@ func (m *submoduleUpdateMng) setErrorLocked(err *updateError) models.UpdateState
 
 // check looks for a newer release. With auto update on, a new release starts downloading.
 func (m *submoduleUpdateMng) check(ctx context.Context) error {
+	return m.runCheck(ctx, true)
+}
+
+// runCheck is check; when the channel changed during the fetch, the stale result is dropped and, if retry is set,
+// the check runs again once on the new channel.
+func (m *submoduleUpdateMng) runCheck(ctx context.Context, retry bool) error {
 	m.mu.Lock()
 	switch m.st.State {
 	case stateChecking, stateDownloading, stateReady:
@@ -198,24 +204,43 @@ func (m *submoduleUpdateMng) check(ctx context.Context) error {
 		m.mu.Unlock()
 		return errBusy
 	}
-	prev := m.st
+	prev, beta := m.st, m.beta
 	m.st.State = stateChecking
 	m.st.ErrorCode = ""
 	checking := m.st
 	m.mu.Unlock()
 	m.emit(checking)
 
-	rel, checkErr := m.fetchRelease(ctx)
-	if checkErr != nil {
-		if errors.Is(ctx.Err(), context.Canceled) {
-			m.update(func(st *models.UpdateStateOutput) { *st = prev })
-			return checkErr
-		}
+	rel, checkErr := m.fetchRelease(ctx, beta)
+	canceled := checkErr != nil && errors.Is(ctx.Err(), context.Canceled)
+
+	m.mu.Lock()
+	if m.beta == beta && checkErr != nil && !canceled {
+		m.mu.Unlock()
 		m.fail(checkErr, true)
 		return checkErr
 	}
-
-	m.mu.Lock()
+	if m.beta != beta {
+		m.rel = nil
+		m.st = models.UpdateStateOutput{Supported: true, State: stateIdle, CurrentVersion: m.version}
+		idle := m.st
+		m.mu.Unlock()
+		m.emit(idle)
+		if canceled {
+			return checkErr
+		}
+		if retry {
+			return m.runCheck(ctx, false)
+		}
+		return nil
+	}
+	if checkErr != nil {
+		m.st = prev
+		restored := m.st
+		m.mu.Unlock()
+		m.emit(restored)
+		return checkErr
+	}
 	m.rel = rel
 	if rel == nil {
 		m.st = models.UpdateStateOutput{Supported: true, State: stateUpToDate, CurrentVersion: m.version}
@@ -239,12 +264,9 @@ func (m *submoduleUpdateMng) check(ctx context.Context) error {
 
 // fetchRelease asks GitHub for the release to install; nil means up to date. Beta on: only a newer pre-release.
 // Beta off: a newer stable, or the latest stable when the running build is a pre-release.
-func (m *submoduleUpdateMng) fetchRelease(ctx context.Context) (*updater.Release, *updateError) {
+func (m *submoduleUpdateMng) fetchRelease(ctx context.Context, beta bool) (*updater.Release, *updateError) {
 	ctx, cancel := context.WithTimeout(ctx, checkTimeout)
 	defer cancel()
-	m.mu.Lock()
-	beta := m.beta
-	m.mu.Unlock()
 	provider, current := m.provider, m.version
 	switch {
 	case beta:
