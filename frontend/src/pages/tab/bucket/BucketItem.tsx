@@ -3,7 +3,6 @@ import { Bucket } from '@wails/S3Browser/models/bucket';
 import dayjs from 'dayjs';
 import { Ellipsis, Folder, Info, ShieldCheck, Trash2 } from 'lucide-react';
 import { type CSSProperties, type MouseEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import { FULL_DATE_TIME_FORMAT, LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import PolicyBadge from '@/components/display/PolicyBadge';
@@ -12,8 +11,19 @@ import WarningIcon from '@/components/display/WarningIcon';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import classes from '@/pages/tab/bucket/page.module.css';
 
+/** Texts of a row, translated once by the list so rows do not subscribe to i18n. */
+export type BucketItemLabels = {
+  inaccessible: string;
+  moreActions: string;
+  createDate: string;
+  detail: string;
+  editPolicy: string;
+  delete: string;
+};
+
 type BucketItemProps = {
   item: Bucket;
+  labels: BucketItemLabels;
   // An anonymous connection cannot change the bucket, so its menu has no "Access permission".
   canEdit?: boolean;
   onSelectBucket?: (bucketName: string | undefined) => void;
@@ -40,8 +50,7 @@ const stopPropagation = (e: MouseEvent) => e.stopPropagation();
  * after a confirmation when it may be inaccessible.
  */
 function BucketItem(props: BucketItemProps) {
-  const { item, canEdit, onSelectBucket, onOpenDetail, onEditPolicy, onDeleteBucket } = props;
-  const { t } = useTranslation('bucket', { keyPrefix: 'page' });
+  const { item, labels, canEdit, onSelectBucket, onOpenDetail, onEditPolicy, onDeleteBucket } = props;
   // An anonymous connection cannot read the creation date, so the backend sends the zero date (year 1).
   const hasCreationDate = dayjs(item.creationDate).year() > 1;
 
@@ -88,13 +97,13 @@ function BucketItem(props: BucketItemProps) {
             <TruncatedText size="xl" fw="bold">
               {item.name}
             </TruncatedText>
-            {item.inaccessible ? <WarningIcon label={t('tooltip.inaccessible')} size={18} /> : null}
+            {item.inaccessible ? <WarningIcon label={labels.inaccessible} size={18} /> : null}
           </Group>
           {hasCreationDate ? (
             <Group gap="xs" wrap="nowrap">
               <Text>
                 <Text span fw={500}>
-                  {t('label.createDate')}
+                  {labels.createDate}
                 </Text>{' '}
                 {dayjs(item.creationDate).format(FULL_DATE_TIME_FORMAT)}
               </Text>
@@ -108,31 +117,31 @@ function BucketItem(props: BucketItemProps) {
         {menuOpened ? (
           <Menu width={200} opened onChange={setMenuOpened}>
             <Menu.Target>
-              <ActionIcon key="menu" tooltip={t('tooltip.moreActions')}>
+              <ActionIcon key="menu" tooltip={labels.moreActions}>
                 <Ellipsis />
               </ActionIcon>
             </Menu.Target>
             <Menu.Dropdown>
               <Menu.Item leftSection={<Info size="16px" />} onClick={onClickDetail}>
-                {t('menu.detail')}
+                {labels.detail}
               </Menu.Item>
               {canEdit ? (
                 <Menu.Item leftSection={<ShieldCheck size="16px" />} onClick={onClickEditPolicy}>
-                  {t('menu.editPolicy')}
+                  {labels.editPolicy}
                 </Menu.Item>
               ) : null}
               {canEdit && !item.deleteDenied ? (
                 <>
                   <Menu.Divider />
                   <Menu.Item color="red" leftSection={<Trash2 size="16px" />} onClick={onClickDelete}>
-                    {t('menu.delete')}
+                    {labels.delete}
                   </Menu.Item>
                 </>
               ) : null}
             </Menu.Dropdown>
           </Menu>
         ) : (
-          <ActionIcon key="button" tooltip={t('tooltip.moreActions')} onClick={onClickMoreActions}>
+          <ActionIcon key="button" tooltip={labels.moreActions} onClick={onClickMoreActions}>
             <Ellipsis />
           </ActionIcon>
         )}

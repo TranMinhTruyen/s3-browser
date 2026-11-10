@@ -83,6 +83,20 @@ func (m *Module) SaveSettings(input models.SaveSettingInput) models.Output[model
 	return output
 }
 
+// SetLaunchOnStartup changes only launch on startup (registry and settings file), leaving the other saved values.
+// When the registry cannot be changed it returns the unchanged value with a STE003 warning.
+func (m *Module) SetLaunchOnStartup(enabled bool) models.Output[models.SettingsOutput] {
+	output := models.NewOutput[models.SettingsOutput]()
+
+	current, err := m.setting.get()
+	if err != nil {
+		m.logger.Error("load settings failed", "error", err)
+		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Setting, STE001, err.Error()))
+	}
+	current.LaunchOnStartup = enabled
+	return m.SaveSettings(models.SaveSettingInput(current))
+}
+
 // GetTabState returns the remembered tabs. A missing, malformed or invalid file yields an empty state.
 func (m *Module) GetTabState() models.Output[models.TabState] {
 	output := models.NewOutput[models.TabState]()

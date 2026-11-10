@@ -1,3 +1,4 @@
+import { Bucket } from '@wails/S3Browser/models/bucket';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
@@ -359,6 +360,38 @@ describe('tabListStore bucket detail', () => {
     expect(state().tabList[id].detailBucket).toEqual(bucket);
     state().closeBucketDetail(id);
     expect(state().tabList[id].detailBucket).toBeUndefined();
+  });
+
+  it('setBucketDetailPolicyMode sets the mode only when the open bucket has that name', () => {
+    const id = activeId();
+    state().openBucketDetail(id, bucket);
+
+    state().setBucketDetailPolicyMode(id, 'other', 'public');
+    expect(state().tabList[id].detailBucket).toEqual(bucket);
+
+    state().setBucketDetailPolicyMode(id, 'bkt', 'public');
+    expect(state().tabList[id].detailBucket).toMatchObject({ name: 'bkt', policyMode: 'public' });
+    expect(bucket).not.toHaveProperty('policyMode');
+  });
+
+  it('setBucketDetailPolicyMode gives subscribers a new bucket reference (real Bucket instance)', () => {
+    const id = activeId();
+    const real = new Bucket({ name: 'bkt', creationDate: '2026-01-02T03:04:05', policyMode: 'private' });
+    state().openBucketDetail(id, real);
+    const before = state().tabList[id].detailBucket;
+
+    state().setBucketDetailPolicyMode(id, 'bkt', 'public');
+
+    expect(state().tabList[id].detailBucket?.policyMode).toBe('public');
+    expect(state().tabList[id].detailBucket).not.toBe(before);
+  });
+
+  it('setBucketDetailPolicyMode does nothing without an open detail or for an unknown tab', () => {
+    const id = activeId();
+    state().setBucketDetailPolicyMode(id, 'bkt', 'public');
+    expect(state().tabList[id].detailBucket).toBeUndefined();
+    state().setBucketDetailPolicyMode('ghost', 'bkt', 'public');
+    expect(state().tabList.ghost).toBeUndefined();
   });
 
   it('ignores an unknown tab', () => {

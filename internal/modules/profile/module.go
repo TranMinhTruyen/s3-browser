@@ -44,7 +44,7 @@ var (
 	// PFE010 - Cannot export profile [{name}].
 	PFE010 = "PFE010"
 
-	// PFE011 - Cannot read the profile file (it may be larger than 1 MB).
+	// PFE011 - Cannot read the profile file (it may be larger than 1 MiB).
 	PFE011 = "PFE011"
 
 	// PFE012 - The file is not a valid S3Browser profile file.

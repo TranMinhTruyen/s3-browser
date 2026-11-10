@@ -137,7 +137,7 @@ describe('UploadLimitModal', () => {
     await flush();
 
     expect(screen.queryByText(/stopped early/)).not.toBeInTheDocument();
-    const header = screen.getByRole('button', { name: 'Folders with 2 or more large files (over 1.00 MB)' });
+    const header = screen.getByRole('button', { name: 'Folders with 2 or more large files (over 1.00 MiB)' });
     expect(header).toHaveAttribute('aria-expanded', 'true');
     expect(screen.queryByText('Folders with more than 2 files')).not.toBeInTheDocument();
   });

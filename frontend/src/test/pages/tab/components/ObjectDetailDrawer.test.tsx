@@ -69,7 +69,7 @@ describe('ObjectDetailDrawer', () => {
     renderDrawer();
 
     expect(screen.getByText('etag-a')).toBeInTheDocument();
-    expect(screen.getByText('2.00 KB (2048 bytes)')).toBeInTheDocument();
+    expect(screen.getByText('2.00 KiB (2048 bytes)')).toBeInTheDocument();
     expect(callIPCMock).toHaveBeenCalledWith(
       expect.anything(),
       [{ connectionId: 'conn', profileName: 'p', bucket: 'bkt', key: 'a.txt' }],

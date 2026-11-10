@@ -7,6 +7,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-10
+
+### Changed
+
+- Updated dependencies, including the AWS SDK for Go, the Go `x` packages, Mantine 9.8 and i18next 27.1.
+
+### Fixed
+
+- File sizes are now labelled KiB / MiB / GiB, matching the units of 1,024 they are computed in. The size limit for importing a profile file is shown as 1 MiB.
+- A public read-only bucket policy whose statements are in a different order is now shown as Public instead of Custom.
+- The bucket details drawer shows the new permission right after the bucket policy is saved.
+- **Apply** in Settings now also applies launch on Windows startup. Cancel after **Apply** does not undo it.
+- Settings cannot be changed while **Apply** is running, and the export profile dialog cannot be closed while the file is being exported.
+- Switching the beta channel during an update check no longer shows the result of the previous channel; the check runs again on the new channel.
+- Deleting a bucket stops with an error instead of looping when the server returns an invalid version list, shows a clear message when the bucket is still not empty, and no longer counts deleted objects twice.
+- The connection dialog now rejects the same OpenID Connect issuer URLs as the backend (for example `http://127.1`).
+
+## [1.0.1-beta.17] - 2026-11-10
+
+### Fixed
+
+- File sizes are now labelled KiB / MiB / GiB, matching the units of 1,024 they are computed in. The size limit for importing a profile file is shown as 1 MiB.
+- A public read-only bucket policy whose statements are in a different order is now shown as Public instead of Custom.
+- The bucket details drawer shows the new permission right after the bucket policy is saved.
+- **Apply** in Settings now also applies launch on Windows startup. Cancel after **Apply** does not undo it.
+- Settings cannot be changed while **Apply** is running, and the export profile dialog cannot be closed while the file is being exported.
+- Switching the beta channel during an update check no longer shows the result of the previous channel; the check runs again on the new channel.
+- Deleting a bucket stops with an error instead of looping when the server returns an invalid version list, shows a clear message when the bucket is still not empty, and no longer counts deleted objects twice.
+- The connection dialog now rejects the same OpenID Connect issuer URLs as the backend (for example `http://127.1`).
+
 ## [1.0.0] - 2026-11-09
 
 ### Added

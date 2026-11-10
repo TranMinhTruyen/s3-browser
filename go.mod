@@ -4,12 +4,12 @@ go 1.27
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.47.8
-	github.com/aws/aws-sdk-go-v2/config v1.33.16
-	github.com/aws/aws-sdk-go-v2/credentials v1.20.16
-	github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.5.5
+	github.com/aws/aws-sdk-go-v2/config v1.33.17
+	github.com/aws/aws-sdk-go-v2/credentials v1.20.17
+	github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.5.6
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.114.9
 	github.com/aws/aws-sdk-go-v2/service/sts v1.51.9
-	github.com/aws/smithy-go v1.28.8
+	github.com/aws/smithy-go v1.28.9
 	github.com/google/uuid v1.6.0
 	github.com/minio/madmin-go/v4 v4.10.7
 	github.com/minio/minio-go/v7 v7.4.1
@@ -19,9 +19,9 @@ require (
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78
 	github.com/zalando/go-keyring v0.2.8
 	go.yaml.in/yaml/v3 v3.0.6
-	golang.org/x/oauth2 v0.37.0
-	golang.org/x/sync v0.24.0
-	golang.org/x/sys v0.49.0
+	golang.org/x/oauth2 v0.38.0
+	golang.org/x/sync v0.25.0
+	golang.org/x/sys v0.50.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	modernc.org/sqlite v1.62.0
 )
@@ -81,7 +81,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.11.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.11 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.20.11 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.12.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.13.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.39.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.44.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
@@ -219,7 +219,7 @@ require (
 	github.com/kevinburke/ssh_config v1.4.0 // indirect
 	github.com/kisielk/errcheck v1.30.0 // indirect
 	github.com/kkHAIKE/contextcheck v1.1.6 // indirect
-	github.com/klauspost/compress v1.20.3 // indirect
+	github.com/klauspost/compress v1.20.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.2 // indirect
 	github.com/klauspost/pgzip v1.2.6 // indirect
 	github.com/kulti/thelper v0.7.1 // indirect
@@ -253,7 +253,7 @@ require (
 	github.com/mgechev/revive v1.17.1 // indirect
 	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minlz v1.2.3 // indirect
+	github.com/minio/minlz v1.2.4 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
@@ -381,11 +381,11 @@ require (
 	golang.org/x/exp v0.0.0-20261014143641-f0251eb4aa3e // indirect
 	golang.org/x/exp/typeparams v0.0.0-20260811152304-ee035b5b010f // indirect
 	golang.org/x/image v0.45.0 // indirect
-	golang.org/x/mod v0.42.0 // indirect
+	golang.org/x/mod v0.43.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/telemetry v0.0.0-20261009151841-97e8ea77aa2a // indirect
-	golang.org/x/term v0.47.0 // indirect
-	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/term v0.48.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/tools v0.52.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20261019180522-ce908d29299b // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20261012220534-4341edf3f941 // indirect
@@ -397,7 +397,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/tools v0.8.2 // indirect
 	howett.net/plist v1.0.2-0.20250314012144-ee69052608d9 // indirect
-	modernc.org/libc v1.80.1 // indirect
+	modernc.org/libc v1.80.2 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 	mvdan.cc/gofumpt v0.12.0 // indirect

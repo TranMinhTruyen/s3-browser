@@ -227,6 +227,46 @@ describe('BucketDetailDrawer', () => {
   });
 
   it.each([
+    ['public', 'private', 'Public (read-only)'],
+    ['custom', 'public', 'Custom'],
+    ['private', null, 'Private'],
+  ])('shows the saved mode %s of the store over the loaded %s', async (saved, loaded, expected) => {
+    callIPCMock.mockResolvedValue(new BucketDetailOutput({ ...nothing, policyMode: loaded }) as never);
+    openBucket(new Bucket({ ...bucketA, policyMode: saved }));
+    renderDrawer();
+
+    await screen.findByText('Region', { selector: 'dt' });
+
+    expect(valueOf('Policy')).toBe(expected);
+  });
+
+  it('updates the policy row when the mode is saved while the drawer is open', async () => {
+    callIPCMock.mockResolvedValue(new BucketDetailOutput({ ...nothing, policyMode: 'private' }) as never);
+    openBucket(new Bucket({ name: 'bucket-a', creationDate: '2026-01-02T03:04:05' }));
+    renderDrawer();
+    await screen.findByText('Region', { selector: 'dt' });
+    expect(valueOf('Policy')).toBe('Private');
+
+    act(() => useTabListStore.getState().setBucketDetailPolicyMode(TAB_ID, 'bucket-a', 'public'));
+
+    expect(valueOf('Policy')).toBe('Public (read-only)');
+  });
+
+  it.each([
+    ['unknown', 'Custom'],
+    ['', 'Custom'],
+    [undefined, 'Custom'],
+  ])('falls back to the loaded mode when the store mode is %j', async (stored, expected) => {
+    callIPCMock.mockResolvedValue(new BucketDetailOutput({ ...nothing, policyMode: 'custom' }) as never);
+    openBucket(new Bucket({ ...bucketA, policyMode: stored }));
+    renderDrawer();
+
+    await screen.findByText('Region', { selector: 'dt' });
+
+    expect(valueOf('Policy')).toBe(expected);
+  });
+
+  it.each([
     [true, 'On'],
     [false, 'Off'],
   ])('shows Block Public Access %s as %s', async (publicBlocked, expected) => {

@@ -33,6 +33,9 @@ export default createMantineModal<{}, boolean>(props => {
   const { t } = useTranslation('settingModal');
   // While saving, every button and every way of closing the modal is locked.
   const [saving, setSaving] = useState(false);
+  // Same lock while Apply is pending, so Cancel/Save/close cannot race with its result.
+  const [applying, setApplying] = useState(false);
+  const busy = saving || applying;
 
   const draft = useSettingStore(useShallow(s => s.draft));
   const applied = useSettingStore(useShallow(s => s.applied));
@@ -99,9 +102,15 @@ export default createMantineModal<{}, boolean>(props => {
   const onClickReset = useCallback(() => resetDraft(), [resetDraft]);
 
   // Apply keeps the current values for this session only; the modal stays open.
-  const onClickApply = useCallback(() => {
-    apply();
-    toast.success(t('message.applied'));
+  const onClickApply = useCallback(async () => {
+    setApplying(true);
+    try {
+      if (await apply().catch(() => false)) {
+        toast.success(t('message.applied'));
+      }
+    } finally {
+      setApplying(false);
+    }
   }, [apply, t]);
 
   // After a successful save the lock stays until the modal is hidden, so no second save can start.
@@ -140,8 +149,8 @@ export default createMantineModal<{}, boolean>(props => {
       onClose={onCloseModal}
       centered
       {...restProps}
-      closeOnEscape={mantine.props.closeOnEscape && !saving}
-      closeOnClickOutside={mantine.props.closeOnClickOutside && !saving}
+      closeOnEscape={mantine.props.closeOnEscape && !busy}
+      closeOnClickOutside={mantine.props.closeOnClickOutside && !busy}
       size="560px"
     >
       <Modal.Overlay />
@@ -155,7 +164,7 @@ export default createMantineModal<{}, boolean>(props => {
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
             <Title order={4}>{t('title')}</Title>
           </Group>
-          <CloseButton tooltip={t('common:button.close')} disabled={saving} onClick={onCloseModal} />
+          <CloseButton tooltip={t('common:button.close')} disabled={busy} onClick={onCloseModal} />
         </Modal.Header>
 
         <Divider />
@@ -220,17 +229,17 @@ export default createMantineModal<{}, boolean>(props => {
 
         {/* Cancel on the left, actions on the right; nowrap keeps the layout stable when text width changes. */}
         <Group p="8px" justify="space-between" wrap="nowrap">
-          <Button color="red" onClick={onClickCancel} disabled={saving}>
+          <Button color="red" onClick={onClickCancel} disabled={busy}>
             {t('button.cancel')}
           </Button>
           <Group gap="xs" wrap="nowrap">
-            <Button {...tintedColor('gray', 'button')} onClick={onClickReset} disabled={saving}>
+            <Button {...tintedColor('gray', 'button')} onClick={onClickReset} disabled={busy}>
               {t('button.reset')}
             </Button>
-            <Button {...tintedColor('teal', 'button')} onClick={onClickApply} disabled={saving}>
+            <Button {...tintedColor('teal', 'button')} onClick={onClickApply} disabled={busy}>
               {t('button.apply')}
             </Button>
-            <Button onClick={onClickSave} loading={saving}>
+            <Button onClick={onClickSave} loading={saving} disabled={applying}>
               {t('button.save')}
             </Button>
           </Group>

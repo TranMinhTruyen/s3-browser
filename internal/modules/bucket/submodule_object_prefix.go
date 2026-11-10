@@ -89,9 +89,18 @@ func (d *batchDeleter) failID(id types.ObjectIdentifier, detail string) {
 	d.fail(aws.ToString(id.Key), detail)
 }
 
-// idKey identifies an object version in a map.
-func idKey(id types.ObjectIdentifier) string {
-	return aws.ToString(id.Key) + "\x00" + aws.ToString(id.VersionId)
+// failedIndex finds the id of the batch that a DeleteObjects error is about, skipping ids already matched. An error
+// without a version id matches any one unmatched id with the same key. It returns -1 when none matches.
+func failedIndex(ids []types.ObjectIdentifier, matched []bool, failed types.ObjectIdentifier) int {
+	for i, id := range ids {
+		if matched[i] || aws.ToString(id.Key) != aws.ToString(failed.Key) {
+			continue
+		}
+		if failed.VersionId == nil || aws.ToString(id.VersionId) == *failed.VersionId {
+			return i
+		}
+	}
+	return -1
 }
 
 // deleteBatch deletes the current version of keys (at most deleteBatchSize). A returned error is a call level
@@ -118,14 +127,16 @@ func (d *batchDeleter) deleteIDs(ctx context.Context, ids []types.ObjectIdentifi
 		switch {
 		case err == nil:
 			// Quiet mode: out only lists the objects that failed.
-			bad := make(map[string]struct{}, len(out.Errors))
+			bad := make([]bool, len(ids))
 			for _, e := range out.Errors {
 				id := types.ObjectIdentifier{Key: e.Key, VersionId: e.VersionId}
-				bad[idKey(id)] = struct{}{}
+				if i := failedIndex(ids, bad, id); i >= 0 {
+					bad[i] = true
+				}
 				d.failID(id, strings.TrimSpace(aws.ToString(e.Code)+" "+aws.ToString(e.Message)))
 			}
-			for _, id := range ids {
-				if _, failed := bad[idKey(id)]; !failed {
+			for i, id := range ids {
+				if !bad[i] {
 					d.ok(aws.ToString(id.Key))
 				}
 			}

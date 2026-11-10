@@ -7,6 +7,36 @@ Mọi thay đổi đáng chú ý của dự án được ghi trong file này.
 
 ## [Chưa phát hành]
 
+## [1.0.1] - 2026-11-10
+
+### Thay đổi
+
+- Cập nhật các thư viện phụ thuộc, gồm AWS SDK for Go, các gói Go `x`, Mantine 9.8 và i18next 27.1.
+
+### Sửa lỗi
+
+- Dung lượng file giờ hiển thị là KiB / MiB / GiB, đúng với đơn vị 1.024 dùng để tính. Giới hạn dung lượng khi nhập file hồ sơ hiển thị là 1 MiB.
+- Bucket policy công khai chỉ đọc nhưng các statement theo thứ tự khác giờ được hiển thị là Công khai thay vì Tuỳ chỉnh.
+- Ngăn chi tiết bucket hiện quyền mới ngay sau khi lưu bucket policy.
+- **Áp dụng** trong Cài đặt giờ áp dụng cả khởi động cùng Windows. Huỷ sau khi **Áp dụng** không hoàn tác thay đổi này.
+- Không thể đổi cài đặt khi **Áp dụng** đang chạy, và không thể đóng hộp thoại xuất hồ sơ khi đang xuất file.
+- Đổi kênh beta trong lúc đang kiểm tra cập nhật không còn hiện kết quả của kênh cũ; việc kiểm tra chạy lại trên kênh mới.
+- Xoá bucket dừng với thông báo lỗi thay vì lặp mãi khi máy chủ trả danh sách version không hợp lệ, hiện thông báo rõ khi bucket vẫn chưa rỗng, và không còn đếm trùng số object đã xoá.
+- Hộp thoại kết nối giờ từ chối cùng các URL issuer OpenID Connect như backend (ví dụ `http://127.1`).
+
+## [1.0.1-beta.17] - 2026-11-10
+
+### Sửa lỗi
+
+- Dung lượng file giờ hiển thị là KiB / MiB / GiB, đúng với đơn vị 1.024 dùng để tính. Giới hạn dung lượng khi nhập file hồ sơ hiển thị là 1 MiB.
+- Bucket policy công khai chỉ đọc nhưng các statement theo thứ tự khác giờ được hiển thị là Công khai thay vì Tuỳ chỉnh.
+- Ngăn chi tiết bucket hiện quyền mới ngay sau khi lưu bucket policy.
+- **Áp dụng** trong Cài đặt giờ áp dụng cả khởi động cùng Windows. Huỷ sau khi **Áp dụng** không hoàn tác thay đổi này.
+- Không thể đổi cài đặt khi **Áp dụng** đang chạy, và không thể đóng hộp thoại xuất hồ sơ khi đang xuất file.
+- Đổi kênh beta trong lúc đang kiểm tra cập nhật không còn hiện kết quả của kênh cũ; việc kiểm tra chạy lại trên kênh mới.
+- Xoá bucket dừng với thông báo lỗi thay vì lặp mãi khi máy chủ trả danh sách version không hợp lệ, hiện thông báo rõ khi bucket vẫn chưa rỗng, và không còn đếm trùng số object đã xoá.
+- Hộp thoại kết nối giờ từ chối cùng các URL issuer OpenID Connect như backend (ví dụ `http://127.1`).
+
 ## [1.0.0] - 2026-11-09
 
 ### Thêm mới
