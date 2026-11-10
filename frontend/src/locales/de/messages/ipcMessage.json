@@ -86,6 +86,7 @@
     "S3E061": "Der Bucket {bucket} ist nicht leer (neue Objekte wurden hinzugefügt) und wurde nicht gelöscht.",
     "S3E062": "Der Bucket {bucket} wurde nicht gelöscht: {failed} Objekt(e) konnten nicht gelöscht werden.",
     "S3E063": "Der Bucket {bucket} hat Object Lock und ist nicht leer, er kann nicht gelöscht werden.",
+    "S3E064": "Der Bucket {bucket} wurde nicht gelöscht: Er enthält noch alte Versionen, die dieser Server nicht auflisten kann.",
     "S3W008": "Die Anmeldedaten von Profil {name} laufen in {minutes} Minute(n) ab und können nicht automatisch erneuert werden.",
     "S3W009": "Auf Bucket {bucket} kann nicht anonym zugegriffen werden.",
     "S3W010": "Die Anmeldedaten von Profil {name} laufen bald ab, geben Sie einen neuen MFA-Code ein, um die Verbindung zu halten.",

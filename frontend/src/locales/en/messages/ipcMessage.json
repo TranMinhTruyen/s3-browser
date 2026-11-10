@@ -86,6 +86,7 @@
     "S3E061": "Bucket {bucket} is not empty (new objects were added), it was not deleted.",
     "S3E062": "Bucket {bucket} was not deleted: {failed} object(s) could not be deleted.",
     "S3E063": "Bucket {bucket} has Object Lock and is not empty, it can't be deleted.",
+    "S3E064": "Bucket {bucket} still has old versions that this server can't list, it was not deleted.",
     "S3W008": "Credentials of profile {name} expire in {minutes} minute(s) and cannot be renewed automatically.",
     "S3W009": "Bucket {bucket} cannot be accessed anonymously.",
     "S3W010": "Credentials of profile {name} expire soon, enter a new MFA code to keep the connection.",

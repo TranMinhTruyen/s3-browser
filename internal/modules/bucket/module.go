@@ -225,6 +225,9 @@ var (
 	// Bucket {bucket} has Object Lock and is not empty, it can't be deleted.
 	S3E063 = "S3E063"
 
+	// Bucket {bucket} still has old versions that this server can't list, it was not deleted.
+	S3E064 = "S3E064"
+
 	// ---- Warning ----
 
 	// Access bucket is limited.
@@ -487,8 +490,9 @@ func (m *Module) GetBucketDeleteInfo(
 // undone. A bucket that is not empty and has Object Lock is refused before any object is deleted (S3E063); so is
 // one whose Object Lock can't be read (S3E060). It stops at the first batch with a failed key (S3E062, the body lists
 // the failures) without deleting the bucket. The body counts what was deleted even when Result is false. Other
-// failures: S3E054 (anonymous), S3E052 (denied), S3E059 (not found), S3E061 (new objects arrived), S3E060 (also a
-// timeout of 30 minutes). Closing the app stops it without a message. The access cache is reset on success.
+// failures: S3E054 (anonymous), S3E052 (denied), S3E059 (not found), S3E061 (new objects arrived), S3E064 (old
+// versions left on a server that can't list them), S3E060 (also a timeout of 30 minutes). Closing the app stops it
+// without a message. The access cache is reset on success.
 // ctx is the call context.
 func (m *Module) DeleteBucket(
 	ctx context.Context,

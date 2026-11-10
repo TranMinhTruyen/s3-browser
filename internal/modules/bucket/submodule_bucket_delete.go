@@ -6,6 +6,7 @@ import (
 	"S3Browser/models"
 	"cmp"
 	"context"
+	"errors"
 	"log/slog"
 	"strings"
 	"time"
@@ -40,6 +41,18 @@ type deleteCursor struct {
 	done          bool
 }
 
+// errVersionMarkerStuck means the server says the version list continues but gives no new marker.
+var errVersionMarkerStuck = errors.New("ListObjectVersions returned no new marker")
+
+// stuck reports whether the next markers can't move the cursor forward: both missing, or the same as before.
+func (c *deleteCursor) stuck(keyMarker, versionMarker *string) bool {
+	if keyMarker == nil && versionMarker == nil {
+		return true
+	}
+	return aws.ToString(keyMarker) == aws.ToString(c.keyMarker) &&
+		aws.ToString(versionMarker) == aws.ToString(c.versionMarker)
+}
+
 // nextPage returns the identifiers of the next page; done is set once the last page was returned.
 func (c *deleteCursor) nextPage(
 	ctx context.Context,
@@ -62,8 +75,11 @@ func (c *deleteCursor) nextPage(
 			for _, v := range page.DeleteMarkers {
 				ids = append(ids, types.ObjectIdentifier{Key: v.Key, VersionId: v.VersionId})
 			}
-			c.keyMarker, c.versionMarker = page.NextKeyMarker, page.NextVersionIdMarker
 			c.done = !aws.ToBool(page.IsTruncated)
+			if !c.done && c.stuck(page.NextKeyMarker, page.NextVersionIdMarker) {
+				return nil, errVersionMarkerStuck
+			}
+			c.keyMarker, c.versionMarker = page.NextKeyMarker, page.NextVersionIdMarker
 			return ids, nil
 		}
 		if !isNotImplemented(err) {
@@ -180,13 +196,13 @@ func (m *submoduleBucketEditMng) deleteBucket(
 
 	region, err := readBucketRegion(ctx, conn, input.Bucket)
 	if isFatalDetailError(ctx, err) {
-		return deleteBucketFailed(ctx, output, input, err)
+		return deleteBucketFailed(ctx, output, input, err, false)
 	}
 	optFns := regionOptFns(conn, region)
 
 	lock, lockErr := readObjectLock(ctx, conn, input.Bucket, optFns)
 	if isFatalDetailError(ctx, lockErr) {
-		return deleteBucketFailed(ctx, output, input, lockErr)
+		return deleteBucketFailed(ctx, output, input, lockErr, false)
 	}
 	if isNotImplemented(lockErr) {
 		lock, lockErr = "Disabled", nil
@@ -199,11 +215,11 @@ func (m *submoduleBucketEditMng) deleteBucket(
 		failures:   []models.DeleteFailure{},
 		optFns:     optFns,
 	}
-	stop, err := emptyBucket(ctx, d, lock, lockErr)
+	stop, legacyList, err := emptyBucket(ctx, d, lock, lockErr)
 	output.Body = models.DeleteBucketOutput{Deleted: d.deleted, Failed: d.failed, Failures: d.failures}
 	switch {
 	case err != nil:
-		return deleteBucketFailed(ctx, output, input, err)
+		return deleteBucketFailed(ctx, output, input, err, false)
 	case stop != nil:
 		m.logger.Error("delete bucket stopped",
 			slog.String("bucket", input.Bucket), "deleted", d.deleted, "failed", d.failed)
@@ -212,7 +228,7 @@ func (m *submoduleBucketEditMng) deleteBucket(
 
 	if _, err := conn.Client.DeleteBucket(ctx, &s3.DeleteBucketInput{Bucket: &input.Bucket}, optFns...); err != nil {
 		m.logger.Error("delete bucket failed", slog.String("bucket", input.Bucket), slog.Any("error", err))
-		return deleteBucketFailed(ctx, output, input, err)
+		return deleteBucketFailed(ctx, output, input, err, legacyList)
 	}
 
 	m.logger.Info("delete bucket done", slog.String("bucket", input.Bucket), "deleted", d.deleted)
@@ -223,52 +239,60 @@ func (m *submoduleBucketEditMng) deleteBucket(
 
 // emptyBucket deletes every version and delete marker with d. It returns the message to stop with when it stopped
 // on purpose (Object Lock, or a key that failed), or an error when a call failed. lock and lockErr are the result
-// of readObjectLock; they only matter when the bucket is not empty.
-func emptyBucket(ctx context.Context, d *batchDeleter, lock string, lockErr error) (*models.Message, error) {
+// of readObjectLock; they only matter when the bucket is not empty. legacyList is set when the server can't list
+// versions and only the current objects were deleted.
+func emptyBucket(
+	ctx context.Context,
+	d *batchDeleter,
+	lock string,
+	lockErr error,
+) (stop *models.Message, legacyList bool, err error) {
 	cursor := deleteCursor{limit: deleteBatchSize}
 	checkedLock := false
 	for !cursor.done {
 		ids, err := cursor.nextPage(ctx, d.client, d.bucket, d.optFns)
 		if err != nil {
-			return nil, err
+			return nil, cursor.v2, err
 		}
 		if len(ids) > 0 && !checkedLock {
 			checkedLock = true
 			switch {
 			case lockErr != nil:
 				msg := bucketMessage(cnst.MessageTypeError, S3E060, d.bucket, UnwrapAwsError(lockErr))
-				return &msg, nil
+				return &msg, cursor.v2, nil
 			case strings.HasPrefix(lock, "Enabled"):
 				msg := bucketMessage(cnst.MessageTypeError, S3E063, d.bucket, "")
-				return &msg, nil
+				return &msg, cursor.v2, nil
 			}
 		}
 		if err := d.deleteIDs(ctx, ids); err != nil {
-			return nil, err
+			return nil, cursor.v2, err
 		}
 		if d.failed > 0 {
 			msg := models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E062, "", map[string]any{
 				"bucket": d.bucket,
 				"failed": d.failed,
 			})
-			return &msg, nil
+			return &msg, cursor.v2, nil
 		}
 	}
-	return nil, nil
+	return nil, cursor.v2, nil
 }
 
 // deleteBucketFailed ends a failed delete of the bucket with the message of the error: BucketNotEmpty gives S3E061,
-// NoSuchBucket S3E059, denied S3E052, anything else S3E060.
+// NoSuchBucket S3E059, denied S3E052, anything else S3E060. legacyList is set when only the current objects could be
+// listed: BucketNotEmpty then means old versions are left, and gives S3E064.
 func deleteBucketFailed(
 	ctx context.Context,
 	output models.Output[models.DeleteBucketOutput],
 	input models.DeleteBucketInput,
 	err error,
+	legacyList bool,
 ) models.Output[models.DeleteBucketOutput] {
 	code := ""
 	switch UnwrapAwsError(err) {
 	case "BucketNotEmpty":
-		code = S3E061
+		code = cmp.Or(map[bool]string{true: S3E064}[legacyList], S3E061)
 	case "NoSuchBucket":
 		code = S3E059
 	default:
