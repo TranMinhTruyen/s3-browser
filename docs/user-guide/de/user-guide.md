@@ -353,7 +353,7 @@ Klicken Sie oben rechts, links von der Schaltfläche für den Download-Verlauf, 
 Jede Änderung wird sofort als Vorschau angezeigt. Wählen Sie dann:
 
 - **Speichern**: behält die Einstellungen, auch nach einem Neustart der App.
-- **Übernehmen**: behält die Einstellungen, bis Sie die App schließen, einschließlich der beiden Update-Schalter; der Dialog bleibt geöffnet. „Beim Windows-Start starten“ wird durch Übernehmen nicht geändert.
+- **Übernehmen**: behält die Einstellungen, bis Sie die App schließen, einschließlich der beiden Update-Schalter; der Dialog bleibt geöffnet. „Beim Windows-Start starten“ wird durch Übernehmen sofort in Windows geschrieben; Abbrechen macht das nicht rückgängig.
 - **Abbrechen**: macht die Änderungen seit dem letzten Übernehmen oder Speichern rückgängig, einschließlich der beiden Update-Schalter. Der Dialog wird geschlossen.
 - **Zurücksetzen**: setzt das Formular auf die Standardwerte zurück (Hell, Nunito, English, **Beim Windows-Start starten** aus). Die beiden Update-Schalter werden ebenfalls sofort zurückgesetzt, wie bei manuellem Umschalten: **Updates automatisch suchen und herunterladen** an und **Beta-Versionen (Vorabversionen) erhalten** aus. Klicken Sie auf **Speichern**, um die Standardwerte zu behalten; **Abbrechen** macht das Zurücksetzen rückgängig.
 

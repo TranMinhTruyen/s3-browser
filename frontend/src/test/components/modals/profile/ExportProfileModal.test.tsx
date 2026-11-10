@@ -256,4 +256,43 @@ describe('ExportProfileModal', () => {
     await expect(result).resolves.toBe(false);
     expect(callIPCMock).not.toHaveBeenCalled();
   });
+
+  describe('while the export is running', () => {
+    async function startPending() {
+      let finish!: (path: string) => void;
+      callIPCMock.mockReturnValue(new Promise(resolve => (finish = resolve)) as never);
+      const ctx = await open();
+      await ctx.user.click(exportBtn());
+      await waitFor(() => expect(callIPCMock).toHaveBeenCalled());
+      return { ...ctx, finish };
+    }
+
+    it('hides the X button, disables Cancel and ignores Escape and overlay click', async () => {
+      const { user, settled, finish } = await startPending();
+
+      expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+
+      await user.keyboard('{Escape}');
+      await user.click(document.querySelector('.mantine-Modal-overlay') as HTMLElement);
+      await flush();
+      expect(title()).toBeInTheDocument();
+      expect(settled.value).toBeUndefined();
+
+      await act(async () => finish('C:/out/p.json'));
+      await waitFor(() => expect(title()).not.toBeInTheDocument());
+      expect(settled.value).toBe(true);
+    });
+
+    it('brings the X button and Cancel back when the export fails', async () => {
+      const { finish, user } = await startPending();
+
+      await act(async () => finish(null as never));
+
+      expect(await screen.findByRole('button', { name: 'Close' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+      await user.keyboard('{Escape}');
+      await waitFor(() => expect(title()).not.toBeInTheDocument());
+    });
+  });
 });

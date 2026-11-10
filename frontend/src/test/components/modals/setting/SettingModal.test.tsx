@@ -1,6 +1,6 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { SaveSettings } from '@wails/S3Browser/internal/handlers/settinghandler';
+import { SaveSettings, SetLaunchOnStartup } from '@wails/S3Browser/internal/handlers/settinghandler';
 import { SetUpdateOptions } from '@wails/S3Browser/internal/handlers/updatehandler';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -19,8 +19,26 @@ vi.mock('@/common/utils/settingUtils', async importOriginal => ({
   ...(await importOriginal<typeof import('@/common/utils/settingUtils')>()),
   applySettings: vi.fn(),
 }));
-vi.mock('@wails/S3Browser/internal/handlers/settinghandler', () => ({ GetSettings: vi.fn(), SaveSettings: vi.fn() }));
+vi.mock('@wails/S3Browser/internal/handlers/settinghandler', () => ({
+  GetSettings: vi.fn(),
+  SaveSettings: vi.fn(),
+  SetLaunchOnStartup: vi.fn(),
+}));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+// Mantine Select never emits null with allowDeselect=false, so a helper button drives that branch.
+vi.mock('@/components/inputs/SelectInput', async importOriginal => {
+  const Original = (await importOriginal<typeof import('@/components/inputs/SelectInput')>()).default;
+  return {
+    default: (props: React.ComponentProps<typeof Original>) => (
+      <>
+        <Original {...props} />
+        <button type="button" onClick={() => props.onChange?.(null, null as never)}>
+          {`null-${props.label}`}
+        </button>
+      </>
+    ),
+  };
+});
 vi.mock('@/components/modals/lazyModals', () => ({ showUnsavedSettingModal: vi.fn() }));
 
 const callIPCMock = vi.mocked(callIPC);
@@ -31,6 +49,7 @@ const state = () => useSettingStore.getState();
 const AUTO_UPDATE_LABEL = 'Automatically check for and download updates';
 const BETA_LABEL = 'Receive beta (pre-release) versions';
 const realSave = state().save;
+const realApply = state().apply;
 
 function open() {
   renderWithProviders(<div />);
@@ -49,7 +68,7 @@ async function pickOption(user: ReturnType<typeof userEvent.setup>, label: strin
 describe('SettingModal', () => {
   beforeEach(() => {
     useModalStackStore.getState().reset();
-    useSettingStore.setState({ save: realSave });
+    useSettingStore.setState({ save: realSave, apply: realApply });
     state().reset();
     useUpdateStore.getState().reset();
     vi.clearAllMocks();
@@ -244,9 +263,11 @@ describe('SettingModal', () => {
     expect(callIPCMock).not.toHaveBeenCalled();
   });
 
-  it('apply keeps the values for the session, shows a toast, stays open and does not save', async () => {
+  // Intended behaviour change (sprint-17 Q2=A): Apply writes launchOnStartup at once.
+  it('apply keeps the values for the session, writes launchOnStartup, shows a toast and does not save', async () => {
     const user = userEvent.setup();
     useSettingStore.setState({ autostartSupported: true });
+    callIPCMock.mockResolvedValueOnce({ settings: { ...DEFAULT_SETTINGS, launchOnStartup: true } });
     open();
     await flush();
 
@@ -254,12 +275,70 @@ describe('SettingModal', () => {
     await user.click(screen.getByRole('switch', { name: 'Launch on Windows startup' }));
     await user.click(screen.getByRole('button', { name: 'Apply' }));
 
-    expect(state().applied).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark', launchOnStartup: false });
-    expect(state().saved).toEqual(DEFAULT_SETTINGS);
-    expect(toast.success).toHaveBeenCalledWith('Settings applied until the app is closed.');
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Settings applied until the app is closed.'));
+    expect(state().applied).toEqual({ ...DEFAULT_SETTINGS, theme: 'dark', launchOnStartup: true });
+    expect(state().saved).toEqual({ ...DEFAULT_SETTINGS, launchOnStartup: true });
+    expect(callIPCMock).toHaveBeenCalledExactlyOnceWith(SetLaunchOnStartup, [true], expect.anything());
     expect(callIPCMock).not.toHaveBeenCalledWith(SaveSettings, expect.anything(), expect.anything());
-    expect(callIPCMock).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+  });
+
+  it('apply without a launchOnStartup change makes no IPC call and still shows the toast', async () => {
+    const user = userEvent.setup();
+    open();
+    await flush();
+
+    await pickOption(user, 'Theme', 'Dark');
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Settings applied until the app is closed.'));
+    expect(callIPCMock).not.toHaveBeenCalled();
+  });
+
+  it('apply shows no toast and keeps applied when the IPC returns null', async () => {
+    const user = userEvent.setup();
+    useSettingStore.setState({ autostartSupported: true });
+    callIPCMock.mockResolvedValueOnce(null);
+    open();
+    await flush();
+
+    await user.click(screen.getByRole('switch', { name: 'Launch on Windows startup' }));
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await flush();
+
+    expect(callIPCMock).toHaveBeenCalledWith(SetLaunchOnStartup, [true], expect.anything());
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(state().applied).toEqual(DEFAULT_SETTINGS);
+  });
+
+  it('apply shows no toast when the store rejects', async () => {
+    const user = userEvent.setup();
+    useSettingStore.setState({ apply: vi.fn().mockRejectedValue(new Error('boom')) });
+    open();
+    await flush();
+
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await flush();
+
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it('cancel after apply does not undo a written launchOnStartup', async () => {
+    const user = userEvent.setup();
+    useSettingStore.setState({ autostartSupported: true });
+    callIPCMock.mockResolvedValueOnce({ settings: { ...DEFAULT_SETTINGS, launchOnStartup: true } });
+    const result = open();
+    await flush();
+
+    await user.click(screen.getByRole('switch', { name: 'Launch on Windows startup' }));
+    await user.click(screen.getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    await expect(result).resolves.toBe(false);
+    expect(state().draft.launchOnStartup).toBe(true);
+    expect(state().applied.launchOnStartup).toBe(true);
+    expect(callIPCMock).not.toHaveBeenCalledWith(SetLaunchOnStartup, [false], expect.anything());
   });
 
   it('cancel after apply keeps the applied values and drops later changes', async () => {
@@ -415,6 +494,110 @@ describe('SettingModal', () => {
       );
       expect(state().saved.launchOnStartup).toBe(false);
       expect(state().draft.launchOnStartup).toBe(false);
+    });
+  });
+
+  it.each(['Theme', 'Font', 'Language'])('ignores a null %s selection', async label => {
+    const user = userEvent.setup();
+    open();
+    await flush();
+
+    await user.click(screen.getByRole('button', { name: `null-${label}` }));
+
+    expect(state().draft).toEqual(DEFAULT_SETTINGS);
+    expect(applySettings).not.toHaveBeenCalled();
+  });
+
+  describe('while applying', () => {
+    function pendingApply() {
+      let finish!: (value: boolean) => void;
+      let fail!: (reason: Error) => void;
+      useSettingStore.setState({
+        apply: vi.fn().mockReturnValue(
+          new Promise<boolean>((resolve, reject) => {
+            finish = resolve;
+            fail = reject;
+          })
+        ),
+      });
+      return {
+        finish: (value: boolean) => act(async () => finish(value)),
+        fail: () => act(async () => fail(new Error('boom'))),
+      };
+    }
+
+    async function startApply(user: ReturnType<typeof userEvent.setup>) {
+      await user.click(screen.getByRole('button', { name: 'Apply' }));
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled());
+    }
+
+    it('locks every button, ignores Escape and overlay click', async () => {
+      const user = userEvent.setup();
+      const pending = pendingApply();
+      let settled = false;
+      open().then(() => (settled = true));
+      await flush();
+
+      await startApply(user);
+
+      expect(screen.getByRole('button', { name: 'Reset to default' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Close' })).toBeDisabled();
+
+      await user.keyboard('{Escape}');
+      await user.click(document.querySelector('.mantine-Modal-overlay') as Element);
+      await flush();
+
+      expect(settled).toBe(false);
+      expect(screen.getByRole('button', { name: 'Apply' })).toBeInTheDocument();
+      expect(toast.success).not.toHaveBeenCalled();
+      await pending.finish(false);
+    });
+
+    it('unlocks the buttons and toasts when apply resolves true', async () => {
+      const user = userEvent.setup();
+      const pending = pendingApply();
+      open();
+      await flush();
+
+      await startApply(user);
+      await pending.finish(true);
+
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled());
+      expect(screen.getByRole('button', { name: 'Reset to default' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Close' })).toBeEnabled();
+      expect(toast.success).toHaveBeenCalledExactlyOnceWith('Settings applied until the app is closed.');
+    });
+
+    it('unlocks the buttons without a toast when apply resolves false', async () => {
+      const user = userEvent.setup();
+      const pending = pendingApply();
+      open();
+      await flush();
+
+      await startApply(user);
+      await pending.finish(false);
+
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled());
+      expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('unlocks the buttons without a toast when apply rejects', async () => {
+      const user = userEvent.setup();
+      const pending = pendingApply();
+      open();
+      await flush();
+
+      await startApply(user);
+      await pending.fail();
+
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled());
+      expect(screen.getByRole('button', { name: 'Close' })).toBeEnabled();
+      expect(toast.success).not.toHaveBeenCalled();
     });
   });
 

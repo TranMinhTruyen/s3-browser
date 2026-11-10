@@ -1,4 +1,4 @@
-import { GetSettings, SaveSettings } from '@wails/S3Browser/internal/handlers/settinghandler';
+import { GetSettings, SaveSettings, SetLaunchOnStartup } from '@wails/S3Browser/internal/handlers/settinghandler';
 import { SetUpdateOptions } from '@wails/S3Browser/internal/handlers/updatehandler';
 import { type AppSettingValues, DEFAULT_SETTINGS } from '@/common/cnst/settingConst';
 import { createAppStore } from '@/common/stores/createStore';
@@ -22,8 +22,8 @@ interface SettingAction {
   setDraft: (patch: Partial<AppSettingValues>) => void;
   /** Saves the draft; resolves true on success. */
   save: () => Promise<boolean>;
-  /** Keeps the draft for this session only (not saved); launchOnStartup stays, only Save changes it. */
-  apply: () => void;
+  /** Keeps the draft for this session only (not saved), but writes launchOnStartup at once; resolves true on success. */
+  apply: () => Promise<boolean>;
   /** Puts the draft back to the defaults (previewed, not saved). */
   resetDraft: () => void;
   /** Drops the draft and restores the applied values. */
@@ -98,10 +98,28 @@ export const useSettingStore = createAppStore<SettingState & SettingAction>((set
       return true;
     },
 
-    apply: () => {
+    apply: async () => {
       const { draft, applied } = get();
-      // launchOnStartup is registry state, so it only changes on Save.
-      set({ applied: { ...draft, launchOnStartup: applied.launchOnStartup } }, undefined, `${SCOPE}/apply`);
+      let launchOnStartup = draft.launchOnStartup;
+      if (launchOnStartup !== applied.launchOnStartup) {
+        // launchOnStartup is registry state, so it is written now and Cancel cannot undo it.
+        const output = await callIPC(SetLaunchOnStartup, [launchOnStartup], { scope: `${SCOPE}/apply` });
+        if (!output) {
+          return false;
+        }
+        // The backend may keep the old value (STE003), so follow what it returns.
+        launchOnStartup = output.settings?.launchOnStartup === true;
+      }
+      set(
+        state => {
+          state.applied = { ...draft, launchOnStartup };
+          state.saved.launchOnStartup = launchOnStartup;
+          state.draft.launchOnStartup = launchOnStartup;
+        },
+        undefined,
+        `${SCOPE}/apply`
+      );
+      return true;
     },
 
     resetDraft: () => {

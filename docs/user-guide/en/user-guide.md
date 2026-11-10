@@ -351,7 +351,7 @@ Click the **Settings** button (gear icon) at the top right, left of the download
 Every change is previewed immediately. Then choose:
 
 - **Save**: keep the settings, also after restarting the app.
-- **Apply**: keep the settings until you close the app, including the two update switches; the dialog stays open. Launch on Windows startup is not changed by Apply.
+- **Apply**: keep the settings until you close the app, including the two update switches; the dialog stays open. Launch on Windows startup is written to Windows at once by Apply, and Cancel does not undo it.
 - **Cancel**: undo the changes made since the last Apply or Save, including the two update switches. The dialog closes.
 - **Reset to default**: put the form back to the defaults (Light, Nunito, English, **Launch on Windows startup** off). The two update switches are also reset at once, like a manual change: **Automatically check for and download updates** on and **Receive beta (pre-release) versions** off. Click **Save** to keep the defaults; **Cancel** undoes the reset.
 
