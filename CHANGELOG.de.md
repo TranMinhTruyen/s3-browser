@@ -7,6 +7,23 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unveröffentlicht]
 
+## [1.0.1] - 2026-11-10
+
+### Geändert
+
+- Abhängigkeiten aktualisiert, darunter das AWS SDK for Go, die Go-`x`-Pakete, Mantine 9.8 und i18next 27.1.
+
+### Behoben
+
+- Dateigrößen werden jetzt als KiB / MiB / GiB angezeigt, passend zu den Einheiten von 1.024, in denen sie berechnet werden. Die Größengrenze beim Importieren einer Profildatei wird als 1 MiB angezeigt.
+- Eine öffentliche, schreibgeschützte Bucket-Richtlinie, deren Anweisungen in anderer Reihenfolge stehen, wird jetzt als „Öffentlich“ statt „Benutzerdefiniert“ angezeigt.
+- Die Seitenleiste mit Bucket-Details zeigt die neue Berechtigung direkt nach dem Speichern der Bucket-Richtlinie.
+- **Übernehmen** in den Einstellungen übernimmt jetzt auch den Start mit Windows. Abbrechen nach **Übernehmen** macht dies nicht rückgängig.
+- Während **Übernehmen** läuft, können die Einstellungen nicht geändert werden, und der Dialog zum Exportieren eines Profils kann während des Exports nicht geschlossen werden.
+- Ein Wechsel des Beta-Kanals während einer Update-Prüfung zeigt nicht mehr das Ergebnis des vorherigen Kanals; die Prüfung läuft für den neuen Kanal erneut.
+- Das Löschen eines Buckets bricht mit einem Fehler ab, statt endlos zu laufen, wenn der Server eine ungültige Versionsliste liefert, zeigt eine klare Meldung, wenn der Bucket noch nicht leer ist, und zählt gelöschte Objekte nicht mehr doppelt.
+- Der Verbindungsdialog lehnt jetzt dieselben OpenID-Connect-Issuer-URLs ab wie das Backend (zum Beispiel `http://127.1`).
+
 ## [1.0.1-beta.17] - 2026-11-10
 
 ### Behoben
