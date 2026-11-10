@@ -222,6 +222,14 @@ describe('BucketPolicyModal', () => {
     await expect(result).resolves.toBe(false);
   });
 
+  it('resolves false (not undefined) when closed with Esc', async () => {
+    const { user, result } = await open();
+
+    await user.keyboard('{Escape}');
+
+    await expect(result).resolves.toBe(false);
+  });
+
   it('aborts a load still running when the modal is closed and ignores its late result', async () => {
     let finishLoad!: () => void;
     callIPCMock.mockImplementation(((_fn: unknown, _args: unknown, options?: { signal?: AbortSignal }) => {
@@ -237,8 +245,8 @@ describe('BucketPolicyModal', () => {
     await waitFor(() => expect(signals.get?.aborted).toBe(true));
     await act(async () => finishLoad());
 
-    // The close button settles the modal without a value (no cancelValue), never with the late result.
-    await expect(result).resolves.not.toBe(true);
+    // The close button settles the modal with cancelValue (false), never with the late result.
+    await expect(result).resolves.toBe(false);
     expect(screen.queryByRole('radio', { name: 'Public (read-only)' })).not.toBeInTheDocument();
   });
 

@@ -8,6 +8,7 @@ import { LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
 import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import BucketListView, { BucketListViewRef } from '@/pages/tab/bucket/BucketListView';
+import { BUCKET_ITEM_LABELS } from '@/test/_helpers/bucketItemLabels';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 // jsdom has no layout, so render every row; `endIndex` is the last row the user "sees" (null = end of list).
@@ -1076,5 +1077,25 @@ describe('BucketListView row menu', () => {
     await userEvent.click(moreActions(0));
 
     expect(await items()).toEqual(['Details']);
+  });
+});
+
+describe('BucketListView row labels', () => {
+  it('passes the translated texts of all six labels to every row', async () => {
+    virtual.endIndex = null;
+    queue = [
+      page([
+        new Bucket({ name: 'alpha', creationDate: '2026-01-02T03:04:05', inaccessible: true, policyMode: 'private' }),
+      ]),
+    ];
+    callIPCMock.mockImplementation((async () => queue[0]) as never);
+    renderList();
+    await screen.findByText('alpha');
+
+    expect(screen.getByLabelText(BUCKET_ITEM_LABELS.inaccessible)).toBeInTheDocument();
+    expect(screen.getByText(BUCKET_ITEM_LABELS.createDate)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: BUCKET_ITEM_LABELS.moreActions }));
+    const names = (await screen.findAllByRole('menuitem', { hidden: true })).map(i => i.textContent);
+    expect(names).toEqual([BUCKET_ITEM_LABELS.detail, BUCKET_ITEM_LABELS.editPolicy, BUCKET_ITEM_LABELS.delete]);
   });
 });

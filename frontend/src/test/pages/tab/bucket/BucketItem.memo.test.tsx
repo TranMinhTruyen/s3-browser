@@ -1,6 +1,7 @@
 import { Bucket } from '@wails/S3Browser/models/bucket';
 import { describe, expect, it, vi } from 'vitest';
 import BucketItem from '@/pages/tab/bucket/BucketItem';
+import { BUCKET_ITEM_LABELS } from '@/test/_helpers/bucketItemLabels';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 // BucketItem calls dayjs once per render: counting the calls counts the renders.
@@ -16,7 +17,9 @@ const bucket = new Bucket({ name: 'my-bucket', creationDate: '2026-01-02T03:04:0
 describe('BucketItem memo', () => {
   it('does not re-render when the parent re-renders with the same props, but does when the bucket changes', () => {
     const onOpenDetail = vi.fn();
-    const ui = (item: Bucket) => <BucketItem item={item} canEdit onOpenDetail={onOpenDetail} />;
+    const ui = (item: Bucket) => (
+      <BucketItem labels={BUCKET_ITEM_LABELS} item={item} canEdit onOpenDetail={onOpenDetail} />
+    );
     const { rerender } = renderWithProviders(ui(bucket));
     const afterMount = dayjsCalls.count;
     expect(afterMount).toBeGreaterThan(0);

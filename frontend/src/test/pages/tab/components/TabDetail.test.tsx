@@ -428,6 +428,31 @@ describe('TabDetail', () => {
       expect(h.setPolicyMode).toHaveBeenCalledExactlyOnceWith('my-bucket', 'public');
     });
 
+    it('also syncs the open detail drawer of this tab when it shows the saved bucket', async () => {
+      setProfile({ isConnected: true });
+      setTab({ detailBucket: { name: 'my-bucket', policyMode: 'private' } });
+      const user = setup();
+
+      await user.click(screen.getByText('edit policy'));
+      const { onSaved } = vi.mocked(showBucketPolicyModal).mock.calls[0][0] as { onSaved: (m: string) => void };
+      act(() => onSaved('public'));
+
+      expect(tab().detailBucket).toMatchObject({ name: 'my-bucket', policyMode: 'public' });
+      expect(h.setPolicyMode).toHaveBeenCalledWith('my-bucket', 'public');
+    });
+
+    it('leaves the detail drawer of another bucket untouched', async () => {
+      setProfile({ isConnected: true });
+      setTab({ detailBucket: { name: 'another', policyMode: 'private' } });
+      const user = setup();
+
+      await user.click(screen.getByText('edit policy'));
+      const { onSaved } = vi.mocked(showBucketPolicyModal).mock.calls[0][0] as { onSaved: (m: string) => void };
+      act(() => onSaved('public'));
+
+      expect(tab().detailBucket).toMatchObject({ name: 'another', policyMode: 'private' });
+    });
+
     it('ignores a request without a bucket name', async () => {
       setProfile({ isConnected: true });
       const user = setup();
