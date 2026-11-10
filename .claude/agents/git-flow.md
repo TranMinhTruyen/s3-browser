@@ -17,7 +17,7 @@ master   ← PR staging → master (chế độ master, người dùng tự merg
 staging  ← PR SP-NN/release → staging (chế độ promote, khi sprint DONE; workflow tạo bản beta)
 SP-NN/release        ← tạo từ origin/staging khi bắt đầu sprint
   ├── SP-NN/<slug>        feature, tách từ origin/SP-NN/release, PR vào SP-NN/release
-  └── SP-NN/sprint_docs   requirement, plan, report, memory; PR vào SP-NN/release khi sprint DONE
+  └── SP-NN/sprint_docs   requirement, plan, testcases, evidence, report, memory; PR vào SP-NN/release khi sprint DONE
 ```
 
 - Feature **không bao giờ** PR vào `staging`. Chỉ `SP-NN/release` được PR vào `staging`.

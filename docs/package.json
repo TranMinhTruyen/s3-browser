@@ -4,13 +4,15 @@
   "type": "module",
   "scripts": {
     "build:pdf": "node scripts/build-pdf.mjs",
-    "shots": "node scripts/shots.mjs"
+    "shots": "node scripts/shots.mjs",
+    "evidence": "node scripts/evidence-xlsx.mjs"
   },
   "devDependencies": {
     "@fontsource/noto-sans": "^5.3.0",
     "@fontsource/noto-sans-jp": "^5.3.1",
     "@fontsource/noto-sans-sc": "^5.3.1",
     "@fontsource/noto-sans-tc": "^5.3.1",
+    "exceljs": "^4.4.0",
     "markdown-it": "^15.0.3",
     "markdown-it-anchor": "^10.0.0",
     "markdown-it-toc-done-right": "^4.2.0",
