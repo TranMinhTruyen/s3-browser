@@ -150,7 +150,7 @@ Bấm nút **Nhập hồ sơ kết nối** (cạnh nút **Tạo hồ sơ kết n
 
 ![Nút Nhập](images/39-profile-import-button.png)
 
-Hộp thoại mở tệp của Windows xuất hiện: chọn tệp `.json` do S3Browser xuất (tối đa 1 MB). Ứng dụng kiểm tra tệp trước khi lưu bất cứ thứ gì. Ví dụ, "Tệp không phải là tệp hồ sơ S3Browser hợp lệ." nghĩa là tệp không phải hồ sơ do S3Browser xuất; cũng có thông báo khi phiên bản của tệp không được hỗ trợ hoặc tệp quá lớn.
+Hộp thoại mở tệp của Windows xuất hiện: chọn tệp `.json` do S3Browser xuất (tối đa 1 MiB). Ứng dụng kiểm tra tệp trước khi lưu bất cứ thứ gì. Ví dụ, "Tệp không phải là tệp hồ sơ S3Browser hợp lệ." nghĩa là tệp không phải hồ sơ do S3Browser xuất; cũng có thông báo khi phiên bản của tệp không được hỗ trợ hoặc tệp quá lớn.
 
 - Tệp xuất không kèm secret được nhập ngay.
 - Tệp xuất kèm secret sẽ mở cửa sổ **Nhập hồ sơ**: nhập mật khẩu đã dùng khi xuất tệp, rồi bấm **Nhập**.

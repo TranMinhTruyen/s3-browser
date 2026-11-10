@@ -54,7 +54,7 @@ func Setup(cfg Config) (*slog.Logger, io.Closer, error) {
 		return nil, nil, err
 	}
 
-	// Rotate at 5 MB, keep 3 compressed backups for 14 days.
+	// Rotate at 5 MiB, keep 3 compressed backups for 14 days.
 	rotator := &lumberjack.Logger{
 		Filename:   filepath.Join(dir, "app.log"),
 		MaxSize:    5,

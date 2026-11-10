@@ -83,7 +83,7 @@ describe('ObjectItem', () => {
   it('shows only the name, without size and last modified', () => {
     setup(fileItem);
     expect(screen.getByText('cat.png')).toBeInTheDocument();
-    expect(screen.queryByText(/bytes|KB/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/bytes|KiB/)).not.toBeInTheDocument();
     expect(screen.queryByText('Size')).not.toBeInTheDocument();
     expect(screen.queryByText('Last Modified')).not.toBeInTheDocument();
   });

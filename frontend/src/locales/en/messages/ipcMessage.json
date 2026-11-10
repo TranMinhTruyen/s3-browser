@@ -106,7 +106,7 @@
     "PFE008": "Authentication method {authType} is not valid for provider {provider}.",
     "PFE009": "Authentication settings are invalid.",
     "PFE010": "Cannot export profile [{name}].",
-    "PFE011": "Cannot read the profile file (it may be larger than 1 MB).",
+    "PFE011": "Cannot read the profile file (it may be larger than 1 MiB).",
     "PFE012": "The file is not a valid S3Browser profile file.",
     "PFE013": "Profile file version {version} is not supported.",
     "PFE014": "Wrong password, or the file is damaged.",

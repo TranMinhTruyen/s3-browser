@@ -513,7 +513,7 @@ describe('UploadPickerModal', () => {
       open();
       await flush();
       await drop(output([group('g', [file('g/a.txt', { size: 2048 })])]));
-      expect(screen.getByText('2.00 KB')).toBeInTheDocument();
+      expect(screen.getByText('2.00 KiB')).toBeInTheDocument();
     });
   });
 

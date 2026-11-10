@@ -106,7 +106,7 @@
     "PFE008": "Phương thức xác thực {authType} không hợp lệ với nhà cung cấp {provider}.",
     "PFE009": "Cấu hình xác thực không hợp lệ.",
     "PFE010": "Không thể xuất hồ sơ [{name}].",
-    "PFE011": "Không thể đọc tệp hồ sơ (có thể lớn hơn 1 MB).",
+    "PFE011": "Không thể đọc tệp hồ sơ (có thể lớn hơn 1 MiB).",
     "PFE012": "Tệp không phải là tệp hồ sơ S3Browser hợp lệ.",
     "PFE013": "Phiên bản tệp hồ sơ {version} không được hỗ trợ.",
     "PFE014": "Sai mật khẩu hoặc tệp bị hỏng.",

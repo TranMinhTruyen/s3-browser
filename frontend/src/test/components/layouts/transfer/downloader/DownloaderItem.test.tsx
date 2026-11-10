@@ -28,7 +28,7 @@ describe('DownloaderItem', () => {
     expect(screen.getByText('Object: b.bin')).toBeInTheDocument();
     expect(screen.getByText('25%')).toBeInTheDocument();
     expect(screen.getByText('512 bytes')).toBeInTheDocument();
-    expect(screen.getByText('1.50 KB')).toBeInTheDocument();
+    expect(screen.getByText('1.50 KiB')).toBeInTheDocument();
   });
 
   it('caps the percentage at 99 while the transfer is still running', () => {
