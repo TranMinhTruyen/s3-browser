@@ -6,6 +6,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
 import { useTabListStore } from '@/common/stores/tabListStore';
+import { POLICY_MODES, type PolicyMode } from '@/common/utils/bucketUtils';
 import { callIPC } from '@/common/utils/ipcUtils';
 import Button from '@/components/buttons/Button';
 import CloseButton from '@/components/buttons/CloseButton';
@@ -102,6 +103,8 @@ function BucketDetailDrawer(props: BucketDetailDrawerProps) {
   // Go's zero time (0001-01-01) means the backend has no date (anonymous connection).
   const createDate = dayjs(bucket.creationDate);
   const detail = state.status === 'done' ? state.detail : undefined;
+  // The mode kept in the store follows a save of the policy; the loaded detail can be older than that.
+  const policyMode = POLICY_MODES.includes(bucket.policyMode as PolicyMode) ? bucket.policyMode : detail?.policyMode;
 
   return (
     <Box
@@ -153,10 +156,7 @@ function BucketDetailDrawer(props: BucketDetailDrawerProps) {
             <>
               <Divider label={t('section.access')} labelPosition="left" />
               <DataList orientation="vertical" withDivider>
-                <DetailRow
-                  label={t('label.policy')}
-                  value={detail.policyMode ? t(`value.policy.${detail.policyMode}`) : undefined}
-                />
+                <DetailRow label={t('label.policy')} value={policyMode ? t(`value.policy.${policyMode}`) : undefined} />
                 <DetailRow
                   label={t('label.publicBlock')}
                   value={

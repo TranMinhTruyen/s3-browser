@@ -64,6 +64,7 @@ function TabDetail(props: TabDetailProps) {
   const changePrefix = useTabListStore(s => s.changePrefix);
   const clearSelectItem = useTabListStore(s => s.clearSelectItem);
   const removeBucket = useTabListStore(s => s.removeBucket);
+  const setBucketDetailPolicyMode = useTabListStore(s => s.setBucketDetailPolicyMode);
 
   const onClickConnect = useCallback(async () => {
     if (isNullOrEmpty(selectedProfileId)) return;
@@ -203,10 +204,13 @@ function TabDetail(props: TabDetailProps) {
         connectionId: selectedProfile.id,
         profileName: selectedProfile.name,
         bucket,
-        onSaved: mode => bucketListRef.current?.setPolicyMode?.(bucket, mode),
+        onSaved: mode => {
+          bucketListRef.current?.setPolicyMode?.(bucket, mode);
+          setBucketDetailPolicyMode(tabId, bucket, mode);
+        },
       });
     },
-    [selectedProfile]
+    [selectedProfile, tabId, setBucketDetailPolicyMode]
   );
 
   const onDeleteBucket = useCallback(

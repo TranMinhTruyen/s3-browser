@@ -1,4 +1,4 @@
-import type { Bucket, ObjectItem } from '@wails/S3Browser/models/bucket';
+import { Bucket, type ObjectItem } from '@wails/S3Browser/models/bucket';
 import type { TabState } from '@wails/S3Browser/models/setting';
 import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
@@ -54,6 +54,8 @@ interface TabListAction {
   closeDetail: (tabId: string) => void;
   openBucketDetail: (tabId: string, bucket: Bucket) => void;
   closeBucketDetail: (tabId: string) => void;
+  // After the policy of a bucket was saved: keeps its open detail drawer in sync.
+  setBucketDetailPolicyMode: (tabId: string, bucket: string, mode: string) => void;
   // For a deleted bucket: tabs of the profile inside it go back to the bucket list, its detail drawer closes.
   removeBucket: (profileId: string, bucket: string) => void;
 
@@ -250,6 +252,13 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>((set
     closeBucketDetail: (tabId: string) => {
       editTab('closeBucketDetail', tabId, tab => {
         tab.detailBucket = undefined;
+      });
+    },
+
+    setBucketDetailPolicyMode: (tabId: string, bucket: string, mode: string) => {
+      editTab('setBucketDetailPolicyMode', tabId, tab => {
+        // Bucket is a class instance (not drafted by immer): replace it so subscribers see a new reference.
+        if (tab.detailBucket?.name === bucket) tab.detailBucket = new Bucket({ ...tab.detailBucket, policyMode: mode });
       });
     },
 

@@ -3,7 +3,17 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { CheckBucketAccess, GetListBucket, SearchBucket } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { Bucket } from '@wails/S3Browser/models/bucket';
-import { Ref, RefObject, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react';
+import {
+  Ref,
+  RefObject,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { LIST_ROW_GAP, LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
 import { useTabListStore } from '@/common/stores/tabListStore';
@@ -11,7 +21,7 @@ import { isAnonymous } from '@/common/utils/authUtils';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { onTabGone } from '@/common/utils/tabUtils';
 import Button from '@/components/buttons/Button';
-import BucketItem from '@/pages/tab/bucket/BucketItem';
+import BucketItem, { BucketItemLabels } from '@/pages/tab/bucket/BucketItem';
 
 // Buckets fetched per page.
 const BUCKET_PAGE_SIZE = 1000;
@@ -44,6 +54,19 @@ function BucketListView(props: BucketListViewProps) {
   const { tabId, profile, active, scrollRef, keyword = '', onSelectBucket, onEditPolicy, onDeleteBucket, ref } = props;
 
   const { t } = useTranslation('bucket', { keyPrefix: 'page' });
+
+  // Rows get their texts from here, so they do not subscribe to i18n themselves.
+  const labels = useMemo<BucketItemLabels>(
+    () => ({
+      inaccessible: t('tooltip.inaccessible'),
+      moreActions: t('tooltip.moreActions'),
+      createDate: t('label.createDate'),
+      detail: t('menu.detail'),
+      editPolicy: t('menu.editPolicy'),
+      delete: t('menu.delete'),
+    }),
+    [t]
+  );
 
   const [bucketDatas, setBucketDatas] = useState<Bucket[]>([]);
   const [nextCursor, setNextCursor] = useState('');
@@ -332,6 +355,7 @@ function BucketListView(props: BucketListViewProps) {
         >
           <BucketItem
             item={bucketList[row.index]}
+            labels={labels}
             canEdit={canEdit}
             onSelectBucket={onSelectBucket}
             onOpenDetail={onOpenDetail}
