@@ -150,7 +150,7 @@ Click the **Import connection profile** button (next to **Create connection prof
 
 ![Import button](images/39-profile-import-button.png)
 
-A Windows open dialog appears: choose a `.json` file exported by S3Browser (at most 1 MB). The application checks the file before it saves anything. For example, "The file is not a valid S3Browser profile file." means that the file is not a profile exported by S3Browser, and a message also tells you when the version of the file is not supported or the file is too large.
+A Windows open dialog appears: choose a `.json` file exported by S3Browser (at most 1 MiB). The application checks the file before it saves anything. For example, "The file is not a valid S3Browser profile file." means that the file is not a profile exported by S3Browser, and a message also tells you when the version of the file is not supported or the file is too large.
 
 - A file exported without secrets is imported at once.
 - A file exported with secrets opens the **Import profile** window: enter the password that was used when the file was exported, then click **Import**.

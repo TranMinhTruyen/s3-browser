@@ -152,7 +152,7 @@ Klicken Sie auf die Schaltfläche **Verbindungsprofil importieren** (über der P
 
 ![Schaltfläche „Importieren“](images/39-profile-import-button.png)
 
-Ein Windows-Öffnen-Dialog erscheint: Wählen Sie eine von S3Browser exportierte `.json`-Datei (höchstens 1 MB). Die Anwendung prüft die Datei, bevor sie etwas speichert. Zum Beispiel bedeutet „Die Datei ist keine gültige S3Browser-Profildatei.“, dass die Datei kein von S3Browser exportiertes Profil ist; eine Meldung erscheint auch, wenn die Version der Datei nicht unterstützt wird oder die Datei zu groß ist.
+Ein Windows-Öffnen-Dialog erscheint: Wählen Sie eine von S3Browser exportierte `.json`-Datei (höchstens 1 MiB). Die Anwendung prüft die Datei, bevor sie etwas speichert. Zum Beispiel bedeutet „Die Datei ist keine gültige S3Browser-Profildatei.“, dass die Datei kein von S3Browser exportiertes Profil ist; eine Meldung erscheint auch, wenn die Version der Datei nicht unterstützt wird oder die Datei zu groß ist.
 
 - Eine ohne Geheimnisse exportierte Datei wird sofort importiert.
 - Bei einer mit Geheimnissen exportierten Datei öffnet sich das Fenster **Profil importieren**: Geben Sie das beim Export verwendete Passwort ein und klicken Sie auf **Importieren**.

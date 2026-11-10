@@ -69,7 +69,7 @@ describe('FileRow', () => {
     renderRow();
 
     expect(screen.getByText('a.bin')).toBeInTheDocument();
-    expect(screen.getByText('2.00 KB')).toBeInTheDocument();
+    expect(screen.getByText('2.00 KiB')).toBeInTheDocument();
   });
 
   it('falls back to the whole relKey when it has no usable last segment', () => {
