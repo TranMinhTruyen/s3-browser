@@ -1,0 +1,28 @@
+{
+  "contextMenu": {
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "edit": "Edit",
+    "export": "Export",
+    "delete": "Delete"
+  },
+  "tooltip": {
+    "connect": "Connect",
+    "createProfile": "Create database profile",
+    "importProfile": "Import database profile",
+    "refresh": "Refresh database profile list"
+  },
+  "profile": {
+    "empty": "No database profiles yet. Use the buttons above to create one."
+  },
+  "dbType": {
+    "postgresql": "PostgreSQL",
+    "sqlite": "SQLite"
+  },
+  "toast": {
+    "noBackend": "This feature needs the database backend, which is not available yet.",
+    "connected": "Connected to {{name}}",
+    "disconnected": "Disconnected from {{name}}",
+    "deleted": "Deleted {{name}}"
+  }
+}

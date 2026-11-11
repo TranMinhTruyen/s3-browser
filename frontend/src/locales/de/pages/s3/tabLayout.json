@@ -1,0 +1,19 @@
+{
+  "title": {
+    "defaultTabName": "Neues Profil"
+  },
+  "tooltip": {
+    "connect": "Verbinden",
+    "refresh": "{target} neu laden",
+    "search": "Suchen",
+    "clearSearch": "Suche leeren",
+    "upload": "Dateien hochladen",
+    "createBucket": "Bucket erstellen"
+  },
+  "search": {
+    "placeholderProfile": "Profil suchen",
+    "emptyProfile": "Keine Profile gefunden",
+    "placeholderObject": "Nach Schlüssel suchen",
+    "placeholderBucket": "Nach Name suchen"
+  }
+}

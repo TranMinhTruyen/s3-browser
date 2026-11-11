@@ -79,6 +79,7 @@ Thêm chế độ **SQL** vào app với giao diện và thao tác **giống ch�
   - [ ] Editor bọc lại thành component trong `components/inputs/` (theo quy ước bọc component), viền và bo góc giống các input Mantine khác.
   - [ ] Tắt các keymap mặc định của CodeMirror xung đột với R7–R9 (ví dụ `searchKeymap` Ctrl+F), và chặn hành vi mặc định của WebView2 cho Ctrl+F/Ctrl+E/Ctrl+Q khi editor đang focus.
   - [ ] Console sạch, không lỗi khi chuyển chế độ, đổi tab hay đổi theme.
+  - [ ] Hint khi gõ (autocomplete, thêm 2026-11-11): gợi ý từ khoá SQL theo dialect và tên bảng/cột từ schema mock của profile đang chọn; tự hiện khi gõ và mở bằng Ctrl+Space; ↑/↓ chọn, Enter/Tab nhận, Esc đóng; popup theo theme Mantine. Cài thêm `@codemirror/autocomplete` (đã đồng ý).
 
 ### R7: Ctrl+Q — format SQL
 - **Mô tả:** Format bằng `sql-formatter`, dialect theo loại DB của profile của tab (PostgreSQL → `postgresql`, SQLite → `sqlite`); chưa chọn profile thì dùng SQL chuẩn (`sql`).
@@ -116,7 +117,7 @@ Thêm chế độ **SQL** vào app với giao diện và thao tác **giống ch�
 ## Ngoài phạm vi
 - Backend Go (`internal/modules/db`), Rust `s3b_db.dll`, kết nối DB thật, lưu profile DB vào SQLite, mã hoá password.
 - Import/export profile DB ra file, hộp thoại chọn file SQLite (chỉ toast).
-- Bảng kết quả truy vấn, lưu/mở file `.sql`, khôi phục tab SQL sau khi tắt app, lịch sử câu lệnh, autocomplete tên bảng/cột.
+- Bảng kết quả truy vấn, lưu/mở file `.sql`, khôi phục tab SQL sau khi tắt app, lịch sử câu lệnh, autocomplete tên bảng/cột lấy từ DB thật (sprint này chỉ dùng schema mock, xem R6).
 - MongoDB (không phải SQL).
 - Tách component dùng chung giữa S3 và SQL (người dùng chọn bản SQL riêng).
 - Tài liệu (README, user guide 7 ngôn ngữ): làm khi có backend.

@@ -1,0 +1,32 @@
+{
+  "title": {
+    "defaultTabName": "New query"
+  },
+  "tooltip": {
+    "connect": "Connect",
+    "execute": "Run SQL"
+  },
+  "search": {
+    "placeholderProfile": "Search profile",
+    "emptyProfile": "No profiles found"
+  },
+  "toast": {
+    "noProfile": "Select a database profile first.",
+    "emptySql": "There is no SQL to run.",
+    "formatAll": "SQL formatted.",
+    "formatSelection": "Selection formatted.",
+    "formatError": "Cannot format SQL: {{message}}"
+  },
+  "find": {
+    "title": "Find and replace",
+    "find": "Find",
+    "replace": "Replace",
+    "replaceAll": "Replace all",
+    "cancel": "Cancel",
+    "placeholderFind": "Find",
+    "placeholderReplace": "Replace with",
+    "count": "{{index}}/{{total}}",
+    "notFound": "No results",
+    "replacedCount": "Replaced {{n}} occurrence(s)."
+  }
+}

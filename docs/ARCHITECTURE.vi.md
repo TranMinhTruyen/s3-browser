@@ -27,7 +27,7 @@ s3-browser
 ├── models/                 model input/output + alias.go
 ├── frontend/
 │   ├── bindings/           binding Wails ĐƯỢC SINH TỰ ĐỘNG (không sửa tay)
-│   └── src/                common, components, pages (pages/tab), locales, test
+│   └── src/                common, components, pages (pages/s3, pages/sql), locales, test
 ├── build/                  đóng gói theo nền tảng (Windows NSIS, portable, ...)
 └── docs/                   tài liệu này + công cụ tạo PDF
 ```
@@ -187,9 +187,9 @@ Các danh sách lớn (object, bucket, uploader, lịch sử, danh sách file) �
 
 ### 3.7 Layout và tab
 
-`App.tsx` -> `MainLayout` (navbar, cửa sổ uploader/downloader) -> `RouterItem` -> `TabPage` (lazy, `pages/tab/TabPage.tsx`). `TabPage` chứa thanh tab (`SortableTab`, kéo thả bằng dnd-kit, đổi thứ tự bằng bàn phím Ctrl+Shift+Left/Right) và render `TabDetail`, nơi hiển thị `pages/tab/bucket` (`BucketListView`, `BucketItem`) hoặc `pages/tab/object` (`ObjectListView`, `ObjectItem`). Các phần dùng chung nằm trong `pages/tab/components` (`BucketDetailDrawer`, `ObjectDetailDrawer`, `TabActionBar`, `TabBreadcrumb`). State nằm trong `common/stores` (`profileStore`, `tabListStore`, `uploaderStore`, `downloaderStore`, `masterDataStore`, `settingStore`, `updateStore`).
+`App.tsx` -> `MainLayout` (chuyển chế độ, cửa sổ uploader/downloader) -> `S3Workspace` hoặc `SqlWorkspace` (lazy trong `MainLayout`, nạp ở lần đầu vào chế độ đó; mỗi cái có navbar và trang tab riêng) -> `S3TabPage` (`S3Workspace` import tĩnh, `pages/s3/S3TabPage.tsx`). `S3TabPage` chứa thanh tab (`TabStrip` và `SortableTab` trong `components/tabs`, kéo thả bằng dnd-kit, đổi thứ tự bằng bàn phím Ctrl+Shift+Left/Right) và render `TabDetail`, nơi hiển thị `pages/s3/bucket` (`BucketListView`, `BucketItem`) hoặc `pages/s3/object` (`ObjectListView`, `ObjectItem`). Các phần dùng chung nằm trong `pages/s3/components` (`BucketDetailDrawer`, `ObjectDetailDrawer`, `TabActionBar`, `TabBreadcrumb`). Mỗi chế độ có thư mục riêng `pages/<mode>` (`s3`, `sql`) với các thư mục con như `stores`, `hooks`, `utils`, `modals`, `navbar`, `components` và `transfer`. State của S3 nằm trong `pages/s3/stores` (`profileStore`, `tabListStore`, `uploaderStore`, `downloaderStore`, `masterDataStore`); state dùng chung toàn app nằm trong `common/stores` (`settingStore`, `updateStore`).
 
-**Ghi nhớ tab**: `useTabPersistence` (gọi trong `App.tsx`) lưu thứ tự tab, tab đang chọn và profile của từng tab vào `tabs.json` qua `SaveTabState` sau 500 ms kể từ lúc chúng ngừng thay đổi và khi `pagehide`. Lúc khởi động, `restoreTabsFromDisk` (`common/utils/tabPersistence.ts`) nạp chúng bằng `GetTabState`. Nếu nạp lỗi, việc lưu bị tắt trong phiên đó để `tabs.json` không bao giờ bị ghi đè. Tab có profile đã bị xoá giữ nguyên vị trí nhưng mất profile (`normalizeTabProfiles`).
+**Ghi nhớ tab**: `useTabPersistence` (gọi trong `App.tsx`) lưu thứ tự tab, tab đang chọn và profile của từng tab vào `tabs.json` qua `SaveTabState` sau 500 ms kể từ lúc chúng ngừng thay đổi và khi `pagehide`. Lúc khởi động, `restoreTabsFromDisk` (`pages/s3/utils/tabPersistence.ts`) nạp chúng bằng `GetTabState`. Nếu nạp lỗi, việc lưu bị tắt trong phiên đó để `tabs.json` không bao giờ bị ghi đè. Tab có profile đã bị xoá giữ nguyên vị trí nhưng mất profile (`normalizeTabProfiles`).
 
 ### 3.8 Cài đặt, theme và cập nhật
 

@@ -27,7 +27,7 @@ s3-browser
 ├── models/                 入出力モデル + alias.go
 ├── frontend/
 │   ├── bindings/           自動生成された Wails バインディング (編集禁止)
-│   └── src/                common、components、pages (pages/tab)、locales、test
+│   └── src/                common、components、pages (pages/s3, pages/sql)、locales、test
 ├── build/                  プラットフォーム別パッケージング (Windows NSIS、portable など)
 └── docs/                   本ドキュメント + PDF 生成ツール
 ```
@@ -187,9 +187,9 @@ const body = await callIPC(GetListObject, [input], { scope: `${SCOPE}/load`, sig
 
 ### 3.7 レイアウトとタブ
 
-`App.tsx` -> `MainLayout` (ナビバー、アップローダー/ダウンローダーのウィンドウ) -> `RouterItem` -> `TabPage` (lazy、`pages/tab/TabPage.tsx`)。`TabPage` はタブバー (`SortableTab`、dnd-kit によるドラッグ&ドロップ、Ctrl+Shift+左/右 でキーボードによる並べ替え) を持ち、`TabDetail` を描画します。`TabDetail` は `pages/tab/bucket` (`BucketListView`、`BucketItem`) または `pages/tab/object` (`ObjectListView`、`ObjectItem`) を表示します。共通部品は `pages/tab/components` (`BucketDetailDrawer`、`ObjectDetailDrawer`、`TabActionBar`、`TabBreadcrumb`) にあります。状態は `common/stores` (`profileStore`、`tabListStore`、`uploaderStore`、`downloaderStore`、`masterDataStore`、`settingStore`、`updateStore`) にあります。
+`App.tsx` -> `MainLayout` (モード切り替え、アップローダー/ダウンローダーのウィンドウ) -> `S3Workspace` または `SqlWorkspace` (`MainLayout` 内で lazy、そのモードを最初に開いたときに読み込み。それぞれナビバーとタブページを持つ) -> `S3TabPage` (`S3Workspace` が静的に import、`pages/s3/S3TabPage.tsx`)。`S3TabPage` はタブバー (`components/tabs` の `TabStrip` と `SortableTab`、dnd-kit によるドラッグ&ドロップ、Ctrl+Shift+左/右 でキーボードによる並べ替え) を持ち、`TabDetail` を描画します。`TabDetail` は `pages/s3/bucket` (`BucketListView`、`BucketItem`) または `pages/s3/object` (`ObjectListView`、`ObjectItem`) を表示します。共通部品は `pages/s3/components` (`BucketDetailDrawer`、`ObjectDetailDrawer`、`TabActionBar`、`TabBreadcrumb`) にあります。各モードは専用フォルダ `pages/<mode>` (`s3`、`sql`) を持ち、`stores`、`hooks`、`utils`、`modals`、`navbar`、`components`、`transfer` などのサブフォルダがあります。S3 の状態は `pages/s3/stores` (`profileStore`、`tabListStore`、`uploaderStore`、`downloaderStore`、`masterDataStore`)、アプリ全体の状態は `common/stores` (`settingStore`、`updateStore`) にあります。
 
-**タブの記憶**: `useTabPersistence` (`App.tsx` で呼び出し) は、タブの順序、アクティブなタブ、各タブのプロファイルを、変更が止まってから 500 ms 後と `pagehide` 時に `SaveTabState` 経由で `tabs.json` に保存します。起動時には `restoreTabsFromDisk` (`common/utils/tabPersistence.ts`) が `GetTabState` で読み込みます。読み込みに失敗した場合、`tabs.json` を上書きしないよう、そのセッションでは保存が無効になります。プロファイルが削除されたタブは位置を保ったままプロファイルだけを失います (`normalizeTabProfiles`)。
+**タブの記憶**: `useTabPersistence` (`App.tsx` で呼び出し) は、タブの順序、アクティブなタブ、各タブのプロファイルを、変更が止まってから 500 ms 後と `pagehide` 時に `SaveTabState` 経由で `tabs.json` に保存します。起動時には `restoreTabsFromDisk` (`pages/s3/utils/tabPersistence.ts`) が `GetTabState` で読み込みます。読み込みに失敗した場合、`tabs.json` を上書きしないよう、そのセッションでは保存が無効になります。プロファイルが削除されたタブは位置を保ったままプロファイルだけを失います (`normalizeTabProfiles`)。
 
 ### 3.8 設定、テーマ、更新
 

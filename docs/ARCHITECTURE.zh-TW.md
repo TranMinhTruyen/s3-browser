@@ -27,7 +27,7 @@ s3-browser
 ├── models/                 輸入/輸出模型 + alias.go
 ├── frontend/
 │   ├── bindings/           自動產生的 Wails 繫結 (請勿編輯)
-│   └── src/                common、components、pages (pages/tab)、locales、test
+│   └── src/                common、components、pages (pages/s3, pages/sql)、locales、test
 ├── build/                  各平台封裝 (Windows NSIS、portable 等)
 └── docs/                   本文件 + PDF 工具
 ```
@@ -187,9 +187,9 @@ Store 以 `createAppStore(creator, name)` 建立 (zustand + immer，開發環境
 
 ### 3.7 版面配置與索引標籤
 
-`App.tsx` -> `MainLayout` (導覽列、上傳器/下載器視窗) -> `RouterItem` -> `TabPage` (lazy，`pages/tab/TabPage.tsx`)。`TabPage` 包含索引標籤列 (`SortableTab`，以 dnd-kit 拖放，Ctrl+Shift+左/右 進行鍵盤排序) 並繪製 `TabDetail`，後者顯示 `pages/tab/bucket` (`BucketListView`、`BucketItem`) 或 `pages/tab/object` (`ObjectListView`、`ObjectItem`)。共用部分位於 `pages/tab/components` (`BucketDetailDrawer`、`ObjectDetailDrawer`、`TabActionBar`、`TabBreadcrumb`)。狀態位於 `common/stores` (`profileStore`、`tabListStore`、`uploaderStore`、`downloaderStore`、`masterDataStore`、`settingStore`、`updateStore`)。
+`App.tsx` -> `MainLayout` (模式切換、上傳器/下載器視窗) -> `S3Workspace` 或 `SqlWorkspace` (在 `MainLayout` 中 lazy，首次進入該模式時載入；各自帶有導覽列與索引標籤頁) -> `S3TabPage` (由 `S3Workspace` 靜態 import，`pages/s3/S3TabPage.tsx`)。`S3TabPage` 包含索引標籤列 (`components/tabs` 中的 `TabStrip` 與 `SortableTab`，以 dnd-kit 拖放，Ctrl+Shift+左/右 進行鍵盤排序) 並繪製 `TabDetail`，後者顯示 `pages/s3/bucket` (`BucketListView`、`BucketItem`) 或 `pages/s3/object` (`ObjectListView`、`ObjectItem`)。共用部分位於 `pages/s3/components` (`BucketDetailDrawer`、`ObjectDetailDrawer`、`TabActionBar`、`TabBreadcrumb`)。每種模式有自己的資料夾 `pages/<mode>` (`s3`、`sql`)，含 `stores`、`hooks`、`utils`、`modals`、`navbar`、`components`、`transfer` 等子資料夾。S3 狀態位於 `pages/s3/stores` (`profileStore`、`tabListStore`、`uploaderStore`、`downloaderStore`、`masterDataStore`)；全應用共用狀態位於 `common/stores` (`settingStore`、`updateStore`)。
 
-**記住索引標籤**：`useTabPersistence` (在 `App.tsx` 中呼叫) 在索引標籤順序、使用中的索引標籤與各索引標籤的設定檔停止變化 500 ms 後以及 `pagehide` 時，透過 `SaveTabState` 將其儲存到 `tabs.json`。啟動時 `restoreTabsFromDisk` (`common/utils/tabPersistence.ts`) 以 `GetTabState` 載入。若載入失敗，本次工作階段會停用儲存，因此 `tabs.json` 絕不會被覆寫。設定檔已被刪除的索引標籤保留位置但失去設定檔 (`normalizeTabProfiles`)。
+**記住索引標籤**：`useTabPersistence` (在 `App.tsx` 中呼叫) 在索引標籤順序、使用中的索引標籤與各索引標籤的設定檔停止變化 500 ms 後以及 `pagehide` 時，透過 `SaveTabState` 將其儲存到 `tabs.json`。啟動時 `restoreTabsFromDisk` (`pages/s3/utils/tabPersistence.ts`) 以 `GetTabState` 載入。若載入失敗，本次工作階段會停用儲存，因此 `tabs.json` 絕不會被覆寫。設定檔已被刪除的索引標籤保留位置但失去設定檔 (`normalizeTabProfiles`)。
 
 ### 3.8 設定、佈景主題與更新
 

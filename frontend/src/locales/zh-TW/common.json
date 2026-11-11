@@ -10,6 +10,13 @@
     "copy": "複製",
     "copied": "已複製"
   },
+  "tab": {
+    "close": "關閉索引標籤",
+    "drag": "拖曳以重新排序 (Ctrl+Shift+←/→)",
+    "add": "新增索引標籤",
+    "scrollLeft": "向左捲動",
+    "scrollRight": "向右捲動"
+  },
   "appName": "S3Browser",
   "window": {
     "minimise": "最小化",
@@ -18,5 +25,12 @@
     "close": "關閉"
   },
   "modalLoadError": "無法開啟對話方塊，請再試一次。",
-  "modalLoading": "正在載入對話方塊..."
+  "modalLoading": "正在載入對話方塊...",
+  "appMode": {
+    "label": "模式",
+    "s3": "S3",
+    "sql": "SQL"
+  },
+  "sqlLoadError": "無法開啟 SQL 模式，請再試一次。",
+  "s3LoadError": "無法開啟 S3 模式，請再試一次。"
 }

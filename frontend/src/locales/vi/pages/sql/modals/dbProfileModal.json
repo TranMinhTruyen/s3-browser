@@ -1,0 +1,38 @@
+{
+  "title": {
+    "create": "Tạo hồ sơ cơ sở dữ liệu",
+    "edit": "Chỉnh sửa hồ sơ cơ sở dữ liệu"
+  },
+  "form": {
+    "label": {
+      "name": "Tên hồ sơ",
+      "color": "Màu hồ sơ",
+      "host": "Máy chủ",
+      "port": "Cổng",
+      "database": "Cơ sở dữ liệu",
+      "username": "Tên người dùng",
+      "password": "Mật khẩu (không bắt buộc)",
+      "sslMode": "Chế độ SSL",
+      "filePath": "Đường dẫn tệp cơ sở dữ liệu"
+    },
+    "sslMode": {
+      "disable": "Tắt",
+      "allow": "Cho phép",
+      "prefer": "Ưu tiên",
+      "require": "Bắt buộc",
+      "verify-ca": "Xác minh CA",
+      "verify-full": "Xác minh đầy đủ"
+    },
+    "tooltip": {
+      "chooseFile": "Chọn tệp"
+    },
+    "button": {
+      "create": "Tạo hồ sơ",
+      "edit": "Cập nhật hồ sơ"
+    }
+  },
+  "toast": {
+    "created": "Đã tạo hồ sơ {{name}}",
+    "updated": "Đã cập nhật hồ sơ {{name}}"
+  }
+}

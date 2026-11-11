@@ -27,7 +27,7 @@ s3-browser
 ├── models/                 модели ввода/вывода + alias.go
 ├── frontend/
 │   ├── bindings/           СГЕНЕРИРОВАННЫЕ привязки Wails (не редактировать)
-│   └── src/                common, components, pages (pages/tab), locales, test
+│   └── src/                common, components, pages (pages/s3, pages/sql), locales, test
 ├── build/                  упаковка для платформ (Windows NSIS, portable, ...)
 └── docs/                   эта документация + инструменты для PDF
 ```
@@ -187,9 +187,9 @@ const body = await callIPC(GetListObject, [input], { scope: `${SCOPE}/load`, sig
 
 ### 3.7 Макет и вкладки
 
-`App.tsx` -> `MainLayout` (панель навигации, окна загрузчика/скачивания) -> `RouterItem` -> `TabPage` (lazy, `pages/tab/TabPage.tsx`). `TabPage` содержит панель вкладок (`SortableTab`, перетаскивание через dnd-kit, перестановка с клавиатуры Ctrl+Shift+Влево/Вправо) и отображает `TabDetail`, который показывает `pages/tab/bucket` (`BucketListView`, `BucketItem`) или `pages/tab/object` (`ObjectListView`, `ObjectItem`). Общие части находятся в `pages/tab/components` (`BucketDetailDrawer`, `ObjectDetailDrawer`, `TabActionBar`, `TabBreadcrumb`). Состояние находится в `common/stores` (`profileStore`, `tabListStore`, `uploaderStore`, `downloaderStore`, `masterDataStore`, `settingStore`, `updateStore`).
+`App.tsx` -> `MainLayout` (переключатель режимов, окна загрузчика/скачивания) -> `S3Workspace` или `SqlWorkspace` (lazy в `MainLayout`, загружается при первом входе в режим; у каждого своя панель навигации и страница вкладок) -> `S3TabPage` (статически импортируется в `S3Workspace`, `pages/s3/S3TabPage.tsx`). `S3TabPage` содержит панель вкладок (`TabStrip` и `SortableTab` в `components/tabs`, перетаскивание через dnd-kit, перестановка с клавиатуры Ctrl+Shift+Влево/Вправо) и отображает `TabDetail`, который показывает `pages/s3/bucket` (`BucketListView`, `BucketItem`) или `pages/s3/object` (`ObjectListView`, `ObjectItem`). Общие части находятся в `pages/s3/components` (`BucketDetailDrawer`, `ObjectDetailDrawer`, `TabActionBar`, `TabBreadcrumb`). У каждого режима своя папка `pages/<mode>` (`s3`, `sql`) с подпапками вроде `stores`, `hooks`, `utils`, `modals`, `navbar`, `components` и `transfer`. Состояние S3 находится в `pages/s3/stores` (`profileStore`, `tabListStore`, `uploaderStore`, `downloaderStore`, `masterDataStore`); общее состояние приложения находится в `common/stores` (`settingStore`, `updateStore`).
 
-**Запоминание вкладок**: `useTabPersistence` (вызывается в `App.tsx`) сохраняет порядок вкладок, активную вкладку и профиль каждой вкладки в `tabs.json` через `SaveTabState` спустя 500 мс после прекращения изменений и при `pagehide`. При запуске `restoreTabsFromDisk` (`common/utils/tabPersistence.ts`) загружает их через `GetTabState`. Если загрузка не удалась, сохранение на этот сеанс отключается, чтобы `tabs.json` никогда не был перезаписан. Вкладка, профиль которой удалён, сохраняет своё место, но теряет профиль (`normalizeTabProfiles`).
+**Запоминание вкладок**: `useTabPersistence` (вызывается в `App.tsx`) сохраняет порядок вкладок, активную вкладку и профиль каждой вкладки в `tabs.json` через `SaveTabState` спустя 500 мс после прекращения изменений и при `pagehide`. При запуске `restoreTabsFromDisk` (`pages/s3/utils/tabPersistence.ts`) загружает их через `GetTabState`. Если загрузка не удалась, сохранение на этот сеанс отключается, чтобы `tabs.json` никогда не был перезаписан. Вкладка, профиль которой удалён, сохраняет своё место, но теряет профиль (`normalizeTabProfiles`).
 
 ### 3.8 Настройки, тема и обновления
 

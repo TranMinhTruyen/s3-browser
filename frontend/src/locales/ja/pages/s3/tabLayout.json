@@ -1,0 +1,19 @@
+{
+  "title": {
+    "defaultTabName": "新しいプロファイル"
+  },
+  "tooltip": {
+    "connect": "接続",
+    "refresh": "{target}を再読み込み",
+    "search": "検索",
+    "clearSearch": "検索をクリア",
+    "upload": "ファイルをアップロード",
+    "createBucket": "バケットを作成"
+  },
+  "search": {
+    "placeholderProfile": "プロファイルを検索",
+    "emptyProfile": "プロファイルが見つかりません",
+    "placeholderObject": "キーで検索",
+    "placeholderBucket": "名前で検索"
+  }
+}

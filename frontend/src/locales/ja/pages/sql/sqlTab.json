@@ -1,0 +1,32 @@
+{
+  "title": {
+    "defaultTabName": "新しいクエリ"
+  },
+  "tooltip": {
+    "connect": "接続",
+    "execute": "SQLを実行"
+  },
+  "search": {
+    "placeholderProfile": "プロファイルを検索",
+    "emptyProfile": "プロファイルが見つかりません"
+  },
+  "toast": {
+    "noProfile": "先にデータベースプロファイルを選択してください。",
+    "emptySql": "実行するSQLがありません。",
+    "formatAll": "SQLを整形しました。",
+    "formatSelection": "選択範囲を整形しました。",
+    "formatError": "SQLを整形できません: {{message}}"
+  },
+  "find": {
+    "title": "検索と置換",
+    "find": "検索",
+    "replace": "置換",
+    "replaceAll": "すべて置換",
+    "cancel": "キャンセル",
+    "placeholderFind": "検索",
+    "placeholderReplace": "置換後の文字列",
+    "count": "{{index}}/{{total}}",
+    "notFound": "見つかりません",
+    "replacedCount": "{{n}}件を置換しました。"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "contextMenu": {
+    "connect": "Verbinden",
+    "disconnect": "Trennen",
+    "edit": "Bearbeiten",
+    "export": "Exportieren",
+    "delete": "Löschen"
+  },
+  "tooltip": {
+    "connect": "Verbinden",
+    "createProfile": "Datenbankprofil erstellen",
+    "importProfile": "Datenbankprofil importieren",
+    "refresh": "Liste der Datenbankprofile neu laden"
+  },
+  "profile": {
+    "empty": "Noch keine Datenbankprofile. Erstellen Sie eines mit den Schaltflächen oben."
+  },
+  "dbType": {
+    "postgresql": "PostgreSQL",
+    "sqlite": "SQLite"
+  },
+  "toast": {
+    "noBackend": "Diese Funktion benötigt das Datenbank-Backend, das noch nicht verfügbar ist.",
+    "connected": "Mit {{name}} verbunden",
+    "disconnected": "Verbindung zu {{name}} getrennt",
+    "deleted": "{{name}} gelöscht"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "title": {
+    "defaultTabName": "Neue Abfrage"
+  },
+  "tooltip": {
+    "connect": "Verbinden",
+    "execute": "SQL ausführen"
+  },
+  "search": {
+    "placeholderProfile": "Profil suchen",
+    "emptyProfile": "Keine Profile gefunden"
+  },
+  "toast": {
+    "noProfile": "Wählen Sie zuerst ein Datenbankprofil aus.",
+    "emptySql": "Es gibt kein SQL zum Ausführen.",
+    "formatAll": "SQL formatiert.",
+    "formatSelection": "Auswahl formatiert.",
+    "formatError": "SQL kann nicht formatiert werden: {{message}}"
+  },
+  "find": {
+    "title": "Suchen und ersetzen",
+    "find": "Suchen",
+    "replace": "Ersetzen",
+    "replaceAll": "Alle ersetzen",
+    "cancel": "Abbrechen",
+    "placeholderFind": "Suchen",
+    "placeholderReplace": "Ersetzen durch",
+    "count": "{{index}}/{{total}}",
+    "notFound": "Keine Treffer",
+    "replacedCount": "{{n}} Vorkommen ersetzt."
+  }
+}

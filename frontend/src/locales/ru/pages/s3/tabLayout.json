@@ -1,0 +1,19 @@
+{
+  "title": {
+    "defaultTabName": "Новый профиль"
+  },
+  "tooltip": {
+    "connect": "Подключиться",
+    "refresh": "Обновить: {target}",
+    "search": "Поиск",
+    "clearSearch": "Очистить поиск",
+    "upload": "Загрузить файлы",
+    "createBucket": "Создать бакет"
+  },
+  "search": {
+    "placeholderProfile": "Поиск профиля",
+    "emptyProfile": "Профили не найдены",
+    "placeholderObject": "Поиск по ключу",
+    "placeholderBucket": "Поиск по имени"
+  }
+}

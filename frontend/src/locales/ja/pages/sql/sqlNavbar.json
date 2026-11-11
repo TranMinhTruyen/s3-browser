@@ -1,0 +1,28 @@
+{
+  "contextMenu": {
+    "connect": "接続",
+    "disconnect": "切断",
+    "edit": "編集",
+    "export": "エクスポート",
+    "delete": "削除"
+  },
+  "tooltip": {
+    "connect": "接続",
+    "createProfile": "データベースプロファイルを作成",
+    "importProfile": "データベースプロファイルをインポート",
+    "refresh": "データベースプロファイル一覧を再読み込み"
+  },
+  "profile": {
+    "empty": "データベースプロファイルがありません。上のボタンから作成してください。"
+  },
+  "dbType": {
+    "postgresql": "PostgreSQL",
+    "sqlite": "SQLite"
+  },
+  "toast": {
+    "noBackend": "この機能にはデータベースのバックエンドが必要ですが、まだ利用できません。",
+    "connected": "{{name}} に接続しました",
+    "disconnected": "{{name}} から切断しました",
+    "deleted": "{{name}} を削除しました"
+  }
+}

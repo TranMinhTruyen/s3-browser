@@ -1,0 +1,19 @@
+{
+  "title": {
+    "defaultTabName": "新配置文件"
+  },
+  "tooltip": {
+    "connect": "连接",
+    "refresh": "刷新{target}",
+    "search": "搜索",
+    "clearSearch": "清除搜索",
+    "upload": "上传文件",
+    "createBucket": "创建存储桶"
+  },
+  "search": {
+    "placeholderProfile": "搜索配置文件",
+    "emptyProfile": "未找到配置文件",
+    "placeholderObject": "按键搜索",
+    "placeholderBucket": "按名称搜索"
+  }
+}

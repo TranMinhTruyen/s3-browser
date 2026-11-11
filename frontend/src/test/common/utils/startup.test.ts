@@ -2,10 +2,10 @@ import { GetSettings, GetTabState } from '@wails/S3Browser/internal/handlers/set
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '@/common/cnst/settingConst';
 import { useSettingStore } from '@/common/stores/settingStore';
-import { useTabListStore } from '@/common/stores/tabListStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { loadStartupData } from '@/common/utils/startup';
-import { isTabRestoreFailed } from '@/common/utils/tabPersistence';
+import { useTabListStore } from '@/pages/s3/stores/tabListStore';
+import { isTabRestoreFailed } from '@/pages/s3/utils/tabPersistence';
 
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
 vi.mock('@/common/utils/settingUtils', async importOriginal => ({

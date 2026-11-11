@@ -10,6 +10,13 @@
     "copy": "コピー",
     "copied": "コピーしました"
   },
+  "tab": {
+    "close": "タブを閉じる",
+    "drag": "ドラッグして並べ替え (Ctrl+Shift+←/→)",
+    "add": "タブを追加",
+    "scrollLeft": "左へスクロール",
+    "scrollRight": "右へスクロール"
+  },
   "appName": "S3Browser",
   "window": {
     "minimise": "最小化",
@@ -18,5 +25,12 @@
     "close": "閉じる"
   },
   "modalLoadError": "ダイアログを開けませんでした。もう一度お試しください。",
-  "modalLoading": "ダイアログを読み込み中..."
+  "modalLoading": "ダイアログを読み込み中...",
+  "appMode": {
+    "label": "モード",
+    "s3": "S3",
+    "sql": "SQL"
+  },
+  "sqlLoadError": "SQLモードを開けませんでした。もう一度お試しください。",
+  "s3LoadError": "S3モードを開けませんでした。もう一度お試しください。"
 }

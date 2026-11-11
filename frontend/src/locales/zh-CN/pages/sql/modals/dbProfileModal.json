@@ -1,0 +1,38 @@
+{
+  "title": {
+    "create": "创建数据库配置文件",
+    "edit": "编辑数据库配置文件"
+  },
+  "form": {
+    "label": {
+      "name": "配置文件名称",
+      "color": "配置文件颜色",
+      "host": "主机",
+      "port": "端口",
+      "database": "数据库",
+      "username": "用户名",
+      "password": "密码（可选）",
+      "sslMode": "SSL 模式",
+      "filePath": "数据库文件路径"
+    },
+    "sslMode": {
+      "disable": "禁用",
+      "allow": "允许",
+      "prefer": "优先",
+      "require": "必需",
+      "verify-ca": "验证 CA",
+      "verify-full": "完全验证"
+    },
+    "tooltip": {
+      "chooseFile": "选择文件"
+    },
+    "button": {
+      "create": "创建配置文件",
+      "edit": "更新配置文件"
+    }
+  },
+  "toast": {
+    "created": "已创建配置文件 {{name}}",
+    "updated": "已更新配置文件 {{name}}"
+  }
+}

@@ -27,7 +27,7 @@ s3-browser
 ├── models/                 输入/输出模型 + alias.go
 ├── frontend/
 │   ├── bindings/           自动生成的 Wails 绑定 (请勿编辑)
-│   └── src/                common、components、pages (pages/tab)、locales、test
+│   └── src/                common、components、pages (pages/s3, pages/sql)、locales、test
 ├── build/                  各平台打包 (Windows NSIS、portable 等)
 └── docs/                   本文档 + PDF 工具
 ```
@@ -187,9 +187,9 @@ Store 通过 `createAppStore(creator, name)` 创建 (zustand + immer，开发环
 
 ### 3.7 布局与标签页
 
-`App.tsx` -> `MainLayout` (导航栏、上传器/下载器窗口) -> `RouterItem` -> `TabPage` (lazy，`pages/tab/TabPage.tsx`)。`TabPage` 包含标签栏 (`SortableTab`，使用 dnd-kit 拖放，Ctrl+Shift+左/右 进行键盘排序) 并渲染 `TabDetail`，后者显示 `pages/tab/bucket` (`BucketListView`、`BucketItem`) 或 `pages/tab/object` (`ObjectListView`、`ObjectItem`)。共用部分位于 `pages/tab/components` (`BucketDetailDrawer`、`ObjectDetailDrawer`、`TabActionBar`、`TabBreadcrumb`)。状态位于 `common/stores` (`profileStore`、`tabListStore`、`uploaderStore`、`downloaderStore`、`masterDataStore`、`settingStore`、`updateStore`)。
+`App.tsx` -> `MainLayout` (模式切换、上传器/下载器窗口) -> `S3Workspace` 或 `SqlWorkspace` (在 `MainLayout` 中 lazy，首次进入该模式时加载；各自带有导航栏和标签页) -> `S3TabPage` (由 `S3Workspace` 静态 import，`pages/s3/S3TabPage.tsx`)。`S3TabPage` 包含标签栏 (`components/tabs` 中的 `TabStrip` 和 `SortableTab`，使用 dnd-kit 拖放，Ctrl+Shift+左/右 进行键盘排序) 并渲染 `TabDetail`，后者显示 `pages/s3/bucket` (`BucketListView`、`BucketItem`) 或 `pages/s3/object` (`ObjectListView`、`ObjectItem`)。共用部分位于 `pages/s3/components` (`BucketDetailDrawer`、`ObjectDetailDrawer`、`TabActionBar`、`TabBreadcrumb`)。每种模式有自己的文件夹 `pages/<mode>` (`s3`、`sql`)，含 `stores`、`hooks`、`utils`、`modals`、`navbar`、`components`、`transfer` 等子文件夹。S3 状态位于 `pages/s3/stores` (`profileStore`、`tabListStore`、`uploaderStore`、`downloaderStore`、`masterDataStore`)；全应用共用状态位于 `common/stores` (`settingStore`、`updateStore`)。
 
-**记住标签页**：`useTabPersistence` (在 `App.tsx` 中调用) 在标签页顺序、活动标签页和各标签页的配置文件停止变化 500 ms 后以及 `pagehide` 时，通过 `SaveTabState` 将其保存到 `tabs.json`。启动时 `restoreTabsFromDisk` (`common/utils/tabPersistence.ts`) 用 `GetTabState` 加载它们。如果加载失败，本次会话会禁用保存，因此 `tabs.json` 永远不会被覆盖。配置文件已被删除的标签页保留位置但失去配置文件 (`normalizeTabProfiles`)。
+**记住标签页**：`useTabPersistence` (在 `App.tsx` 中调用) 在标签页顺序、活动标签页和各标签页的配置文件停止变化 500 ms 后以及 `pagehide` 时，通过 `SaveTabState` 将其保存到 `tabs.json`。启动时 `restoreTabsFromDisk` (`pages/s3/utils/tabPersistence.ts`) 用 `GetTabState` 加载它们。如果加载失败，本次会话会禁用保存，因此 `tabs.json` 永远不会被覆盖。配置文件已被删除的标签页保留位置但失去配置文件 (`normalizeTabProfiles`)。
 
 ### 3.8 设置、主题与更新
 

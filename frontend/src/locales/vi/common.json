@@ -10,6 +10,13 @@
     "copy": "Sao chép",
     "copied": "Đã sao chép"
   },
+  "tab": {
+    "close": "Đóng tab",
+    "drag": "Kéo để đổi vị trí (Ctrl+Shift+←/→)",
+    "add": "Thêm tab",
+    "scrollLeft": "Cuộn sang trái",
+    "scrollRight": "Cuộn sang phải"
+  },
   "appName": "S3Browser",
   "window": {
     "minimise": "Thu nhỏ",
@@ -18,5 +25,12 @@
     "close": "Đóng"
   },
   "modalLoadError": "Không mở được hộp thoại. Vui lòng thử lại.",
-  "modalLoading": "Đang mở hộp thoại..."
+  "modalLoading": "Đang mở hộp thoại...",
+  "appMode": {
+    "label": "Chế độ",
+    "s3": "S3",
+    "sql": "SQL"
+  },
+  "sqlLoadError": "Không mở được chế độ SQL. Vui lòng thử lại.",
+  "s3LoadError": "Không mở được chế độ S3. Vui lòng thử lại."
 }

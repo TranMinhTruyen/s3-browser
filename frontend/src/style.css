@@ -7,6 +7,9 @@ body,
 html,
 body {
   color: var(--mantine-color-text);
+
+  /* Desktop app: the window never scrolls, scrolling lives inside each workspace pane. */
+  overflow: hidden;
 }
 
 body {

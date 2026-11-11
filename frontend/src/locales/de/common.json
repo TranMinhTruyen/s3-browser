@@ -10,6 +10,13 @@
     "copy": "Kopieren",
     "copied": "Kopiert"
   },
+  "tab": {
+    "close": "Tab schließen",
+    "drag": "Zum Umsortieren ziehen (Strg+Umschalt+←/→)",
+    "add": "Tab hinzufügen",
+    "scrollLeft": "Nach links scrollen",
+    "scrollRight": "Nach rechts scrollen"
+  },
   "appName": "S3Browser",
   "window": {
     "minimise": "Minimieren",
@@ -18,5 +25,12 @@
     "close": "Schließen"
   },
   "modalLoadError": "Der Dialog konnte nicht geöffnet werden. Bitte versuchen Sie es erneut.",
-  "modalLoading": "Dialog wird geladen..."
+  "modalLoading": "Dialog wird geladen...",
+  "appMode": {
+    "label": "Modus",
+    "s3": "S3",
+    "sql": "SQL"
+  },
+  "sqlLoadError": "Der SQL-Modus konnte nicht geöffnet werden. Bitte versuchen Sie es erneut.",
+  "s3LoadError": "Der S3-Modus konnte nicht geöffnet werden. Bitte versuchen Sie es erneut."
 }

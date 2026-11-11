@@ -1,0 +1,28 @@
+{
+  "contextMenu": {
+    "connect": "连接",
+    "disconnect": "断开连接",
+    "edit": "编辑",
+    "export": "导出",
+    "delete": "删除"
+  },
+  "tooltip": {
+    "connect": "连接",
+    "createProfile": "创建数据库配置文件",
+    "importProfile": "导入数据库配置文件",
+    "refresh": "刷新数据库配置文件列表"
+  },
+  "profile": {
+    "empty": "暂无数据库配置文件。请使用上方的按钮创建。"
+  },
+  "dbType": {
+    "postgresql": "PostgreSQL",
+    "sqlite": "SQLite"
+  },
+  "toast": {
+    "noBackend": "此功能需要数据库后端，目前尚不可用。",
+    "connected": "已连接到 {{name}}",
+    "disconnected": "已断开与 {{name}} 的连接",
+    "deleted": "已删除 {{name}}"
+  }
+}

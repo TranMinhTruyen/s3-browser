@@ -1,6 +1,6 @@
 import { toast } from 'sonner';
-import type { ConnectModalProps } from '@/components/modals/connect/connectSchema';
 import i18n from '@/locales/i18n';
+import type { ConnectModalProps } from '@/pages/s3/modals/connect/connectSchema';
 
 /** A chunk that loads faster than this shows no feedback, so fast loads do not flash a toast. */
 const SLOW_LOAD_MS = 300;
@@ -38,10 +38,10 @@ async function loadModal<M>(load: () => Promise<M>): Promise<M | undefined> {
  * When the chunk fails to load, `show` resolves undefined: callers that await a result must treat it as a cancel.
  */
 export const showConnectModal = async (props: ConnectModalProps) =>
-  (await loadModal(() => import('@/components/modals/connect/ConnectModal')))?.default.show(props);
+  (await loadModal(() => import('@/pages/s3/modals/connect/ConnectModal')))?.default.show(props);
 
 export const showHistoryModal = async () =>
-  (await loadModal(() => import('@/components/modals/history/HistoryModal')))?.default.show();
+  (await loadModal(() => import('@/pages/s3/modals/history/HistoryModal')))?.default.show();
 
 export const showSettingModal = async () =>
   (await loadModal(() => import('@/components/modals/setting/SettingModal')))?.default.show();
@@ -50,41 +50,41 @@ export const showUnsavedSettingModal = async () =>
   (await loadModal(() => import('@/components/modals/setting/UnsavedSettingModal')))?.default.show();
 
 export const showUploadPickerModal = async (
-  props: Parameters<typeof import('@/components/modals/upload/UploadPickerModal')['default']['show']>[0]
-) => (await loadModal(() => import('@/components/modals/upload/UploadPickerModal')))?.default.show(props);
+  props: Parameters<typeof import('@/pages/s3/modals/upload/UploadPickerModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/pages/s3/modals/upload/UploadPickerModal')))?.default.show(props);
 
 export const showUploadLimitModal = async (
-  props: Parameters<typeof import('@/components/modals/upload/UploadLimitModal')['default']['show']>[0]
-) => (await loadModal(() => import('@/components/modals/upload/UploadLimitModal')))?.default.show(props);
+  props: Parameters<typeof import('@/pages/s3/modals/upload/UploadLimitModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/pages/s3/modals/upload/UploadLimitModal')))?.default.show(props);
 
 export const showMfaCodeModal = async (
-  props: Parameters<typeof import('@/components/modals/connect/MfaCodeModal')['default']['show']>[0]
-) => (await loadModal(() => import('@/components/modals/connect/MfaCodeModal')))?.default.show(props);
+  props: Parameters<typeof import('@/pages/s3/modals/connect/MfaCodeModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/pages/s3/modals/connect/MfaCodeModal')))?.default.show(props);
 
 export const showDeleteConfirmModal = async (
-  props: Parameters<typeof import('@/components/modals/delete/DeleteConfirmModal')['default']['show']>[0]
-) => (await loadModal(() => import('@/components/modals/delete/DeleteConfirmModal')))?.default.show(props);
+  props: Parameters<typeof import('@/pages/s3/modals/delete/DeleteConfirmModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/pages/s3/modals/delete/DeleteConfirmModal')))?.default.show(props);
 
 export const showDeleteResultModal = async (
-  props: Parameters<typeof import('@/components/modals/delete/DeleteResultModal')['default']['show']>[0]
-) => (await loadModal(() => import('@/components/modals/delete/DeleteResultModal')))?.default.show(props);
+  props: Parameters<typeof import('@/pages/s3/modals/delete/DeleteResultModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/pages/s3/modals/delete/DeleteResultModal')))?.default.show(props);
 
 export const showCreateBucketModal = async (
-  props: Parameters<typeof import('@/components/modals/bucket/CreateBucketModal')['default']['show']>[0]
-) => (await loadModal(() => import('@/components/modals/bucket/CreateBucketModal')))?.default.show(props);
+  props: Parameters<typeof import('@/pages/s3/modals/bucket/CreateBucketModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/pages/s3/modals/bucket/CreateBucketModal')))?.default.show(props);
 
 export const showBucketPolicyModal = async (
-  props: Parameters<typeof import('@/components/modals/bucket/BucketPolicyModal')['default']['show']>[0]
-) => (await loadModal(() => import('@/components/modals/bucket/BucketPolicyModal')))?.default.show(props);
+  props: Parameters<typeof import('@/pages/s3/modals/bucket/BucketPolicyModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/pages/s3/modals/bucket/BucketPolicyModal')))?.default.show(props);
 
 export const showExportProfileModal = async (
-  props: Parameters<typeof import('@/components/modals/profile/ExportProfileModal')['default']['show']>[0]
-) => (await loadModal(() => import('@/components/modals/profile/ExportProfileModal')))?.default.show(props);
+  props: Parameters<typeof import('@/pages/s3/modals/profile/ExportProfileModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/pages/s3/modals/profile/ExportProfileModal')))?.default.show(props);
 
 export const showImportPasswordModal = async (
-  props: Parameters<typeof import('@/components/modals/profile/ImportPasswordModal')['default']['show']>[0]
-) => (await loadModal(() => import('@/components/modals/profile/ImportPasswordModal')))?.default.show(props);
+  props: Parameters<typeof import('@/pages/s3/modals/profile/ImportPasswordModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/pages/s3/modals/profile/ImportPasswordModal')))?.default.show(props);
 
 export const showDeleteBucketModal = async (
-  props: Parameters<typeof import('@/components/modals/bucket/DeleteBucketModal')['default']['show']>[0]
-) => (await loadModal(() => import('@/components/modals/bucket/DeleteBucketModal')))?.default.show(props);
+  props: Parameters<typeof import('@/pages/s3/modals/bucket/DeleteBucketModal')['default']['show']>[0]
+) => (await loadModal(() => import('@/pages/s3/modals/bucket/DeleteBucketModal')))?.default.show(props);

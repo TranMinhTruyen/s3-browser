@@ -10,5 +10,6 @@
   "V000009": "{0} must not start with a reserved prefix",
   "V000010": "{0} must not end with a reserved suffix",
   "V000011": "{0} does not match",
-  "V000012": "{0} must be at least {1} characters"
+  "V000012": "{0} must be at least {1} characters",
+  "V000013": "{0} already exists"
 }

@@ -1,0 +1,38 @@
+{
+  "title": {
+    "create": "Datenbankprofil erstellen",
+    "edit": "Datenbankprofil bearbeiten"
+  },
+  "form": {
+    "label": {
+      "name": "Profilname",
+      "color": "Profilfarbe",
+      "host": "Host",
+      "port": "Port",
+      "database": "Datenbank",
+      "username": "Benutzername",
+      "password": "Passwort (optional)",
+      "sslMode": "SSL-Modus",
+      "filePath": "Pfad der Datenbankdatei"
+    },
+    "sslMode": {
+      "disable": "Deaktivieren",
+      "allow": "Erlauben",
+      "prefer": "Bevorzugen",
+      "require": "Erforderlich",
+      "verify-ca": "CA prüfen",
+      "verify-full": "Vollständig prüfen"
+    },
+    "tooltip": {
+      "chooseFile": "Datei auswählen"
+    },
+    "button": {
+      "create": "Profil erstellen",
+      "edit": "Profil aktualisieren"
+    }
+  },
+  "toast": {
+    "created": "Profil {{name}} erstellt",
+    "updated": "Profil {{name}} aktualisiert"
+  }
+}

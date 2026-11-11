@@ -1,0 +1,32 @@
+{
+  "title": {
+    "defaultTabName": "Новый запрос"
+  },
+  "tooltip": {
+    "connect": "Подключиться",
+    "execute": "Выполнить SQL"
+  },
+  "search": {
+    "placeholderProfile": "Поиск профиля",
+    "emptyProfile": "Профили не найдены"
+  },
+  "toast": {
+    "noProfile": "Сначала выберите профиль базы данных.",
+    "emptySql": "Нет SQL для выполнения.",
+    "formatAll": "SQL отформатирован.",
+    "formatSelection": "Выделенный фрагмент отформатирован.",
+    "formatError": "Не удалось отформатировать SQL: {{message}}"
+  },
+  "find": {
+    "title": "Найти и заменить",
+    "find": "Найти",
+    "replace": "Заменить",
+    "replaceAll": "Заменить все",
+    "cancel": "Отмена",
+    "placeholderFind": "Найти",
+    "placeholderReplace": "Заменить на",
+    "count": "{{index}}/{{total}}",
+    "notFound": "Ничего не найдено",
+    "replacedCount": "Заменено вхождений: {{n}}."
+  }
+}

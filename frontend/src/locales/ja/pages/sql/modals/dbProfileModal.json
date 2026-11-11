@@ -1,0 +1,38 @@
+{
+  "title": {
+    "create": "データベースプロファイルを作成",
+    "edit": "データベースプロファイルを編集"
+  },
+  "form": {
+    "label": {
+      "name": "プロファイル名",
+      "color": "プロファイルの色",
+      "host": "ホスト",
+      "port": "ポート",
+      "database": "データベース",
+      "username": "ユーザー名",
+      "password": "パスワード（任意）",
+      "sslMode": "SSL モード",
+      "filePath": "データベースファイルのパス"
+    },
+    "sslMode": {
+      "disable": "無効",
+      "allow": "許可",
+      "prefer": "優先",
+      "require": "必須",
+      "verify-ca": "CA を検証",
+      "verify-full": "完全に検証"
+    },
+    "tooltip": {
+      "chooseFile": "ファイルを選択"
+    },
+    "button": {
+      "create": "プロファイルを作成",
+      "edit": "プロファイルを更新"
+    }
+  },
+  "toast": {
+    "created": "プロファイル {{name}} を作成しました",
+    "updated": "プロファイル {{name}} を更新しました"
+  }
+}

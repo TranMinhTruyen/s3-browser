@@ -6,11 +6,11 @@ import {
 } from '@wails/S3Browser/internal/handlers/updatehandler';
 import type { UpdateStateOutput } from '@wails/S3Browser/models';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useDownloaderStore } from '@/common/stores/downloaderStore';
 import { useUpdateStore } from '@/common/stores/updateStore';
-import { useUploaderStore } from '@/common/stores/uploaderStore';
 import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
+import { useDownloaderStore } from '@/pages/s3/stores/downloaderStore';
+import { useUploaderStore } from '@/pages/s3/stores/uploaderStore';
 
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
 vi.mock('@/components/modals/confirm/ConfirmModal', () => ({ default: { show: vi.fn() } }));

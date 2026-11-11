@@ -7,10 +7,10 @@ import './style.css';
 import '@mantine/core/styles.css';
 import NiceModal from '@ebay/nice-modal-react';
 import { appTheme } from '@/common/theme/appTheme';
-import { installDropTargetCleanup } from '@/common/utils/dropTargetUtils';
 import { settingColorSchemeManager } from '@/common/utils/settingUtils';
 import { loadStartupData } from '@/common/utils/startup';
 import MotionProvider from '@/components/providers/MotionProvider';
+import { installDropTargetCleanup } from '@/pages/s3/utils/dropTargetUtils';
 
 installDropTargetCleanup();
 

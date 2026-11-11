@@ -335,7 +335,7 @@ async function runLang(browser, lang, bigFilePath) {
 
   const createProfileButton = () =>
     page.getByRole('button', {
-      name: L('components/layouts/navbar/connectionProfiles', 'tooltip.createProfile'),
+      name: L('pages/s3/connectionProfiles', 'tooltip.createProfile'),
       exact: true,
     });
   /** The side panel whose header text is the title of the given drawer namespace. */
@@ -351,20 +351,20 @@ async function runLang(browser, lang, bigFilePath) {
       .last();
   const toastBox = () => page.locator('[data-sonner-toast]').first();
   const tabConnect = () =>
-    page.getByRole('button', { name: L('pages/tab/tabLayout', 'tooltip.connect'), exact: true }).last();
+    page.getByRole('button', { name: L('pages/s3/tabLayout', 'tooltip.connect'), exact: true }).last();
   const openProfileMenu = async () => {
     await page.getByText(PROFILE, { exact: true }).first().click({ button: 'right' });
     await page.getByRole('menuitem').first().waitFor();
   };
   const clickMenuItem = key =>
-    page.getByRole('menuitem', { name: L('components/layouts/navbar/connectionProfiles', key), exact: true }).click();
+    page.getByRole('menuitem', { name: L('pages/s3/connectionProfiles', key), exact: true }).click();
 
   /** Disconnects (when connected) and deletes the demo profile; `withShot` photographs the confirmation. */
   async function deleteProfile(withShot) {
     if (!(await page.getByText(PROFILE, { exact: true }).count())) return;
     await openProfileMenu();
     const disconnect = page.getByRole('menuitem', {
-      name: L('components/layouts/navbar/connectionProfiles', 'contextMenu.disconnect'),
+      name: L('pages/s3/connectionProfiles', 'contextMenu.disconnect'),
       exact: true,
     });
     if (await disconnect.count()) {
@@ -382,11 +382,11 @@ async function runLang(browser, lang, bigFilePath) {
     await pause(1000);
   }
 
-  const BUCKET_PAGE = 'pages/tab/bucket/page';
-  const CREATE_BUCKET = 'components/modals/createBucketModal';
-  const DELETE_BUCKET = 'components/modals/deleteBucketModal';
-  const POLICY_MODAL = 'components/modals/bucketPolicyModal';
-  const CONNECT = 'components/modals/connectModal';
+  const BUCKET_PAGE = 'pages/s3/bucket/page';
+  const CREATE_BUCKET = 'pages/s3/modals/createBucketModal';
+  const DELETE_BUCKET = 'pages/s3/modals/deleteBucketModal';
+  const POLICY_MODAL = 'pages/s3/modals/bucketPolicyModal';
+  const CONNECT = 'pages/s3/modals/connectModal';
   const closeModal = () =>
     page
       .getByRole('button', { name: L('common', 'button.close'), exact: true })
@@ -437,7 +437,7 @@ async function runLang(browser, lang, bigFilePath) {
   async function openEmptyProfileForm(provider) {
     await page
       .getByRole('button', {
-        name: L('components/layouts/navbar/connectionProfiles', 'tooltip.createProfile'),
+        name: L('pages/s3/connectionProfiles', 'tooltip.createProfile'),
         exact: true,
       })
       .click();
@@ -485,17 +485,17 @@ async function runLang(browser, lang, bigFilePath) {
   });
 
   // 03 connection profile form (fake key values; the real ones are typed only after the shot)
-  const form = key => L('components/modals/connectModal', `form.label.${key}`);
+  const form = key => L('pages/s3/modals/connectModal', `form.label.${key}`);
   await page
     .getByRole('button', {
-      name: L('components/layouts/navbar/connectionProfiles', 'tooltip.createProfile'),
+      name: L('pages/s3/connectionProfiles', 'tooltip.createProfile'),
       exact: true,
     })
     .click();
   await page.getByText('MinIO', { exact: true }).click();
   await page.getByRole('textbox', { name: form('name'), exact: true }).fill(PROFILE);
   await page.getByRole('textbox', { name: form('endpoint') }).fill('http://localhost:9000');
-  await page.locator('button', { hasText: L('components/inputs/inputs', 'regionCombobox.placeholder') }).click();
+  await page.locator('button', { hasText: L('pages/s3/components/inputs', 'regionCombobox.placeholder') }).click();
   await page.getByRole('option', { name: /us-east-1/ }).click();
   await page.getByRole('textbox', { name: form('accessKey') }).fill('demo-access-key');
   await page.getByLabel(form('secretKey'), { exact: true }).fill('demo-secret-key');
@@ -506,7 +506,7 @@ async function runLang(browser, lang, bigFilePath) {
       {
         id: 'save',
         target: page.getByRole('button', {
-          name: L('components/modals/connectModal', 'form.button.createProfile'),
+          name: L('pages/s3/modals/connectModal', 'form.button.createProfile'),
           exact: true,
         }),
         place: 'left',
@@ -519,7 +519,7 @@ async function runLang(browser, lang, bigFilePath) {
   await page.getByRole('textbox', { name: form('accessKey') }).fill(accessKey);
   await page.getByLabel(form('secretKey'), { exact: true }).fill(secretKey);
   await page
-    .getByRole('button', { name: L('components/modals/connectModal', 'form.button.createProfile'), exact: true })
+    .getByRole('button', { name: L('pages/s3/modals/connectModal', 'form.button.createProfile'), exact: true })
     .click();
   await pause(900);
   await shot('04-profile-created', {
@@ -533,9 +533,9 @@ async function runLang(browser, lang, bigFilePath) {
   await page.keyboard.press('Escape');
 
   // 37-40 export and import a profile (nothing is written: the export modal is canceled, the file is faked)
-  const CP = 'components/layouts/navbar/connectionProfiles';
-  const EXPORT_MODAL = 'components/modals/exportProfileModal';
-  const IMPORT_MODAL = 'components/modals/importPasswordModal';
+  const CP = 'pages/s3/connectionProfiles';
+  const EXPORT_MODAL = 'pages/s3/modals/exportProfileModal';
+  const IMPORT_MODAL = 'pages/s3/modals/importPasswordModal';
   await openProfileMenu();
   await shot('37-profile-export-menu', {
     notes: [
@@ -612,7 +612,7 @@ async function runLang(browser, lang, bigFilePath) {
         target: tabPanel
           .locator('[aria-haspopup="listbox"]')
           .first()
-          .or(tabPanel.getByRole('button', { name: L('pages/tab/tabLayout', 'tooltip.connect'), exact: true })),
+          .or(tabPanel.getByRole('button', { name: L('pages/s3/tabLayout', 'tooltip.connect'), exact: true })),
         place: 'left',
         gap: 25,
         dy: 110,
@@ -622,30 +622,30 @@ async function runLang(browser, lang, bigFilePath) {
   });
 
   // 07 bucket search
-  const bucketSearch = page.getByPlaceholder(L('pages/tab/tabLayout', 'search.placeholderBucket'));
+  const bucketSearch = page.getByPlaceholder(L('pages/s3/tabLayout', 'search.placeholderBucket'));
   await bucketSearch.fill('reports');
   await bucketSearch.press('Enter');
   await page.getByText('demo-reports', { exact: true }).waitFor();
   await pause(1000);
   await shot('07-bucket-search', { notes: [{ id: 'search', target: bucketSearch, place: 'bottom', gap: 130 }] });
-  await page.getByRole('button', { name: L('pages/tab/tabLayout', 'tooltip.clearSearch') }).click();
+  await page.getByRole('button', { name: L('pages/s3/tabLayout', 'tooltip.clearSearch') }).click();
   await pause();
 
   // 29 bucket menu, 30 bucket details drawer, 31 create bucket (real), 32 bucket permission (custom policy)
   await openBucketMenu('demo-photos');
   await shot('29-bucket-menu', { notes: [{ id: 'menu', target: page.getByRole('menu'), place: 'right' }] });
   await clickBucketMenu('detail');
-  await page.getByText(L('pages/tab/bucketDetailDrawer', 'label.rootCount')).waitFor();
+  await page.getByText(L('pages/s3/bucketDetailDrawer', 'label.rootCount')).waitFor();
   await pause(1500);
   await shot('30-bucket-detail', {
-    notes: [{ id: 'detail', target: drawer('pages/tab/bucketDetailDrawer'), place: 'left' }],
+    notes: [{ id: 'detail', target: drawer('pages/s3/bucketDetailDrawer'), place: 'left' }],
   });
   await page
-    .getByRole('button', { name: L('pages/tab/bucketDetailDrawer', 'tooltip.close'), exact: true })
+    .getByRole('button', { name: L('pages/s3/bucketDetailDrawer', 'tooltip.close'), exact: true })
     .last()
     .click();
   await pause();
-  await page.getByRole('button', { name: L('pages/tab/tabLayout', 'tooltip.createBucket'), exact: true }).click();
+  await page.getByRole('button', { name: L('pages/s3/tabLayout', 'tooltip.createBucket'), exact: true }).click();
   await page.getByPlaceholder(L(CREATE_BUCKET, 'placeholder.name')).fill(TEMP_BUCKET);
   await page.getByText(L(POLICY_MODAL, 'mode.public'), { exact: true }).click();
   await pause();
@@ -688,12 +688,12 @@ async function runLang(browser, lang, bigFilePath) {
   await page.getByText('paris.png').waitFor();
   await shot('09-object-folder', { notes: [{ id: 'file', target: page.getByText('paris.png'), place: 'right' }] });
   await page.getByText('paris.png').click();
-  await page.getByText(L('pages/tab/objectDetailDrawer', 'label.contentType')).waitFor();
+  await page.getByText(L('pages/s3/objectDetailDrawer', 'label.contentType')).waitFor();
   await shot('10-object-detail', {
-    notes: [{ id: 'detail', target: drawer('pages/tab/objectDetailDrawer'), place: 'left' }],
+    notes: [{ id: 'detail', target: drawer('pages/s3/objectDetailDrawer'), place: 'left' }],
   });
   await page
-    .getByRole('button', { name: L('pages/tab/objectDetailDrawer', 'tooltip.close'), exact: true })
+    .getByRole('button', { name: L('pages/s3/objectDetailDrawer', 'tooltip.close'), exact: true })
     .last()
     .click();
   await pause();
@@ -707,23 +707,23 @@ async function runLang(browser, lang, bigFilePath) {
       { id: 'selected', target: page.getByRole('checkbox', { checked: true }), place: 'bottom', gap: 30, dx: 130 },
     ],
   });
-  await page.getByRole('button', { name: L('pages/tab/object/page', 'tooltip.clearSelected') }).click();
+  await page.getByRole('button', { name: L('pages/s3/object/page', 'tooltip.clearSelected') }).click();
 
   // 12 object search (keys containing the keyword in the current folder)
-  const objectSearch = page.getByPlaceholder(L('pages/tab/tabLayout', 'search.placeholderObject'));
+  const objectSearch = page.getByPlaceholder(L('pages/s3/tabLayout', 'search.placeholderObject'));
   await objectSearch.fill('tokyo');
   await objectSearch.press('Enter');
   await page.getByText('tokyo.png').waitFor();
   await pause(1000);
   await shot('12-object-search', { notes: [{ id: 'search', target: objectSearch, place: 'bottom' }] });
-  await page.getByRole('button', { name: L('pages/tab/tabLayout', 'tooltip.clearSearch') }).click();
+  await page.getByRole('button', { name: L('pages/s3/tabLayout', 'tooltip.clearSearch') }).click();
 
   // 13 upload picker (empty, then filled by the drop event the backend would send)
-  await page.getByRole('button', { name: L('pages/tab/tabLayout', 'tooltip.upload') }).click();
-  await page.getByText(L('components/modals/uploadPickerModal', 'dropHint')).waitFor();
+  await page.getByRole('button', { name: L('pages/s3/tabLayout', 'tooltip.upload') }).click();
+  await page.getByText(L('pages/s3/modals/uploadPickerModal', 'dropHint')).waitFor();
   await shot('13-upload-modal', {
     notes: [
-      { id: 'drop', target: page.getByText(L('components/modals/uploadPickerModal', 'dropHint')), place: 'bottom' },
+      { id: 'drop', target: page.getByText(L('pages/s3/modals/uploadPickerModal', 'dropHint')), place: 'bottom' },
     ],
   });
   const tabId = await page.evaluate(() => document.querySelector('[data-tab-id]')?.getAttribute('data-tab-id'));
@@ -758,7 +758,7 @@ async function runLang(browser, lang, bigFilePath) {
 
   // 15 real upload with progress, 16 the new object, 17 delete confirmation
   await page.getByText('demo-photos', { exact: true }).first().click();
-  await page.getByRole('button', { name: L('pages/tab/object/page', 'tooltip.backToBucket') }).click();
+  await page.getByRole('button', { name: L('pages/s3/object/page', 'tooltip.backToBucket') }).click();
   await page.getByText('demo-backups', { exact: true }).click();
   await page.getByText('db', { exact: true }).click();
   await page.getByText('backup-2026-10-28.zip').waitFor();
@@ -769,18 +769,18 @@ async function runLang(browser, lang, bigFilePath) {
     prefix: 'db/',
     objList: [{ path: bigFilePath, relKey: BIG_FILE }],
   });
-  await page.getByText(L('components/layouts/transfer/uploaderWindow', 'label.uploadedLbl')).first().waitFor();
+  await page.getByText(L('pages/s3/transfer/uploaderWindow', 'label.uploadedLbl')).first().waitFor();
   await pause(200);
   await shot('15-upload-progress', {
-    notes: [{ id: 'progress', target: transferWindow('components/layouts/transfer/uploaderWindow'), place: 'left' }],
+    notes: [{ id: 'progress', target: transferWindow('pages/s3/transfer/uploaderWindow'), place: 'left' }],
   });
   await upload;
   await pause(500);
   await page
     .getByRole('button', {
-      name: L('pages/tab/tabLayout', 'tooltip.refresh').replace(
+      name: L('pages/s3/tabLayout', 'tooltip.refresh').replace(
         '{target}',
-        L('pages/tab/object/page', 'tooltip.objectList')
+        L('pages/s3/object/page', 'tooltip.objectList')
       ),
     })
     .click();
@@ -789,17 +789,17 @@ async function runLang(browser, lang, bigFilePath) {
     notes: [{ id: 'file', target: page.getByText(BIG_FILE, { exact: true }), place: 'bottom' }],
   });
   await page
-    .getByRole('button', { name: L('pages/tab/object/page', 'tooltip.moreActions') })
+    .getByRole('button', { name: L('pages/s3/object/page', 'tooltip.moreActions') })
     .last()
     .click();
-  await page.getByRole('menuitem', { name: L('pages/tab/object/page', 'action.delete') }).click();
+  await page.getByRole('menuitem', { name: L('pages/s3/object/page', 'action.delete') }).click();
   await pause();
   await shot('17-delete-confirm', {
     notes: [
       {
         id: 'confirm',
         target: page.getByRole('button', {
-          name: `${L('components/modals/deleteConfirmModal', 'delete')} (1)`,
+          name: `${L('pages/s3/modals/deleteConfirmModal', 'delete')} (1)`,
           exact: true,
         }),
         place: 'left',
@@ -807,9 +807,9 @@ async function runLang(browser, lang, bigFilePath) {
     ],
   });
   await page
-    .getByRole('button', { name: `${L('components/modals/deleteConfirmModal', 'delete')} (1)`, exact: true })
+    .getByRole('button', { name: `${L('pages/s3/modals/deleteConfirmModal', 'delete')} (1)`, exact: true })
     .click();
-  await page.getByText(L('components/modals/deleteResultModal', 'title'), { exact: true }).waitFor();
+  await page.getByText(L('pages/s3/modals/deleteResultModal', 'title'), { exact: true }).waitFor();
   await page.getByRole('button', { name: L('common', 'button.OK'), exact: true }).click();
   await page.getByRole('tabpanel').getByText(BIG_FILE, { exact: true }).waitFor({ state: 'detached' });
   await pause(600);
@@ -833,7 +833,7 @@ async function runLang(browser, lang, bigFilePath) {
   }
   await pause(800);
   await shot('19-download-progress', {
-    notes: [{ id: 'progress', target: transferWindow('components/layouts/transfer/downloaderWindow'), place: 'left' }],
+    notes: [{ id: 'progress', target: transferWindow('pages/s3/transfer/downloaderWindow'), place: 'left' }],
   });
   // Finish the fake downloads (newer version, status DONE) so the window is not in shots 21 onwards
   for (const { id, fileName } of downloads) {
@@ -844,19 +844,19 @@ async function runLang(browser, lang, bigFilePath) {
   // 21-22 common errors, reproduced with "Test connection" in the profile form
   await page
     .getByRole('button', {
-      name: L('components/layouts/navbar/connectionProfiles', 'tooltip.createProfile'),
+      name: L('pages/s3/connectionProfiles', 'tooltip.createProfile'),
       exact: true,
     })
     .click();
   await page.getByText('MinIO', { exact: true }).click();
   await page.getByRole('textbox', { name: form('name'), exact: true }).fill('Wrong credentials');
   await page.getByRole('textbox', { name: form('endpoint') }).fill(endpoint);
-  await page.locator('button', { hasText: L('components/inputs/inputs', 'regionCombobox.placeholder') }).click();
+  await page.locator('button', { hasText: L('pages/s3/components/inputs', 'regionCombobox.placeholder') }).click();
   await page.getByRole('option', { name: /us-east-1/ }).click();
   await page.getByRole('textbox', { name: form('accessKey') }).fill('wrong-access-key');
   await page.getByLabel(form('secretKey'), { exact: true }).fill('wrong-secret-key');
   const testButton = page.getByRole('button', {
-    name: L('components/modals/connectModal', 'form.button.testConnection'),
+    name: L('pages/s3/modals/connectModal', 'form.button.testConnection'),
   });
   await page.locator('[data-sonner-toast]').first().waitFor({ state: 'detached', timeout: 15000 });
   await testButton.click();

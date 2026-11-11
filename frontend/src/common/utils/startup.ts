@@ -1,5 +1,5 @@
 import { useSettingStore } from '@/common/stores/settingStore';
-import { restoreTabsFromDisk } from '@/common/utils/tabPersistence';
+import { restoreTabsFromDisk } from '@/pages/s3/utils/tabPersistence';
 
 /**
  * Loads what the first render needs, in parallel: settings (so the UI never flashes the wrong theme, font or

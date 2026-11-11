@@ -50,20 +50,20 @@ const chunk = (key: ModalKey) => async () => {
 vi.mock('sonner', () => ({ toast: h.toast }));
 
 const CHUNKS: [string, ModalKey][] = [
-  ['connect/ConnectModal', 'connect'],
-  ['connect/MfaCodeModal', 'mfaCode'],
-  ['history/HistoryModal', 'history'],
-  ['setting/SettingModal', 'setting'],
-  ['setting/UnsavedSettingModal', 'unsavedSetting'],
-  ['upload/UploadPickerModal', 'uploadPicker'],
-  ['upload/UploadLimitModal', 'uploadLimit'],
-  ['delete/DeleteConfirmModal', 'deleteConfirm'],
-  ['delete/DeleteResultModal', 'deleteResult'],
-  ['bucket/CreateBucketModal', 'createBucket'],
-  ['bucket/BucketPolicyModal', 'bucketPolicy'],
-  ['bucket/DeleteBucketModal', 'deleteBucket'],
-  ['profile/ExportProfileModal', 'exportProfile'],
-  ['profile/ImportPasswordModal', 'importPassword'],
+  ['pages/s3/modals/connect/ConnectModal', 'connect'],
+  ['pages/s3/modals/connect/MfaCodeModal', 'mfaCode'],
+  ['pages/s3/modals/history/HistoryModal', 'history'],
+  ['components/modals/setting/SettingModal', 'setting'],
+  ['components/modals/setting/UnsavedSettingModal', 'unsavedSetting'],
+  ['pages/s3/modals/upload/UploadPickerModal', 'uploadPicker'],
+  ['pages/s3/modals/upload/UploadLimitModal', 'uploadLimit'],
+  ['pages/s3/modals/delete/DeleteConfirmModal', 'deleteConfirm'],
+  ['pages/s3/modals/delete/DeleteResultModal', 'deleteResult'],
+  ['pages/s3/modals/bucket/CreateBucketModal', 'createBucket'],
+  ['pages/s3/modals/bucket/BucketPolicyModal', 'bucketPolicy'],
+  ['pages/s3/modals/bucket/DeleteBucketModal', 'deleteBucket'],
+  ['pages/s3/modals/profile/ExportProfileModal', 'exportProfile'],
+  ['pages/s3/modals/profile/ImportPasswordModal', 'importPassword'],
 ];
 
 const PROPS = {
@@ -99,7 +99,7 @@ const HEAVY_CHUNK_DEPS = [
   '@mantine/core',
   '@mantine/form',
   '@wails/S3Browser/internal/handlers/buckethandler',
-  '@/common/stores/profileStore',
+  '@/pages/s3/stores/profileStore',
   '@/common/utils/ipcUtils',
   '@/components/buttons/Button',
   '@/components/buttons/CloseButton',
@@ -111,7 +111,7 @@ async function loadModule() {
   vi.resetModules();
   vi.doUnmock('@/common/utils/modalUtils');
   for (const id of HEAVY_CHUNK_DEPS) vi.doUnmock(id);
-  for (const [file, key] of CHUNKS) vi.doMock(`@/components/modals/${file}`, () => chunk(key)());
+  for (const [file, key] of CHUNKS) vi.doMock(`@/${file}`, () => chunk(key)());
   const lazy = await import('@/components/modals/lazyModals');
   const i18n = (await import('@/locales/i18n')).default;
   return { lazy, i18n };
@@ -172,7 +172,7 @@ describe('lazyModals', () => {
     // Mantine/app tree is loaded and the test stays fast on a cold, loaded run.
     const { i18n } = await loadModule();
     vi.resetModules();
-    vi.doUnmock('@/components/modals/connect/MfaCodeModal');
+    vi.doUnmock('@/pages/s3/modals/connect/MfaCodeModal');
     for (const id of HEAVY_CHUNK_DEPS) vi.doMock(id, () => ({}));
     vi.doMock('@/common/utils/modalUtils', () => ({
       createMantineModal: () => {

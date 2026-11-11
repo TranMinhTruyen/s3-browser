@@ -1,0 +1,38 @@
+{
+  "title": {
+    "create": "建立資料庫設定檔",
+    "edit": "編輯資料庫設定檔"
+  },
+  "form": {
+    "label": {
+      "name": "設定檔名稱",
+      "color": "設定檔顏色",
+      "host": "主機",
+      "port": "連接埠",
+      "database": "資料庫",
+      "username": "使用者名稱",
+      "password": "密碼（選填）",
+      "sslMode": "SSL 模式",
+      "filePath": "資料庫檔案路徑"
+    },
+    "sslMode": {
+      "disable": "停用",
+      "allow": "允許",
+      "prefer": "優先",
+      "require": "必要",
+      "verify-ca": "驗證 CA",
+      "verify-full": "完整驗證"
+    },
+    "tooltip": {
+      "chooseFile": "選擇檔案"
+    },
+    "button": {
+      "create": "建立設定檔",
+      "edit": "更新設定檔"
+    }
+  },
+  "toast": {
+    "created": "已建立設定檔 {{name}}",
+    "updated": "已更新設定檔 {{name}}"
+  }
+}

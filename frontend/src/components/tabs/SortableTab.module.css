@@ -1,0 +1,34 @@
+/*
+ * Rounded pill tabs with a small gap around them: inactive tabs have a default border so they stand out,
+ * hover is a soft tint, the active tab uses the primary "light" variant like buttons.
+ * Scoped under .wrapper to outrank Mantine's outline-variant rules. Shared by S3 and SQL tabs.
+ */
+.wrapper .tab {
+  /* No vertical margin (the tab page spaces the strip) and none left of the first tab: lines up with the tab detail. */
+  margin: 0 2px;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  color: var(--mantine-color-text);
+  transition: background-color 150ms ease;
+}
+
+.wrapper:first-child .tab {
+  margin-left: 0;
+}
+
+/* Mantine's 1px corner pieces of the outline active tab. */
+.wrapper .tab::before,
+.wrapper .tab::after {
+  display: none;
+}
+
+.wrapper .tab:not([data-active]):hover {
+  background-color: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-5));
+}
+
+/* Same 1px border width as inactive tabs so switching tabs never shifts the layout. */
+.wrapper .tab[data-active] {
+  border-color: transparent;
+  background-color: var(--mantine-primary-color-light);
+  color: var(--mantine-primary-color-light-color);
+}

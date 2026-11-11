@@ -1,0 +1,32 @@
+{
+  "title": {
+    "defaultTabName": "Truy vấn mới"
+  },
+  "tooltip": {
+    "connect": "Kết nối",
+    "execute": "Chạy SQL"
+  },
+  "search": {
+    "placeholderProfile": "Tìm profile",
+    "emptyProfile": "Không tìm thấy profile"
+  },
+  "toast": {
+    "noProfile": "Hãy chọn hồ sơ cơ sở dữ liệu trước.",
+    "emptySql": "Không có SQL để chạy.",
+    "formatAll": "Đã định dạng SQL.",
+    "formatSelection": "Đã định dạng phần đã chọn.",
+    "formatError": "Không thể định dạng SQL: {{message}}"
+  },
+  "find": {
+    "title": "Tìm và thay thế",
+    "find": "Tìm",
+    "replace": "Thay thế",
+    "replaceAll": "Thay thế tất cả",
+    "cancel": "Hủy",
+    "placeholderFind": "Tìm",
+    "placeholderReplace": "Thay bằng",
+    "count": "{{index}}/{{total}}",
+    "notFound": "Không tìm thấy",
+    "replacedCount": "Đã thay thế {{n}} vị trí."
+  }
+}
