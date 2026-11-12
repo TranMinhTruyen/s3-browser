@@ -48,7 +48,19 @@
       "Bash(cargo add *)",
       "Bash(cargo tree *)",
       "Bash(cargo llvm-cov *)",
-      "WebFetch(domain:docs.rs)"
+      "WebFetch(domain:docs.rs)",
+      "Bash(go test *)",
+      "Bash(node_modules/.bin/knip.exe *)",
+      "Bash(graphify query *)",
+      "Bash(graphify path *)",
+      "Bash(graphify explain *)",
+      "Bash(gh release list *)",
+      "Bash(git fetch origin master)",
+      "Bash(git fetch origin staging master)",
+      "Bash(git switch -c release/v*)",
+      "Bash(git add -- build/config.yml)",
+      "Bash(git push -u origin release/v*)",
+      "Bash(gh pr create --base staging --head release/v*)"
     ],
     "deny": [
       "Bash(git reset *)",

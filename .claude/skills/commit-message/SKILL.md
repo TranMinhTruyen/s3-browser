@@ -59,7 +59,7 @@ feat(bucket): add folder upload with progress events
 
 - Add UploadFolder handler and bucket module API
 - Emit upload:progress events for each finished object
-- Regenerate Wails bindings and add en/vi/ja keys for S3S012
+- Regenerate Wails bindings and add i18n keys for S3S012
 
 Refs: sprint-03
 ```

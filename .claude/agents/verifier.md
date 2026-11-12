@@ -11,7 +11,7 @@ Bạn là **verifier** của S3Browser. Bạn chỉ chạy kiểm tra và báo c
 
 ## Các bước
 
-1. Xác định phạm vi bằng `git status --porcelain` và `git diff --name-only`.
+1. Xác định phạm vi bằng `git status --porcelain` và `git diff HEAD --name-only` (gồm cả phần đã staged).
 1b. Nếu có file trong `rust/` thay đổi (chạy trong `rust/`):
    - `cargo fmt --check`
    - `cargo clippy --target x86_64-pc-windows-msvc --all-targets -- -D warnings`
@@ -32,10 +32,11 @@ Bạn là **verifier** của S3Browser. Bạn chỉ chạy kiểm tra và báo c
    - Windows `node_modules/.bin/biome.exe check <các file đã đổi>`, macOS/Linux `node_modules/.bin/biome check <các file đã đổi>` (không dùng `npx biome`)
    - Unit test và coverage: chạy toàn bộ test bằng lệnh `vitest run` trong mục **Testing** của `CLAUDE.md`, với `--coverage.include` là các file `.ts`/`.tsx` production đã đổi (trừ phần loại trừ). Mỗi file phải đạt **Branches ≥ 95%** và **Lines ≥ 95%**. Đây cũng là bước hồi quy: test fail ở file **không** thuộc phạm vi đã đổi ghi rõ là lỗi hồi quy (agent nên sửa: `react-frontend`, trừ khi plan chủ ý đổi hành vi đó)
    - **Console sạch**: đọc toàn bộ output của lần `vitest run` ở trên (cả stdout và stderr). Nếu có `Warning:`, cảnh báo `act(...)`, dòng `stderr |`, `console.error` hoặc `console.warn` thì ghi **FAIL**, kèm tên test và nguyên văn cảnh báo (agent nên sửa: `react-frontend` nếu do code production, `react-tester` nếu do cách viết test). Đồng thời grep `console\.(log|warn|error|debug)` trong các file production đã đổi; có thì FAIL
+   - **Code chết**: chạy knip theo mục **Lệnh** của `CLAUDE.md` (Windows `node_modules/.bin/knip.exe`). File/export/type/dependency không dùng nằm trong file đã đổi (hoặc file mới) thì **FAIL** (agent nên sửa: `react-frontend`); mục knip báo ở file không đổi chỉ ghi vào Ghi chú, không tính FAIL
    - Mỗi file production đã đổi có file test tương ứng trong `frontend/src/test/` theo cùng cây thư mục (ví dụ `src/pages/bucket/BucketPage.tsx` → `src/test/pages/bucket/BucketPage.test.tsx`) (hoặc được ghi trong mục "Không test được" kèm lý do)
 4. Kiểm tra tính đầy đủ:
-   - Message code mới trong `module.go` đều có key trong `ipcMessage.json` của en, vi, ja.
-   - Key i18n mới có đủ ở cả 3 ngôn ngữ, namespace mới đã đăng ký trong `resource.ts` của cả 3.
+   - Message code mới trong `module.go` đều có key trong `ipcMessage.json` của **cả 7 ngôn ngữ** (`en`, `vi`, `ja`, `zh-CN`, `zh-TW`, `ru`, `de`).
+   - Mỗi file locale đã đổi hoặc thêm mới: 6 ngôn ngữ còn lại có **đúng tập key và placeholder** (`{{x}}`/`{x}`) như bản `en` (so bằng script tạm ngoài repo, ví dụ `bun -e`; thiếu, thừa hoặc lệch placeholder đều FAIL, ghi rõ ngôn ngữ và key). Namespace mới đã đăng ký trong `resource.ts` của cả 7.
    - Model mới đã được re-export trong `models/alias.go`.
    - Tester không sửa code production: file do `react-tester` thêm chỉ là file test, helper test, `testdata`.
 
@@ -56,12 +57,13 @@ Bạn là **verifier** của S3Browser. Bạn chỉ chạy kiểm tra và báo c
 | tsc | | |
 | oxlint | | |
 | biome | | |
-| i18n đủ en/vi/ja | | |
+| i18n đủ 7 ngôn ngữ (key + placeholder) | | |
 | alias.go | | |
 | bindings mới nhất | | |
 | sqlc diff | | |
 | vitest | | |
 | console sạch (không warning/error) | | |
+| knip (code chết trong file đã đổi) | | |
 | FE coverage Branches/Lines ≥ 95% | | file dưới ngưỡng: ... |
 
 ### Lỗi
