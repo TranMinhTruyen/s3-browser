@@ -27,6 +27,10 @@
     "placeholderReplace": "替换为",
     "count": "{{index}}/{{total}}",
     "notFound": "未找到结果",
-    "replacedCount": "已替换 {{n}} 处。"
+    "replacedCount": "已替换 {{n}} 处。",
+    "matchCase": "区分大小写",
+    "matchWholeWord": "全字匹配",
+    "useRegex": "使用正则表达式",
+    "invalidRegex": "正则表达式无效"
   }
 }

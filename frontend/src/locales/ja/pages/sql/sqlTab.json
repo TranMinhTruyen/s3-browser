@@ -27,6 +27,10 @@
     "placeholderReplace": "置換後の文字列",
     "count": "{{index}}/{{total}}",
     "notFound": "見つかりません",
-    "replacedCount": "{{n}}件を置換しました。"
+    "replacedCount": "{{n}}件を置換しました。",
+    "matchCase": "大文字と小文字を区別する",
+    "matchWholeWord": "単語単位で検索する",
+    "useRegex": "正規表現を使用する",
+    "invalidRegex": "正規表現が正しくありません"
   }
 }

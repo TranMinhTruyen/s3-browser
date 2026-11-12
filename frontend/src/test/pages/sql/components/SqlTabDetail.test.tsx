@@ -18,6 +18,7 @@ type EditorProps = {
   onFormat: () => void;
   onFind: () => void;
   onExecute: () => void;
+  onDocChange: () => void;
 };
 
 const editor = vi.hoisted(() => ({ props: null as unknown, view: null as unknown, mount: true }));
@@ -272,6 +273,58 @@ describe('SqlTabDetail', () => {
       await user.click(screen.getByRole('button', { name: 'Replace all' }));
 
       expect(view().state.doc.toString()).toBe('SELECT 1');
+    });
+
+    it('keeps the search options after closing and reopening the panel', async () => {
+      const user = userEvent.setup();
+      renderDetail();
+      act(() => props().onFind());
+      await user.click(screen.getByRole('button', { name: 'Match case' }));
+      await user.click(screen.getByRole('button', { name: 'Use regular expression' }));
+
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      act(() => props().onFind());
+
+      expect(screen.getByRole('button', { name: 'Match case' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'Match whole word' })).toHaveAttribute('aria-pressed', 'false');
+      expect(screen.getByRole('button', { name: 'Use regular expression' })).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('applies the search options to Replace all in the editor', async () => {
+      const user = userEvent.setup();
+      renderDetail();
+      act(() => props().onFind());
+      await user.click(screen.getByRole('button', { name: 'Use regular expression' }));
+      await user.type(findBox()!, 'SEL(E)CT');
+      await user.type(screen.getByPlaceholderText('Replace with'), 'x$1');
+      await user.click(screen.getByRole('button', { name: 'Replace all' }));
+      expect(view().state.doc.toString()).toBe('xe 1');
+    });
+
+    it('refreshes the shown counter when the editor reports a document change', async () => {
+      const user = userEvent.setup();
+      renderDetail();
+      act(() => props().onFind());
+      await user.type(findBox()!, 'select');
+      await user.click(screen.getByRole('button', { name: 'Find' }));
+      expect(screen.getByText('1/1')).toBeInTheDocument();
+
+      act(() => {
+        view().dispatch({ changes: { from: view().state.doc.length, insert: ' select' } });
+        props().onDocChange();
+      });
+
+      expect(screen.getByText('1/2')).toBeInTheDocument();
+    });
+
+    it('ignores document changes while the panel is closed or after it was closed', async () => {
+      const user = userEvent.setup();
+      renderDetail();
+      expect(() => act(() => props().onDocChange())).not.toThrow();
+
+      act(() => props().onFind());
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(() => act(() => props().onDocChange())).not.toThrow();
     });
   });
 });

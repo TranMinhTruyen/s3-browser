@@ -27,6 +27,10 @@
     "placeholderReplace": "Thay bằng",
     "count": "{{index}}/{{total}}",
     "notFound": "Không tìm thấy",
-    "replacedCount": "Đã thay thế {{n}} vị trí."
+    "replacedCount": "Đã thay thế {{n}} vị trí.",
+    "matchCase": "Phân biệt chữ hoa chữ thường",
+    "matchWholeWord": "Khớp toàn bộ từ",
+    "useRegex": "Dùng biểu thức chính quy",
+    "invalidRegex": "Biểu thức chính quy không hợp lệ"
   }
 }

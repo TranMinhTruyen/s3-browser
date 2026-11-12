@@ -27,6 +27,10 @@
     "placeholderReplace": "Ersetzen durch",
     "count": "{{index}}/{{total}}",
     "notFound": "Keine Treffer",
-    "replacedCount": "{{n}} Vorkommen ersetzt."
+    "replacedCount": "{{n}} Vorkommen ersetzt.",
+    "matchCase": "Groß-/Kleinschreibung beachten",
+    "matchWholeWord": "Nur ganze Wörter",
+    "useRegex": "Regulären Ausdruck verwenden",
+    "invalidRegex": "Ungültiger regulärer Ausdruck"
   }
 }

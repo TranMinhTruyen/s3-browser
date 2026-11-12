@@ -10,6 +10,7 @@ import SqlEditor from '@/pages/sql/components/sqlEditor/SqlEditor';
 import { getMockSchema } from '@/pages/sql/mock/dbSchemaMock';
 import { selectProfileNames, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
+import { DEFAULT_FIND_OPTIONS, type FindOptions } from '@/pages/sql/utils/findReplace';
 import { formatEditorSql } from '@/pages/sql/utils/sqlFormat';
 import { runSql } from '@/pages/sql/utils/sqlToast';
 
@@ -34,6 +35,9 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
   const [findOpen, setFindOpen] = useState(false);
   const [findText, setFindText] = useState('');
   const [replaceText, setReplaceText] = useState('');
+  const [findOptions, setFindOptions] = useState<FindOptions>(DEFAULT_FIND_OPTIONS);
+  // The open panel puts its counter refresh here; the editor calls it after every text change.
+  const docChangeRef = useRef<(() => void) | null>(null);
   const [focusKey, setFocusKey] = useState(0);
 
   const optionsData = useMemo(
@@ -91,6 +95,8 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
 
   const onCloseFind = useCallback(() => setFindOpen(false), []);
 
+  const onDocChange = useCallback(() => docChangeRef.current?.(), []);
+
   return (
     <Paper withBorder h="100%" display="flex" style={{ flexDirection: 'column', overflow: 'hidden' }}>
       <SqlTabActionBar
@@ -112,15 +118,19 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
           onFormat={onFormatShortcut}
           onFind={onFindShortcut}
           onExecute={onExecuteShortcut}
+          onDocChange={onDocChange}
         />
         {findOpen && (
           <FindReplacePanel
             viewRef={editorRef}
             find={findText}
             replace={replaceText}
+            options={findOptions}
+            docChangeRef={docChangeRef}
             focusKey={focusKey}
             onChangeFind={setFindText}
             onChangeReplace={setReplaceText}
+            onChangeOptions={setFindOptions}
             onClose={onCloseFind}
           />
         )}
