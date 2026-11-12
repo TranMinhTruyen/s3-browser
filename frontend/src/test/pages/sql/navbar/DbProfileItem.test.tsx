@@ -1,4 +1,5 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
+import { Profiler } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DbProfileItem, { CARD_HEIGHT } from '@/pages/sql/navbar/DbProfileItem';
 import { type DbProfile, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
@@ -73,6 +74,42 @@ describe('DbProfileItem', () => {
     renderItem();
     fireEvent.doubleClick(card());
     expect(onConnect).toHaveBeenCalledWith('p1');
+  });
+
+  describe('re-render (D31e)', () => {
+    const renderCounted = () => {
+      const onRender = vi.fn();
+      useDbProfileStore.setState({ dbProfiles: { p1: pg, p2: { ...pg, id: 'p2', name: 'Other' } } });
+      renderWithProviders(
+        <Profiler id="item" onRender={onRender}>
+          <DbProfileItem profileKey="p1" onConnect={onConnect} />
+        </Profiler>
+      );
+      onRender.mockClear();
+      return onRender;
+    };
+
+    it('does not re-render when another profile changes', () => {
+      const onRender = renderCounted();
+      act(() => {
+        useDbProfileStore.setState(s => ({
+          dbProfiles: { ...s.dbProfiles, p2: { ...s.dbProfiles.p2, name: 'Renamed', isConnected: true } },
+        }));
+      });
+      expect(onRender).not.toHaveBeenCalled();
+      expect(screen.getByText('My PG')).toBeInTheDocument();
+    });
+
+    it('re-renders when its own profile changes', () => {
+      const onRender = renderCounted();
+      act(() => {
+        useDbProfileStore.setState(s => ({
+          dbProfiles: { ...s.dbProfiles, p1: { ...s.dbProfiles.p1, name: 'Renamed PG' } },
+        }));
+      });
+      expect(onRender).toHaveBeenCalled();
+      expect(screen.getByText('Renamed PG')).toBeInTheDocument();
+    });
   });
 
   describe('status', () => {

@@ -32,5 +32,6 @@
     "sql": "SQL"
   },
   "sqlLoadError": "Could not open SQL mode. Please try again.",
-  "s3LoadError": "Could not open S3 mode. Please try again."
+  "s3LoadError": "Could not open S3 mode. Please try again.",
+  "retry": "Retry"
 }

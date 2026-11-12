@@ -1,8 +1,10 @@
+import type { SQLNamespace } from '@codemirror/lang-sql';
 import { language } from '@codemirror/language';
+import { Compartment } from '@codemirror/state';
 import { type EditorView, runScopeHandlers } from '@codemirror/view';
 import { createEvent, fireEvent, render } from '@testing-library/react';
 import { createRef } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import SqlEditor, { type SqlDialect } from '@/pages/sql/components/sqlEditor/SqlEditor';
 import { polyfillCodeMirrorLayout } from '@/test/_helpers/codemirror';
 
@@ -67,6 +69,55 @@ describe('SqlEditor', () => {
     expect(view.state.facet(language)).toBeTruthy();
     rerender('sqlite');
     expect(viewRef.current).toBe(view);
+  });
+
+  describe('language reconfigure (D31d)', () => {
+    const mountWithSchema = (dialect: SqlDialect, schema: SQLNamespace) => {
+      const viewRef = createRef<EditorView | null>() as { current: EditorView | null };
+      const utils = render(<SqlEditor viewRef={viewRef} dialect={dialect} schema={schema} />);
+      const rerender = (nextDialect: SqlDialect, nextSchema: SQLNamespace) =>
+        utils.rerender(<SqlEditor viewRef={viewRef} dialect={nextDialect} schema={nextSchema} />);
+      return { viewRef, rerender };
+    };
+    const reconfigureSpy = () => vi.spyOn(Compartment.prototype, 'reconfigure');
+
+    afterEach(() => vi.restoreAllMocks());
+
+    it('does not reconfigure on mount', () => {
+      const reconfigure = reconfigureSpy();
+      mountWithSchema('sqlite', { t: ['a'] });
+      expect(reconfigure).not.toHaveBeenCalled();
+    });
+
+    it('does not reconfigure or dispatch when re-rendered with the same dialect and schema', () => {
+      const schema = { t: ['a'] };
+      const { viewRef, rerender } = mountWithSchema('sqlite', schema);
+      const reconfigure = reconfigureSpy();
+      const dispatch = vi.spyOn(viewRef.current as EditorView, 'dispatch');
+      rerender('sqlite', schema);
+      expect(reconfigure).not.toHaveBeenCalled();
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it('reconfigures exactly once when the schema changes', () => {
+      const { viewRef, rerender } = mountWithSchema('sqlite', { t: ['a'] });
+      const reconfigure = reconfigureSpy();
+      const dispatch = vi.spyOn(viewRef.current as EditorView, 'dispatch');
+      const next = { t: ['a', 'b'] };
+      rerender('sqlite', next);
+      expect(reconfigure).toHaveBeenCalledTimes(1);
+      expect(dispatch).toHaveBeenCalledTimes(1);
+      rerender('sqlite', next);
+      expect(reconfigure).toHaveBeenCalledTimes(1);
+    });
+
+    it('reconfigures exactly once when the dialect changes', () => {
+      const schema = { t: ['a'] };
+      const { rerender } = mountWithSchema('sqlite', schema);
+      const reconfigure = reconfigureSpy();
+      rerender('postgresql', schema);
+      expect(reconfigure).toHaveBeenCalledTimes(1);
+    });
   });
 
   // Runs the keymap directly (no DOM listener), so the bindings stay covered while the DOM-level tests below fail.

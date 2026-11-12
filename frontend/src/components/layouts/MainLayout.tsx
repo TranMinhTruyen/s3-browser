@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { tintedColor } from '@/common/theme/tintedColor';
 import ActionIcon from '@/components/buttons/ActionIcon';
+import Button from '@/components/buttons/Button';
 import SegmentedControl from '@/components/inputs/SegmentedControl';
 import WindowControls from '@/components/layouts/window/WindowControls';
 import { showHistoryModal, showSettingModal } from '@/components/modals/lazyModals';
@@ -70,11 +71,22 @@ function MainLayout() {
   const [mode, setMode] = useState<AppMode>('S3');
   const [visited, setVisited] = useState<Set<AppMode>>(() => new Set(['S3']));
 
-  const onChangeMode = useCallback((value: string) => {
-    const next = value as AppMode;
-    setMode(next);
-    setVisited(prev => (prev.has(next) ? prev : new Set(prev).add(next)));
+  const visit = useCallback((target: AppMode) => {
+    setVisited(prev => (prev.has(target) ? prev : new Set(prev).add(target)));
   }, []);
+
+  const onChangeMode = useCallback(
+    (value: string) => {
+      const next = value as AppMode;
+      setMode(next);
+      visit(next);
+    },
+    [visit]
+  );
+
+  const onClickRetry = useCallback(() => {
+    visit(mode);
+  }, [visit, mode]);
 
   // Un-visit a mode whose chunk failed to load, so selecting it again retries.
   const onLoadFail = useCallback((failed: AppMode) => {
@@ -147,6 +159,13 @@ function MainLayout() {
             </Box>
           ) : null;
         })}
+
+        {/* A mode leaves `visited` only when its chunk failed to load: offer a retry. */}
+        {!visited.has(mode) && (
+          <Center h="100%">
+            <Button onClick={onClickRetry}>{tCommon('retry')}</Button>
+          </Center>
+        )}
 
         <DownloaderWindow />
         <UploaderWindow />
