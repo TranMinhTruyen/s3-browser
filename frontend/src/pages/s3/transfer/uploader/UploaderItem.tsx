@@ -2,9 +2,9 @@ import { Center, Group, Loader, Text } from '@mantine/core';
 import { CancelUploadOne } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useUploaderStore } from '@/common/stores/uploaderStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
-import { useUploaderStore } from '@/pages/s3/stores/uploaderStore';
 import TransferRow from '@/pages/s3/transfer/TransferRow';
 import TransferSizes from '@/pages/s3/transfer/TransferSizes';
 

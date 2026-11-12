@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { selectUploadingIds, useUploaderStore } from '@/common/stores/uploaderStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
-import { selectUploadingIds, useUploaderStore } from '@/pages/s3/stores/uploaderStore';
 
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
 

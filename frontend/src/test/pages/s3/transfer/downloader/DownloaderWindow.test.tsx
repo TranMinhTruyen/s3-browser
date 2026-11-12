@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { CancelAllDownloads } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Events } from '@wailsio/runtime';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useDownloaderStore } from '@/common/stores/downloaderStore';
 import { callIPC } from '@/common/utils/ipcUtils';
-import { useDownloaderStore } from '@/pages/s3/stores/downloaderStore';
 import DownloaderWindow from '@/pages/s3/transfer/downloader/DownloaderWindow';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 

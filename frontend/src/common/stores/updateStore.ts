@@ -6,10 +6,10 @@ import {
 } from '@wails/S3Browser/internal/handlers/updatehandler';
 import type { UpdateStateOutput } from '@wails/S3Browser/models';
 import { createAppStore } from '@/common/stores/createStore';
+import { selectDownloadingIds, useDownloaderStore } from '@/common/stores/downloaderStore';
+import { selectUploadingIds, useUploaderStore } from '@/common/stores/uploaderStore';
 import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
-import { selectDownloadingIds, useDownloaderStore } from '@/pages/s3/stores/downloaderStore';
-import { selectUploadingIds, useUploaderStore } from '@/pages/s3/stores/uploaderStore';
 
 /** `state` is idle, checking, upToDate, available, downloading, ready or error. */
 type UpdateState = UpdateStateOutput;
