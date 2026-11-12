@@ -98,7 +98,9 @@ function SortableTab({ tabId, renderLabel, closable, sortable, onClickClose, onM
                 component="span"
                 role="button"
                 aria-label={t('tab.close')}
-                size="xs"
+                size={22}
+                // Even gap (22 - 16) / 2 = 3px: the default 70% icon lands on a fractional offset, off-center.
+                iconSize={16}
                 onClick={onClickCloseButton}
                 style={{ flexShrink: 0 }}
               />

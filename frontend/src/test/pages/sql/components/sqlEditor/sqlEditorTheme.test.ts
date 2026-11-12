@@ -47,6 +47,13 @@ describe('sqlEditorTheme', () => {
     }
   });
 
+  it('draws the active line translucent so the selection stays visible under it', () => {
+    const bg = themeSpec()['.cm-activeLine'].backgroundColor;
+    expect(bg).toContain('light-dark(');
+    expect(bg).toContain('color-mix(');
+    expect(bg).toContain('transparent');
+  });
+
   it('uses only theme variables for every color property in the theme', () => {
     const colorProps = ['color', 'backgroundColor', 'borderColor', 'borderLeftColor'];
     for (const rule of Object.values(themeSpec())) {

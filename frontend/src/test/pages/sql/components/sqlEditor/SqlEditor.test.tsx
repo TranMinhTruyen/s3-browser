@@ -1,3 +1,4 @@
+import { redo, undo } from '@codemirror/commands';
 import type { SQLNamespace } from '@codemirror/lang-sql';
 import { language } from '@codemirror/language';
 import { Compartment } from '@codemirror/state';
@@ -10,7 +11,7 @@ import { polyfillCodeMirrorLayout } from '@/test/_helpers/codemirror';
 
 polyfillCodeMirrorLayout();
 
-type Handlers = { onFormat?: () => void; onFind?: () => void; onExecute?: () => void };
+type Handlers = { onFormat?: () => void; onFind?: () => void; onExecute?: () => void; onDocChange?: () => void };
 
 const mount = (dialect: SqlDialect = null, handlers: Handlers = {}) => {
   const viewRef = createRef<EditorView | null>() as { current: EditorView | null };
@@ -277,6 +278,61 @@ describe('SqlEditor', () => {
       runScopeHandlers(view, event, 'editor');
 
       expect(view.state.doc.toString()).toBe('abc');
+    });
+  });
+
+  describe('onDocChange', () => {
+    it.each([
+      ['typing', { changes: { from: 0, insert: 'a' }, userEvent: 'input.type' }],
+      ['a programmatic change', { changes: { from: 0, insert: 'select' } }],
+      ['a paste', { changes: { from: 0, insert: 'x y' }, userEvent: 'input.paste' }],
+    ])('is called once for %s', (_n, spec) => {
+      const onDocChange = vi.fn();
+      const { viewRef } = mount(null, { onDocChange });
+      (viewRef.current as EditorView).dispatch(spec);
+      expect(onDocChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('is called for undo and redo, and for a delete', () => {
+      const onDocChange = vi.fn();
+      const { viewRef } = mount(null, { onDocChange });
+      const view = viewRef.current as EditorView;
+      view.dispatch({ changes: { from: 0, insert: 'abc' }, userEvent: 'input.type' });
+      onDocChange.mockClear();
+
+      undo(view);
+      redo(view);
+      view.dispatch({ changes: { from: 0, to: 1 }, userEvent: 'delete.backward' });
+
+      expect(onDocChange).toHaveBeenCalledTimes(3);
+    });
+
+    it('is not called when only the selection changes', () => {
+      const onDocChange = vi.fn();
+      const { viewRef } = mount(null, { onDocChange });
+      const view = viewRef.current as EditorView;
+      view.dispatch({ changes: { from: 0, insert: 'abc' } });
+      onDocChange.mockClear();
+
+      view.dispatch({ selection: { anchor: 1, head: 2 } });
+
+      expect(onDocChange).not.toHaveBeenCalled();
+    });
+
+    it('calls the latest handler after a re-render and tolerates a missing one', () => {
+      const first = vi.fn();
+      const second = vi.fn();
+      const { viewRef, rerender } = mount(null, { onDocChange: first });
+      const view = viewRef.current as EditorView;
+
+      rerender(null, { onDocChange: second });
+      view.dispatch({ changes: { from: 0, insert: 'a' } });
+      expect(first).not.toHaveBeenCalled();
+      expect(second).toHaveBeenCalledTimes(1);
+
+      rerender(null, {});
+      expect(() => view.dispatch({ changes: { from: 0, insert: 'b' } })).not.toThrow();
+      expect(second).toHaveBeenCalledTimes(1);
     });
   });
 });

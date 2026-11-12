@@ -2,9 +2,9 @@ import { Text } from '@mantine/core';
 import { CancelDownloadOne } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDownloaderStore } from '@/common/stores/downloaderStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
-import { useDownloaderStore } from '@/pages/s3/stores/downloaderStore';
 import TransferRow from '@/pages/s3/transfer/TransferRow';
 import TransferSizes from '@/pages/s3/transfer/TransferSizes';
 

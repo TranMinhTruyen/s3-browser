@@ -37,9 +37,15 @@ const title = (name: string) => screen.queryByRole('heading', { name });
 const saved = () => Object.values(useDbProfileStore.getState().dbProfiles);
 
 async function fillPostgres(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(field(/^Host/), 'db.local');
-  await user.type(field(/^Database/), 'app');
-  await user.type(field(/^Username/), 'me');
+  // Paste instead of per-key typing: keeps the case well under the 5s timeout when coverage slows the run.
+  for (const [label, value] of [
+    [/^Host/, 'db.local'],
+    [/^Database/, 'app'],
+    [/^Username/, 'me'],
+  ] as const) {
+    await user.click(field(label));
+    await user.paste(value);
+  }
 }
 
 describe('DbProfileModal', () => {

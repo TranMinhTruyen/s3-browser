@@ -75,6 +75,16 @@ describe('formatEditorSql', () => {
     expect(view.state.doc.toString()).toBe('x select 1');
   });
 
+  it('returns null without dispatching when the editor was detached while the formatter loaded', async () => {
+    const view = make('select a,b from t');
+    const dispatch = vi.spyOn(view, 'dispatch');
+    const promise = formatEditorSql(view, null);
+    view.dom.remove();
+    expect(await promise).toBeNull();
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(view.state.doc.toString()).toBe('select a,b from t');
+  });
+
   it.each([
     ['an Error', new Error('boom'), 'boom'],
     ['a string', 'bad', 'bad'],

@@ -8,11 +8,8 @@ import '@mantine/core/styles.css';
 import NiceModal from '@ebay/nice-modal-react';
 import { appTheme } from '@/common/theme/appTheme';
 import { settingColorSchemeManager } from '@/common/utils/settingUtils';
-import { loadStartupData } from '@/common/utils/startup';
 import MotionProvider from '@/components/providers/MotionProvider';
-import { installDropTargetCleanup } from '@/pages/s3/utils/dropTargetUtils';
-
-installDropTargetCleanup();
+import { loadStartupData } from '@/pages/s3/utils/startup';
 
 // Settings and tabs are ready before the first render; App loads the profiles afterwards and clears deleted ones.
 await loadStartupData();

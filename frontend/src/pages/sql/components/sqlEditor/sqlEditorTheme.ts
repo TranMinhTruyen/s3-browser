@@ -26,7 +26,12 @@ const editorTheme = EditorView.theme({
     backgroundColor: 'var(--mantine-color-body)',
     borderRight: '1px solid var(--mantine-color-default-border)',
   },
-  '.cm-activeLine': { backgroundColor: color('gray-light', 'dark-6') },
+  // Translucent so the selection layer (drawn under the line content) stays visible on the active line.
+  '.cm-activeLine': {
+    backgroundColor:
+      'light-dark(color-mix(in srgb, var(--mantine-color-gray-5) 12%, transparent), ' +
+      'color-mix(in srgb, var(--mantine-color-dark-3) 15%, transparent))',
+  },
   '.cm-activeLineGutter': { backgroundColor: color('gray-light', 'dark-6'), color: 'var(--mantine-color-text)' },
   '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--mantine-color-text)' },
   '.cm-selectionBackground': { backgroundColor: color('blue-1', 'dark-4') },

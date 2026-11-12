@@ -27,6 +27,10 @@
     "placeholderReplace": "Replace with",
     "count": "{{index}}/{{total}}",
     "notFound": "No results",
-    "replacedCount": "Replaced {{n}} occurrence(s)."
+    "replacedCount": "Replaced {{n}} occurrence(s).",
+    "matchCase": "Match case",
+    "matchWholeWord": "Match whole word",
+    "useRegex": "Use regular expression",
+    "invalidRegex": "Invalid regular expression"
   }
 }

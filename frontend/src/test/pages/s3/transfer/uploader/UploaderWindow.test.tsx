@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import { CancelAllUploads } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { Events } from '@wailsio/runtime';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useDownloaderStore } from '@/common/stores/downloaderStore';
+import { useUploaderStore } from '@/common/stores/uploaderStore';
 import { callIPC } from '@/common/utils/ipcUtils';
-import { useDownloaderStore } from '@/pages/s3/stores/downloaderStore';
-import { useUploaderStore } from '@/pages/s3/stores/uploaderStore';
 import UploaderWindow from '@/pages/s3/transfer/uploader/UploaderWindow';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 

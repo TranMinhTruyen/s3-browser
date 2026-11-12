@@ -7,10 +7,10 @@ import { Upload } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/shallow';
+import { useDownloaderStore } from '@/common/stores/downloaderStore';
+import { selectUploadingIds, useUploaderStore } from '@/common/stores/uploaderStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
-import { useDownloaderStore } from '@/pages/s3/stores/downloaderStore';
-import { selectUploadingIds, useUploaderStore } from '@/pages/s3/stores/uploaderStore';
 import TransferPanel from '@/pages/s3/transfer/TransferPanel';
 import UploaderItem from '@/pages/s3/transfer/uploader/UploaderItem';
 

@@ -1,7 +1,7 @@
 import { act, screen } from '@testing-library/react';
 import { Events } from '@wailsio/runtime';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useUploaderStore } from '@/pages/s3/stores/uploaderStore';
+import { useUploaderStore } from '@/common/stores/uploaderStore';
 import UploaderWindow from '@/pages/s3/transfer/uploader/UploaderWindow';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 

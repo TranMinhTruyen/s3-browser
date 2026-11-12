@@ -2,8 +2,8 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CancelDownloadOne } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useDownloaderStore } from '@/common/stores/downloaderStore';
 import { callIPC } from '@/common/utils/ipcUtils';
-import { useDownloaderStore } from '@/pages/s3/stores/downloaderStore';
 import DownloaderItem from '@/pages/s3/transfer/downloader/DownloaderItem';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 

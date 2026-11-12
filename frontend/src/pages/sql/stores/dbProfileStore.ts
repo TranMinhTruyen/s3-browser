@@ -36,6 +36,18 @@ interface DbProfileAction {
 
 const SCOPE = 'dbProfile';
 
+let lastProfiles: DbProfileState['dbProfiles'] | null = null;
+let lastNames: Record<string, string> = {};
+
+/** Profile id -> name. Computed once per `dbProfiles` change and shared by every tab that selects it. */
+export const selectProfileNames = (s: DbProfileState): Record<string, string> => {
+  if (s.dbProfiles !== lastProfiles) {
+    lastProfiles = s.dbProfiles;
+    lastNames = Object.fromEntries(Object.entries(s.dbProfiles).map(([key, value]) => [key, value?.name ?? '']));
+  }
+  return lastNames;
+};
+
 /** Database profiles by id, starting with the mock ones. */
 export const useDbProfileStore = createAppStore<DbProfileState & DbProfileAction>(
   (set, get) => ({

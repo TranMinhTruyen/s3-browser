@@ -8,8 +8,9 @@ import FindReplacePanel from '@/pages/sql/components/FindReplacePanel';
 import SqlTabActionBar from '@/pages/sql/components/SqlTabActionBar';
 import SqlEditor from '@/pages/sql/components/sqlEditor/SqlEditor';
 import { getMockSchema } from '@/pages/sql/mock/dbSchemaMock';
-import { useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
+import { selectProfileNames, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
+import { DEFAULT_FIND_OPTIONS, escapeRegExp, type FindOptions } from '@/pages/sql/utils/findReplace';
 import { formatEditorSql } from '@/pages/sql/utils/sqlFormat';
 import { runSql } from '@/pages/sql/utils/sqlToast';
 
@@ -24,9 +25,7 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
   const selectedProfileId = useSqlTabStore(s => s.tabList[tabId]?.profileId ?? null);
   const setTabProfile = useSqlTabStore(s => s.setTabProfile);
   // Only id -> name, so a profile change that keeps its name does not re-render every tab.
-  const profileNames = useDbProfileStore(
-    useShallow(s => Object.fromEntries(Object.entries(s.dbProfiles).map(([key, value]) => [key, value?.name ?? ''])))
-  );
+  const profileNames = useDbProfileStore(useShallow(selectProfileNames));
   const isConnected = useDbProfileStore(s => !!(selectedProfileId && s.dbProfiles[selectedProfileId]?.isConnected));
   const setConnected = useDbProfileStore(s => s.setConnected);
   const dialect = useDbProfileStore(s => (selectedProfileId ? s.dbProfiles[selectedProfileId]?.dbType : null) ?? null);
@@ -36,7 +35,9 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
   const [findOpen, setFindOpen] = useState(false);
   const [findText, setFindText] = useState('');
   const [replaceText, setReplaceText] = useState('');
-  const [showReplace, setShowReplace] = useState(false);
+  const [findOptions, setFindOptions] = useState<FindOptions>(DEFAULT_FIND_OPTIONS);
+  // The open panel puts its counter refresh here; the editor calls it after every text change.
+  const docChangeRef = useRef<(() => void) | null>(null);
   const [focusKey, setFocusKey] = useState(0);
 
   const optionsData = useMemo(
@@ -80,20 +81,21 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
     else toast.error(t('toast.formatError', { ns: 'sqlTab', message: result.message }));
   }, [dialect, t]);
 
-  // Ctrl+F: a single-line selection becomes the search text; opening again just re-focuses the Find box.
+  // Ctrl+F: a single-line selection becomes the search text (escaped when regex is on); again just re-focuses the Find box.
   const onFindShortcut = useCallback(() => {
     const view = editorRef.current;
     if (view) {
       const { from, to } = view.state.selection.main;
       const selected = view.state.sliceDoc(from, to);
-      if (selected && !selected.includes('\n')) setFindText(selected);
+      if (selected && !selected.includes('\n')) setFindText(findOptions.regexp ? escapeRegExp(selected) : selected);
     }
     setFindOpen(true);
     setFocusKey(key => key + 1);
-  }, []);
+  }, [findOptions.regexp]);
 
-  const onShowReplace = useCallback(() => setShowReplace(true), []);
   const onCloseFind = useCallback(() => setFindOpen(false), []);
+
+  const onDocChange = useCallback(() => docChangeRef.current?.(), []);
 
   return (
     <Paper withBorder h="100%" display="flex" style={{ flexDirection: 'column', overflow: 'hidden' }}>
@@ -116,17 +118,19 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
           onFormat={onFormatShortcut}
           onFind={onFindShortcut}
           onExecute={onExecuteShortcut}
+          onDocChange={onDocChange}
         />
         {findOpen && (
           <FindReplacePanel
             viewRef={editorRef}
             find={findText}
             replace={replaceText}
-            showReplace={showReplace}
+            options={findOptions}
+            docChangeRef={docChangeRef}
             focusKey={focusKey}
             onChangeFind={setFindText}
             onChangeReplace={setReplaceText}
-            onShowReplace={onShowReplace}
+            onChangeOptions={setFindOptions}
             onClose={onCloseFind}
           />
         )}

@@ -23,10 +23,14 @@ function TabDragPreview({ label, closable }: TabDragPreviewProps) {
         background: 'var(--mantine-primary-color-light)',
         color: 'var(--mantine-primary-color-light-color)',
         borderRadius: 'var(--mantine-radius-md)',
+        // Same transparent 1px border as the active tab so the content lines up.
+        border: '1px solid transparent',
       }}
     >
       <div style={{ minWidth: 0, flex: 1 }}>{label}</div>
-      {closable && <CloseButton component="span" size="xs" style={{ flexShrink: 0, pointerEvents: 'none' }} />}
+      {closable && (
+        <CloseButton component="span" size={22} iconSize={16} style={{ flexShrink: 0, pointerEvents: 'none' }} />
+      )}
     </Group>
   );
 }

@@ -27,6 +27,10 @@
     "placeholderReplace": "Заменить на",
     "count": "{{index}}/{{total}}",
     "notFound": "Ничего не найдено",
-    "replacedCount": "Заменено вхождений: {{n}}."
+    "replacedCount": "Заменено вхождений: {{n}}.",
+    "matchCase": "Учитывать регистр",
+    "matchWholeWord": "Слово целиком",
+    "useRegex": "Использовать регулярное выражение",
+    "invalidRegex": "Недопустимое регулярное выражение"
   }
 }

@@ -19,6 +19,8 @@ type SqlEditorProps = {
   onFormat?: () => void;
   onFind?: () => void;
   onExecute?: () => void;
+  /** Called after every change of the text (typing, undo, paste, autocomplete...). */
+  onDocChange?: () => void;
 };
 
 const DIALECTS = { postgresql: PostgreSQL, sqlite: SQLite };
@@ -26,16 +28,16 @@ const getLanguage = (dialect: SqlDialect, schema?: SQLNamespace) =>
   sql({ dialect: dialect ? DIALECTS[dialect] : StandardSQL, schema });
 
 /** SQL editor (CodeMirror 6). The view is created once; dialect/schema changes only reconfigure the language. */
-function SqlEditor({ viewRef, dialect, schema, onFormat, onFind, onExecute }: SqlEditorProps) {
+function SqlEditor({ viewRef, dialect, schema, onFormat, onFind, onExecute, onDocChange }: SqlEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const languageRef = useRef(new Compartment());
   // Latest callbacks, read by the keymap so the view never has to be rebuilt.
-  const handlersRef = useRef({ onFormat, onFind, onExecute });
+  const handlersRef = useRef({ onFormat, onFind, onExecute, onDocChange });
   const languageOptionsRef = useRef({ dialect, schema });
 
   useEffect(() => {
-    handlersRef.current = { onFormat, onFind, onExecute };
-  }, [onFormat, onFind, onExecute]);
+    handlersRef.current = { onFormat, onFind, onExecute, onDocChange };
+  }, [onFormat, onFind, onExecute, onDocChange]);
 
   useEffect(() => {
     const run = (name: 'onFormat' | 'onFind' | 'onExecute') => () => {
@@ -69,6 +71,9 @@ function SqlEditor({ viewRef, dialect, schema, onFormat, onFind, onExecute }: Sq
           // so Enter still inserts a newline and Esc does nothing otherwise. Tab also accepts.
           autocompletion({ activateOnTyping: true }),
           Prec.high(keymap.of([{ key: 'Tab', run: acceptCompletion }])),
+          EditorView.updateListener.of(update => {
+            if (update.docChanged) handlersRef.current.onDocChange?.();
+          }),
           sqlEditorTheme,
         ],
       }),

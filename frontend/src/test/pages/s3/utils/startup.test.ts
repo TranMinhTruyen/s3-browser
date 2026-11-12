@@ -3,10 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '@/common/cnst/settingConst';
 import { useSettingStore } from '@/common/stores/settingStore';
 import { callIPC } from '@/common/utils/ipcUtils';
-import { loadStartupData } from '@/common/utils/startup';
 import { useTabListStore } from '@/pages/s3/stores/tabListStore';
+import { installDropTargetCleanup } from '@/pages/s3/utils/dropTargetUtils';
+import { loadStartupData } from '@/pages/s3/utils/startup';
 import { isTabRestoreFailed } from '@/pages/s3/utils/tabPersistence';
 
+vi.mock('@/pages/s3/utils/dropTargetUtils', () => ({ installDropTargetCleanup: vi.fn(() => vi.fn()) }));
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
 vi.mock('@/common/utils/settingUtils', async importOriginal => ({
   ...(await importOriginal<typeof import('@/common/utils/settingUtils')>()),
@@ -36,6 +38,7 @@ const backend = (results: { settings: unknown; tabs: unknown }) =>
 
 describe('loadStartupData', () => {
   beforeEach(() => {
+    vi.mocked(installDropTargetCleanup).mockClear();
     useSettingStore.getState().reset();
     useTabListStore.getState().reset();
   });
@@ -52,6 +55,24 @@ describe('loadStartupData', () => {
     expect(Object.keys(useTabListStore.getState().tabList)).toEqual(['saved']);
     expect(useTabListStore.getState().activeTab).toBe('saved');
     expect(isTabRestoreFailed()).toBe(false);
+  });
+
+  it('installs the drop-target cleanup before the settings and tab loads start', async () => {
+    const order: string[] = [];
+    vi.mocked(installDropTargetCleanup).mockImplementationOnce(() => {
+      order.push('cleanup');
+      return vi.fn();
+    });
+    callIPCMock.mockImplementation((async (binding: unknown) => {
+      order.push(binding === GetSettings ? 'settings' : 'tabs');
+      return null;
+    }) as never);
+
+    await loadStartupData();
+
+    expect(order[0]).toBe('cleanup');
+    expect(order).toHaveLength(3);
+    expect(installDropTargetCleanup).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the default tab and marks the restore failed when GetTabState fails, without rejecting', async () => {

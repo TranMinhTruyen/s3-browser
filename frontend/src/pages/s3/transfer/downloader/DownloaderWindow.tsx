@@ -6,9 +6,9 @@ import { Events } from '@wailsio/runtime';
 import { Download } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { selectDownloadingIds, useDownloaderStore } from '@/common/stores/downloaderStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
-import { selectDownloadingIds, useDownloaderStore } from '@/pages/s3/stores/downloaderStore';
 import DownloaderItem from '@/pages/s3/transfer/downloader/DownloaderItem';
 import TransferPanel from '@/pages/s3/transfer/TransferPanel';
 
