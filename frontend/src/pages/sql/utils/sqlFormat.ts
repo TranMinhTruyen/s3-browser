@@ -9,7 +9,7 @@ export const dbTypeToDialect = (dbType: SqlDialect): 'sql' | 'postgresql' | 'sql
 /**
  * Formats the selection (or the whole document when nothing is selected) in one transaction, so a single undo
  * restores it. `sql-formatter` is loaded on first use. Returns null when there is nothing to format or the text
- * changed while formatting; a syntax error leaves the document untouched.
+ * changed or the editor was closed while formatting; a syntax error leaves the document untouched.
  */
 export const formatEditorSql = async (view: EditorView, dbType: SqlDialect): Promise<FormatResult> => {
   const { from, to } = view.state.selection.main;
@@ -22,8 +22,8 @@ export const formatEditorSql = async (view: EditorView, dbType: SqlDialect): Pro
     const { formatDialect, postgresql, sqlite, sql } = await import('sql-formatter');
     const dialects = { sql, postgresql, sqlite };
     const formatted = formatDialect(source, { dialect: dialects[dbTypeToDialect(dbType)] });
-    // The user kept typing while the formatter module loaded.
-    if (view.state.sliceDoc(range.from, range.to) !== source) return null;
+    // The tab was closed (view destroyed) or the user kept typing while the formatter module loaded.
+    if (!view.dom.isConnected || view.state.sliceDoc(range.from, range.to) !== source) return null;
     view.dispatch({
       changes: { ...range, insert: formatted },
       selection: { anchor: range.from, head: range.from + formatted.length },

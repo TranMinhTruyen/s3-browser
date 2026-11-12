@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
 import { MOCK_DB_PROFILES } from '@/pages/sql/mock/dbProfileMock';
-import { type DbProfile, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
+import { type DbProfile, selectProfileNames, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
 
@@ -89,5 +89,36 @@ describe('dbProfileStore', () => {
   it('does not mutate the shared mock data when profiles change', () => {
     store().setConnected('mock-pg-local', true);
     expect(MOCK_DB_PROFILES['mock-pg-local'].isConnected).toBe(false);
+  });
+});
+
+describe('selectProfileNames', () => {
+  beforeEach(() => {
+    store().reset();
+  });
+
+  it('maps every profile id to its name', () => {
+    expect(selectProfileNames(store())).toEqual({
+      'mock-pg-local': 'Local PostgreSQL',
+      ...Object.fromEntries(
+        Object.entries(store().dbProfiles)
+          .filter(([id]) => id !== 'mock-pg-local')
+          .map(([id, p]) => [id, p?.name])
+      ),
+    });
+  });
+
+  it('falls back to an empty name for an undefined profile', () => {
+    const state = { ...store(), dbProfiles: { a: undefined, b: profile('b') } } as never;
+    expect(selectProfileNames(state)).toEqual({ a: '', b: 'b-name' });
+  });
+
+  it('returns the same object while dbProfiles keeps its reference, and a new one after it changes', () => {
+    const first = selectProfileNames(store());
+    expect(selectProfileNames({ ...store() })).toBe(first);
+    store().saveDbProfile(profile('new'));
+    const next = selectProfileNames(store());
+    expect(next).not.toBe(first);
+    expect(next.new).toBe('new-name');
   });
 });
