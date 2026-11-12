@@ -32,5 +32,6 @@
     "sql": "SQL"
   },
   "sqlLoadError": "無法開啟 SQL 模式，請再試一次。",
-  "s3LoadError": "無法開啟 S3 模式，請再試一次。"
+  "s3LoadError": "無法開啟 S3 模式，請再試一次。",
+  "retry": "重試"
 }

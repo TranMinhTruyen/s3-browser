@@ -32,5 +32,6 @@
     "sql": "SQL"
   },
   "sqlLoadError": "Không mở được chế độ SQL. Vui lòng thử lại.",
-  "s3LoadError": "Không mở được chế độ S3. Vui lòng thử lại."
+  "s3LoadError": "Không mở được chế độ S3. Vui lòng thử lại.",
+  "retry": "Thử lại"
 }
