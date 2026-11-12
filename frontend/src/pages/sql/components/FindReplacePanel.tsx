@@ -4,6 +4,7 @@ import { type KeyboardEvent, memo, type RefObject, useCallback, useEffect, useRe
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import Button from '@/components/buttons/Button';
+import CloseButton from '@/components/buttons/CloseButton';
 import FieldInput from '@/components/inputs/FieldInput';
 import { getMatchInfo, replaceAll, replaceCurrent, selectNext } from '@/pages/sql/utils/findReplace';
 
@@ -11,12 +12,10 @@ type FindReplacePanelProps = {
   viewRef: RefObject<EditorView | null>;
   find: string;
   replace: string;
-  showReplace: boolean;
   /** Changes every time Ctrl+F is pressed, so the Find box is focused again even when already open. */
   focusKey: number;
   onChangeFind: (value: string) => void;
   onChangeReplace: (value: string) => void;
-  onShowReplace: () => void;
   onClose: () => void;
 };
 
@@ -24,8 +23,7 @@ type MatchInfo = { index: number; total: number };
 
 /** Find / Replace box floating over the editor. It is not a modal, so the editor stays usable while it is open. */
 function FindReplacePanel(props: FindReplacePanelProps) {
-  const { viewRef, find, replace, showReplace, focusKey, onChangeFind, onChangeReplace, onShowReplace, onClose } =
-    props;
+  const { viewRef, find, replace, focusKey, onChangeFind, onChangeReplace, onClose } = props;
   const { t } = useTranslation('sqlTab');
   const findInputRef = useRef<HTMLInputElement>(null);
   const [info, setInfo] = useState<MatchInfo | null>(null);
@@ -37,6 +35,14 @@ function FindReplacePanel(props: FindReplacePanelProps) {
 
   // Runs on open and on every later Ctrl+F (`focusKey` changes).
   useEffect(focusFind, [focusKey, focusFind]);
+
+  // The "i/n" counter is stale once the user edits the text.
+  useEffect(() => {
+    const dom = viewRef.current?.contentDOM;
+    const onInput = () => setInfo(null);
+    dom?.addEventListener('input', onInput);
+    return () => dom?.removeEventListener('input', onInput);
+  }, [viewRef]);
 
   const onChangeFindText = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,11 +69,10 @@ function FindReplacePanel(props: FindReplacePanelProps) {
 
   const onClickReplace = useCallback(() => {
     const view = viewRef.current;
-    if (!showReplace) return onShowReplace();
     if (!view || !find) return;
     replaceCurrent(view, find, replace);
     refreshInfo(view);
-  }, [viewRef, find, replace, showReplace, onShowReplace, refreshInfo]);
+  }, [viewRef, find, replace, refreshInfo]);
 
   const onClickReplaceAll = useCallback(() => {
     const view = viewRef.current;
@@ -110,40 +115,34 @@ function FindReplacePanel(props: FindReplacePanelProps) {
       style={{ position: 'absolute', top: 8, right: 16, zIndex: 10 }}
     >
       <Stack gap="xs">
-        <Text size="sm" fw={500}>
-          {t('find.title')}
-        </Text>
+        <Group justify="space-between" wrap="nowrap">
+          <Text size="sm" fw={500}>
+            {t('find.title')}
+          </Text>
+          <CloseButton tooltip={t('find.cancel')} onClick={onClickCancel} />
+        </Group>
         <FieldInput
           ref={findInputRef}
           value={find}
           onChange={onChangeFindText}
           placeholder={t('find.placeholderFind')}
         />
-        {showReplace && (
-          <FieldInput value={replace} onChange={onChangeReplaceText} placeholder={t('find.placeholderReplace')} />
-        )}
+        <FieldInput value={replace} onChange={onChangeReplaceText} placeholder={t('find.placeholderReplace')} />
         {info && (
           <Text size="xs" c="dimmed">
             {info.total === 0 ? t('find.notFound') : t('find.count', { index: info.index, total: info.total })}
           </Text>
         )}
-        <Group p="8px" justify="space-between" wrap="nowrap">
-          <Button color="red" onClick={onClickCancel}>
-            {t('find.cancel')}
+        <Group p="8px" justify="flex-end" gap="xs" wrap="nowrap">
+          <Button onClick={onClickFind} disabled={!hasFind}>
+            {t('find.find')}
           </Button>
-          <Group gap="xs" wrap="nowrap">
-            <Button onClick={onClickFind} disabled={!hasFind}>
-              {t('find.find')}
-            </Button>
-            <Button onClick={onClickReplace} disabled={showReplace && !hasFind}>
-              {t('find.replace')}
-            </Button>
-            {showReplace && (
-              <Button onClick={onClickReplaceAll} disabled={!hasFind}>
-                {t('find.replaceAll')}
-              </Button>
-            )}
-          </Group>
+          <Button onClick={onClickReplace} disabled={!hasFind}>
+            {t('find.replace')}
+          </Button>
+          <Button onClick={onClickReplaceAll} disabled={!hasFind}>
+            {t('find.replaceAll')}
+          </Button>
         </Group>
       </Stack>
     </Paper>

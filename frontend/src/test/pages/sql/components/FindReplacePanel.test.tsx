@@ -16,35 +16,25 @@ type Options = {
   doc?: string;
   find?: string;
   replace?: string;
-  showReplace?: boolean;
   focusKey?: number;
   noView?: boolean;
 };
 
 /** Panel with its state owned by the test harness, like SqlTabDetail does. */
-function setup({
-  doc = 'foo bar foo',
-  find = '',
-  replace = '',
-  showReplace = false,
-  focusKey = 0,
-  noView,
-}: Options = {}) {
+function setup({ doc = 'foo bar foo', find = '', replace = '', focusKey = 0, noView }: Options = {}) {
   const view = createView(doc, { anchor: 0 });
   views.push(view);
   const viewRef = { current: noView ? null : view } as RefObject<EditorView | null>;
-  const spies = { onShowReplace: vi.fn(), onClose: vi.fn(), onChangeFind: vi.fn(), onChangeReplace: vi.fn() };
+  const spies = { onClose: vi.fn(), onChangeFind: vi.fn(), onChangeReplace: vi.fn() };
 
   function Harness({ initialFocusKey }: { initialFocusKey: number }) {
     const [findText, setFind] = useState(find);
     const [replaceText, setReplace] = useState(replace);
-    const [shown, setShown] = useState(showReplace);
     return (
       <FindReplacePanel
         viewRef={viewRef}
         find={findText}
         replace={replaceText}
-        showReplace={shown}
         focusKey={initialFocusKey}
         onChangeFind={v => {
           spies.onChangeFind(v);
@@ -54,10 +44,6 @@ function setup({
           spies.onChangeReplace(v);
           setReplace(v);
         }}
-        onShowReplace={() => {
-          spies.onShowReplace();
-          setShown(true);
-        }}
         onClose={spies.onClose}
       />
     );
@@ -65,7 +51,7 @@ function setup({
 
   const utils = renderWithProviders(<Harness initialFocusKey={focusKey} />);
   const rerenderWithKey = (key: number) => utils.rerender(<Harness initialFocusKey={key} />);
-  return { view, spies, user: userEvent.setup(), rerenderWithKey };
+  return { view, spies, user: userEvent.setup(), rerenderWithKey, unmount: utils.unmount };
 }
 
 const findInput = () => screen.getByPlaceholderText('Find') as HTMLInputElement;
@@ -79,20 +65,14 @@ afterEach(() => {
 
 describe('FindReplacePanel', () => {
   describe('layout', () => {
-    it('shows the title, the Find box and Cancel on the left, Find and Replace on the right', () => {
+    it('shows the title, the Find and Replace boxes, Cancel (X) on the left, and the action buttons on the right', () => {
       setup();
       expect(screen.getByText('Find and replace')).toBeInTheDocument();
       expect(findInput()).toBeInTheDocument();
-      expect(screen.queryByPlaceholderText('Replace with')).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: 'Replace all' })).not.toBeInTheDocument();
-      const names = screen.getAllByRole('button').map(b => b.textContent);
-      expect(names).toEqual(['Cancel', 'Find', 'Replace']);
-    });
-
-    it('shows the Replace box and Replace all when replace mode is on', () => {
-      setup({ showReplace: true });
       expect(replaceInput()).toBeInTheDocument();
-      expect(btn('Replace all')).toBeInTheDocument();
+      const names = screen.getAllByRole('button').map(b => b.getAttribute('aria-label') ?? b.textContent);
+      expect(names).toEqual(['Cancel', 'Find', 'Replace', 'Replace all']);
+      expect(btn('Cancel').textContent).toBe('');
     });
   });
 
@@ -130,7 +110,7 @@ describe('FindReplacePanel', () => {
     });
 
     it('reports the Replace text', async () => {
-      const { user, spies } = setup({ showReplace: true });
+      const { user, spies } = setup({});
       await user.type(replaceInput(), 'z');
       expect(spies.onChangeReplace).toHaveBeenLastCalledWith('z');
     });
@@ -170,7 +150,7 @@ describe('FindReplacePanel', () => {
     });
 
     it('Enter in the Replace box does not search', async () => {
-      const { user, view } = setup({ find: 'foo', showReplace: true });
+      const { user, view } = setup({ find: 'foo' });
       await user.type(replaceInput(), '{Enter}');
       expect(sel(view)).toEqual([0, 0]);
     });
@@ -183,24 +163,15 @@ describe('FindReplacePanel', () => {
   });
 
   describe('Replace', () => {
-    it('is enabled without a Find text and only opens the Replace box', async () => {
-      const { user, spies, view } = setup();
-      expect(btn('Replace')).toBeEnabled();
-
+    it('is disabled without a Find text and leaves the document untouched', async () => {
+      const { user, view } = setup();
+      expect(btn('Replace')).toBeDisabled();
       await user.click(btn('Replace'));
-
-      expect(spies.onShowReplace).toHaveBeenCalledTimes(1);
-      expect(replaceInput()).toBeInTheDocument();
       expect(view.state.doc.toString()).toBe('foo bar foo');
     });
 
-    it('is disabled in replace mode without a Find text', () => {
-      setup({ showReplace: true });
-      expect(btn('Replace')).toBeDisabled();
-    });
-
-    it('with the Replace box open: selects the first match, then replaces it and moves to the next', async () => {
-      const { user, view } = setup({ find: 'foo', replace: 'x', showReplace: true });
+    it('selects the first match, then replaces it and moves to the next', async () => {
+      const { user, view } = setup({ find: 'foo', replace: 'x' });
 
       await user.click(btn('Replace'));
       expect(sel(view)).toEqual([0, 3]);
@@ -213,34 +184,34 @@ describe('FindReplacePanel', () => {
     });
 
     it('does nothing when the editor is gone', async () => {
-      const { user, spies } = setup({ find: 'foo', showReplace: true, noView: true });
+      const { user } = setup({ find: 'foo', replace: 'x', noView: true });
       await user.click(btn('Replace'));
-      expect(spies.onShowReplace).not.toHaveBeenCalled();
+      expect(screen.queryByText(/\d+\/\d+/)).not.toBeInTheDocument();
     });
   });
 
   describe('Replace all', () => {
     it('is disabled without a Find text', () => {
-      setup({ showReplace: true });
+      setup({});
       expect(btn('Replace all')).toBeDisabled();
     });
 
     it('replaces every match and toasts the count', async () => {
-      const { user, view } = setup({ find: 'foo', replace: 'x', showReplace: true });
+      const { user, view } = setup({ find: 'foo', replace: 'x' });
       await user.click(btn('Replace all'));
       expect(view.state.doc.toString()).toBe('x bar x');
       expect(toast.info).toHaveBeenCalledWith('Replaced 2 occurrence(s).');
     });
 
     it('toasts 0 when nothing matches', async () => {
-      const { user, view } = setup({ find: 'zzz', replace: 'x', showReplace: true });
+      const { user, view } = setup({ find: 'zzz', replace: 'x' });
       await user.click(btn('Replace all'));
       expect(view.state.doc.toString()).toBe('foo bar foo');
       expect(toast.info).toHaveBeenCalledWith('Replaced 0 occurrence(s).');
     });
 
     it('does nothing when the editor is gone', async () => {
-      const { user } = setup({ find: 'foo', showReplace: true, noView: true });
+      const { user } = setup({ find: 'foo', noView: true });
       await user.click(btn('Replace all'));
       expect(toast.info).not.toHaveBeenCalled();
     });
@@ -278,7 +249,7 @@ describe('FindReplacePanel', () => {
       ['Ctrl+F', { key: 'f', ctrlKey: true }],
       ['Cmd+F', { key: 'F', metaKey: true }],
     ])('%s is kept from the WebView and re-focuses the Find box', (_n, init) => {
-      setup({ find: 'foo', showReplace: true });
+      setup({ find: 'foo' });
       replaceInput().focus();
       const event = createEvent.keyDown(replaceInput(), init);
 
@@ -294,6 +265,27 @@ describe('FindReplacePanel', () => {
       fireEvent(findInput(), event);
       expect(event.defaultPrevented).toBe(false);
       expect(spies.onClose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('stale match counter', () => {
+    it('clears the i/n counter when the user edits the document', async () => {
+      const { user, view } = setup({ find: 'foo' });
+      await user.click(btn('Find'));
+      expect(screen.getByText('1/2')).toBeInTheDocument();
+
+      act(() => {
+        view.contentDOM.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+
+      expect(screen.queryByText('1/2')).not.toBeInTheDocument();
+    });
+
+    it('stops listening to the editor after unmount', async () => {
+      const { view, unmount } = setup({ find: 'foo' });
+      const remove = vi.spyOn(view.contentDOM, 'removeEventListener');
+      unmount();
+      expect(remove).toHaveBeenCalledWith('input', expect.any(Function));
     });
   });
 

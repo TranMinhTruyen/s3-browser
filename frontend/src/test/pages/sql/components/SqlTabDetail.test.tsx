@@ -262,13 +262,12 @@ describe('SqlTabDetail', () => {
       expect(findBox()).toHaveValue('sel');
     });
 
-    it('Replace opens the replace box and Replace all replaces in the editor', async () => {
+    it('shows the Replace box straight away (no find-only mode) and Replace all replaces in the editor', async () => {
       const user = userEvent.setup();
       renderDetail();
       act(() => props().onFind());
       await user.type(findBox()!, 'select');
 
-      await user.click(screen.getByRole('button', { name: 'Replace' }));
       await user.type(screen.getByPlaceholderText('Replace with'), 'SELECT');
       await user.click(screen.getByRole('button', { name: 'Replace all' }));
 

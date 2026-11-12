@@ -8,7 +8,7 @@ import FindReplacePanel from '@/pages/sql/components/FindReplacePanel';
 import SqlTabActionBar from '@/pages/sql/components/SqlTabActionBar';
 import SqlEditor from '@/pages/sql/components/sqlEditor/SqlEditor';
 import { getMockSchema } from '@/pages/sql/mock/dbSchemaMock';
-import { useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
+import { selectProfileNames, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
 import { formatEditorSql } from '@/pages/sql/utils/sqlFormat';
 import { runSql } from '@/pages/sql/utils/sqlToast';
@@ -24,9 +24,7 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
   const selectedProfileId = useSqlTabStore(s => s.tabList[tabId]?.profileId ?? null);
   const setTabProfile = useSqlTabStore(s => s.setTabProfile);
   // Only id -> name, so a profile change that keeps its name does not re-render every tab.
-  const profileNames = useDbProfileStore(
-    useShallow(s => Object.fromEntries(Object.entries(s.dbProfiles).map(([key, value]) => [key, value?.name ?? ''])))
-  );
+  const profileNames = useDbProfileStore(useShallow(selectProfileNames));
   const isConnected = useDbProfileStore(s => !!(selectedProfileId && s.dbProfiles[selectedProfileId]?.isConnected));
   const setConnected = useDbProfileStore(s => s.setConnected);
   const dialect = useDbProfileStore(s => (selectedProfileId ? s.dbProfiles[selectedProfileId]?.dbType : null) ?? null);
@@ -36,7 +34,6 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
   const [findOpen, setFindOpen] = useState(false);
   const [findText, setFindText] = useState('');
   const [replaceText, setReplaceText] = useState('');
-  const [showReplace, setShowReplace] = useState(false);
   const [focusKey, setFocusKey] = useState(0);
 
   const optionsData = useMemo(
@@ -92,7 +89,6 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
     setFocusKey(key => key + 1);
   }, []);
 
-  const onShowReplace = useCallback(() => setShowReplace(true), []);
   const onCloseFind = useCallback(() => setFindOpen(false), []);
 
   return (
@@ -122,11 +118,9 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
             viewRef={editorRef}
             find={findText}
             replace={replaceText}
-            showReplace={showReplace}
             focusKey={focusKey}
             onChangeFind={setFindText}
             onChangeReplace={setReplaceText}
-            onShowReplace={onShowReplace}
             onClose={onCloseFind}
           />
         )}
