@@ -1,4 +1,4 @@
-// Package setting stores the user preferences (theme, font, language, launch on startup) in settings.json.
+// Package setting stores the user preferences (theme, font, language, UI size, launch on startup) in settings.json.
 package setting
 
 import (

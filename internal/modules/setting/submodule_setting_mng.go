@@ -16,11 +16,12 @@ var (
 		"monospace", "jetbrains-mono",
 	}
 	languages = []string{"en", "vi", "ja", "zh-CN", "zh-TW", "ru", "de"}
+	sizes     = []string{"small", "medium", "large"}
 )
 
 // defaultSettings is what the app uses when nothing is saved, and the fallback for any unknown value.
 func defaultSettings() models.AppSettings {
-	return models.AppSettings{Theme: "light", Font: "nunito", Language: "en", AutoUpdate: true}
+	return models.AppSettings{Theme: "light", Font: "nunito", Language: "en", Size: "medium", AutoUpdate: true}
 }
 
 // sanitize replaces each unknown value with its default, so an old or edited file never breaks startup.
@@ -35,6 +36,9 @@ func sanitize(s models.AppSettings) models.AppSettings {
 	if !slices.Contains(languages, s.Language) {
 		s.Language = def.Language
 	}
+	if !slices.Contains(sizes, s.Size) {
+		s.Size = def.Size
+	}
 	return s
 }
 
@@ -47,6 +51,8 @@ func validate(s models.AppSettings) error {
 		return fmt.Errorf("invalid font %q", s.Font)
 	case !slices.Contains(languages, s.Language):
 		return fmt.Errorf("invalid language %q", s.Language)
+	case !slices.Contains(sizes, s.Size):
+		return fmt.Errorf("invalid size %q", s.Size)
 	}
 	return nil
 }
