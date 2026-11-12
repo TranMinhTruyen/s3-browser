@@ -28,9 +28,14 @@ export const findAll = (state: EditorState, query: SearchQuery): Match[] => [
   ...iterate(state, query, 0, state.doc.length),
 ];
 
-/** First match starting at or after `from`, wrapping to the start of the document. Null when there is none. */
+/**
+ * First match starting at or after `from`, wrapping to the start of the document. Null when there is none.
+ * The wrap-around scans the whole document: cutting it at `from` would hide matches that cross `from`.
+ */
 export const findNext = (state: EditorState, query: SearchQuery, from: number): Match | null =>
-  iterate(state, query, from, state.doc.length).next().value ?? iterate(state, query, 0, from).next().value ?? null;
+  iterate(state, query, from, state.doc.length).next().value ??
+  iterate(state, query, 0, state.doc.length).next().value ??
+  null;
 
 /** Text a match is replaced with. With a regular expression, `$1`, `$&` and `$$` are expanded like CodeMirror does. */
 const getReplacement = (query: SearchQuery, match: Match, replacement: string) => {
@@ -48,12 +53,26 @@ const getReplacement = (query: SearchQuery, match: Match, replacement: string) =
   });
 };
 
+/** Same test as CodeMirror's RegExpCursor: such a pattern can match across lines. */
+const MULTILINE_PATTERN = /\\[sWDnr]|\n|\r|\[\^/;
+
 /** The match that is exactly the selected range, or null. */
 const getSelectedMatch = (state: EditorState, query: SearchQuery, range: SelectionRange): Match | null => {
   if (range.from === range.to) return null;
-  // Search the whole document so context (whole word, lookbehind, ^, $, \b) is seen.
-  return findAll(state, query).find(match => match.from === range.from && match.to === range.to) ?? null;
+  // Search whole lines around the selection so context (whole word, lookbehind, ^, $, \b) is seen;
+  // a pattern that can span lines needs the whole document.
+  const multiline = MULTILINE_PATTERN.test(query.search);
+  const from = multiline ? 0 : state.doc.lineAt(range.from).from;
+  const to = multiline ? state.doc.length : state.doc.lineAt(range.to).to;
+  for (const match of iterate(state, query, from, to)) {
+    if (match.from === range.from && match.to === range.to) return match;
+    if (match.from >= range.from) break;
+  }
+  return null;
 };
+
+/** Escapes characters that are special in a regular expression, so the text matches literally. */
+export const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /** Selects the next match after the current selection. Returns false when there is no match. */
 export const selectNext = (view: EditorView, query: SearchQuery): boolean => {
@@ -103,7 +122,12 @@ export const replaceAll = (view: EditorView, query: SearchQuery, replacement: st
 
 /** 1-based position of the selected match among all matches (0 when the selection is not a match) and the total. */
 export const getMatchInfo = (state: EditorState, query: SearchQuery) => {
-  const matches = findAll(state, query);
   const { from, to } = state.selection.main;
-  return { index: matches.findIndex(match => match.from === from && match.to === to) + 1, total: matches.length };
+  let index = 0;
+  let total = 0;
+  for (const match of iterate(state, query, 0, state.doc.length)) {
+    total++;
+    if (match.from === from && match.to === to) index = total;
+  }
+  return { index, total };
 };

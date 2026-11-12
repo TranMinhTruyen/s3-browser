@@ -67,6 +67,7 @@ describe('SqlTabDetail', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     for (const v of views.splice(0)) v.destroy();
   });
 
@@ -224,6 +225,23 @@ describe('SqlTabDetail', () => {
       expect(findBox()).toHaveValue('select');
     });
 
+    it('escapes the selected text when regular expressions are on', async () => {
+      const user = userEvent.setup();
+      view().dispatch({ changes: { from: 0, to: 8, insert: 'count(*) a.b' }, selection: { anchor: 0, head: 8 } });
+      renderDetail();
+      act(() => props().onFind());
+      await user.click(screen.getByRole('button', { name: 'Use regular expression' }));
+      act(() => props().onFind());
+      expect(findBox()).toHaveValue('count\\(\\*\\)');
+    });
+
+    it('keeps the selected text as is when regular expressions are off', () => {
+      view().dispatch({ changes: { from: 0, to: 8, insert: 'count(*) a.b' }, selection: { anchor: 0, head: 8 } });
+      renderDetail();
+      act(() => props().onFind());
+      expect(findBox()).toHaveValue('count(*)');
+    });
+
     it('ignores a multi-line selection', () => {
       view().dispatch({ changes: { from: 0, to: 8, insert: 'a\nb' }, selection: { anchor: 0, head: 3 } });
       renderDetail();
@@ -301,7 +319,7 @@ describe('SqlTabDetail', () => {
       expect(view().state.doc.toString()).toBe('xe 1');
     });
 
-    it('refreshes the shown counter when the editor reports a document change', async () => {
+    it('refreshes the shown counter 120 ms after the editor reports a document change', async () => {
       const user = userEvent.setup();
       renderDetail();
       act(() => props().onFind());
@@ -309,9 +327,14 @@ describe('SqlTabDetail', () => {
       await user.click(screen.getByRole('button', { name: 'Find' }));
       expect(screen.getByText('1/1')).toBeInTheDocument();
 
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
       act(() => {
         view().dispatch({ changes: { from: view().state.doc.length, insert: ' select' } });
         props().onDocChange();
+      });
+      expect(screen.getByText('1/1')).toBeInTheDocument();
+      await act(async () => {
+        vi.advanceTimersByTime(120);
       });
 
       expect(screen.getByText('1/2')).toBeInTheDocument();

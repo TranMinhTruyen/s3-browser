@@ -32,6 +32,9 @@ type FindReplacePanelProps = {
   onClose: () => void;
 };
 
+/** Wait (ms) after the last text change before the "i/n" counter is recomputed. */
+const DOC_CHANGE_DELAY = 120;
+
 type MatchInfo = { index: number; total: number };
 
 const OPTION_ICONS = [
@@ -80,11 +83,16 @@ function FindReplacePanel(props: FindReplacePanelProps) {
     });
   }, [viewRef, query]);
 
-  // Runs on mount and when the query or an option changes; the editor calls it on every text change.
+  // Runs on mount and when the query or an option changes; text changes are batched so typing stays cheap.
   useEffect(() => {
     updateInfo();
-    docChangeRef.current = updateInfo;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    docChangeRef.current = () => {
+      clearTimeout(timer);
+      timer = setTimeout(updateInfo, DOC_CHANGE_DELAY);
+    };
     return () => {
+      clearTimeout(timer);
       docChangeRef.current = null;
     };
   }, [updateInfo, docChangeRef]);
@@ -189,7 +197,7 @@ function FindReplacePanel(props: FindReplacePanelProps) {
                   key={key}
                   size="sm"
                   variant={options[key] ? 'filled' : 'subtle'}
-                  color={options[key] ? undefined : 'gray'}
+                  color={options[key] ? undefined : 'var(--mantine-color-gray-6)'}
                   aria-pressed={options[key]}
                   data-option={key}
                   tooltip={t(label)}

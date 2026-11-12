@@ -82,6 +82,7 @@ const btn = (name: string) => screen.getByRole('button', { name });
 const sel = (view: EditorView) => [view.state.selection.main.from, view.state.selection.main.to];
 
 afterEach(() => {
+  vi.useRealTimers();
   for (const view of views.splice(0)) view.destroy();
 });
 
@@ -413,6 +414,12 @@ describe('FindReplacePanel', () => {
 
   describe('match counter refresh (docChangeRef)', () => {
     type Ctx = ReturnType<typeof setup>;
+    /** The counter is recomputed 120 ms after the last change (DOC_CHANGE_DELAY); fake timers are installed after clicks. */
+    const useFakeClock = () => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    const advance = (ms = 120) =>
+      act(async () => {
+        vi.advanceTimersByTime(ms);
+      });
     /** Edits the document like the editor does: the change, then its update listener calls the registered refresh. */
     const edit = (ctx: Ctx, changes: { from: number; to?: number; insert?: string }) =>
       act(() => {
@@ -431,34 +438,44 @@ describe('FindReplacePanel', () => {
       const ctx = setup({ find: 'foo' });
       await ctx.user.click(btn('Find'));
       expect(screen.getByText('1/2')).toBeInTheDocument();
+      useFakeClock();
 
       edit(ctx, { from: 11, insert: ' foo' }); // typing
+      await advance();
       expect(screen.getByText('1/3')).toBeInTheDocument();
 
       edit(ctx, { from: 11, to: 15 }); // Backspace / undo
+      await advance();
       expect(screen.getByText('1/2')).toBeInTheDocument();
 
       edit(ctx, { from: 0, insert: 'foo foo ' }); // paste
+      await advance();
       expect(screen.getByText(/^\d\/4$/)).toBeInTheDocument();
     });
 
     it('shows "No results" when the edit removes every match', async () => {
       const ctx = setup({ find: 'foo' });
       await ctx.user.click(btn('Find'));
+      useFakeClock();
       edit(ctx, { from: 0, to: ctx.view.state.doc.length, insert: 'bar' });
+      await advance();
       expect(screen.getByText('No results')).toBeInTheDocument();
     });
 
-    it('does not show a counter on edit when none was shown (info stays null)', () => {
+    it('does not show a counter on edit when none was shown (info stays null)', async () => {
       const ctx = setup({ find: 'foo' });
+      useFakeClock();
       edit(ctx, { from: 0, insert: 'foo ' });
+      await advance();
       expect(screen.queryByText(/\d+\/\d+/)).not.toBeInTheDocument();
       expect(screen.queryByText('No results')).not.toBeInTheDocument();
     });
 
-    it('does nothing when the editor is gone', () => {
+    it('does nothing when the editor is gone', async () => {
       const ctx = setup({ find: 'foo', noView: true });
+      useFakeClock();
       expect(() => act(() => ctx.docChangeRef.current?.())).not.toThrow();
+      await advance();
       expect(screen.queryByText(/\d+\/\d+/)).not.toBeInTheDocument();
     });
 
@@ -467,8 +484,10 @@ describe('FindReplacePanel', () => {
       await ctx.user.click(btn('Find'));
       const counter = screen.getByText('1/2');
       ctx.onRender.mockClear();
+      useFakeClock();
 
       edit(ctx, { from: 11, insert: ' x' }); // no match added or removed, selection unchanged
+      await advance();
 
       expect(ctx.onRender).not.toHaveBeenCalled();
       expect(screen.getByText('1/2')).toBe(counter);
@@ -478,8 +497,10 @@ describe('FindReplacePanel', () => {
       const ctx = setup({ find: 'foo' });
       await ctx.user.click(btn('Find'));
       ctx.onRender.mockClear();
+      useFakeClock();
 
       edit(ctx, { from: 11, insert: ' foo' });
+      await advance();
 
       expect(ctx.onRender).toHaveBeenCalled();
       expect(screen.getByText('1/3')).toBeInTheDocument();
@@ -491,11 +512,70 @@ describe('FindReplacePanel', () => {
       await ctx.user.click(btn('Find'));
       ctx.viewRef.current = null;
       ctx.onRender.mockClear();
+      useFakeClock();
 
       expect(() => act(() => ctx.docChangeRef.current?.())).not.toThrow();
+      await advance();
 
       expect(ctx.onRender).not.toHaveBeenCalled();
       expect(screen.getByText('1/2')).toBeInTheDocument();
+    });
+
+    it('waits 120 ms after the change before recomputing', async () => {
+      const ctx = setup({ find: 'foo' });
+      await ctx.user.click(btn('Find'));
+      useFakeClock();
+      edit(ctx, { from: 11, insert: ' foo' });
+      await advance(119);
+      expect(screen.getByText('1/2')).toBeInTheDocument();
+      await advance(1);
+      expect(screen.getByText('1/3')).toBeInTheDocument();
+    });
+
+    it('batches consecutive changes into one update', async () => {
+      const ctx = setup({ find: 'foo' });
+      await ctx.user.click(btn('Find'));
+      useFakeClock();
+      ctx.onRender.mockClear();
+
+      edit(ctx, { from: 11, insert: ' foo' });
+      await advance(100);
+      edit(ctx, { from: 15, insert: ' foo' });
+      await advance(100); // 200 ms since the first change, 100 ms since the last
+      expect(screen.getByText('1/2')).toBeInTheDocument();
+      expect(ctx.onRender).not.toHaveBeenCalled();
+
+      await advance(20);
+      expect(screen.getByText('1/4')).toBeInTheDocument();
+      expect(ctx.onRender).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not update after unmount and leaves no timer behind', async () => {
+      const ctx = setup({ find: 'foo' });
+      await ctx.user.click(btn('Find'));
+      useFakeClock();
+      edit(ctx, { from: 11, insert: ' foo' });
+      ctx.onRender.mockClear();
+
+      ctx.unmount();
+
+      expect(vi.getTimerCount()).toBe(0);
+      await advance();
+      expect(ctx.onRender).not.toHaveBeenCalled();
+    });
+
+    it('drops a pending update when the query changes', async () => {
+      const ctx = setup({ find: 'foo' });
+      await ctx.user.click(btn('Find'));
+      useFakeClock();
+      edit(ctx, { from: 11, insert: ' foo' });
+      expect(vi.getTimerCount()).toBe(1);
+
+      fireEvent.change(findInput(), { target: { value: 'bar' } });
+
+      expect(vi.getTimerCount()).toBe(0);
+      await advance();
+      expect(screen.queryByText(/\d+\/\d+/)).not.toBeInTheDocument();
     });
 
     it('recomputes a shown counter when an option changes, and keeps it hidden otherwise', async () => {

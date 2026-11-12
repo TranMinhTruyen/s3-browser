@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   createQuery,
   DEFAULT_FIND_OPTIONS,
+  escapeRegExp,
   type FindOptions,
   findAll,
   findNext,
@@ -58,6 +59,22 @@ describe('findNext', () => {
 
   it('wraps to the start of the document', () => {
     expect(findNext(make('foo bar').state, q('foo'), 4)).toMatchObject({ from: 0, to: 3 });
+  });
+
+  it.each([
+    ['a match that crosses the position when wrapping', 'select 1', 2, 'select', {}, { from: 0, to: 6 }],
+    ['a lookahead match that crosses the position', 'foobar', 2, 'foo(?=bar)', { regexp: true }, { from: 0, to: 3 }],
+    ['no match when an anchor fails after wrapping', 'foobar', 3, 'foo$', { regexp: true }, null],
+  ] as const)('wrap-around scans the whole document: %s', (_n, doc, from, search, options, expected) => {
+    const found = findNext(make(doc).state, q(search, options), from);
+    if (expected) expect(found).toMatchObject(expected);
+    else expect(found).toBeNull();
+  });
+
+  it('keeps finding the next match and wrapping normally', () => {
+    const s = make('foo x foo').state;
+    expect(findNext(s, q('foo'), 3)).toMatchObject({ from: 6, to: 9 });
+    expect(findNext(s, q('foo'), 7)).toMatchObject({ from: 0, to: 3 });
   });
 
   it('returns null for an empty query or no match', () => {
@@ -121,6 +138,13 @@ describe('replaceCurrent', () => {
     expect(replaceCurrent(view, q('foo'), 'bar')).toBe(true);
     expect(view.state.doc.toString()).toBe('a foo');
     expect(sel(view)).toEqual([2, 5]);
+  });
+
+  it('does not replace or fake a selection when an anchored pattern does not match the selection', () => {
+    const view = make('foobar', { anchor: 0, head: 3 });
+    expect(replaceCurrent(view, q('foo$', { regexp: true }), 'x')).toBe(false);
+    expect(view.state.doc.toString()).toBe('foobar');
+    expect(sel(view)).toEqual([0, 3]);
   });
 
   it('returns false for an empty query', () => {
@@ -281,5 +305,61 @@ describe('replacement with a regular expression', () => {
     replaceCurrent(inWord, q('foo', { wholeWord: true }), 'x');
     expect(inWord.state.doc.toString()).toBe('foobar foo');
     expect(sel(inWord)).toEqual([7, 10]);
+  });
+});
+
+describe('escapeRegExp', () => {
+  it.each([
+    ['count(*', 'count\\(\\*'],
+    ['a.b+c?', 'a\\.b\\+c\\?'],
+    ['^$|{}[]', '\\^\\$\\|\\{\\}\\[\\]'],
+    ['a\\b', 'a\\\\b'],
+    ['plain text 1', 'plain text 1'],
+    ['', ''],
+  ])('escapes %j to %j', (input, expected) => {
+    expect(escapeRegExp(input)).toBe(expected);
+  });
+
+  it('makes the text match literally as a regular expression', () => {
+    const { state } = make('count(*) from t');
+    expect(findAll(state, q(escapeRegExp('count(*)'), { regexp: true })).map(m => [m.from, m.to])).toEqual([[0, 8]]);
+  });
+});
+
+describe('replaceCurrent selected-match lookup', () => {
+  it.each([
+    ['\\s', 'a b\nc', { anchor: 1, head: 2 }, 'a_b\nc'],
+    ['\\s', 'a b\nc', { anchor: 3, head: 4 }, 'a b_c'],
+    ['[^x]b', 'xab\nab', { anchor: 1, head: 3 }, 'x_\nab'],
+    ['x\\ny', 'x\ny x', { anchor: 0, head: 3 }, '_ x'],
+  ])('finds a multi-line capable pattern %s', (search, doc, selection, expected) => {
+    const view = make(doc);
+    view.dispatch({ selection });
+    expect(replaceCurrent(view, q(search, { regexp: true }), '_')).toBe(true);
+    expect(view.state.doc.toString()).toBe(expected);
+  });
+
+  it.each([
+    ['starts before the first match', { anchor: 1, head: 2 }, [8, 11]],
+    ['sits between two matches', { anchor: 4, head: 5 }, [8, 11]],
+    ['starts inside a match', { anchor: 9, head: 10 }, [0, 3]],
+  ])('does not replace a selection that is not a match (%s)', (_n, selection, next) => {
+    const view = make('foo bar foo', selection);
+    expect(replaceCurrent(view, q('foo'), 'x')).toBe(true);
+    expect(view.state.doc.toString()).toBe('foo bar foo');
+    expect(sel(view)).toEqual(next);
+  });
+
+  it('does not treat a multi-line selection as a match of a single-line pattern', () => {
+    const view = make('ab\ncd ab', { anchor: 0, head: 5 });
+    expect(replaceCurrent(view, q('ab'), 'x')).toBe(true);
+    expect(view.state.doc.toString()).toBe('ab\ncd ab');
+    expect(sel(view)).toEqual([6, 8]);
+  });
+
+  it('replaces a selection on a later line with whole-line context', () => {
+    const view = make('foo\nbar foo', { anchor: 8, head: 11 });
+    replaceCurrent(view, q('foo', { wholeWord: true }), 'x');
+    expect(view.state.doc.toString()).toBe('foo\nbar x');
   });
 });

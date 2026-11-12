@@ -10,7 +10,7 @@ import SqlEditor from '@/pages/sql/components/sqlEditor/SqlEditor';
 import { getMockSchema } from '@/pages/sql/mock/dbSchemaMock';
 import { selectProfileNames, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
-import { DEFAULT_FIND_OPTIONS, type FindOptions } from '@/pages/sql/utils/findReplace';
+import { DEFAULT_FIND_OPTIONS, escapeRegExp, type FindOptions } from '@/pages/sql/utils/findReplace';
 import { formatEditorSql } from '@/pages/sql/utils/sqlFormat';
 import { runSql } from '@/pages/sql/utils/sqlToast';
 
@@ -81,17 +81,17 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
     else toast.error(t('toast.formatError', { ns: 'sqlTab', message: result.message }));
   }, [dialect, t]);
 
-  // Ctrl+F: a single-line selection becomes the search text; opening again just re-focuses the Find box.
+  // Ctrl+F: a single-line selection becomes the search text (escaped when regex is on); again just re-focuses the Find box.
   const onFindShortcut = useCallback(() => {
     const view = editorRef.current;
     if (view) {
       const { from, to } = view.state.selection.main;
       const selected = view.state.sliceDoc(from, to);
-      if (selected && !selected.includes('\n')) setFindText(selected);
+      if (selected && !selected.includes('\n')) setFindText(findOptions.regexp ? escapeRegExp(selected) : selected);
     }
     setFindOpen(true);
     setFocusKey(key => key + 1);
-  }, []);
+  }, [findOptions.regexp]);
 
   const onCloseFind = useCallback(() => setFindOpen(false), []);
 
