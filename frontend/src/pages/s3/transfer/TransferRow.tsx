@@ -45,7 +45,7 @@ function TransferRow(props: TransferRowProps) {
         </Center>
       </Card.Section>
 
-      <Card.Section inheritPadding px="xs" style={{ flex: 1, minWidth: 0, padding: '8px' }}>
+      <Card.Section inheritPadding px="xs" style={{ flex: 1, minWidth: 0, padding: '0.5rem' }}>
         <TruncatedText>{title}</TruncatedText>
         {children}
       </Card.Section>

@@ -194,6 +194,7 @@ describe('SettingModal', () => {
     expect(state().draft).toEqual({
       theme: 'dark',
       font: 'jetbrains-mono',
+      size: 'medium',
       language: 'ja',
       launchOnStartup: true,
       autoUpdate: true,
@@ -813,6 +814,98 @@ describe('SettingModal', () => {
       await flush();
 
       await user.click(screen.getByRole('switch', { name: AUTO_UPDATE_LABEL }));
+      await user.click(screen.getByRole('button', { name: 'Close' }));
+
+      expect(unsavedMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('interface size slider', () => {
+    const thumb = () => screen.getByRole('slider', { name: 'Interface size' });
+
+    it('shows the three size marks and the thumb at the draft size', async () => {
+      useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size: 'large' } });
+      open();
+      await flush();
+
+      for (const name of ['Small', 'Medium', 'Large']) {
+        expect(screen.getByText(name)).toBeInTheDocument();
+      }
+      expect(thumb()).toHaveAttribute('aria-valuenow', '2');
+    });
+
+    it('starts at the medium size', async () => {
+      open();
+      await flush();
+      expect(thumb()).toHaveAttribute('aria-valuenow', '1');
+    });
+
+    it.each([
+      ['{ArrowRight}', 'large'],
+      ['{ArrowLeft}', 'small'],
+      ['{Home}', 'small'],
+      ['{End}', 'large'],
+    ])('applies the size at once for the key %s', async (key, size) => {
+      const user = userEvent.setup();
+      open();
+      await flush();
+
+      thumb().focus();
+      await user.keyboard(key);
+
+      expect(state().draft.size).toBe(size);
+      expect(applySettings).toHaveBeenLastCalledWith({ ...DEFAULT_SETTINGS, size });
+      expect(callIPCMock).not.toHaveBeenCalled();
+    });
+
+    it('does not change the draft when a key leaves the size as it is', async () => {
+      const user = userEvent.setup();
+      useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size: 'large' } });
+      open();
+      await flush();
+      vi.mocked(applySettings).mockClear();
+
+      thumb().focus();
+      await user.keyboard('{ArrowRight}');
+
+      expect(state().draft.size).toBe('large');
+      expect(applySettings).not.toHaveBeenCalled();
+    });
+
+    it('Reset puts the slider back to medium', async () => {
+      const user = userEvent.setup();
+      useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size: 'large' } });
+      open();
+      await flush();
+
+      await user.click(screen.getByRole('button', { name: 'Reset to default' }));
+
+      expect(state().draft.size).toBe('medium');
+      expect(thumb()).toHaveAttribute('aria-valuenow', '1');
+    });
+
+    it('Cancel restores the applied size', async () => {
+      const user = userEvent.setup();
+      const result = open();
+      await flush();
+
+      thumb().focus();
+      await user.keyboard('{ArrowLeft}');
+      expect(state().draft.size).toBe('small');
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      await expect(result).resolves.toBe(false);
+      expect(state().draft.size).toBe('medium');
+      expect(applySettings).toHaveBeenLastCalledWith(DEFAULT_SETTINGS);
+    });
+
+    it('a changed size alone counts as unsaved when closing with the X button', async () => {
+      const user = userEvent.setup();
+      open();
+      await flush();
+
+      thumb().focus();
+      await user.keyboard('{ArrowRight}');
       await user.click(screen.getByRole('button', { name: 'Close' }));
 
       expect(unsavedMock).toHaveBeenCalledTimes(1);

@@ -12,6 +12,7 @@ import {
   type LanguageKey,
   THEMES,
   type ThemeKey,
+  UI_SIZES,
 } from '@/common/cnst/settingConst';
 import { useSettingStore } from '@/common/stores/settingStore';
 import { useUpdateStore } from '@/common/stores/updateStore';
@@ -21,6 +22,7 @@ import { isSettingDirty } from '@/common/utils/settingUtils';
 import Button from '@/components/buttons/Button';
 import CloseButton from '@/components/buttons/CloseButton';
 import SelectInput from '@/components/inputs/SelectInput';
+import SliderInput from '@/components/inputs/SliderInput';
 import SwitchInput from '@/components/inputs/SwitchInput';
 import { showUnsavedSettingModal } from '@/components/modals/lazyModals';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
@@ -36,6 +38,8 @@ export default createMantineModal<{}, boolean>(props => {
   // Same lock while Apply is pending, so Cancel/Save/close cannot race with its result.
   const [applying, setApplying] = useState(false);
   const busy = saving || applying;
+  // Dragging only moves the thumb; the size is applied on release (keys apply at once).
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   const draft = useSettingStore(useShallow(s => s.draft));
   const applied = useSettingStore(useShallow(s => s.applied));
@@ -50,6 +54,7 @@ export default createMantineModal<{}, boolean>(props => {
   const themeOptions = useMemo(() => THEMES.map(value => ({ value, label: t(`option.theme.${value}`) })), [t]);
   const fontOptions = useMemo(() => FONTS.map(value => ({ value, label: t(`option.font.${value}`) })), [t]);
   const languageOptions = useMemo(() => LANGUAGES.map(value => ({ value, label: LANGUAGE_LABELS[value] })), []);
+  const sizeMarks = useMemo(() => UI_SIZES.map((key, value) => ({ value, label: t(`option.size.${key}`) })), [t]);
   const comboboxProps = useMemo(() => ({ zIndex: mantine.props.zIndex + 1 }), [mantine.props.zIndex]);
 
   const onChangeTheme = useCallback(
@@ -63,6 +68,15 @@ export default createMantineModal<{}, boolean>(props => {
       if (value) setDraft({ font: value as FontKey });
     },
     [setDraft]
+  );
+  const onChangeSize = useCallback((value: number) => setDragIndex(value), []);
+  const onChangeEndSize = useCallback(
+    (value: number) => {
+      setDragIndex(null);
+      const size = UI_SIZES[value];
+      if (size !== draft.size) setDraft({ size });
+    },
+    [draft.size, setDraft]
   );
   const onChangeLanguage = useCallback(
     (value: string | null) => {
@@ -189,6 +203,18 @@ export default createMantineModal<{}, boolean>(props => {
                   renderOption={renderFontOption}
                   allowDeselect={false}
                   comboboxProps={comboboxProps}
+                />
+                <SliderInput
+                  label={t('label.size')}
+                  thumbLabel={t('label.size')}
+                  min={0}
+                  max={UI_SIZES.length - 1}
+                  step={1}
+                  marks={sizeMarks}
+                  value={dragIndex ?? UI_SIZES.indexOf(draft.size)}
+                  onChange={onChangeSize}
+                  onChangeEnd={onChangeEndSize}
+                  mb="lg"
                 />
                 <SelectInput
                   label={t('label.language')}

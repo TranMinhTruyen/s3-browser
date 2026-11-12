@@ -40,7 +40,7 @@ const ICON_SECTION_STYLE: CSSProperties = {
   justifyContent: 'center',
 };
 const CONTENT_SECTION_STYLE: CSSProperties = { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' };
-const MENU_SECTION_STYLE: CSSProperties = { ...ICON_SECTION_STYLE, minWidth: '56px' };
+const MENU_SECTION_STYLE: CSSProperties = { ...ICON_SECTION_STYLE, minWidth: '3.5rem' };
 
 const stopPropagation = (e: MouseEvent) => e.stopPropagation();
 
@@ -88,7 +88,7 @@ function BucketItem(props: BucketItemProps) {
   return (
     <Card padding="8px" orientation="horizontal" h={LIST_ROW_HEIGHT} onClick={onClickBucket} className={classes.card}>
       <Card.Section inheritPadding px="8px" withBorder className={classes.iconSection} style={ICON_SECTION_STYLE}>
-        <Folder size="20px" />
+        <Folder size="1.25rem" />
       </Card.Section>
       <Card.Section inheritPadding px="xs" style={CONTENT_SECTION_STYLE}>
         {/* miw=0 lets the flex item shrink, so a long bucket name is truncated instead of overflowing. */}
@@ -122,18 +122,18 @@ function BucketItem(props: BucketItemProps) {
               </ActionIcon>
             </Menu.Target>
             <Menu.Dropdown>
-              <Menu.Item leftSection={<Info size="16px" />} onClick={onClickDetail}>
+              <Menu.Item leftSection={<Info size="1rem" />} onClick={onClickDetail}>
                 {labels.detail}
               </Menu.Item>
               {canEdit ? (
-                <Menu.Item leftSection={<ShieldCheck size="16px" />} onClick={onClickEditPolicy}>
+                <Menu.Item leftSection={<ShieldCheck size="1rem" />} onClick={onClickEditPolicy}>
                   {labels.editPolicy}
                 </Menu.Item>
               ) : null}
               {canEdit && !item.deleteDenied ? (
                 <>
                   <Menu.Divider />
-                  <Menu.Item color="red" leftSection={<Trash2 size="16px" />} onClick={onClickDelete}>
+                  <Menu.Item color="red" leftSection={<Trash2 size="1rem" />} onClick={onClickDelete}>
                     {labels.delete}
                   </Menu.Item>
                 </>

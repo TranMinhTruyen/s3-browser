@@ -97,7 +97,7 @@ function TabActionBar(props: TabActionBarProps) {
           data={profileOptions}
           searchPlaceholder={t('search.placeholderProfile')}
           emptyText={t('search.emptyProfile')}
-          style={{ width: '200px' }}
+          style={{ width: '12.5rem' }}
         />
 
         <ActionIcon

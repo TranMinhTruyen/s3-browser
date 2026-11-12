@@ -33,7 +33,7 @@ type UploadPickerModalProps = ModalProps & {
 export type UploadPickerResult = { bucket: string; files: DroppedFile[] };
 
 // The list follows the window height but never gets smaller than the minimum.
-const LIST_HEIGHT = 'max(280px, 40vh)';
+const LIST_HEIGHT = 'max(17.5rem, 40vh)';
 
 type FileListProps = {
   rows: UploadRow[];
@@ -280,7 +280,7 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
             <Stack gap="4px" p="8px">
               <Group gap="xs">
                 <Button
-                  leftSection={<Upload size="16px" />}
+                  leftSection={<Upload size="1rem" />}
                   onClick={onClickPickFiles}
                   loading={isPicking}
                   disabled={isPicking}
@@ -289,7 +289,7 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
                 </Button>
                 <Button
                   {...tintedColor('red', 'button')}
-                  leftSection={<Trash2 size="16px" />}
+                  leftSection={<Trash2 size="1rem" />}
                   onClick={onClickRemoveSelected}
                   disabled={isPicking || selected.size === 0}
                 >
@@ -321,7 +321,7 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
                 />
               )}
               <div className={classes.dropOverlay}>
-                <FileDown size="32px" />
+                <FileDown size="2rem" />
                 <Text fw={600}>{t('dropHere')}</Text>
               </div>
             </div>

@@ -189,7 +189,7 @@ export default createMantineModal<DbProfileModalProps, false>(
                       withAsterisk
                       rightSection={
                         <ActionIcon variant="subtle" onClick={notifyNoBackend} tooltip={t('form.tooltip.chooseFile')}>
-                          <FolderOpen size="16px" />
+                          <FolderOpen size="1rem" />
                         </ActionIcon>
                       }
                       key={form.key('filePath')}

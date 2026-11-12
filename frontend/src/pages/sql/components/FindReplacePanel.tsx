@@ -203,7 +203,7 @@ function FindReplacePanel(props: FindReplacePanelProps) {
                   tooltip={t(label)}
                   onClick={onClickToggleOption}
                 >
-                  <Icon size={16} />
+                  <Icon size="1rem" />
                 </ActionIcon>
               ))}
             </Group>

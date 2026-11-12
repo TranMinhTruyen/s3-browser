@@ -3,9 +3,11 @@ import type { SQLNamespace } from '@codemirror/lang-sql';
 import { language } from '@codemirror/language';
 import { Compartment } from '@codemirror/state';
 import { type EditorView, runScopeHandlers } from '@codemirror/view';
-import { createEvent, fireEvent, render } from '@testing-library/react';
+import { act, createEvent, fireEvent, render } from '@testing-library/react';
 import { createRef } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_SETTINGS, type UiSizeKey } from '@/common/cnst/settingConst';
+import { useSettingStore } from '@/common/stores/settingStore';
 import SqlEditor, { type SqlDialect } from '@/pages/sql/components/sqlEditor/SqlEditor';
 import { polyfillCodeMirrorLayout } from '@/test/_helpers/codemirror';
 
@@ -333,6 +335,54 @@ describe('SqlEditor', () => {
       rerender(null, {});
       expect(() => view.dispatch({ changes: { from: 0, insert: 'b' } })).not.toThrow();
       expect(second).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('interface size', () => {
+    const setSize = (size: UiSizeKey) => act(() => useSettingStore.setState(s => ({ draft: { ...s.draft, size } })));
+
+    beforeEach(() => {
+      useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS } });
+    });
+
+    it('does not measure again on a re-render with the same size', () => {
+      const { viewRef, rerender } = mount();
+      const requestMeasure = vi.spyOn(viewRef.current as EditorView, 'requestMeasure');
+
+      rerender(null);
+
+      expect(requestMeasure).not.toHaveBeenCalled();
+    });
+
+    it('measures once for every size change and keeps the document', () => {
+      const { viewRef } = mount();
+      const view = viewRef.current as EditorView;
+      view.dispatch({ changes: { from: 0, insert: 'select 1' } });
+      const requestMeasure = vi.spyOn(view, 'requestMeasure');
+
+      setSize('large');
+      expect(requestMeasure).toHaveBeenCalledTimes(1);
+
+      setSize('small');
+      expect(requestMeasure).toHaveBeenCalledTimes(2);
+      expect(viewRef.current).toBe(view);
+      expect(view.state.doc.toString()).toBe('select 1');
+    });
+
+    it('does not measure when another setting changes', () => {
+      const { viewRef } = mount();
+      const requestMeasure = vi.spyOn(viewRef.current as EditorView, 'requestMeasure');
+
+      act(() => useSettingStore.setState(s => ({ draft: { ...s.draft, theme: 'dark' } })));
+
+      expect(requestMeasure).not.toHaveBeenCalled();
+    });
+
+    it('tolerates a size change while no view exists', () => {
+      const { viewRef, unmount } = mount();
+      unmount();
+      expect(viewRef.current).toBeNull();
+      expect(() => setSize('large')).not.toThrow();
     });
   });
 });

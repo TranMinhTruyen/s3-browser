@@ -4,10 +4,10 @@ import { File, Folder } from 'lucide-react';
 import { CSSProperties, memo, useCallback, useState } from 'react';
 import TruncatedText from '@/components/display/TruncatedText';
 
-const LIST_MAX_HEIGHT = 320;
+const LIST_MAX_HEIGHT = '20rem';
 // One-line card plus its gap; the real height is measured, as error reasons may wrap.
 const ROW_ESTIMATE_HEIGHT = 56;
-const ROW_GAP = 8;
+const ROW_GAP = '0.5rem';
 // Same border as the cards of the object list.
 const CARD_BORDER_COLOR = 'light-dark(var(--mantine-color-black), var(--mantine-color-dark-2))';
 
@@ -19,7 +19,7 @@ export type DeleteKeyRow = {
 
 type DeleteKeyListProps = {
   rows: DeleteKeyRow[];
-  maxHeight?: number;
+  maxHeight?: number | string;
 };
 
 // Error reasons wrap anywhere (no spaces in keys); nothing may widen the list (no horizontal scroll).
@@ -81,7 +81,7 @@ const DeleteKeyList = memo(function DeleteKeyList(props: DeleteKeyListProps) {
             >
               <Card padding="8px" orientation="horizontal" style={{ border: `1px solid ${CARD_BORDER_COLOR}` }}>
                 <Card.Section inheritPadding px="8px" withBorder style={ICON_SECTION_STYLE}>
-                  {isFolder ? <Folder size="20px" /> : <File size="20px" />}
+                  {isFolder ? <Folder size="1.25rem" /> : <File size="1.25rem" />}
                 </Card.Section>
                 <Card.Section inheritPadding px="md" py="xs" style={NAME_SECTION_STYLE}>
                   {/* The full key is the hint when the name alone does not tell it. */}
