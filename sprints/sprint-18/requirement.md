@@ -114,6 +114,19 @@ Thêm chế độ **SQL** vào app với giao diện và thao tác **giống ch�
   - [ ] Chưa chọn profile: Ctrl+E hiện toast cảnh báo "chưa chọn profile", không làm gì khác.
   - [ ] Nội dung rỗng (hoặc chỉ khoảng trắng): toast cảnh báo, không "thực thi".
 
+### R10: Cỡ giao diện trong Settings (thêm 2026-11-12)
+- **Mô tả:** Settings có thêm mục **Cỡ giao diện** với 3 mức `small`, `medium`, `large` (mặc định `medium`), phóng to/thu nhỏ **mọi component** của app (cả S3 lẫn SQL). Hoạt động như theme/font: chọn là preview ngay, Apply/Save/Reset/Huỷ như các setting khác, lưu trong `settings.json`.
+- **Nền tảng:** Cả hai
+- **Màn hình liên quan:** `SettingModal`, toàn app
+- **Ngoại lệ so với nguyên tắc sprint:** R10 có sửa **backend Go** (`internal/modules/setting`, `models/setting`) và **code S3** (các chiều cao px cố định) — người dùng đồng ý khi thêm yêu cầu.
+- **Tiêu chí chấp nhận:**
+  - [ ] Cách scale (người dùng chốt): đặt `font-size` của `<html>` trong `applySettings`; Mantine tính kích thước theo rem nên mọi component co giãn theo. Tỉ lệ: small 87.5% (14px), medium 100% (16px, giữ y giao diện hiện tại), large 112.5% (18px). Chỉ ghi style khi giá trị đổi (như font), không re-render React.
+  - [ ] Chỗ dùng px cố định cũng co giãn theo (người dùng chốt): `LIST_ROW_HEIGHT`, `ROW_HEIGHT` của `UploadFileList`, `estimateSize` của các danh sách virtualize (bucket, object, history, delete, upload...), cỡ chữ SQL editor (`FONT` trong `sqlEditorTheme.ts`), và các chỗ khác planner tìm được. Đổi cỡ thì virtualizer đo lại, không chồng/hở hàng.
+  - [ ] Go: thêm field `size` (json `size`) vào model settings input/output, danh sách hợp lệ `small|medium|large`, `sanitize` giá trị lạ về `medium`, `validate` từ chối giá trị lạ; file `settings.json` cũ không có `size` mở ra là `medium`. Sinh lại bindings.
+  - [ ] FE: thêm `size` vào `AppSettingValues`, `DEFAULT_SETTINGS`, `normalizeSettings`; control trong `SettingModal` là **`Slider` của Mantine** (người dùng chốt 2026-11-12), bọc lại thành wrapper trong `components/inputs/` theo quy ước bọc component Mantine. Slider có 3 nấc cố định (small / medium / large, `step` 1, `marks` hiện nhãn từng nấc, chỉ dừng ở nấc, không có giá trị lẻ); kéo hoặc dùng phím mũi tên đều đổi cỡ và preview ngay. Nhãn đủ 7 ngôn ngữ.
+  - [ ] Ở cả 3 mức: không tràn/cắt chữ bất thường ở navbar, header, dải tab, hàng bucket/object, modal; cửa sổ Downloader/Uploader cũng theo cỡ đã chọn.
+  - [ ] Test hồi quy Go (`sanitize`, `validate`, đọc/ghi settings) và FE (`settingUtils`, `settingStore`, `SettingModal`, các danh sách đã đổi), C1 ≥ 95%.
+
 ## Ngoài phạm vi
 - Backend Go (`internal/modules/db`), Rust `s3b_db.dll`, kết nối DB thật, lưu profile DB vào SQLite, mã hoá password.
 - Import/export profile DB ra file, hộp thoại chọn file SQLite (chỉ toast).

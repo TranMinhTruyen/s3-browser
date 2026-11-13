@@ -6,6 +6,7 @@ import {
   Tooltip,
 } from '@mantine/core';
 import { useAutoLoading } from '@/common/hooks/useAutoLoading';
+import classes from '@/components/buttons/ActionIcon.module.css';
 
 interface ActionIconProps extends MActionIconProps, ElementProps<'button', keyof MActionIconProps> {
   /** Translated text shown on hover; also the default `aria-label`. */
@@ -27,6 +28,7 @@ function ActionIcon(props: ActionIconProps) {
     loading,
     onClick,
     disabled,
+    className,
     style,
     m,
     mx,
@@ -53,6 +55,7 @@ function ActionIcon(props: ActionIconProps) {
           loading={isLoading}
           disabled={isDisabled}
           onClick={onClickButton}
+          className={className ? `${classes.root} ${className}` : classes.root}
           {...restProps}
         />
       </Box>

@@ -18,7 +18,7 @@ import { MODAL_CHROME_HEIGHT } from '@/components/modals/modalLayout';
 const PAGE_SIZE = 10;
 
 // Fixed body height on tall screens; shrinks on short ones so Modal.Content never exceeds its max-height.
-const BODY_HEIGHT = `min(650px, calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT}))`;
+const BODY_HEIGHT = `min(40.625rem, calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT}))`;
 
 type HistoryCardProps = {
   item: DownloadHistoryItem;

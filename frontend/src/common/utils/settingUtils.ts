@@ -9,6 +9,9 @@ import {
   type LanguageKey,
   THEMES,
   type ThemeKey,
+  UI_SIZE_FONT_PX,
+  UI_SIZES,
+  type UiSizeKey,
 } from '@/common/cnst/settingConst';
 import i18n, { loadLanguage } from '@/locales/i18n';
 
@@ -21,6 +24,7 @@ export function normalizeSettings(raw?: Partial<Record<keyof AppSettingValues, u
   return {
     theme: pick<ThemeKey>(THEMES, raw?.theme, DEFAULT_SETTINGS.theme),
     font: pick<FontKey>(FONTS, raw?.font, DEFAULT_SETTINGS.font),
+    size: pick<UiSizeKey>(UI_SIZES, raw?.size, DEFAULT_SETTINGS.size),
     language: pick<LanguageKey>(LANGUAGES, raw?.language, DEFAULT_SETTINGS.language),
     launchOnStartup: raw?.launchOnStartup === true,
     autoUpdate: raw?.autoUpdate !== false,
@@ -81,6 +85,11 @@ export async function applySettings(settings: AppSettingValues): Promise<void> {
   if (style.getPropertyValue('--mantine-font-family') !== family) {
     style.setProperty('--mantine-font-family', family);
     style.setProperty('--mantine-font-family-headings', family);
+  }
+  // The root font-size scales every rem value; same rule as the font: write only when it changed.
+  const fontSize = `${UI_SIZE_FONT_PX[settings.size]}px`;
+  if (style.fontSize !== fontSize) {
+    style.fontSize = fontSize;
   }
   document.documentElement.lang = settings.language;
 

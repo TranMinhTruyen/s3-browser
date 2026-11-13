@@ -13,7 +13,9 @@ import { ObjectItem } from '@wails/S3Browser/models/bucket';
 import { Events } from '@wailsio/runtime';
 import { Activity, createRef, RefObject } from 'react';
 import { toast } from 'sonner';
-import { LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
+import { LIST_ROW_GAP, LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
+import { DEFAULT_SETTINGS, type UiSizeKey } from '@/common/cnst/settingConst';
+import { useSettingStore } from '@/common/stores/settingStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import { showDeleteConfirmModal, showDeleteResultModal } from '@/components/modals/lazyModals';
@@ -30,6 +32,9 @@ const virtual = vi.hoisted(() => ({
   estimate: null as number | null,
   // Height of the viewport; null means the virtualizer has not measured it yet.
   scrollHeight: null as number | null,
+  gap: 0,
+  scrollMargin: 0,
+  measure: vi.fn(),
 }));
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: ({
@@ -37,16 +42,23 @@ vi.mock('@tanstack/react-virtual', () => ({
     getItemKey,
     getScrollElement,
     estimateSize,
+    gap,
+    scrollMargin,
   }: {
     count: number;
     getItemKey: (i: number) => string;
     getScrollElement: () => unknown;
     estimateSize: () => number;
+    gap: number;
+    scrollMargin: number;
   }) => ({
+    measure: () => virtual.measure(),
     // The real virtualizer asks for these itself; record them so a test can check what it would get.
     getVirtualItems: () => {
       virtual.scrollElement = getScrollElement();
       virtual.estimate = estimateSize();
+      virtual.gap = gap;
+      virtual.scrollMargin = scrollMargin;
       return Array.from({ length: count }, (_, index) => ({ key: getItemKey(index), index, start: 0 }));
     },
     getTotalSize: () => count * 100,
@@ -125,6 +137,7 @@ describe('ObjectListView', () => {
       files.map(f => f.key)) as never);
     virtual.endIndex = null;
     virtual.scrollHeight = null;
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS } });
     // Mimics the real callIPC: an Output ({ result, ... }) runs resolveAction/rejectAction and yields its body;
     // any other resolved value is treated as the body itself.
     callIPCMock.mockImplementation((async (
@@ -192,6 +205,53 @@ describe('ObjectListView', () => {
     expect(listMock).toHaveBeenCalledTimes(1);
   });
 
+  describe('interface size', () => {
+    const setSize = (size: UiSizeKey) => act(() => useSettingStore.setState(st => ({ draft: { ...st.draft, size } })));
+
+    it('keeps the row height and gap at the medium size', async () => {
+      renderList();
+      await screen.findByText('a.txt');
+      expect(virtual.estimate).toBe(88);
+      expect(virtual.gap).toBe(LIST_ROW_GAP);
+    });
+
+    it.each([
+      ['small', 0.875],
+      ['large', 1.125],
+    ] as const)('scales the row height and gap at the %s size', async (size, scale) => {
+      useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size } });
+      renderList();
+      await screen.findByText('a.txt');
+      expect(virtual.estimate).toBe(LIST_ROW_HEIGHT * scale);
+      expect(virtual.gap).toBe(LIST_ROW_GAP * scale);
+    });
+
+    it('measures again once after the size changes, not on mount', async () => {
+      renderList();
+      await screen.findByText('a.txt');
+      expect(virtual.measure).not.toHaveBeenCalled();
+
+      await setSize('large');
+      expect(virtual.measure).toHaveBeenCalledTimes(1);
+    });
+
+    it('reads the offset of the list again after the size changes', async () => {
+      let top = 8;
+      const offsetTop = vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(() => top);
+      try {
+        renderList();
+        await screen.findByText('a.txt');
+        expect(virtual.scrollMargin).toBe(8);
+
+        top = 9;
+        await setSize('large');
+        expect(virtual.scrollMargin).toBe(9);
+      } finally {
+        offsetTop.mockRestore();
+      }
+    });
+  });
+
   describe('prefetching the next page', () => {
     // 6 rows: the last index is 5. The threshold index is 5 - max(2, ceil(2 * height / (88 + 8))).
     const many = Array.from({ length: 6 }, (_, i) => new ObjectItem({ key: `f${i}`, name: `f${i}` }));
@@ -216,6 +276,23 @@ describe('ObjectListView', () => {
       if (loads) {
         expect(listMock).toHaveBeenLastCalledWith(expect.objectContaining({ nextCursor: 'cursor-1', limit: 1000 }));
       }
+    });
+
+    it.each([
+      ['small size looks 5 rows ahead', 'small', 184, 0, true],
+      ['medium size looks only 4 rows ahead for the same viewport', 'medium', 184, 0, false],
+      ['large size looks 4 rows ahead', 'large', 216, 1, true],
+      ['large size no longer looks 5 rows ahead', 'large', 216, 0, false],
+    ] as const)('%s', async (_name, size, scrollHeight, endIndex, loads) => {
+      useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size } });
+      virtual.endIndex = endIndex;
+      virtual.scrollHeight = scrollHeight;
+      listMock.mockResolvedValueOnce(page(many, 'cursor-1')).mockResolvedValueOnce(page([fileB]));
+      renderList();
+      await screen.findByText('f5');
+      await act(async () => {});
+
+      expect(listMock).toHaveBeenCalledTimes(loads ? 2 : 1);
     });
 
     it('does not ask for a page while the previous one is still loading', async () => {

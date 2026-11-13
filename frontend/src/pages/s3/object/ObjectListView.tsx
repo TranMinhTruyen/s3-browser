@@ -16,6 +16,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LIST_ROW_GAP, LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
+import { useRemeasureOnScale, useUiScale } from '@/common/hooks/useUiScale';
 import { callIPC } from '@/common/utils/ipcUtils';
 import Button from '@/components/buttons/Button';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
@@ -64,6 +65,7 @@ function ObjectListView(props: ObjectListViewProps) {
   );
 
   const [scrollMargin, setScrollMargin] = useState(0);
+  const scale = useUiScale();
 
   const connectionId = profile?.id;
   const profileName = profile?.name;
@@ -223,25 +225,28 @@ function ObjectListView(props: ObjectListViewProps) {
   // The list sits below the scroll container's padding, so the virtualizer needs that offset.
   useLayoutEffect(() => {
     setScrollMargin(listRef.current?.offsetTop ?? 0);
-  }, []);
+    // The padding above the list is rem, so its offset changes with the size too.
+  }, [scale]);
 
   // React Compiler is disabled, so this compiler-only lint does not apply.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
     count: objectList.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => LIST_ROW_HEIGHT,
+    estimateSize: () => LIST_ROW_HEIGHT * scale,
     getItemKey: idx => objectList[idx].key,
-    gap: LIST_ROW_GAP,
+    gap: LIST_ROW_GAP * scale,
     overscan: 5,
     scrollMargin,
   });
+
+  useRemeasureOnScale(virtualizer, scale);
 
   const virtualItems = virtualizer.getVirtualItems();
   const lastVisibleIndex = virtualizer.range?.endIndex ?? -1;
   const prefetchRows = Math.max(
     PREFETCH_MIN_ROWS,
-    Math.ceil((PREFETCH_SCREENS * (virtualizer.scrollRect?.height ?? 0)) / (LIST_ROW_HEIGHT + LIST_ROW_GAP))
+    Math.ceil((PREFETCH_SCREENS * (virtualizer.scrollRect?.height ?? 0)) / ((LIST_ROW_HEIGHT + LIST_ROW_GAP) * scale))
   );
 
   useEffect(() => {

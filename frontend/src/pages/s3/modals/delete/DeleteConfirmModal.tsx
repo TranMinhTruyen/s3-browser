@@ -19,7 +19,7 @@ type DeleteConfirmModalProps = ModalProps & {
 };
 
 // The list follows the window height but never gets smaller than the minimum.
-const LIST_HEIGHT = 'max(200px, 35vh)';
+const LIST_HEIGHT = 'max(12.5rem, 35vh)';
 
 /**
  * Lists the files about to be deleted (all ticked) so the user can untick the ones to keep.
@@ -120,7 +120,7 @@ export default createMantineModal<DeleteConfirmModalProps, string[] | null>(prop
                 onChange={onChangeAll}
                 aria-label={t('selectAll')}
               />
-              <Folder size="16px" style={{ flexShrink: 0 }} />
+              <Folder size="1rem" style={{ flexShrink: 0 }} />
               <TruncatedText fw={600} style={{ flex: 1, minWidth: 0 }}>
                 {t('rootFolder')}
               </TruncatedText>

@@ -43,11 +43,19 @@ export const FONTS = Object.keys(FONT_STACKS) as FontKey[];
 export const getFontFamily = (font: FontKey, language: (typeof LANGUAGES)[number]): string =>
   `${FONT_STACKS[font]}, ${CJK_FALLBACKS[language] ?? JP_FONTS}`;
 
+/** Interface sizes in slider order. */
+export const UI_SIZES = ['small', 'medium', 'large'] as const;
+export type UiSizeKey = (typeof UI_SIZES)[number];
+
+/** Root font-size per interface size; `medium` is the browser default, so the UI looks as before. */
+export const UI_SIZE_FONT_PX: Record<UiSizeKey, number> = { small: 14, medium: 16, large: 18 };
+
 export type ThemeKey = (typeof THEMES)[number];
 export type LanguageKey = (typeof LANGUAGES)[number];
 export interface AppSettingValues {
   theme: ThemeKey;
   font: FontKey;
+  size: UiSizeKey;
   language: LanguageKey;
   launchOnStartup: boolean;
   /** Check for and download updates by itself; takes effect on Save only. */
@@ -59,6 +67,7 @@ export interface AppSettingValues {
 export const DEFAULT_SETTINGS: AppSettingValues = {
   theme: 'light',
   font: 'nunito',
+  size: 'medium',
   language: 'en',
   launchOnStartup: false,
   autoUpdate: true,

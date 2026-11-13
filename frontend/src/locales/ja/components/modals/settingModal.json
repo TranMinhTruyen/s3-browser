@@ -1,6 +1,7 @@
 {
   "title": "設定",
   "label": {
+    "size": "表示サイズ",
     "theme": "テーマ",
     "font": "フォント",
     "language": "言語",
@@ -9,6 +10,7 @@
     "betaUpdate": "ベータ版 (プレリリース) を受け取る"
   },
   "option": {
+    "size": { "small": "小", "medium": "中", "large": "大" },
     "theme": { "light": "ライト", "dark": "ダーク", "auto": "システムに合わせる" },
     "font": {
       "nunito": "Nunito",

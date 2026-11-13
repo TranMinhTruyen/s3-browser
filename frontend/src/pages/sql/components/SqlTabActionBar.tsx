@@ -28,7 +28,7 @@ function SqlTabActionBar(props: SqlTabActionBarProps) {
         data={profileOptions}
         searchPlaceholder={t('search.placeholderProfile')}
         emptyText={t('search.emptyProfile')}
-        style={{ width: '200px' }}
+        style={{ width: '12.5rem' }}
       />
 
       <ActionIcon onClick={onClickConnect} tooltip={t('tooltip.connect')} disabled={isConnected || !selectedProfileId}>

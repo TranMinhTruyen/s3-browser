@@ -1,0 +1,9 @@
+/* Mantine centers each mark label on its mark, so the first and last labels stick out of the slider and add a
+   horizontal scrollbar. Align the first label to the left end and the last to the right end instead. */
+.markWrapper:first-child .markLabel {
+  transform: translate(0, calc(var(--mantine-spacing-xs) / 2));
+}
+
+.markWrapper:last-child .markLabel {
+  transform: translate(calc(-100% + var(--slider-size)), calc(var(--mantine-spacing-xs) / 2));
+}

@@ -12,7 +12,7 @@ import { useTabListStore } from '@/pages/s3/stores/tabListStore';
 // Section layouts shared by the folder and file rows.
 const ICON_SECTION_STYLE = { flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } as const;
 const NAME_SECTION_STYLE = { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' } as const;
-const MENU_SECTION_STYLE = { ...ICON_SECTION_STYLE, minWidth: '56px' } as const;
+const MENU_SECTION_STYLE = { ...ICON_SECTION_STYLE, minWidth: '3.5rem' } as const;
 const CHECKBOX_STYLES = { input: { cursor: 'pointer' } };
 const CHECKBOX_SECTION_STYLE = { ...ICON_SECTION_STYLE, cursor: 'pointer' } as const;
 
@@ -86,7 +86,11 @@ const ObjectRow = memo(function ObjectRow(props: ObjectRowProps) {
         style={isFolder ? ICON_SECTION_STYLE : CHECKBOX_SECTION_STYLE}
         onClick={isFolder ? undefined : onClickSection}
       >
-        {isFolder ? <Folder size="20px" /> : <CheckBoxInput styles={CHECKBOX_STYLES} checked={isSelected} readOnly />}
+        {isFolder ? (
+          <Folder size="1.25rem" />
+        ) : (
+          <CheckBoxInput styles={CHECKBOX_STYLES} checked={isSelected} readOnly />
+        )}
       </Card.Section>
       <Card.Section inheritPadding px="md" py="md" style={NAME_SECTION_STYLE}>
         <TruncatedText size="xl" fw={500}>
@@ -105,11 +109,11 @@ const ObjectRow = memo(function ObjectRow(props: ObjectRowProps) {
             <Menu.Dropdown>
               {/* A folder is only a key prefix: it can be opened or deleted (with all its content), not downloaded. */}
               {isFolder ? null : (
-                <Menu.Item leftSection={<Download size="16px" />} onClick={onClickDownload}>
+                <Menu.Item leftSection={<Download size="1rem" />} onClick={onClickDownload}>
                   {labels.download}
                 </Menu.Item>
               )}
-              <Menu.Item leftSection={<Trash size="16px" />} color="var(--mantine-color-red-6)" onClick={onClickDelete}>
+              <Menu.Item leftSection={<Trash size="1rem" />} color="var(--mantine-color-red-6)" onClick={onClickDelete}>
                 {labels.delete}
               </Menu.Item>
             </Menu.Dropdown>

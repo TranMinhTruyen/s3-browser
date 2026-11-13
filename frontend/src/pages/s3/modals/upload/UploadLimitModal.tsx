@@ -40,6 +40,7 @@ type FileListProps = {
   onToggleFile: (path: string, checked: boolean) => void;
 };
 
+// Max list height in px at the medium size; the list height itself is given in rem.
 const LIST_MAX_HEIGHT = 320;
 
 const FileList = memo(function FileList(props: FileListProps) {
@@ -78,7 +79,11 @@ const FileList = memo(function FileList(props: FileListProps) {
   );
 
   return (
-    <VirtualRowList rows={rows} height={Math.min(rowsHeight(rows.length), LIST_MAX_HEIGHT)} renderRow={renderRow} />
+    <VirtualRowList
+      rows={rows}
+      height={`${Math.min(rowsHeight(rows.length), LIST_MAX_HEIGHT) / 16}rem`}
+      renderRow={renderRow}
+    />
   );
 });
 

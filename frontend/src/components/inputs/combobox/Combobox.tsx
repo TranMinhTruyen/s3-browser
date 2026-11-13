@@ -43,7 +43,7 @@ const ComboboxOption = memo(function ComboboxOption({ item, active }: { item: Co
   return (
     <MCombobox.Option value={item.value} active={active}>
       <Group gap="xs" wrap="nowrap">
-        {active && <CheckIcon size={12} />}
+        {active && <CheckIcon size="0.75rem" />}
         <Text>{item.name}</Text>
       </Group>
     </MCombobox.Option>
@@ -137,7 +137,7 @@ function Combobox(props: ComboboxProps) {
         </InputBase>
       </MCombobox.Target>
 
-      <MCombobox.Dropdown miw={targetWidth}>
+      <MCombobox.Dropdown style={{ minWidth: targetWidth }}>
         {hasSearch && <MCombobox.Search value={keyword} onChange={onChangeKeyword} placeholder={searchPlaceholder} />}
         <ComboboxOptions>
           {filteredData.map(item => (

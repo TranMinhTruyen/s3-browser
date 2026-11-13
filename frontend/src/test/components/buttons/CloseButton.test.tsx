@@ -1,6 +1,7 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
+import actionIconClasses from '@/components/buttons/ActionIcon.module.css';
 import CloseButton from '@/components/buttons/CloseButton';
 import classes from '@/components/buttons/CloseButton.module.css';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
@@ -62,12 +63,12 @@ describe('CloseButton', () => {
     renderWithProviders(<CloseButton tooltip="Close it" className="extra" />);
     const button = screen.getByRole('button', { name: 'Close it' });
 
-    expect(button).toHaveClass(classes.closeButton, 'extra');
+    expect(button).toHaveClass(classes.closeButton, actionIconClasses.root, 'extra');
   });
 
   it('has only the hover class without a caller class', () => {
     renderWithProviders(<CloseButton tooltip="Close it" />);
 
-    expect(screen.getByRole('button', { name: 'Close it' })).toHaveClass(classes.closeButton);
+    expect(screen.getByRole('button', { name: 'Close it' })).toHaveClass(classes.closeButton, actionIconClasses.root);
   });
 });

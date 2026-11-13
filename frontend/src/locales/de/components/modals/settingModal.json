@@ -1,6 +1,7 @@
 {
   "title": "Einstellungen",
   "label": {
+    "size": "Oberflächengröße",
     "theme": "Design",
     "font": "Schriftart",
     "language": "Sprache",
@@ -9,6 +10,7 @@
     "betaUpdate": "Beta-Versionen (Vorabversionen) erhalten"
   },
   "option": {
+    "size": { "small": "Klein", "medium": "Mittel", "large": "Groß" },
     "theme": {
       "light": "Hell",
       "dark": "Dunkel",

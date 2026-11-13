@@ -15,7 +15,7 @@ function CloseButton({ className, size = 'md', ...props }: CloseButtonProps) {
       type="button"
       className={className ? `${classes.closeButton} ${className}` : classes.closeButton}
     >
-      <X size={16} />
+      <X size="1rem" />
     </ActionIcon>
   );
 }

@@ -70,7 +70,7 @@ function DownloaderWindow() {
   return rendered ? (
     <>
       {!visible ? (
-        <Affix ref={sizeRef} style={{ bottom: '16px', right: '16px' }}>
+        <Affix ref={sizeRef} style={{ bottom: '1rem', right: '1rem' }}>
           <ActionIcon onClick={openWindow} size="xl" tooltip={t('title')}>
             <Download />
           </ActionIcon>

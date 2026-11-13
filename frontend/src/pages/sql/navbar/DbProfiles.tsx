@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
+import { useRemeasureOnScale, useUiScale } from '@/common/hooks/useUiScale';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import DbProfileModal from '@/pages/sql/modals/dbProfile/DbProfileModal';
 import DbProfileItem, { CARD_HEIGHT } from '@/pages/sql/navbar/DbProfileItem';
@@ -100,17 +101,21 @@ function DbProfiles() {
     [menuKey, onClickDeleteProfile]
   );
 
+  const scale = useUiScale();
+
   // React Compiler is disabled, so this compiler-only lint does not apply.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
     count: keys.length,
     getScrollElement: () => scrollRef.current,
     // Fixed card height: the virtualizer never measures, so the scroll size stays stable while scrolling.
-    estimateSize: () => CARD_HEIGHT,
-    gap: ROW_GAP,
+    estimateSize: () => CARD_HEIGHT * scale,
+    gap: ROW_GAP * scale,
     getItemKey: idx => keys[idx],
     overscan: 10,
   });
+
+  useRemeasureOnScale(virtualizer, scale);
 
   const virtualItems = virtualizer.getVirtualItems();
   const menuOpened = menuKey !== null && menuConnected !== undefined;
@@ -125,7 +130,7 @@ function DbProfiles() {
   }, [menuOpened]);
 
   return (
-    <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '8px' }}>
+    <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0.5rem' }}>
       {keys.length === 0 ? (
         <Text c="dimmed" ta="center" p="md">
           {t('profile.empty')}
@@ -140,7 +145,7 @@ function DbProfiles() {
                 style={{
                   position: 'absolute',
                   width: '100%',
-                  height: CARD_HEIGHT,
+                  height: CARD_HEIGHT * scale,
                   transform: `translateY(${row.start}px)`,
                 }}
               >
@@ -152,13 +157,13 @@ function DbProfiles() {
 
         <Menu.Dropdown>
           {!menuConnected && (
-            <Menu.Item leftSection={<PlugZap size="16px" />} onClick={onClickMenuConnect}>
+            <Menu.Item leftSection={<PlugZap size="1rem" />} onClick={onClickMenuConnect}>
               {t('contextMenu.connect')}
             </Menu.Item>
           )}
           {menuConnected && (
             <Menu.Item
-              leftSection={<Unplug size="16px" />}
+              leftSection={<Unplug size="1rem" />}
               color="var(--mantine-color-red-6)"
               onClick={onClickMenuDisconnect}
             >
@@ -166,15 +171,15 @@ function DbProfiles() {
             </Menu.Item>
           )}
           {!menuConnected && (
-            <Menu.Item leftSection={<SquarePen size="16px" />} onClick={onClickMenuEdit}>
+            <Menu.Item leftSection={<SquarePen size="1rem" />} onClick={onClickMenuEdit}>
               {t('contextMenu.edit')}
             </Menu.Item>
           )}
-          <Menu.Item leftSection={<FileDown size="16px" />} onClick={notifyNoBackend}>
+          <Menu.Item leftSection={<FileDown size="1rem" />} onClick={notifyNoBackend}>
             {t('contextMenu.export')}
           </Menu.Item>
           <Menu.Divider />
-          <Menu.Item leftSection={<Trash size="16px" />} color="var(--mantine-color-red-6)" onClick={onClickMenuDelete}>
+          <Menu.Item leftSection={<Trash size="1rem" />} color="var(--mantine-color-red-6)" onClick={onClickMenuDelete}>
             {t('contextMenu.delete')}
           </Menu.Item>
         </Menu.Dropdown>

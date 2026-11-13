@@ -14,7 +14,14 @@ import { normalizeTabProfiles } from '@/pages/s3/utils/tabPersistence';
 vi.mock('@/components/layouts/MainLayout', () => ({ default: () => <div>main layout</div> }));
 vi.mock('@/components/layouts/AppUpdateToast', () => ({ default: () => <div>update toast</div> }));
 vi.mock('@/pages/s3/hooks/useCredentialExpiring', () => ({ useCredentialExpiring: vi.fn() }));
-vi.mock('sonner', () => ({ Toaster: () => <div>toaster</div>, toast: { error: vi.fn(), warning: vi.fn() } }));
+const toaster = vi.hoisted(() => ({ props: undefined as Record<string, unknown> | undefined }));
+vi.mock('sonner', () => ({
+  Toaster: (props: Record<string, unknown>) => {
+    toaster.props = props;
+    return <div>toaster</div>;
+  },
+  toast: { error: vi.fn(), warning: vi.fn() },
+}));
 vi.mock('@wails/S3Browser/internal/handlers/profilehandler', () => ({ GetAllConnectionProfile: vi.fn() }));
 vi.mock('@wails/S3Browser/internal/handlers/settinghandler', () => ({ GetTabState: vi.fn(), SaveTabState: vi.fn() }));
 
@@ -48,6 +55,26 @@ describe('App', () => {
       render(<App />);
       expect(await screen.findByText(/main layout/)).toBeInTheDocument();
       expect(screen.getByText('toaster')).toBeInTheDocument();
+    });
+
+    it('keeps the toaster position, duration and look', () => {
+      render(<App />);
+
+      expect(toaster.props).toMatchObject({
+        position: 'top-center',
+        richColors: true,
+        closeButton: true,
+        duration: 10000,
+      });
+    });
+
+    it('sizes the toasts in rem so they follow the interface size', () => {
+      render(<App />);
+
+      expect(toaster.props?.style).toEqual({ '--width': '22.25rem' });
+      expect(toaster.props?.toastOptions).toEqual({
+        style: { fontSize: 'var(--mantine-font-size-sm)', padding: '1rem' },
+      });
     });
   });
 

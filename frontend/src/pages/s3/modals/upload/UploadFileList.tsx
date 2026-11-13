@@ -3,6 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { DroppedFile, DroppedGroup } from '@wails/S3Browser/models/bucket';
 import { Folder, Trash2 } from 'lucide-react';
 import { ChangeEvent, CSSProperties, memo, ReactNode, useCallback, useMemo, useRef } from 'react';
+import { useRemeasureOnScale, useUiScale } from '@/common/hooks/useUiScale';
 import { tintedColor } from '@/common/theme/tintedColor';
 import { formatFileSize } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
@@ -15,6 +16,7 @@ export type UploadRow = { kind: 'group'; index: number; group: DroppedGroup } | 
 /** How many files / large files of a group are currently ticked. */
 export type GroupStat = { selected: number; selectedLarge: number };
 
+// Row height in px at the medium size; scaled with the interface size.
 const ROW_HEIGHT = 36;
 
 // Last path segment; paths use "\" on Windows and "/" elsewhere.
@@ -22,18 +24,20 @@ const baseName = (path: string) => path.split(/[\\/]/).pop() || path;
 
 // Absolute position of a row inside the virtual list. Memoized by the rows, so `memo` keeps working
 // (a fresh style object on every render would defeat it).
-const useRowStyle = (top: number): CSSProperties =>
-  useMemo(
+const useRowStyle = (top: number): CSSProperties => {
+  const scale = useUiScale();
+  return useMemo(
     () => ({
       position: 'absolute',
       top: 0,
       left: 0,
       width: '100%',
-      height: ROW_HEIGHT,
+      height: ROW_HEIGHT * scale,
       transform: `translateY(${top}px)`,
     }),
-    [top]
+    [top, scale]
   );
+};
 
 type GroupRowProps = {
   group: DroppedGroup;
@@ -55,7 +59,7 @@ export const GroupRow = memo(function GroupRow(props: GroupRowProps) {
 
   return (
     <Group style={style} gap="xs" wrap="nowrap" px="xs" bg="var(--mantine-color-default-hover)">
-      <Folder size="16px" style={{ flexShrink: 0 }} />
+      <Folder size="1rem" style={{ flexShrink: 0 }} />
       <TruncatedText fw={600} style={{ flex: 1, minWidth: 0 }}>
         {group.name || rootLabel}
       </TruncatedText>
@@ -131,7 +135,7 @@ export const FileRow = memo(function FileRow(props: FileRowProps) {
       </Text>
       {onRemoveFile && removeLabel && (
         <ActionIcon size="sm" {...tintedColor('red', 'ai')} onClick={onClickRemove} tooltip={removeLabel}>
-          <Trash2 size="14px" />
+          <Trash2 size="0.875rem" />
         </ActionIcon>
       )}
     </Group>
@@ -151,19 +155,21 @@ export const VirtualRowList = memo(function VirtualRowList(props: VirtualRowList
   const { rows, height, renderRow } = props;
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const scale = useUiScale();
 
   // React Compiler is disabled, so this compiler-only lint does not apply.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: () => ROW_HEIGHT * scale,
     getItemKey: idx => {
       const row = rows[idx];
       return row.kind === 'group' ? `g:${row.index}` : `f:${row.file.path}`;
     },
     overscan: 8,
   });
+  useRemeasureOnScale(virtualizer, scale);
 
   return (
     <div ref={scrollRef} style={{ height, overflow: 'auto', position: 'relative' }}>
@@ -174,5 +180,5 @@ export const VirtualRowList = memo(function VirtualRowList(props: VirtualRowList
   );
 });
 
-/** Height of `count` rows, for lists that shrink to their content. */
+/** Height of `count` rows in px at the medium size, for lists that shrink to their content. */
 export const rowsHeight = (count: number) => count * ROW_HEIGHT;

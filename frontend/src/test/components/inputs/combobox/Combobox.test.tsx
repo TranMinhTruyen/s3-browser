@@ -1,8 +1,20 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import Combobox from '@/components/inputs/combobox/Combobox';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
+
+const size = vi.hoisted(() => ({ width: null as number | null }));
+vi.mock('@mantine/hooks', async importOriginal => {
+  const actual = await importOriginal<typeof import('@mantine/hooks')>();
+  return {
+    ...actual,
+    useElementSize: <T extends HTMLElement>() => {
+      const r = actual.useElementSize<T>();
+      return size.width === null ? r : { ...r, width: size.width };
+    },
+  };
+});
 
 const data = [
   { name: 'Alpha', value: 'a' },
@@ -10,6 +22,29 @@ const data = [
 ];
 
 describe('Combobox', () => {
+  afterEach(() => {
+    size.width = null;
+  });
+
+  it('sets the dropdown min-width in raw px from the measured trigger (not scaled by rem)', async () => {
+    size.width = 237;
+    renderWithProviders(<Combobox label="Pick" data={data} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /Pick/ }));
+
+    const dropdown = document.querySelector<HTMLElement>('.mantine-Combobox-dropdown')!;
+    expect(dropdown.style.minWidth).toBe('237px');
+  });
+
+  it('sizes the active check icon in rem', async () => {
+    renderWithProviders(<Combobox label="Pick" data={data} value="a" />);
+
+    await userEvent.click(screen.getByRole('button', { name: /Pick/ }));
+
+    const [alpha] = screen.getAllByRole('option', { hidden: true });
+    expect(alpha.querySelector('svg')).toHaveAttribute('width', '0.75rem');
+  });
+
   it('shows the label as placeholder and a chevron when nothing is selected', () => {
     renderWithProviders(<Combobox label="Pick" data={data} />);
     expect(screen.getByRole('button', { name: /Pick/ })).toBeInTheDocument();

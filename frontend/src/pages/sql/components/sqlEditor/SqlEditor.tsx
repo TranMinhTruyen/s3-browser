@@ -4,7 +4,8 @@ import { PostgreSQL, SQLite, type SQLNamespace, StandardSQL, sql } from '@codemi
 import { bracketMatching, indentOnInput } from '@codemirror/language';
 import { Compartment, EditorState, Prec } from '@codemirror/state';
 import { drawSelection, EditorView, highlightActiveLine, keymap, lineNumbers, tooltips } from '@codemirror/view';
-import { memo, type RefObject, useEffect, useRef } from 'react';
+import { memo, type RefObject, useEffect, useMemo, useRef } from 'react';
+import { useRemeasureOnScale, useUiScale } from '@/common/hooks/useUiScale';
 import { sqlEditorTheme } from '@/pages/sql/components/sqlEditor/sqlEditorTheme';
 
 export type SqlDialect = 'postgresql' | 'sqlite' | null;
@@ -92,6 +93,11 @@ function SqlEditor({ viewRef, dialect, schema, onFormat, onFind, onExecute, onDo
     languageOptionsRef.current = { dialect, schema };
     viewRef.current?.dispatch({ effects: languageRef.current.reconfigure(getLanguage(dialect, schema)) });
   }, [dialect, schema, viewRef]);
+
+  // CodeMirror caches line height and character width: measure again when the root font-size changes.
+  const scale = useUiScale();
+  const measurer = useMemo(() => ({ measure: () => viewRef.current?.requestMeasure() }), [viewRef]);
+  useRemeasureOnScale(measurer, scale);
 
   return <div ref={containerRef} style={{ height: '100%', minHeight: 0 }} />;
 }

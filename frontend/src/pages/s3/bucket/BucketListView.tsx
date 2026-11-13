@@ -16,6 +16,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LIST_ROW_GAP, LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
+import { useRemeasureOnScale, useUiScale } from '@/common/hooks/useUiScale';
 import { callIPC } from '@/common/utils/ipcUtils';
 import Button from '@/components/buttons/Button';
 import BucketItem, { BucketItemLabels } from '@/pages/s3/bucket/BucketItem';
@@ -79,6 +80,7 @@ function BucketListView(props: BucketListViewProps) {
   // True once the first page of the current list has loaded, so an empty search result can be told from loading.
   const [isLoaded, setIsLoaded] = useState(false);
   const [scrollMargin, setScrollMargin] = useState(0);
+  const scale = useUiScale();
 
   const openBucketDetail = useTabListStore(s => s.openBucketDetail);
 
@@ -224,20 +226,23 @@ function BucketListView(props: BucketListViewProps) {
   // Re-measure when the view is shown again, since offsetTop is 0 while it is hidden.
   useLayoutEffect(() => {
     if (active) setScrollMargin(listRef.current?.offsetTop ?? 0);
-  }, [active]);
+    // The padding above the list is rem, so its offset changes with the size too.
+  }, [active, scale]);
 
   // React Compiler is disabled, so this compiler-only lint does not apply.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
     count: bucketList.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => LIST_ROW_HEIGHT,
+    estimateSize: () => LIST_ROW_HEIGHT * scale,
     getItemKey: idx => bucketList[idx].name ?? idx,
-    gap: LIST_ROW_GAP,
+    gap: LIST_ROW_GAP * scale,
     overscan: 5,
     scrollMargin,
     enabled: active,
   });
+
+  useRemeasureOnScale(virtualizer, scale);
 
   const virtualItems = virtualizer.getVirtualItems();
   const lastVisibleIndex = virtualizer.range?.endIndex ?? -1;

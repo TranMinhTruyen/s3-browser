@@ -62,7 +62,7 @@ function ConnectionProfileItem({ profileKey, connecting, onConnect }: Connection
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
-          minWidth: '40px',
+          minWidth: '2.5rem',
           justifyContent: 'center',
           // Status uses Mantine "light" variant colors: connected = green, disconnected = red
           color: profile.isConnected

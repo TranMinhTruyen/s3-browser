@@ -106,10 +106,10 @@ describe('DeleteKeyList', () => {
     expect((scroller as HTMLElement).style.maxHeight).toBe('100px');
   });
 
-  it('defaults the list height limit to 320px', () => {
+  it('defaults the list height limit to 20rem', () => {
     renderWithProviders(<DeleteKeyList rows={[{ key: 'a' }]} />);
 
     const scroller = virtualizer.options?.getScrollElement() as HTMLElement;
-    expect(scroller.style.maxHeight).toBe('320px');
+    expect(scroller.style.maxHeight).toBe('20rem');
   });
 });
