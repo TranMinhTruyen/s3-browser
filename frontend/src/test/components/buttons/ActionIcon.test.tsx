@@ -2,6 +2,7 @@ import { act, fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import ActionIcon from '@/components/buttons/ActionIcon';
+import classes from '@/components/buttons/ActionIcon.module.css';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 describe('ActionIcon', () => {
@@ -112,6 +113,21 @@ describe('ActionIcon', () => {
     const button = screen.getByRole('button', { name: 'go' });
     expect(button).toHaveClass('my-class');
     expect(button.parentElement).not.toHaveClass('my-class');
+  });
+
+  it('always applies the module root class and merges the caller className with it', () => {
+    renderWithProviders(
+      <>
+        <ActionIcon tooltip="plain" />
+        <ActionIcon tooltip="merged" className="my-class" />
+      </>
+    );
+    const plain = screen.getByRole('button', { name: 'plain' });
+    expect(plain).toHaveClass(classes.root);
+    expect(plain).toHaveClass('mantine-ActionIcon-root');
+    const merged = screen.getByRole('button', { name: 'merged' });
+    expect(merged).toHaveClass(classes.root, 'my-class', 'mantine-ActionIcon-root');
+    expect(merged.parentElement).not.toHaveClass(classes.root);
   });
 
   it('hides the tooltip while aria-expanded is true', async () => {

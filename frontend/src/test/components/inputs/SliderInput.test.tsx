@@ -2,6 +2,7 @@ import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import SliderInput from '@/components/inputs/SliderInput';
+import classes from '@/components/inputs/SliderInput.module.css';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 const marks = [
@@ -44,5 +45,19 @@ describe('SliderInput', () => {
 
     expect(onChange).toHaveBeenCalledWith(2);
     expect(onChangeEnd).toHaveBeenCalledWith(2);
+  });
+
+  it('applies the module classes to the mark wrappers and labels', () => {
+    const { container } = renderWithProviders(<SliderInput {...base} value={1} onChange={vi.fn()} />);
+    expect(container.querySelectorAll(`.${classes.markWrapper}`)).toHaveLength(3);
+    expect(container.querySelectorAll(`.${classes.markLabel}`)).toHaveLength(3);
+    expect(screen.getByText('Small')).toHaveClass(classes.markLabel);
+  });
+
+  it('lets the caller classNames add to the module classes', () => {
+    renderWithProviders(
+      <SliderInput {...base} value={1} onChange={vi.fn()} classNames={{ markLabel: 'caller-label' }} />
+    );
+    expect(screen.getByText('Medium')).toHaveClass('caller-label');
   });
 });
