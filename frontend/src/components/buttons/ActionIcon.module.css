@@ -12,7 +12,7 @@
   min-height: round(nearest, var(--ai-size), 2px);
 }
 
-.root svg[width] {
+.root svg[width$="rem"] {
   width: round(nearest, attr(width type(<length>), 1.5rem), 2px);
   height: round(nearest, attr(height type(<length>), 1.5rem), 2px);
 }

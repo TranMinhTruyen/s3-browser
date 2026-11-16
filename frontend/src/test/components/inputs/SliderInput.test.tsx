@@ -56,8 +56,25 @@ describe('SliderInput', () => {
 
   it('lets the caller classNames add to the module classes', () => {
     renderWithProviders(
-      <SliderInput {...base} value={1} onChange={vi.fn()} classNames={{ markLabel: 'caller-label' }} />
+      <SliderInput
+        {...base}
+        value={1}
+        onChange={vi.fn()}
+        classNames={{ markLabel: 'caller-label', markWrapper: 'caller-wrapper', thumb: 'caller-thumb' }}
+      />
     );
-    expect(screen.getByText('Medium')).toHaveClass('caller-label');
+    const label = screen.getByText('Medium');
+    expect(label).toHaveClass(classes.markLabel, 'caller-label');
+    const wrapper = label.parentElement as HTMLElement;
+    expect(wrapper).toHaveClass(classes.markWrapper, 'caller-wrapper');
+    expect(screen.getByRole('slider', { name: 'Interface size' })).toHaveClass('caller-thumb');
+  });
+
+  it('keeps only the module class when the caller sets no mark classes', () => {
+    renderWithProviders(<SliderInput {...base} value={1} onChange={vi.fn()} classNames={{ root: 'caller-root' }} />);
+    const label = screen.getByText('Medium');
+    expect(label).toHaveClass(classes.markLabel);
+    expect(label.className).not.toContain('undefined');
+    expect((label.parentElement as HTMLElement).className).not.toContain('undefined');
   });
 });

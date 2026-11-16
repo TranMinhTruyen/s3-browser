@@ -8,9 +8,18 @@ type SliderInputProps = Omit<SliderProps, 'label'> & {
 };
 
 /** Thin wrapper over Mantine `Slider`: field label like other inputs, no floating label on the thumb. */
-function SliderInput({ label, ...props }: SliderInputProps) {
+function SliderInput({ label, classNames, ...props }: SliderInputProps) {
+  const extra = classNames as Record<string, string | undefined> | undefined;
   const slider = (
-    <Slider classNames={{ markWrapper: classes.markWrapper, markLabel: classes.markLabel }} {...props} label={null} />
+    <Slider
+      {...props}
+      classNames={{
+        ...extra,
+        markWrapper: [classes.markWrapper, extra?.markWrapper].filter(Boolean).join(' '),
+        markLabel: [classes.markLabel, extra?.markLabel].filter(Boolean).join(' '),
+      }}
+      label={null}
+    />
   );
   return label ? <Input.Wrapper label={label}>{slider}</Input.Wrapper> : slider;
 }
