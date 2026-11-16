@@ -1,0 +1,5 @@
+.label {
+  /* Trim the line box to cap height so uppercase text centers exactly; symmetric padding keeps accents/descenders inside the label's overflow clip */
+  text-box: trim-both cap alphabetic;
+  padding-block: 0.35em;
+}
