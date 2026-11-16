@@ -370,17 +370,17 @@ function BucketListView(props: BucketListViewProps) {
         </div>
       ))}
       {isLoadingMore || (isLoadingFirst && keyword && connectionId) ? (
-        <Center style={footerStyle} py="8px">
+        <Center style={footerStyle} py="0.5rem">
           <Loader size="sm" />
         </Center>
       ) : null}
       {showEmpty ? (
-        <Center style={footerStyle} py="8px">
+        <Center style={footerStyle} py="0.5rem">
           <Text c="dimmed">{keyword ? t('search.empty') : t('empty')}</Text>
         </Center>
       ) : null}
       {showLoadMore ? (
-        <Center style={footerStyle} py="8px">
+        <Center style={footerStyle} py="0.5rem">
           <Button onClick={onClickLoadMore}>{t('search.loadMore')}</Button>
         </Center>
       ) : null}

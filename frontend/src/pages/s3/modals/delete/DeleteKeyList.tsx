@@ -79,8 +79,8 @@ const DeleteKeyList = memo(function DeleteKeyList(props: DeleteKeyListProps) {
                 paddingBottom: ROW_GAP,
               }}
             >
-              <Card padding="8px" orientation="horizontal" style={{ border: `1px solid ${CARD_BORDER_COLOR}` }}>
-                <Card.Section inheritPadding px="8px" withBorder style={ICON_SECTION_STYLE}>
+              <Card padding="0.5rem" orientation="horizontal" style={{ border: `1px solid ${CARD_BORDER_COLOR}` }}>
+                <Card.Section inheritPadding px="0.5rem" withBorder style={ICON_SECTION_STYLE}>
                   {isFolder ? <Folder size="1.25rem" /> : <File size="1.25rem" />}
                 </Card.Section>
                 <Card.Section inheritPadding px="md" py="xs" style={NAME_SECTION_STYLE}>

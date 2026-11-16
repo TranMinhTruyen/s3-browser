@@ -77,10 +77,10 @@ const ObjectRow = memo(function ObjectRow(props: ObjectRowProps) {
   }, [menuOpened]);
 
   return (
-    <Card padding="8px" orientation="horizontal" onClick={onClick} className={classes.card} h={LIST_ROW_HEIGHT}>
+    <Card padding="0.5rem" orientation="horizontal" onClick={onClick} className={classes.card} h={LIST_ROW_HEIGHT}>
       <Card.Section
         inheritPadding
-        px="8px"
+        px="0.5rem"
         withBorder
         className={classes.iconSection}
         style={isFolder ? ICON_SECTION_STYLE : CHECKBOX_SECTION_STYLE}
@@ -100,7 +100,7 @@ const ObjectRow = memo(function ObjectRow(props: ObjectRowProps) {
       {/* The menu area must not trigger the row click. */}
       <Card.Section ref={menuSectionRef} onClick={stopPropagation} style={MENU_SECTION_STYLE}>
         {menuOpened ? (
-          <Menu width={200} opened onChange={setMenuOpened}>
+          <Menu width="12.5rem" opened onChange={setMenuOpened}>
             <Menu.Target>
               <ActionIcon key="menu" loading={isDeleting} tooltip={labels.moreActions}>
                 <Ellipsis />

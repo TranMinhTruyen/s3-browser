@@ -110,7 +110,7 @@ function MainLayout() {
   }, []);
 
   return (
-    <AppShell header={{ height: '48px' }} styles={{ main: { height: '100vh' } }}>
+    <AppShell header={{ height: '3rem' }} styles={{ main: { height: '100vh' } }}>
       <AppShell.Header>
         <Group
           h="100%"
@@ -119,7 +119,7 @@ function MainLayout() {
           onDoubleClick={onDoubleClickHeader}
         >
           <Group gap="xs" wrap="nowrap">
-            <Image src="/favicon.ico" alt="" w={20} h={20} />
+            <Image src="/favicon.ico" alt="" w="1.25rem" h="1.25rem" />
             <Text fw={600}>{tCommon('appName')}</Text>
           </Group>
 

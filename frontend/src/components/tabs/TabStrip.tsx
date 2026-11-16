@@ -153,7 +153,7 @@ function TabStrip({ useTabStore, renderLabel, renderDetail }: TabStripProps) {
 
   return (
     // Bordered like S3Navbar so the tab page reads as its own panel.
-    <Paper withBorder h="100%" p="4px">
+    <Paper withBorder h="100%" p="0.25rem">
       <Tabs
         variant="outline"
         value={activeTab}
@@ -164,7 +164,10 @@ function TabStrip({ useTabStore, renderLabel, renderDetail }: TabStripProps) {
       >
         {/* Transparent border var hides the outline variant's list line: the detail below has its own full border. */}
         {/* Bottom padding (not tab margin) spaces the strip so tabs and the + button share one vertical center. */}
-        <Tabs.List pb="4px" style={{ flexWrap: 'nowrap', alignItems: 'center', '--tab-border-color': 'transparent' }}>
+        <Tabs.List
+          pb="0.25rem"
+          style={{ flexWrap: 'nowrap', alignItems: 'center', '--tab-border-color': 'transparent' }}
+        >
           <TabScroller ref={scrollerRef}>
             <DndContext
               sensors={sensors}
@@ -199,7 +202,7 @@ function TabStrip({ useTabStore, renderLabel, renderDetail }: TabStripProps) {
               )}
             </DndContext>
           </TabScroller>
-          <ActionIcon style={{ flexShrink: 0, marginLeft: '2px' }} onClick={addTab} tooltip={t('tab.add')}>
+          <ActionIcon style={{ flexShrink: 0, marginLeft: '0.125rem' }} onClick={addTab} tooltip={t('tab.add')}>
             <Plus />
           </ActionIcon>
         </Tabs.List>

@@ -77,7 +77,7 @@ function DownloaderWindow() {
         </Affix>
       ) : null}
       {visible && (
-        <Affix ref={sizeRef} position={{ bottom: 16, right: 16 }}>
+        <Affix ref={sizeRef} position={{ bottom: '1rem', right: '1rem' }}>
           <TransferPanel
             title={t('title')}
             cancelAllTooltip={t('action.cancelAll')}

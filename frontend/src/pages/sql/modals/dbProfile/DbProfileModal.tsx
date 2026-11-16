@@ -87,8 +87,8 @@ export default createMantineModal<DbProfileModalProps, false>(
           <Modal.Content>
             <Modal.Header
               pos="relative"
-              p="8px"
-              mih="0px"
+              p="0.5rem"
+              mih="0"
               style={{ justifyContent: 'flex-end', backgroundColor: INFO_BG_COLOR }}
             >
               <Title
@@ -102,7 +102,7 @@ export default createMantineModal<DbProfileModalProps, false>(
 
             <Divider />
 
-            <Modal.Body p="16px">
+            <Modal.Body p="1rem">
               <Paper withBorder p="md">
                 <Stack gap="sm">
                   <SegmentedControl data={DB_TYPE_OPTIONS} key={form.key('dbType')} {...form.getInputProps('dbType')} />
@@ -202,7 +202,7 @@ export default createMantineModal<DbProfileModalProps, false>(
 
             <Divider />
 
-            <Group p="8px" justify="space-between" wrap="nowrap">
+            <Group p="0.5rem" justify="space-between" wrap="nowrap">
               <Button type="button" color="red" onClick={mantine.props.onClose} disabled={form.submitting}>
                 {t('common:button.cancel')}
               </Button>

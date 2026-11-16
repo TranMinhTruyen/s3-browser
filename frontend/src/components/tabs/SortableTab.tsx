@@ -78,7 +78,7 @@ function SortableTab({ tabId, renderLabel, closable, sortable, onClickClose, onM
         <Tabs.Tab
           value={tabId}
           className={classes.tab}
-          p="8px"
+          p="0.5rem"
           h={TAB_HEIGHT}
           miw={TAB_WIDTH}
           maw={TAB_WIDTH}
@@ -98,9 +98,9 @@ function SortableTab({ tabId, renderLabel, closable, sortable, onClickClose, onM
                 component="span"
                 role="button"
                 aria-label={t('tab.close')}
-                size={22}
-                // Even gap (22 - 16) / 2 = 3px: the default 70% icon lands on a fractional offset, off-center.
-                iconSize={16}
+                size="1.375rem"
+                // Even gap (22 - 16) / 2 = 3px at the 16px root: the default 70% icon lands on a fractional offset, off-center.
+                iconSize="1rem"
                 onClick={onClickCloseButton}
                 style={{ flexShrink: 0 }}
               />

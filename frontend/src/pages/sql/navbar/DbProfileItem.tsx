@@ -50,7 +50,7 @@ function DbProfileItem({ profileKey, onConnect }: DbProfileItemProps) {
 
   return (
     <Card
-      padding="8px"
+      padding="0.5rem"
       withBorder
       orientation="horizontal"
       h={CARD_HEIGHT}

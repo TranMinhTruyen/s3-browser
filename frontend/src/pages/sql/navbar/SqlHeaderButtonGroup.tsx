@@ -15,7 +15,7 @@ function SqlHeaderButtonGroup() {
   }, []);
 
   return (
-    <Stack p="4px">
+    <Stack p="0.25rem">
       <Group gap="xs">
         <ActionIcon onClick={notifyNoBackend} tooltip={t('tooltip.connect')}>
           <PlugZap />

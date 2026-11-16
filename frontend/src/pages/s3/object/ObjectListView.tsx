@@ -302,17 +302,17 @@ function ObjectListView(props: ObjectListViewProps) {
         </div>
       ))}
       {isLoadingMore || (isLoadingFirst && keyword && connectionId && bucket) ? (
-        <Center style={footerStyle} py="8px">
+        <Center style={footerStyle} py="0.5rem">
           <Loader size="sm" />
         </Center>
       ) : null}
       {showEmpty ? (
-        <Center style={footerStyle} py="8px">
+        <Center style={footerStyle} py="0.5rem">
           <Text c="dimmed">{keyword ? t('search.empty') : t('emptyFolder')}</Text>
         </Center>
       ) : null}
       {showLoadMore ? (
-        <Center style={footerStyle} py="8px">
+        <Center style={footerStyle} py="0.5rem">
           <Button onClick={onClickLoadMore}>{t('search.loadMore')}</Button>
         </Center>
       ) : null}

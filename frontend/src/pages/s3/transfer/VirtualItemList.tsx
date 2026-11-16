@@ -37,7 +37,7 @@ function VirtualItemList(props: VirtualItemListProps) {
   useRemeasureOnScale(virtualizer, scale);
 
   return (
-    <Box ref={setListElement} p="8px" style={{ maxHeight: LIST_MAX_HEIGHT, overflow: 'auto' }}>
+    <Box ref={setListElement} p="0.5rem" style={{ maxHeight: LIST_MAX_HEIGHT, overflow: 'auto' }}>
       <div style={{ position: 'relative', height: virtualizer.getTotalSize(), width: '100%' }}>
         {virtualizer.getVirtualItems().map(row => (
           <div

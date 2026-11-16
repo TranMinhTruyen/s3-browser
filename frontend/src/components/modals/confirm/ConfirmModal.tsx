@@ -44,8 +44,8 @@ export default createMantineModal<ConfirmModalProps, boolean>(props => {
       <Modal.Content>
         <Modal.Header
           pos="relative"
-          p="8px"
-          mih="0px"
+          p="0.5rem"
+          mih="0"
           style={{ justifyContent: 'flex-end', backgroundColor: isInfo ? INFO_BG_COLOR : WARNING_BG_COLOR }}
         >
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
@@ -59,7 +59,7 @@ export default createMantineModal<ConfirmModalProps, boolean>(props => {
 
         <Divider />
 
-        <Modal.Body p="8px">
+        <Modal.Body p="0.5rem">
           <Modal.Stack>
             <Text ta="center">{text}</Text>
           </Modal.Stack>
@@ -67,7 +67,7 @@ export default createMantineModal<ConfirmModalProps, boolean>(props => {
 
         <Divider />
 
-        <Group p="8px" justify="space-between" wrap="nowrap">
+        <Group p="0.5rem" justify="space-between" wrap="nowrap">
           <Button onClick={onClickCancel} color="red">
             {t('common:button.cancel')}
           </Button>

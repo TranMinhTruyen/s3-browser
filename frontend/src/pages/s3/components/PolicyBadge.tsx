@@ -10,7 +10,7 @@ const POLICY_BADGE_COLORS = { private: 'gray', public: 'orange', custom: 'blue' 
 /** Policy mode of a bucket: skeleton while unknown yet, nothing when it could not be read ("unknown"). */
 function PolicyBadge({ mode }: PolicyBadgeProps) {
   const { t } = useTranslation('bucket', { keyPrefix: 'page' });
-  if (!mode) return <Skeleton w={56} h={18} radius="xl" />;
+  if (!mode) return <Skeleton w="3.5rem" h="1.125rem" radius="xl" />;
   if (!(mode in POLICY_BADGE_COLORS)) return null;
   const policyMode = mode as keyof typeof POLICY_BADGE_COLORS;
   return (

@@ -103,8 +103,8 @@ export default createMantineModal<ExportProfileModalProps, boolean>(
           <Modal.Content>
             <Modal.Header
               pos="relative"
-              p="8px"
-              mih="0px"
+              p="0.5rem"
+              mih="0"
               style={{ justifyContent: 'flex-end', backgroundColor: INFO_BG_COLOR }}
             >
               <Group
@@ -121,9 +121,9 @@ export default createMantineModal<ExportProfileModalProps, boolean>(
 
             <Divider />
 
-            <Modal.Body p="8px">
-              <Paper withBorder p="8px">
-                <Stack gap="8px">
+            <Modal.Body p="0.5rem">
+              <Paper withBorder p="0.5rem">
+                <Stack gap="0.5rem">
                   <CheckBoxInput
                     label={t('label.includeSecret')}
                     description={hasSecret ? t('hint.includeSecret') : t('hint.noSavedSecret')}
@@ -155,7 +155,7 @@ export default createMantineModal<ExportProfileModalProps, boolean>(
 
             <Divider />
 
-            <Group p="8px" justify="space-between" wrap="nowrap">
+            <Group p="0.5rem" justify="space-between" wrap="nowrap">
               <Button type="button" color="red" onClick={onClickCancel} disabled={form.submitting}>
                 {t('common:button.cancel')}
               </Button>

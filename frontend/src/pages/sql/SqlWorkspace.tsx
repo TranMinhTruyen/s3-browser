@@ -6,10 +6,10 @@ import SqlTabPage from '@/pages/sql/SqlTabPage';
 function SqlWorkspace() {
   return (
     <Splitter h="100%">
-      <Splitter.Pane defaultSize="18%" min="18%" p="4px">
+      <Splitter.Pane defaultSize="18%" min="18%" p="0.25rem">
         <SqlNavbar />
       </Splitter.Pane>
-      <Splitter.Pane defaultSize="85%" min="50%" p="4px">
+      <Splitter.Pane defaultSize="85%" min="50%" p="0.25rem">
         <SqlTabPage />
       </Splitter.Pane>
     </Splitter>

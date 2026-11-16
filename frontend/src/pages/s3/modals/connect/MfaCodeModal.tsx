@@ -92,8 +92,8 @@ export default createMantineModal<MfaCodeModalProps, boolean>(
           <Modal.Content>
             <Modal.Header
               pos="relative"
-              p="8px"
-              mih="0px"
+              p="0.5rem"
+              mih="0"
               style={{ justifyContent: 'flex-end', backgroundColor: WARNING_BG_COLOR }}
             >
               <Title
@@ -107,7 +107,7 @@ export default createMantineModal<MfaCodeModalProps, boolean>(
 
             <Divider />
 
-            <Modal.Body p="16px" style={{ overflow: 'auto', maxHeight: BODY_MAX_HEIGHT }}>
+            <Modal.Body p="1rem" style={{ overflow: 'auto', maxHeight: BODY_MAX_HEIGHT }}>
               <Paper withBorder p="md">
                 <Stack gap="sm">
                   <Text size="sm">{formatStringJson(t('ipcMessage:bucket.S3W010'), { name: profileName })}</Text>
@@ -141,7 +141,7 @@ export default createMantineModal<MfaCodeModalProps, boolean>(
 
             <Divider />
 
-            <Group p="8px" justify="space-between" wrap="nowrap">
+            <Group p="0.5rem" justify="space-between" wrap="nowrap">
               <Button type="button" color="red" onClick={onClickCancel}>
                 {t('common:button.cancel')}
               </Button>

@@ -108,7 +108,7 @@ function BucketDetailDrawer(props: BucketDetailDrawerProps) {
 
   return (
     <Box
-      w={320}
+      w="20rem"
       h="100%"
       style={{
         flexShrink: 0,
@@ -117,13 +117,13 @@ function BucketDetailDrawer(props: BucketDetailDrawerProps) {
         borderLeft: '1px solid var(--mantine-color-default-border)',
       }}
     >
-      <Group justify="space-between" p="8px" wrap="nowrap" style={{ flexShrink: 0 }}>
+      <Group justify="space-between" p="0.5rem" wrap="nowrap" style={{ flexShrink: 0 }}>
         <Text fw={600}>{t('title')}</Text>
         <CloseButton onClick={onClickClose} tooltip={t('tooltip.close')} />
       </Group>
 
       <ScrollArea style={{ flex: 1, minHeight: 0 }}>
-        <Stack gap="sm" p="8px">
+        <Stack gap="sm" p="0.5rem">
           <Divider label={t('section.basic')} labelPosition="left" />
           <DataList orientation="vertical" withDivider>
             <DetailRow label={t('label.name')} value={bucket.name} />

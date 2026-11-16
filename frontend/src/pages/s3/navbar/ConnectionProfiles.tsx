@@ -241,7 +241,7 @@ function ConnectionProfiles() {
           {t('profile.empty')}
         </Text>
       ) : null}
-      <Menu width={200} opened={menuOpened} onChange={onChangeMenu}>
+      <Menu width="12.5rem" opened={menuOpened} onChange={onChangeMenu}>
         <Menu.ContextMenu>
           <div style={{ position: 'relative', height: virtualizer.getTotalSize() }} onContextMenu={onContextMenuRows}>
             {virtualItems.map(row => (

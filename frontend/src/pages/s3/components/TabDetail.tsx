@@ -241,7 +241,7 @@ function TabDetail(props: TabDetailProps) {
 
   const viewContent = (
     <>
-      <Stack gap="8px" display={currentView === 'bucketList' ? undefined : 'none'}>
+      <Stack gap="0.5rem" display={currentView === 'bucketList' ? undefined : 'none'}>
         <BucketListView
           tabId={tabId}
           profile={isConnected ? selectedProfile : null}
@@ -255,7 +255,7 @@ function TabDetail(props: TabDetailProps) {
         />
       </Stack>
       {currentView === 'objectList' ? (
-        <Stack gap="8px">
+        <Stack gap="0.5rem">
           <ObjectListView
             tabId={tabId}
             profile={isConnected ? selectedProfile : null}
@@ -305,13 +305,13 @@ function TabDetail(props: TabDetailProps) {
       <Group gap={0} wrap="nowrap" align="stretch" style={{ flex: 1, minHeight: 0 }}>
         <Paper
           ref={scrollRef}
-          p="8px"
+          p="0.5rem"
           className={classes.dropZone}
           data-file-drop-target={currentView === 'objectList' ? '' : undefined}
           data-tab-id={tabId}
           style={{ flex: 1, minWidth: 0, overflow: 'auto', position: 'relative' }}
         >
-          <Stack gap="8px">{viewContent}</Stack>
+          <Stack gap="0.5rem">{viewContent}</Stack>
         </Paper>
         {currentView === 'objectList' && hasDetail && selectedProfile?.id && selectedBucket ? (
           <ObjectDetailDrawer

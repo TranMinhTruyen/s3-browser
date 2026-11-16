@@ -47,7 +47,7 @@ function ConnectionProfileItem({ profileKey, connecting, onConnect }: Connection
 
   return (
     <Card
-      padding="8px"
+      padding="0.5rem"
       withBorder
       orientation="horizontal"
       h={CARD_HEIGHT}

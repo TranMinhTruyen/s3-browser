@@ -28,7 +28,7 @@ export default function BucketPolicyInput({
   const onChangeSegment = useCallback((value: string) => onChangeMode(value as PolicyMode), [onChangeMode]);
 
   return (
-    <Stack gap="8px">
+    <Stack gap="0.5rem">
       <SegmentedControl fullWidth data={modeOptions} value={mode} disabled={readOnly} onChange={onChangeSegment} />
       <Text size="sm" c="dimmed">
         {t(`hint.${mode}`)}

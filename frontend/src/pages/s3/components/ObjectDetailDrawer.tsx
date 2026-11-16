@@ -78,7 +78,7 @@ function ObjectDetailDrawer(props: ObjectDetailDrawerProps) {
 
   return (
     <Box
-      w={320}
+      w="20rem"
       h="100%"
       style={{
         flexShrink: 0,
@@ -87,13 +87,13 @@ function ObjectDetailDrawer(props: ObjectDetailDrawerProps) {
         borderLeft: '1px solid var(--mantine-color-default-border)',
       }}
     >
-      <Group justify="space-between" p="8px" wrap="nowrap" style={{ flexShrink: 0 }}>
+      <Group justify="space-between" p="0.5rem" wrap="nowrap" style={{ flexShrink: 0 }}>
         <Text fw={600}>{t('title')}</Text>
         <CloseButton onClick={onClickClose} tooltip={t('tooltip.close')} />
       </Group>
 
       <ScrollArea style={{ flex: 1, minHeight: 0 }}>
-        <Stack gap="sm" p="8px">
+        <Stack gap="sm" p="0.5rem">
           <DataList orientation="vertical" withDivider>
             <DetailRow label={t('label.name')} value={item.name} />
             <DetailRow label={t('label.key')} value={item.key} copyable />

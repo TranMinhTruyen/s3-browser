@@ -42,8 +42,8 @@ export default createMantineModal<DeleteResultModalProps, void>(props => {
       <Modal.Content>
         <Modal.Header
           pos="relative"
-          p="8px"
-          mih="0px"
+          p="0.5rem"
+          mih="0"
           style={{ justifyContent: 'flex-end', backgroundColor: INFO_BG_COLOR }}
         >
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
@@ -57,10 +57,10 @@ export default createMantineModal<DeleteResultModalProps, void>(props => {
 
         <Divider />
 
-        <Modal.Body p="8px">
-          <Paper withBorder p="8px">
-            <Stack gap="8px">
-              <Group gap="8px">
+        <Modal.Body p="0.5rem">
+          <Paper withBorder p="0.5rem">
+            <Stack gap="0.5rem">
+              <Group gap="0.5rem">
                 <Badge variant="light" color="var(--mantine-color-green-6)" size="lg">
                   {formatStringJson(t('deletedCount'), { count: deleted })}
                 </Badge>
@@ -85,7 +85,7 @@ export default createMantineModal<DeleteResultModalProps, void>(props => {
                       <Accordion.Control>{formatStringJson(t('failedSection'), { count: failed })}</Accordion.Control>
                       <Accordion.Panel>
                         {failed > failures.length && (
-                          <Text size="sm" c="dimmed" mb="4px">
+                          <Text size="sm" c="dimmed" mb="0.25rem">
                             {formatStringJson(t('truncated'), { shown: failures.length, total: failed })}
                           </Text>
                         )}
@@ -109,7 +109,7 @@ export default createMantineModal<DeleteResultModalProps, void>(props => {
 
         <Divider />
 
-        <Group p="8px" justify="flex-end" wrap="nowrap">
+        <Group p="0.5rem" justify="flex-end" wrap="nowrap">
           <Button onClick={onClickOk}>{t('common:button.OK')}</Button>
         </Group>
       </Modal.Content>

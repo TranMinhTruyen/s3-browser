@@ -3,9 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { GetDownloadHistory, OpenDownloadDest } from '@wails/S3Browser/internal/handlers/buckethandler';
 import { DownloadHistoryItem, DownloadHistoryOutput } from '@wails/S3Browser/models/bucket';
 import dayjs from 'dayjs';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
+import { DEFAULT_SETTINGS, type UiSizeKey } from '@/common/cnst/settingConst';
 import { useModalStackStore } from '@/common/stores/modalStackStore';
+import { useSettingStore } from '@/common/stores/settingStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import HistoryModal from '@/pages/s3/modals/history/HistoryModal';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
@@ -16,6 +18,7 @@ const virtual = vi.hoisted(() => ({
   endIndex: null as number | null,
   estimates: [] as number[],
   scrollEls: [] as unknown[],
+  measure: vi.fn(),
 }));
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: ({
@@ -23,16 +26,19 @@ vi.mock('@tanstack/react-virtual', () => ({
     getItemKey,
     estimateSize,
     getScrollElement,
+    gap,
   }: {
     count: number;
     getItemKey: (i: number) => string;
     estimateSize: () => number;
     getScrollElement: () => unknown;
+    gap: number;
   }) => ({
+    measure: () => virtual.measure(),
     getVirtualItems: () => {
       virtual.estimates.push(estimateSize());
       virtual.scrollEls.push(getScrollElement());
-      return Array.from({ length: count }, (_, index) => ({ key: getItemKey(index), index, start: 0 }));
+      return Array.from({ length: count }, (_, index) => ({ key: getItemKey(index), index, start: index * gap }));
     },
     getTotalSize: () => count * 100,
     measureElement: () => {},
@@ -76,6 +82,11 @@ describe('HistoryModal', () => {
     virtual.endIndex = null;
     virtual.estimates = [];
     virtual.scrollEls = [];
+    virtual.measure.mockClear();
+  });
+
+  afterEach(() => {
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS } });
   });
 
   it('requests the first page and renders every column of the items', async () => {
@@ -315,5 +326,36 @@ describe('HistoryModal', () => {
 
     expect(virtual.estimates).toContain(100);
     expect(virtual.scrollEls.at(-1)).toBeInstanceOf(HTMLElement);
+  });
+
+  describe('interface size', () => {
+    const secondRowOffset = () => (screen.getByText('b.bin').closest('[data-index]') as HTMLElement).style.transform;
+
+    it.each([
+      ['small', 7, 87.5],
+      ['medium', 8, 100],
+      ['large', 9, 112.5],
+    ] as const)('scales the row gap and estimate at the %s size', async (size, gap, estimate) => {
+      useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size } });
+      callIPCMock.mockResolvedValueOnce(pageOf([item('a'), item('b')]));
+      open();
+      await flush();
+
+      expect(secondRowOffset()).toBe(`translateY(${gap}px)`);
+      expect(virtual.estimates).toContain(estimate);
+    });
+
+    it('measures again once after the size changes, not on mount', async () => {
+      callIPCMock.mockResolvedValueOnce(pageOf([item('a'), item('b')]));
+      open();
+      await flush();
+      expect(virtual.measure).not.toHaveBeenCalled();
+
+      const size: UiSizeKey = 'large';
+      act(() => useSettingStore.setState(st => ({ draft: { ...st.draft, size } })));
+
+      expect(virtual.measure).toHaveBeenCalledTimes(1);
+      expect(secondRowOffset()).toBe('translateY(9px)');
+    });
   });
 });

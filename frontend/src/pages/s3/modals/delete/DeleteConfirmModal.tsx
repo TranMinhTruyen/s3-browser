@@ -92,8 +92,8 @@ export default createMantineModal<DeleteConfirmModalProps, string[] | null>(prop
       <Modal.Content>
         <Modal.Header
           pos="relative"
-          p="8px"
-          mih="0px"
+          p="0.5rem"
+          mih="0"
           style={{ justifyContent: 'flex-end', backgroundColor: WARNING_BG_COLOR }}
         >
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
@@ -107,13 +107,13 @@ export default createMantineModal<DeleteConfirmModalProps, string[] | null>(prop
 
         <Divider />
 
-        <Modal.Body p="8px">
+        <Modal.Body p="0.5rem">
           <Paper withBorder style={{ overflow: 'hidden' }}>
-            <Text p="8px" size="sm" ta="center" c="var(--mantine-color-red-filled)">
+            <Text p="0.5rem" size="sm" ta="center" c="var(--mantine-color-red-filled)">
               {t('warning')}
             </Text>
             <Divider />
-            <Group gap="xs" wrap="nowrap" px="xs" h={36} bg="var(--mantine-color-default-hover)">
+            <Group gap="xs" wrap="nowrap" px="xs" h="2.25rem" bg="var(--mantine-color-default-hover)">
               <CheckBoxInput
                 checked={count === total}
                 indeterminate={count > 0 && count < total}
@@ -134,7 +134,7 @@ export default createMantineModal<DeleteConfirmModalProps, string[] | null>(prop
 
         <Divider />
 
-        <Group p="8px" justify="space-between" wrap="nowrap">
+        <Group p="0.5rem" justify="space-between" wrap="nowrap">
           <Button onClick={onClickCancel} color="red">
             {t('common:button.cancel')}
           </Button>

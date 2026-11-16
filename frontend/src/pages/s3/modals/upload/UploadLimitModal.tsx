@@ -204,8 +204,8 @@ export default createMantineModal<UploadLimitModalProps, DroppedFile[]>(props =>
       <Modal.Content>
         <Modal.Header
           pos="relative"
-          p="8px"
-          mih="0px"
+          p="0.5rem"
+          mih="0"
           style={{ justifyContent: 'flex-end', backgroundColor: WARNING_BG_COLOR }}
         >
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
@@ -219,8 +219,8 @@ export default createMantineModal<UploadLimitModalProps, DroppedFile[]>(props =>
 
         <Divider />
 
-        <Modal.Body p="8px">
-          <Stack gap="8px">
+        <Modal.Body p="0.5rem">
+          <Stack gap="0.5rem">
             <Text>{t('description')}</Text>
             {capped && (
               <Text c="var(--mantine-color-orange-filled)" size="sm">
@@ -277,7 +277,7 @@ export default createMantineModal<UploadLimitModalProps, DroppedFile[]>(props =>
 
         <Divider />
 
-        <Group p="8px" justify="space-between" wrap="nowrap">
+        <Group p="0.5rem" justify="space-between" wrap="nowrap">
           <Button onClick={onClickCancel} color="red">
             {t('common:button.cancel')}
           </Button>

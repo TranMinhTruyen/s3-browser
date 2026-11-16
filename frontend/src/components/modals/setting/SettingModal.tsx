@@ -165,14 +165,14 @@ export default createMantineModal<{}, boolean>(props => {
       {...restProps}
       closeOnEscape={mantine.props.closeOnEscape && !busy}
       closeOnClickOutside={mantine.props.closeOnClickOutside && !busy}
-      size="560px"
+      size="35rem"
     >
       <Modal.Overlay />
       <Modal.Content>
         <Modal.Header
           pos="relative"
-          p="8px"
-          mih="0px"
+          p="0.5rem"
+          mih="0"
           style={{ justifyContent: 'flex-end', backgroundColor: INFO_BG_COLOR }}
         >
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
@@ -183,9 +183,9 @@ export default createMantineModal<{}, boolean>(props => {
 
         <Divider />
 
-        <Modal.Body p="8px">
-          <Stack gap="8px">
-            <Paper withBorder p="8px">
+        <Modal.Body p="0.5rem">
+          <Stack gap="0.5rem">
+            <Paper withBorder p="0.5rem">
               <Stack>
                 <SelectInput
                   label={t('label.theme')}
@@ -254,7 +254,7 @@ export default createMantineModal<{}, boolean>(props => {
         <Divider />
 
         {/* Cancel on the left, actions on the right; nowrap keeps the layout stable when text width changes. */}
-        <Group p="8px" justify="space-between" wrap="nowrap">
+        <Group p="0.5rem" justify="space-between" wrap="nowrap">
           <Button color="red" onClick={onClickCancel} disabled={busy}>
             {t('button.cancel')}
           </Button>

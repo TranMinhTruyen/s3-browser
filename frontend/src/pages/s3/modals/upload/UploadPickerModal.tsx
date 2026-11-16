@@ -243,8 +243,8 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
       <Modal.Content className={classes.dropZone} data-file-drop-target="" data-drop-kind="picker" data-tab-id={tabId}>
         <Modal.Header
           pos="relative"
-          p="8px"
-          mih="0px"
+          p="0.5rem"
+          mih="0"
           style={{ justifyContent: 'flex-end', backgroundColor: INFO_BG_COLOR }}
         >
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
@@ -256,10 +256,10 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
 
         <Divider />
 
-        <Modal.Body p="8px">
+        <Modal.Body p="0.5rem">
           {/* Bordered sections like the object view: target, actions and list, each split by a divider */}
           <Paper withBorder style={{ overflow: 'hidden' }}>
-            <Box p="8px">
+            <Box p="0.5rem">
               {bucket ? (
                 <TruncatedText size="sm" c="dimmed">
                   {formatStringJson(t('target'), { target })}
@@ -277,7 +277,7 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
 
             <Divider />
 
-            <Stack gap="4px" p="8px">
+            <Stack gap="0.25rem" p="0.5rem">
               <Group gap="xs">
                 <Button
                   leftSection={<Upload size="1rem" />}
@@ -330,7 +330,7 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
 
         <Divider />
 
-        <Group p="8px" justify="space-between" wrap="nowrap">
+        <Group p="0.5rem" justify="space-between" wrap="nowrap">
           <Button onClick={onClickCancel} color="red">
             {t('common:button.cancel')}
           </Button>

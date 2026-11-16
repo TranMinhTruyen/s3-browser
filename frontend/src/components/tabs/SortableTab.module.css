@@ -5,7 +5,7 @@
  */
 .wrapper .tab {
   /* No vertical margin (the tab page spaces the strip) and none left of the first tab: lines up with the tab detail. */
-  margin: 0 2px;
+  margin: 0 0.125rem;
   border: 1px solid var(--mantine-color-default-border);
   border-radius: var(--mantine-radius-md);
   color: var(--mantine-color-text);

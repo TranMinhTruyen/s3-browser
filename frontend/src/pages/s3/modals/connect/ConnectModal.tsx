@@ -271,8 +271,8 @@ export default createMantineModal<ConnectModalProps, false>(
           <Modal.Content>
             <Modal.Header
               pos="relative"
-              p="8px"
-              mih="0px"
+              p="0.5rem"
+              mih="0"
               style={{ justifyContent: 'flex-end', backgroundColor: INFO_BG_COLOR }}
             >
               <Title
@@ -292,7 +292,7 @@ export default createMantineModal<ConnectModalProps, false>(
             <Divider />
 
             <Modal.Body
-              p="16px"
+              p="1rem"
               style={{ overflow: 'auto', maxHeight: secretRequired ? BODY_HEIGHT_NO_HINT : BODY_HEIGHT_WITH_HINT }}
             >
               <Stack gap="sm">
@@ -391,7 +391,7 @@ export default createMantineModal<ConnectModalProps, false>(
 
             <Divider />
 
-            <Group p="8px" justify="space-between" wrap="nowrap">
+            <Group p="0.5rem" justify="space-between" wrap="nowrap">
               <Button type="button" loading={form.submitting} onClick={onClickTestConnection}>
                 {t('form.button.testConnection')}
               </Button>

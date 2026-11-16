@@ -86,13 +86,19 @@ function BucketItem(props: BucketItemProps) {
   }, [onSelectBucket, item.name, item.inaccessible]);
 
   return (
-    <Card padding="8px" orientation="horizontal" h={LIST_ROW_HEIGHT} onClick={onClickBucket} className={classes.card}>
-      <Card.Section inheritPadding px="8px" withBorder className={classes.iconSection} style={ICON_SECTION_STYLE}>
+    <Card
+      padding="0.5rem"
+      orientation="horizontal"
+      h={LIST_ROW_HEIGHT}
+      onClick={onClickBucket}
+      className={classes.card}
+    >
+      <Card.Section inheritPadding px="0.5rem" withBorder className={classes.iconSection} style={ICON_SECTION_STYLE}>
         <Folder size="1.25rem" />
       </Card.Section>
       <Card.Section inheritPadding px="xs" style={CONTENT_SECTION_STYLE}>
         {/* miw=0 lets the flex item shrink, so a long bucket name is truncated instead of overflowing. */}
-        <Stack miw={0} gap="4px">
+        <Stack miw={0} gap="0.25rem">
           <Group gap="xs" wrap="nowrap">
             <TruncatedText size="xl" fw="bold">
               {item.name}
@@ -115,7 +121,7 @@ function BucketItem(props: BucketItemProps) {
       {/* The menu area must not trigger the row click. */}
       <Card.Section ref={menuSectionRef} onClick={stopPropagation} style={MENU_SECTION_STYLE}>
         {menuOpened ? (
-          <Menu width={200} opened onChange={setMenuOpened}>
+          <Menu width="12.5rem" opened onChange={setMenuOpened}>
             <Menu.Target>
               <ActionIcon key="menu" tooltip={labels.moreActions}>
                 <Ellipsis />
