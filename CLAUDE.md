@@ -41,7 +41,10 @@ Hãy tự hỏi: "Liệu một kỹ sư cấp cao có cho rằng cách làm này
 
 1. Luôn trả lời bằng **tiếng Việt**; giữ nguyên tên định danh trong code bằng tiếng Anh.
 2. **Không bao giờ** chạy `git commit`, `git push`, `git switch`, `git reset`, `git checkout`, `git stash` hay lệnh nào thay đổi branch hoặc lịch sử git. **Ngoại lệ duy nhất**: agent `git-flow`, khi được `orchestrator` gọi trong quy trình sprint, được tạo `SP-NN/release` từ `origin/staging` khi bắt đầu sprint, tách feature `SP-NN/<slug>` từ `origin/SP-NN/release`, commit, rồi tự push feature và tạo PR vào `SP-NN/release`. Feature **không bao giờ** PR vào `staging`; chỉ `SP-NN/release` được PR vào `staging`, và chỉ khi người dùng báo sprint DONE và đồng ý. `master` là branch release: không agent nào được commit hay push vào `master`; code lên `master` chỉ qua PR `staging` → `master` do `git-flow` tạo (chế độ `master`) khi người dùng yêu cầu ra bản stable, người dùng tự merge. Trước đó `git-flow` (chế độ `stable`) được tạo `release/v<version>` từ `origin/staging` chỉ để đổi version và PR vào `staging`. Không agent nào được push thẳng vào `staging` hay `SP-NN/release`, force push hay merge PR. Ngoài quy trình sprint, khi được yêu cầu chỉ soạn commit message cho các thay đổi đã stage (`git diff --cached`) bằng skill `/commit-message`.
-3. Không tự ý quyết định phần yêu cầu chưa rõ: ghi lại thành câu hỏi và chờ người dùng trả lời.
+3. Không tự ý quyết định phần yêu cầu chưa rõ: ghi lại thành câu hỏi và chờ người dùng trả lời. Câu hỏi cho người dùng luôn ở dạng **poll** để người dùng chỉ cần chọn:
+   - Session chính và `orchestrator` (khi chạy bằng `claude --agent orchestrator`) hỏi bằng tool `AskUserQuestion`: mỗi câu 2–4 phương án loại trừ nhau, phương án đề xuất đặt đầu và thêm `(Recommended)`, không tự thêm phương án "Khác" (tool đã có sẵn ô Other). Mỗi poll tối đa 4 câu, nhiều hơn thì chia nhiều poll liên tiếp; câu hỏi phải tự đủ nghĩa vì người dùng có thể chỉ thấy hộp poll.
+   - Subagent không có tool poll: mục "Cần hỏi người dùng" hay "Câu hỏi chưa rõ" ghi mỗi câu kèm 2–4 phương án và phương án đề xuất, để bên gọi chuyển thành poll. Bên gọi cũng không có tool poll (ví dụ orchestrator chạy làm subagent) thì trả nguyên câu hỏi và phương án về cho session chính.
+   - Chỉ hỏi dạng văn bản khi câu trả lời không thể là lựa chọn (ví dụ tên tự do, đoạn nội dung).
 4. Không sửa tay code sinh tự động: `internal/pkg/db/sqlc/**`, `frontend/bindings/**`. Các đường dẫn này, cùng `.claude/**`, `CLAUDE.md`, `go.sum`, `.env*`, bị chặn ghi trong `.claude/settings.json`; chỉ được thay đổi qua lệnh sinh code tương ứng hoặc do người dùng tự sửa.
 5. Chỉ format/lint frontend bằng **biome** và **oxlint**, không dùng prettier/eslint.
 6. Gặp điểm chưa rõ giữa chừng thì **dừng task đó** và báo về, không tự đoán.
@@ -165,7 +168,7 @@ Tất cả tool Go được khai báo trong `tool (...)` của `go.mod` (wails3,
 
 - Format: `cargo fmt --check`. Lint: `cargo clippy --target x86_64-pc-windows-msvc --all-targets -- -D warnings`.
 - Build: `cargo build --release --target x86_64-pc-windows-msvc` (task `build:native` chạy trước build Go, copy DLL cạnh exe, vào bản portable và NSIS).
-- Test: <chốt: không viết unit test như Go | `cargo test` cho protocol/dispatch>.
+- Test: `cargo test` cho protocol, dispatch và driver (SQLite dùng file DB tạm), do `rust-tester` viết và **có commit** (khác test Go tạm).
 
 ## 9. Frontend (React 19 + TS)
 

@@ -16,7 +16,7 @@ Bên gọi đưa cho bạn đường dẫn thư mục sprint, ví dụ `sprints/
 1. Đọc **toàn bộ** file `.md` trong thư mục sprint, trừ `plan.md` và `report.md`. Nếu `plan.md` đã tồn tại, đọc để cập nhật thay vì viết lại từ đầu.
 2. Tìm và đọc code liên quan: handler, module, submodule, model, store, page, component, locale. Hiểu code hiện tại trước khi lên plan. Bạn không có Bash nên không chạy được `graphify query`: có `graphify-out/wiki/index.md` thì đọc nó để định hướng trước, rồi mới Grep.
 3. Nếu yêu cầu đụng tới API Wails, tra https://v3.wails.io/ để chắc chắn API còn đúng ở bản hiện tại.
-4. **Không tự ý quyết định** những điểm chưa rõ. Ghi chúng vào mục "Câu hỏi chưa rõ", mỗi câu kèm phương án bạn đề xuất.
+4. **Không tự ý quyết định** những điểm chưa rõ. Ghi chúng vào mục "Câu hỏi chưa rõ", mỗi câu kèm 2–4 phương án loại trừ nhau (mỗi phương án một dòng ngắn nêu hệ quả) và phương án bạn đề xuất, để orchestrator chuyển thành poll (luật 3 mục 4 của `CLAUDE.md`).
 4b. **Thiết kế đơn giản nhất đáp ứng đúng yêu cầu** (theo mục 2 của `CLAUDE.md`):
    - Trước khi đề xuất file/hàm/component mới, tìm cái sẵn có dùng lại được (helper trong `common/utils`, component trong `components/`, hàm ở module Go khác, binding đã có) và ghi ở dòng "Dùng lại" của nhóm task. Chỉ tạo mới khi không có.
    - Không thêm task ngoài yêu cầu (refactor tiện tay, option cấu hình, abstraction cho tương lai). Thấy thật sự cần thì ghi thành câu hỏi, không tự đưa vào plan.
@@ -41,9 +41,9 @@ Bên gọi đưa cho bạn đường dẫn thư mục sprint, ví dụ `sprints/
 - R2: ...
 
 ## 2. Câu hỏi chưa rõ
-| # | Câu hỏi | Đề xuất | Trả lời |
-|---|---|---|---|
-| Q1 | ... | ... | (chờ người dùng) |
+| # | Câu hỏi | Phương án | Đề xuất | Trả lời |
+|---|---|---|---|---|
+| Q1 | ... | A: ...<br>B: ... | A | (chờ người dùng) |
 
 ## 3a. Task native (rust-native)
 | # | Task | Yêu cầu | File sửa / tạo | Phụ thuộc |
