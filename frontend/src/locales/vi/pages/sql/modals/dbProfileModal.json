@@ -5,6 +5,7 @@
   },
   "form": {
     "label": {
+      "dbType": "Loại cơ sở dữ liệu",
       "name": "Tên hồ sơ",
       "color": "Màu hồ sơ",
       "host": "Máy chủ",
@@ -29,6 +30,10 @@
     "button": {
       "create": "Tạo hồ sơ",
       "edit": "Cập nhật hồ sơ"
+    },
+    "dbType": {
+      "postgresql": "PostgreSQL",
+      "sqlite": "SQLite"
     }
   },
   "toast": {

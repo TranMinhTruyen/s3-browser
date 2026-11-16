@@ -5,6 +5,7 @@
   },
   "form": {
     "label": {
+      "dbType": "Тип базы данных",
       "name": "Имя профиля",
       "color": "Цвет профиля",
       "host": "Хост",
@@ -29,6 +30,10 @@
     "button": {
       "create": "Создать профиль",
       "edit": "Обновить профиль"
+    },
+    "dbType": {
+      "postgresql": "PostgreSQL",
+      "sqlite": "SQLite"
     }
   },
   "toast": {

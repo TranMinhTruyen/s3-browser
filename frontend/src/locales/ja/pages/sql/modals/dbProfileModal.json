@@ -5,6 +5,7 @@
   },
   "form": {
     "label": {
+      "dbType": "データベースの種類",
       "name": "プロファイル名",
       "color": "プロファイルの色",
       "host": "ホスト",
@@ -29,6 +30,10 @@
     "button": {
       "create": "プロファイルを作成",
       "edit": "プロファイルを更新"
+    },
+    "dbType": {
+      "postgresql": "PostgreSQL",
+      "sqlite": "SQLite"
     }
   },
   "toast": {

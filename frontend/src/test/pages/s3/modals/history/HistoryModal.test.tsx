@@ -345,6 +345,21 @@ describe('HistoryModal', () => {
       expect(virtual.estimates).toContain(estimate);
     });
 
+    it('re-reads the list offset when the size changes', async () => {
+      let top = 10;
+      const spy = vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(function (this: HTMLElement) {
+        return this.style.position === 'relative' ? top : 0;
+      });
+      callIPCMock.mockResolvedValueOnce(pageOf([item('a'), item('b')]));
+      open();
+      await flush();
+      top = 14;
+      act(() => useSettingStore.setState(st => ({ draft: { ...st.draft, size: 'large' } })));
+
+      expect(secondRowOffset()).toBe('translateY(-5px)');
+      spy.mockRestore();
+    });
+
     it('measures again once after the size changes, not on mount', async () => {
       callIPCMock.mockResolvedValueOnce(pageOf([item('a'), item('b')]));
       open();

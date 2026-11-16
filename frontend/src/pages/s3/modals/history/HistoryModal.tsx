@@ -142,7 +142,8 @@ export default createMantineModal<{}, false>(props => {
   // The list sits below the scroll container's padding, so the virtualizer needs that offset.
   useLayoutEffect(() => {
     setScrollMargin(listRef.current?.offsetTop ?? 0);
-  }, []);
+    // offsetTop is px and the padding above the list is rem: measure again when the interface size changes.
+  }, [scale]);
 
   // React Compiler is disabled, so this compiler-only lint does not apply.
   // oxlint-disable-next-line react/incompatible-library

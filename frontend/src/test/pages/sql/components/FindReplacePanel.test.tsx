@@ -403,6 +403,31 @@ describe('FindReplacePanel', () => {
       expect(findInput()).toHaveFocus();
     });
 
+    it.each([
+      ['Ctrl+E', { key: 'e', ctrlKey: true }],
+      ['Cmd+Q', { key: 'Q', metaKey: true }],
+      ['Ctrl+q', { key: 'q', ctrlKey: true }],
+    ])('%s is kept from the WebView without moving focus or closing', (_n, init) => {
+      const { spies } = setup({ find: 'foo' });
+      replaceInput().focus();
+      const event = createEvent.keyDown(replaceInput(), init);
+
+      fireEvent(replaceInput(), event);
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(replaceInput()).toHaveFocus();
+      expect(spies.onClose).not.toHaveBeenCalled();
+    });
+
+    it('does not prevent plain e or Ctrl+other keys', () => {
+      setup({ find: 'foo' });
+      for (const init of [{ key: 'e' }, { key: 'x', ctrlKey: true }]) {
+        const event = createEvent.keyDown(findInput(), init);
+        fireEvent(findInput(), event);
+        expect(event.defaultPrevented).toBe(false);
+      }
+    });
+
     it('ignores other keys', () => {
       const { spies } = setup({ find: 'foo' });
       const event = createEvent.keyDown(findInput(), { key: 'f' });

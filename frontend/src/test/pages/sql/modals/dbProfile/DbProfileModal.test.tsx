@@ -147,6 +147,14 @@ describe('DbProfileModal', () => {
       expect(saved().find(p => p?.host === 'db.local')?.sslMode).toBe('require');
     });
 
+    it('labels the DB type control and its options from the translations', async () => {
+      await open();
+
+      expect(screen.getByRole('radiogroup', { name: 'Database type' })).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: 'PostgreSQL' })).toBeChecked();
+      expect(screen.getByRole('radio', { name: 'SQLite' })).not.toBeChecked();
+    });
+
     it('switches to SQLite: shows the file path, hides PostgreSQL fields and drops earlier errors', async () => {
       const { user } = await open();
       await user.click(screen.getByRole('button', { name: 'Create profile' }));

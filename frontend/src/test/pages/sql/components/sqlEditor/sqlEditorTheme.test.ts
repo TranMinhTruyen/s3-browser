@@ -54,6 +54,12 @@ describe('sqlEditorTheme', () => {
     expect(bg).toContain('transparent');
   });
 
+  it('draws a visible focus ring inside the editor from the theme color', () => {
+    const focused = themeSpec()['&.cm-focused'];
+    expect(focused.outline).toBe('2px solid var(--mantine-primary-color-filled)');
+    expect(focused.outlineOffset).toBe('-2px');
+  });
+
   it('uses only theme variables for every color property in the theme', () => {
     const colorProps = ['color', 'backgroundColor', 'borderColor', 'borderLeftColor'];
     for (const rule of Object.values(themeSpec())) {

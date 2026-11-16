@@ -1,5 +1,6 @@
 import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import classes from '@/components/tabs/SortableTab.module.css';
 import TabDragPreview from '@/components/tabs/TabDragPreview';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
@@ -15,6 +16,9 @@ describe('TabDragPreview', () => {
     const close = container.querySelector('.mantine-CloseButton-root') as HTMLElement;
     expect(close).toBeInTheDocument();
     expect(close.style.pointerEvents).toBe('none');
+    expect(close).toHaveClass(classes.close);
+    expect(close.style.getPropertyValue('--cb-size')).toBe('');
+    expect(close.style.getPropertyValue('--cb-icon-size')).toBe('');
   });
 
   it('renders no close icon when not closable', () => {

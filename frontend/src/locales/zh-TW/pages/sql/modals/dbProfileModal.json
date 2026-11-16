@@ -5,6 +5,7 @@
   },
   "form": {
     "label": {
+      "dbType": "資料庫類型",
       "name": "設定檔名稱",
       "color": "設定檔顏色",
       "host": "主機",
@@ -29,6 +30,10 @@
     "button": {
       "create": "建立設定檔",
       "edit": "更新設定檔"
+    },
+    "dbType": {
+      "postgresql": "PostgreSQL",
+      "sqlite": "SQLite"
     }
   },
   "toast": {

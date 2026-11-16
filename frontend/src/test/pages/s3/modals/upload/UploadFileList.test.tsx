@@ -169,11 +169,24 @@ describe('FileRow positioning', () => {
     ['small', '31.5px'],
     ['medium', '36px'],
     ['large', '40.5px'],
-  ] as const)('scales the fixed height at the %s size (%s)', (size, height) => {
+  ] as const)('scales the fixed height at the %s size (%s) when rendered by VirtualRowList', (size, height) => {
     useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size } });
-    renderWithProviders(<FileRow {...props} top={0} />);
+    renderWithProviders(
+      <VirtualRowList
+        rows={[{ kind: 'file', file: file() }]}
+        height={200}
+        renderRow={(_row, key, top) => <FileRow key={key} {...props} top={top} />}
+      />
+    );
 
     expect(row().style.height).toBe(height);
+  });
+
+  it('takes the scale from the parent list, not from the setting store', () => {
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size: 'large' } });
+    renderWithProviders(<FileRow {...props} top={0} />);
+
+    expect(row().style.height).toBe('36px');
   });
 
   it('moves when top changes', () => {

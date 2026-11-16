@@ -23,6 +23,6 @@
 /* The Wails runtime adds file-drop-target-active while files are dragged over the drop target. */
 .dropZone:global(.file-drop-target-active) {
   outline: 2px dashed var(--mantine-color-indigo-light-color);
-  outline-offset: -0.25rem;
+  outline-offset: -4px;
   background-color: var(--mantine-color-indigo-light);
 }

@@ -8,11 +8,14 @@ type SliderInputProps = Omit<SliderProps, 'label'> & {
 };
 
 /** Thin wrapper over Mantine `Slider`: field label like other inputs, no floating label on the thumb. */
-function SliderInput({ label, classNames, ...props }: SliderInputProps) {
-  const extra = classNames as Record<string, string | undefined> | undefined;
+function SliderInput({ label, classNames, thumbLabel, ...props }: SliderInputProps) {
+  // Only the object form is merged; the function form of `classNames` is not used by callers.
+  const extra = typeof classNames === 'object' ? classNames : undefined;
   const slider = (
     <Slider
       {...props}
+      // The thumb is the role="slider" element: name it after the field label unless the caller gave one.
+      thumbLabel={thumbLabel ?? (typeof label === 'string' ? label : undefined)}
       classNames={{
         ...extra,
         markWrapper: [classes.markWrapper, extra?.markWrapper].filter(Boolean).join(' '),

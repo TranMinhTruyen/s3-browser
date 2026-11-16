@@ -5,6 +5,7 @@
   },
   "form": {
     "label": {
+      "dbType": "Datenbanktyp",
       "name": "Profilname",
       "color": "Profilfarbe",
       "host": "Host",
@@ -29,6 +30,10 @@
     "button": {
       "create": "Profil erstellen",
       "edit": "Profil aktualisieren"
+    },
+    "dbType": {
+      "postgresql": "PostgreSQL",
+      "sqlite": "SQLite"
     }
   },
   "toast": {

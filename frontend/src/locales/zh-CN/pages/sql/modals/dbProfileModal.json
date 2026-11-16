@@ -5,6 +5,7 @@
   },
   "form": {
     "label": {
+      "dbType": "数据库类型",
       "name": "配置文件名称",
       "color": "配置文件颜色",
       "host": "主机",
@@ -29,6 +30,10 @@
     "button": {
       "create": "创建配置文件",
       "edit": "更新配置文件"
+    },
+    "dbType": {
+      "postgresql": "PostgreSQL",
+      "sqlite": "SQLite"
     }
   },
   "toast": {
