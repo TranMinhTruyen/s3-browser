@@ -1,4 +1,4 @@
-import { createTheme } from '@mantine/core';
+import { Badge, createTheme } from '@mantine/core';
 import badgeClasses from '@/components/display/badge.module.css';
 import classes from '@/components/inputs/combobox/combobox.module.css';
 
@@ -11,7 +11,12 @@ const dropdownClassNames = { dropdown: classes.dropdown, search: classes.search,
  */
 export const appTheme = createTheme({
   components: {
-    Badge: { classNames: { root: badgeClasses.root, label: badgeClasses.label } },
+    Badge: Badge.extend({
+      classNames: (_theme, { size }) => ({
+        root: size === 'lg' || size === 'xl' ? badgeClasses.root : `${badgeClasses.root} ${badgeClasses.snap}`,
+        label: badgeClasses.label,
+      }),
+    }),
     Combobox: { classNames: dropdownClassNames },
     Select: { classNames: dropdownClassNames },
     MultiSelect: { classNames: dropdownClassNames },
