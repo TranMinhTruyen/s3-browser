@@ -2,10 +2,12 @@ import { Card, Text } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { File, Folder } from 'lucide-react';
 import { CSSProperties, memo, useCallback, useState } from 'react';
+import { useRemeasureOnScale, useUiScale } from '@/common/hooks/useUiScale';
 import TruncatedText from '@/components/display/TruncatedText';
 
 const LIST_MAX_HEIGHT = '20rem';
-// One-line card plus its gap; the real height is measured, as error reasons may wrap.
+// Px at the medium size (scaled with the interface size): one-line card plus its gap; the real height is measured,
+// as error reasons may wrap.
 const ROW_ESTIMATE_HEIGHT = 56;
 const ROW_GAP = '0.5rem';
 // Same border as the cards of the object list.
@@ -44,7 +46,8 @@ const DeleteKeyList = memo(function DeleteKeyList(props: DeleteKeyListProps) {
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
 
   const getScrollElement = useCallback(() => scrollElement, [scrollElement]);
-  const estimateSize = useCallback(() => ROW_ESTIMATE_HEIGHT, []);
+  const scale = useUiScale();
+  const estimateSize = useCallback(() => ROW_ESTIMATE_HEIGHT * scale, [scale]);
 
   // React Compiler is disabled, so this compiler-only lint does not apply.
   // oxlint-disable-next-line react/incompatible-library
@@ -54,6 +57,7 @@ const DeleteKeyList = memo(function DeleteKeyList(props: DeleteKeyListProps) {
     estimateSize,
     overscan: 10,
   });
+  useRemeasureOnScale(virtualizer, scale);
 
   return (
     <div

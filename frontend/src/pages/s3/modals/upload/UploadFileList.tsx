@@ -2,7 +2,17 @@ import { Badge, Group, Text } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { DroppedFile, DroppedGroup } from '@wails/S3Browser/models/bucket';
 import { Folder, Trash2 } from 'lucide-react';
-import { ChangeEvent, CSSProperties, memo, ReactNode, useCallback, useMemo, useRef } from 'react';
+import {
+  ChangeEvent,
+  CSSProperties,
+  createContext,
+  memo,
+  ReactNode,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+} from 'react';
 import { useRemeasureOnScale, useUiScale } from '@/common/hooks/useUiScale';
 import { tintedColor } from '@/common/theme/tintedColor';
 import { formatFileSize } from '@/common/utils/stringUtils';
@@ -22,10 +32,13 @@ const ROW_HEIGHT = 36;
 // Last path segment; paths use "\" on Windows and "/" elsewhere.
 const baseName = (path: string) => path.split(/[\\/]/).pop() || path;
 
+// Interface scale, read once by VirtualRowList so the rows do not each subscribe to the setting store.
+const RowScaleContext = createContext(1);
+
 // Absolute position of a row inside the virtual list. Memoized by the rows, so `memo` keeps working
 // (a fresh style object on every render would defeat it).
 const useRowStyle = (top: number): CSSProperties => {
-  const scale = useUiScale();
+  const scale = useContext(RowScaleContext);
   return useMemo(
     () => ({
       position: 'absolute',
@@ -172,11 +185,13 @@ export const VirtualRowList = memo(function VirtualRowList(props: VirtualRowList
   useRemeasureOnScale(virtualizer, scale);
 
   return (
-    <div ref={scrollRef} style={{ height, overflow: 'auto', position: 'relative' }}>
-      <div style={{ position: 'relative', height: virtualizer.getTotalSize(), width: '100%' }}>
-        {virtualizer.getVirtualItems().map(item => renderRow(rows[item.index], item.key, item.start))}
+    <RowScaleContext.Provider value={scale}>
+      <div ref={scrollRef} style={{ height, overflow: 'auto', position: 'relative' }}>
+        <div style={{ position: 'relative', height: virtualizer.getTotalSize(), width: '100%' }}>
+          {virtualizer.getVirtualItems().map(item => renderRow(rows[item.index], item.key, item.start))}
+        </div>
       </div>
-    </div>
+    </RowScaleContext.Provider>
   );
 });
 

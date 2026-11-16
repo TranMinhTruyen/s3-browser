@@ -30,11 +30,6 @@ type DbProfileModalProps = {
   profile?: DbProfile;
 };
 
-const DB_TYPE_OPTIONS = [
-  { value: 'postgresql', label: 'PostgreSQL' },
-  { value: 'sqlite', label: 'SQLite' },
-];
-
 /**
  * Modal to create or edit a database profile (kept in RAM for now). Both save paths close the modal;
  * editing asks for confirmation first. Resolves `false` when dismissed.
@@ -66,6 +61,14 @@ export default createMantineModal<DbProfileModalProps, false>(
     const dbType = form.useWatchValue('dbType');
 
     form.watch('dbType', () => form.clearErrors()); // errors of the other DB type no longer apply
+
+    const dbTypeOptions = useMemo(
+      () => [
+        { value: 'postgresql', label: t('form.dbType.postgresql') },
+        { value: 'sqlite', label: t('form.dbType.sqlite') },
+      ],
+      [t]
+    );
 
     const sslOptions = useMemo(() => SSL_MODES.map(value => ({ value, label: t(`form.sslMode.${value}`) })), [t]);
 
@@ -105,7 +108,12 @@ export default createMantineModal<DbProfileModalProps, false>(
             <Modal.Body p="1rem">
               <Paper withBorder p="md">
                 <Stack gap="sm">
-                  <SegmentedControl data={DB_TYPE_OPTIONS} key={form.key('dbType')} {...form.getInputProps('dbType')} />
+                  <SegmentedControl
+                    data={dbTypeOptions}
+                    aria-label={t('form.label.dbType')}
+                    key={form.key('dbType')}
+                    {...form.getInputProps('dbType')}
+                  />
 
                   <FieldInput
                     type="text"

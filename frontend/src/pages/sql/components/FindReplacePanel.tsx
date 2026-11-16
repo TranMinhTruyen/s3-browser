@@ -157,6 +157,9 @@ function FindReplacePanel(props: FindReplacePanelProps) {
         // Keep the WebView's own find bar away; just re-focus the Find box.
         e.preventDefault();
         focusFind();
+      } else if ((e.ctrlKey || e.metaKey) && ['e', 'q'].includes(e.key.toLowerCase())) {
+        // Editor shortcuts (execute, format): inert while typing here, and the WebView must not act on them either.
+        e.preventDefault();
       } else if (e.key === 'Enter' && e.target === findInputRef.current) {
         onClickFind();
       }

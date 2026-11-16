@@ -2,7 +2,6 @@ import { Badge, Box, Card, Group, isLightColor, useComputedColorScheme } from '@
 import { Cable, Unplug } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
 import classes from '@/components/display/ProfileCard.module.css';
 import TruncatedText from '@/components/display/TruncatedText';
 import { type DbProfile, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
@@ -41,7 +40,7 @@ type DbProfileItemProps = {
 // The context menu is shared and owned by DbProfiles; rows carry `data-profile-key` for it.
 function DbProfileItem({ profileKey, onConnect }: DbProfileItemProps) {
   const { t } = useTranslation('sqlNavbar');
-  const profile = useDbProfileStore(useShallow(s => s.dbProfiles[profileKey]));
+  const profile = useDbProfileStore(s => s.dbProfiles[profileKey]);
   const dark = useComputedColorScheme('light') === 'dark';
 
   const onDoubleClickCard = useCallback(() => onConnect(profileKey), [onConnect, profileKey]);

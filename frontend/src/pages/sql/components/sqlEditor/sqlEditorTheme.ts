@@ -17,7 +17,8 @@ const editorTheme = EditorView.theme({
     color: 'var(--mantine-color-text)',
     backgroundColor: 'var(--mantine-color-body)',
   },
-  '&.cm-focused': { outline: 'none' },
+  // Visible focus ring drawn inside the editor so the tab frame (overflow hidden) does not clip it.
+  '&.cm-focused': { outline: '2px solid var(--mantine-primary-color-filled)', outlineOffset: '-2px' },
   '.cm-scroller': { ...FONT, overflow: 'auto' },
   '.cm-content': { ...FONT, caretColor: 'var(--mantine-color-text)' },
   '.cm-gutters': {

@@ -1,6 +1,8 @@
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_SETTINGS } from '@/common/cnst/settingConst';
+import { useSettingStore } from '@/common/stores/settingStore';
 import DeleteKeyList from '@/pages/s3/modals/delete/DeleteKeyList';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
@@ -26,6 +28,7 @@ vi.mock('@tanstack/react-virtual', () => ({
 describe('DeleteKeyList', () => {
   beforeEach(() => {
     virtualizer.options = undefined;
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS } });
   });
 
   it('renders nothing for no rows', () => {
@@ -104,6 +107,17 @@ describe('DeleteKeyList', () => {
     expect(scroller).toBeInstanceOf(HTMLDivElement);
     expect(container.contains(scroller as HTMLElement)).toBe(true);
     expect((scroller as HTMLElement).style.maxHeight).toBe('100px');
+  });
+
+  it.each([
+    ['small', 49],
+    ['medium', 56],
+    ['large', 63],
+  ] as const)('scales the row estimate at the %s size', (size, estimate) => {
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size } });
+    renderWithProviders(<DeleteKeyList rows={[{ key: 'a' }]} />);
+
+    expect(virtualizer.options?.estimateSize()).toBe(estimate);
   });
 
   it('defaults the list height limit to 20rem', () => {

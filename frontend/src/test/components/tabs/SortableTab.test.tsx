@@ -3,6 +3,7 @@ import { act, createEvent, fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SortableTab from '@/components/tabs/SortableTab';
+import classes from '@/components/tabs/SortableTab.module.css';
 import { motionState } from '@/test/_helpers/mockMotion';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
@@ -122,6 +123,14 @@ describe('SortableTab', () => {
     expect(onClickClose).toHaveBeenCalledTimes(1);
     expect(onClickClose.mock.calls[0][0]).toBe('t1');
     expect(onClickClose.mock.calls[0][1]).toHaveProperty('type', 'click');
+  });
+
+  it('gives the close button the rounded-size class', () => {
+    renderTab(true);
+    const close = screen.getByRole('button', { name: 'Close tab' });
+    expect(close).toHaveClass(classes.close);
+    expect(close.style.getPropertyValue('--cb-size')).toBe('');
+    expect(close.style.getPropertyValue('--cb-icon-size')).toBe('');
   });
 
   it('hides the close button when not closable', () => {
