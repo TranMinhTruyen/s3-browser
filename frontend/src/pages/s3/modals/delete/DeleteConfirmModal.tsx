@@ -19,7 +19,7 @@ type DeleteConfirmModalProps = ModalProps & {
 };
 
 // The list follows the window height but never gets smaller than the minimum.
-const LIST_HEIGHT = 'max(200px, 35vh)';
+const LIST_HEIGHT = 'max(12.5rem, 35vh)';
 
 /**
  * Lists the files about to be deleted (all ticked) so the user can untick the ones to keep.
@@ -92,8 +92,8 @@ export default createMantineModal<DeleteConfirmModalProps, string[] | null>(prop
       <Modal.Content>
         <Modal.Header
           pos="relative"
-          p="8px"
-          mih="0px"
+          p="0.5rem"
+          mih="0"
           style={{ justifyContent: 'flex-end', backgroundColor: WARNING_BG_COLOR }}
         >
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
@@ -107,20 +107,20 @@ export default createMantineModal<DeleteConfirmModalProps, string[] | null>(prop
 
         <Divider />
 
-        <Modal.Body p="8px">
+        <Modal.Body p="0.5rem">
           <Paper withBorder style={{ overflow: 'hidden' }}>
-            <Text p="8px" size="sm" ta="center" c="var(--mantine-color-red-filled)">
+            <Text p="0.5rem" size="sm" ta="center" c="var(--mantine-color-red-filled)">
               {t('warning')}
             </Text>
             <Divider />
-            <Group gap="xs" wrap="nowrap" px="xs" h={36} bg="var(--mantine-color-default-hover)">
+            <Group gap="xs" wrap="nowrap" px="xs" h="2.25rem" bg="var(--mantine-color-default-hover)">
               <CheckBoxInput
                 checked={count === total}
                 indeterminate={count > 0 && count < total}
                 onChange={onChangeAll}
                 aria-label={t('selectAll')}
               />
-              <Folder size="16px" style={{ flexShrink: 0 }} />
+              <Folder size="1rem" style={{ flexShrink: 0 }} />
               <TruncatedText fw={600} style={{ flex: 1, minWidth: 0 }}>
                 {t('rootFolder')}
               </TruncatedText>
@@ -134,7 +134,7 @@ export default createMantineModal<DeleteConfirmModalProps, string[] | null>(prop
 
         <Divider />
 
-        <Group p="8px" justify="space-between" wrap="nowrap">
+        <Group p="0.5rem" justify="space-between" wrap="nowrap">
           <Button onClick={onClickCancel} color="red">
             {t('common:button.cancel')}
           </Button>

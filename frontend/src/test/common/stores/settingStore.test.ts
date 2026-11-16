@@ -30,6 +30,7 @@ const settle = async () => {
 const dark = {
   theme: 'dark',
   font: 'arial',
+  size: 'small',
   language: 'vi',
   launchOnStartup: true,
   autoUpdate: true,
@@ -271,6 +272,7 @@ describe('settingStore', () => {
       expect(state().applied).toEqual({
         theme: 'dark',
         font: 'arial',
+        size: 'medium',
         language: 'vi',
         launchOnStartup: true,
         autoUpdate: true,

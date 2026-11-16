@@ -20,7 +20,7 @@ function UpdateProgress(props: UpdateProgressProps) {
       : t('progressUnknown', { written: formatFileSize(written) });
 
   return (
-    <Stack gap="4px">
+    <Stack gap="0.25rem">
       <Progress value={total > 0 ? percent : 100} animated={total === 0} size="sm" />
       <Text size="xs">{text}</Text>
     </Stack>

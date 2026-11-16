@@ -4,7 +4,9 @@ import { CheckBucketAccess, GetListBucket, SearchBucket } from '@wails/S3Browser
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { Bucket } from '@wails/S3Browser/models/bucket';
 import { Activity, createRef, type ReactElement, RefObject } from 'react';
-import { LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
+import { LIST_ROW_GAP, LIST_ROW_HEIGHT } from '@/common/cnst/commonConst';
+import { DEFAULT_SETTINGS, type UiSizeKey } from '@/common/cnst/settingConst';
+import { useSettingStore } from '@/common/stores/settingStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import BucketListView, { BucketListViewRef } from '@/pages/s3/bucket/BucketListView';
 import { useTabListStore } from '@/pages/s3/stores/tabListStore';
@@ -12,21 +14,38 @@ import { BUCKET_ITEM_LABELS } from '@/test/_helpers/bucketItemLabels';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 // jsdom has no layout, so render every row; `endIndex` is the last row the user "sees" (null = end of list).
-const virtual = vi.hoisted(() => ({ endIndex: null as number | null, estimate: 0 }));
+const virtual = vi.hoisted(() => ({
+  endIndex: null as number | null,
+  estimate: 0,
+  gap: 0,
+  scrollMargin: 0,
+  measure: vi.fn(),
+}));
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: ({
     count,
     getItemKey,
     getScrollElement,
     estimateSize,
+    gap,
+    scrollMargin,
   }: {
     count: number;
     getItemKey: (i: number) => string;
     getScrollElement: () => unknown;
     estimateSize: () => number;
+    gap: number;
+    scrollMargin: number;
   }) => ({
+    measure: () => virtual.measure(),
     getVirtualItems: () => Array.from({ length: count }, (_, index) => ({ key: getItemKey(index), index, start: 0 })),
-    getTotalSize: () => (getScrollElement(), (virtual.estimate = estimateSize()), count * virtual.estimate),
+    getTotalSize: () => (
+      getScrollElement(),
+      (virtual.estimate = estimateSize()),
+      (virtual.gap = gap),
+      (virtual.scrollMargin = scrollMargin),
+      count * virtual.estimate
+    ),
     range: count === 0 ? null : { startIndex: 0, endIndex: virtual.endIndex ?? count - 1 },
   }),
 }));
@@ -90,6 +109,7 @@ function renderList({
 describe('BucketListView', () => {
   beforeEach(() => {
     virtual.endIndex = null;
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS } });
     queue = [page([b('alpha'), b('beta')])];
     callIPCMock.mockImplementation((async () => (queue.length > 1 ? queue.shift() : queue[0])) as never);
   });
@@ -109,6 +129,51 @@ describe('BucketListView', () => {
     renderList();
     await screen.findByText('alpha');
     expect(virtual.estimate).toBe(LIST_ROW_HEIGHT);
+  });
+
+  describe('interface size', () => {
+    const setSize = (size: UiSizeKey) => act(() => useSettingStore.setState(st => ({ draft: { ...st.draft, size } })));
+
+    it('keeps the row height and gap at the medium size', async () => {
+      renderList();
+      await screen.findByText('alpha');
+      expect(virtual.estimate).toBe(88);
+      expect(virtual.gap).toBe(LIST_ROW_GAP);
+    });
+
+    it.each([
+      ['small', 0.875],
+      ['large', 1.125],
+    ] as const)('scales the row height and gap at the %s size', async (size, scale) => {
+      useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size } });
+      renderList();
+      await screen.findByText('alpha');
+      expect(virtual.estimate).toBe(LIST_ROW_HEIGHT * scale);
+      expect(virtual.gap).toBe(LIST_ROW_GAP * scale);
+    });
+
+    it('measures again once after the size changes, not on mount', async () => {
+      renderList();
+      await screen.findByText('alpha');
+      expect(virtual.measure).not.toHaveBeenCalled();
+
+      await setSize('large');
+      expect(virtual.measure).toHaveBeenCalledTimes(1);
+      expect(virtual.estimate).toBe(LIST_ROW_HEIGHT * 1.125);
+    });
+
+    it('reads the offset of the list again after the size changes', async () => {
+      let top = 8;
+      const offsetTop = vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(() => top);
+      renderList();
+      await screen.findByText('alpha');
+      expect(virtual.scrollMargin).toBe(8);
+
+      top = 9;
+      await setSize('large');
+      expect(virtual.scrollMargin).toBe(9);
+      offsetTop.mockRestore();
+    });
   });
 
   it('does not request anything without a connected profile', () => {

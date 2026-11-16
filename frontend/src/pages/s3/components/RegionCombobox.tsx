@@ -19,7 +19,7 @@ const RegionOption = memo(function RegionOption({ item, active }: RegionOptionPr
   return (
     <Combobox.Option value={item.value1 ?? ''} active={active}>
       <Group gap="xs">
-        {active && <CheckIcon size={12} />}
+        {active && <CheckIcon size="0.75rem" />}
         <span>{item.name}</span>
         <span>[{item.value1}]</span>
       </Group>

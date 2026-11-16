@@ -2,6 +2,8 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_SETTINGS, type UiSizeKey } from '@/common/cnst/settingConst';
+import { useSettingStore } from '@/common/stores/settingStore';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import { MOCK_DB_PROFILES } from '@/pages/sql/mock/dbProfileMock';
 import DbProfileModal from '@/pages/sql/modals/dbProfile/DbProfileModal';
@@ -11,6 +13,7 @@ import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 // jsdom has no layout, so render every row.
+const virtual = vi.hoisted(() => ({ measure: vi.fn(), estimate: 0, gap: 0 }));
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: (options: {
     count: number;
@@ -20,7 +23,10 @@ vi.mock('@tanstack/react-virtual', () => ({
   }) => {
     const size = options.estimateSize();
     const gap = options.gap ?? 0;
+    virtual.estimate = size;
+    virtual.gap = gap;
     return {
+      measure: () => virtual.measure(),
       getVirtualItems: () =>
         Array.from({ length: options.count }, (_, index) => ({
           key: options.getItemKey(index),
@@ -56,6 +62,7 @@ describe('DbProfiles', () => {
   beforeEach(() => {
     useDbProfileStore.getState().reset();
     useSqlTabStore.getState().reset();
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS } });
     confirmMock.mockResolvedValue(true as never);
   });
 
@@ -70,6 +77,38 @@ describe('DbProfiles', () => {
     useDbProfileStore.setState({ dbProfiles: {} });
     renderWithProviders(<DbProfiles />);
     expect(screen.getByText('No database profiles yet. Use the buttons above to create one.')).toBeInTheDocument();
+  });
+
+  describe('interface size', () => {
+    const row = (name: string) => card(name).parentElement as HTMLElement;
+    const setSize = (size: UiSizeKey) => act(() => useSettingStore.setState(st => ({ draft: { ...st.draft, size } })));
+
+    it('keeps the 68px card and 8px gap at the medium size', () => {
+      renderWithProviders(<DbProfiles />);
+      expect(virtual.estimate).toBe(68);
+      expect(virtual.gap).toBe(8);
+      expect(row('Local PostgreSQL')).toHaveStyle({ height: '68px', transform: 'translateY(0px)' });
+    });
+
+    it.each([
+      ['small', 59.5, 7],
+      ['large', 76.5, 9],
+    ] as const)('scales the card height and the gap at the %s size', (size, height, gap) => {
+      useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size } });
+      renderWithProviders(<DbProfiles />);
+      expect(virtual.estimate).toBe(height);
+      expect(virtual.gap).toBe(gap);
+      expect(row('Local PostgreSQL')).toHaveStyle({ height: `${height}px` });
+    });
+
+    it('measures once after the size changes and not on mount', async () => {
+      renderWithProviders(<DbProfiles />);
+      expect(virtual.measure).not.toHaveBeenCalled();
+
+      await setSize('large');
+
+      expect(virtual.measure).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('double click', () => {

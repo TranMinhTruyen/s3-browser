@@ -97,8 +97,8 @@ export default createMantineModal<DeleteBucketModalProps, DeleteBucketOutput | n
       <Modal.Content>
         <Modal.Header
           pos="relative"
-          p="8px"
-          mih="0px"
+          p="0.5rem"
+          mih="0"
           style={{ justifyContent: 'flex-end', backgroundColor: WARNING_BG_COLOR }}
         >
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
@@ -110,14 +110,14 @@ export default createMantineModal<DeleteBucketModalProps, DeleteBucketOutput | n
 
         <Divider />
 
-        <Modal.Body p="8px">
-          <Paper withBorder p="8px">
+        <Modal.Body p="0.5rem">
+          <Paper withBorder p="0.5rem">
             {!info ? (
               <Center py="md">
                 <Loader size="sm" aria-label={t('checking')} />
               </Center>
             ) : (
-              <Stack gap="8px">
+              <Stack gap="0.5rem">
                 {objectLockBlocked ? (
                   <Text c={ERROR_TEXT_COLOR}>{t('warning.objectLockBlocked', { bucket })}</Text>
                 ) : (
@@ -149,7 +149,7 @@ export default createMantineModal<DeleteBucketModalProps, DeleteBucketOutput | n
 
         <Divider />
 
-        <Group p="8px" justify={deleting ? 'flex-end' : 'space-between'} wrap="nowrap">
+        <Group p="0.5rem" justify={deleting ? 'flex-end' : 'space-between'} wrap="nowrap">
           {deleting ? null : (
             <Button onClick={onClickCancel} color="red">
               {t('common:button.cancel')}

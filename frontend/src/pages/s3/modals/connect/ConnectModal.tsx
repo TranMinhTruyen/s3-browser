@@ -55,8 +55,8 @@ const PROVIDER_OPTIONS = [
 ].map(({ logo, label, value }) => ({
   value,
   label: (
-    <Center style={{ gap: '16px' }}>
-      <img src={logo} alt="" width={18} height={18} />
+    <Center style={{ gap: '1rem' }}>
+      <img src={logo} alt="" style={{ width: '1.125rem', height: '1.125rem' }} />
       <span>{label}</span>
     </Center>
   ),
@@ -66,7 +66,8 @@ const PROVIDER_OPTIONS = [
 // methods scroll. Each cap shrinks on short screens so the modal stays in the viewport. Create/edit show the hint under
 // the fields (2 lines of xs text plus the Stack gap, measured at about 43px); connect modes do not. Measured content:
 // 747px in create, so 747 - 43 = 704 in connect, plus a few px of slack = 710.
-const bodyHeight = (px: number) => `min(${px}px, calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT}))`;
+const bodyHeight = (px: number) =>
+  `min(${px / 16}rem, calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT}))`;
 const BODY_HEIGHT_WITH_HINT = bodyHeight(750);
 const BODY_HEIGHT_NO_HINT = bodyHeight(710);
 
@@ -270,8 +271,8 @@ export default createMantineModal<ConnectModalProps, false>(
           <Modal.Content>
             <Modal.Header
               pos="relative"
-              p="8px"
-              mih="0px"
+              p="0.5rem"
+              mih="0"
               style={{ justifyContent: 'flex-end', backgroundColor: INFO_BG_COLOR }}
             >
               <Title
@@ -291,7 +292,7 @@ export default createMantineModal<ConnectModalProps, false>(
             <Divider />
 
             <Modal.Body
-              p="16px"
+              p="1rem"
               style={{ overflow: 'auto', maxHeight: secretRequired ? BODY_HEIGHT_NO_HINT : BODY_HEIGHT_WITH_HINT }}
             >
               <Stack gap="sm">
@@ -390,7 +391,7 @@ export default createMantineModal<ConnectModalProps, false>(
 
             <Divider />
 
-            <Group p="8px" justify="space-between" wrap="nowrap">
+            <Group p="0.5rem" justify="space-between" wrap="nowrap">
               <Button type="button" loading={form.submitting} onClick={onClickTestConnection}>
                 {t('form.button.testConnection')}
               </Button>

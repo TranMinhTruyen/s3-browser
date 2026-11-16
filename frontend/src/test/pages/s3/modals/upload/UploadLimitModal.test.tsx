@@ -55,6 +55,24 @@ describe('UploadLimitModal', () => {
     });
   const within_ = () => group('small', [file('small/s1.txt')], {});
 
+  describe('list height', () => {
+    const listHeight = () =>
+      (screen.getByRole('checkbox', { name: 'f1.jpg' }).closest('[style*="overflow"]') as HTMLElement).style.height;
+
+    it('fits the rows in rem when there are few (1 group + 4 files = 180px = 11.25rem)', async () => {
+      open([photos()]);
+      await flush();
+      expect(listHeight()).toBe('11.25rem');
+    });
+
+    it('stops growing at 20rem when there are many rows', async () => {
+      const files = Array.from({ length: 10 }, (_, i) => file(`photos/f${i + 1}.jpg`));
+      open([group('photos', files, { max: true })]);
+      await flush();
+      expect(listHeight()).toBe('20rem');
+    });
+  });
+
   it('preselects the first files within the limits and uploads them with the groups that are within limits', async () => {
     const result = open([photos(), videos(), within_()]);
     await flush();

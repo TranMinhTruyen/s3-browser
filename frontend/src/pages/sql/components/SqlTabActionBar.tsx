@@ -21,14 +21,14 @@ function SqlTabActionBar(props: SqlTabActionBarProps) {
   const { t } = useTranslation('sqlTab');
 
   return (
-    <Group gap="xs" p="4px" style={{ flexShrink: 0 }}>
+    <Group gap="xs" p="0.25rem" style={{ flexShrink: 0 }}>
       <Combobox
         value={selectedProfileId}
         onChange={onChangeSelectProfile}
         data={profileOptions}
         searchPlaceholder={t('search.placeholderProfile')}
         emptyText={t('search.emptyProfile')}
-        style={{ width: '200px' }}
+        style={{ width: '12.5rem' }}
       />
 
       <ActionIcon onClick={onClickConnect} tooltip={t('tooltip.connect')} disabled={isConnected || !selectedProfileId}>

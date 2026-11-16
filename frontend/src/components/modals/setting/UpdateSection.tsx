@@ -43,7 +43,7 @@ function UpdateSection() {
       : t(`status.${state}`, { version });
 
   return (
-    <Paper withBorder p="8px">
+    <Paper withBorder p="0.5rem">
       <Stack gap="xs">
         <Title order={5}>{t('title')}</Title>
         <Text size="sm">{t('currentVersion', { version: currentVersion })}</Text>

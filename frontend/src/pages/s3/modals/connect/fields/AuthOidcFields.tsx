@@ -170,7 +170,7 @@ function AuthOidcFields({ form }: Pick<AuthFieldsProps, 'form'>) {
           <CopyButton value={redirectUri}>
             {({ copied, copy }) => (
               <ActionIcon size="sm" onClick={copy} tooltip={copied ? t('form.button.copied') : t('form.button.copy')}>
-                {copied ? <Check size="14px" /> : <Copy size="14px" />}
+                {copied ? <Check size="0.875rem" /> : <Copy size="0.875rem" />}
               </ActionIcon>
             )}
           </CopyButton>

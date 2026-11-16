@@ -24,7 +24,7 @@ function TransferPanel(props: TransferPanelProps) {
   const { title, cancelAllTooltip, closeLabel, ids, gap, renderItem, onCancelAll, onClose } = props;
 
   return (
-    <Paper w="400px" withBorder style={{ overflow: 'hidden' }}>
+    <Paper w="25rem" withBorder style={{ overflow: 'hidden' }}>
       <Group p="xs" justify="space-between">
         <Text>{title}</Text>
         <Group gap="xs">

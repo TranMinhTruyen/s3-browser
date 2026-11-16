@@ -15,6 +15,18 @@ vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
   SearchBucket: vi.fn(),
 }));
 
+const size = vi.hoisted(() => ({ width: null as number | null }));
+vi.mock('@mantine/hooks', async importOriginal => {
+  const actual = await importOriginal<typeof import('@mantine/hooks')>();
+  return {
+    ...actual,
+    useElementSize: <T extends HTMLElement>() => {
+      const r = actual.useElementSize<T>();
+      return size.width === null ? r : { ...r, width: size.width };
+    },
+  };
+});
+
 type Page = { bucketList?: Partial<Bucket>[]; nextCursor?: string } | null | undefined;
 type Pending = { resolve: (page: Page) => void; signal: AbortSignal; binding: unknown; args: unknown[] };
 
@@ -51,8 +63,23 @@ function setup(props: Partial<React.ComponentProps<typeof BucketPicker>> = {}) {
 
 describe('BucketPicker', () => {
   afterEach(() => {
+    size.width = null;
     vi.mocked(ConfirmModal.show).mockReset();
     vi.useRealTimers();
+  });
+
+  it('sets the dropdown min-width in raw px and sizes the check icon in rem', async () => {
+    size.width = 311;
+    answerWith(page(['alpha', 'beta']));
+    const { user } = setup({ value: 'alpha' });
+    await user.click(trigger());
+    await screen.findByText('beta');
+
+    const dropdown = document.querySelector<HTMLElement>('.mantine-Combobox-dropdown')!;
+    expect(dropdown.style.minWidth).toBe('311px');
+    const [alpha, beta] = screen.getAllByRole('option', { hidden: true });
+    expect(alpha.querySelector('svg')).toHaveAttribute('width', '0.75rem');
+    expect(beta.querySelector('svg')).toBeNull();
   });
 
   it('shows the placeholder and does not load until opened', () => {

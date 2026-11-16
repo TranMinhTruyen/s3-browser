@@ -94,8 +94,8 @@ export default createMantineModal<CreateBucketModalProps, boolean>(
         <Modal.Content>
           <Modal.Header
             pos="relative"
-            p="8px"
-            mih="0px"
+            p="0.5rem"
+            mih="0"
             style={{ justifyContent: 'flex-end', backgroundColor: INFO_BG_COLOR }}
           >
             <Group
@@ -110,9 +110,9 @@ export default createMantineModal<CreateBucketModalProps, boolean>(
 
           <Divider />
 
-          <Modal.Body p="8px">
-            <Paper withBorder p="8px">
-              <Stack gap="8px">
+          <Modal.Body p="0.5rem">
+            <Paper withBorder p="0.5rem">
+              <Stack gap="0.5rem">
                 <FieldInput
                   data-autofocus
                   label={t('label.name')}
@@ -139,7 +139,7 @@ export default createMantineModal<CreateBucketModalProps, boolean>(
 
           <Divider />
 
-          <Group p="8px" justify="space-between" wrap="nowrap">
+          <Group p="0.5rem" justify="space-between" wrap="nowrap">
             <Button onClick={onClickCancel} color="red">
               {t('common:button.cancel')}
             </Button>

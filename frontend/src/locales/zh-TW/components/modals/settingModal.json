@@ -1,6 +1,7 @@
 {
   "title": "設定",
   "label": {
+    "size": "介面大小",
     "theme": "佈景主題",
     "font": "字型",
     "language": "語言",
@@ -9,6 +10,7 @@
     "betaUpdate": "接收測試版 (搶先發行版本)"
   },
   "option": {
+    "size": { "small": "小", "medium": "中", "large": "大" },
     "theme": {
       "light": "淺色",
       "dark": "深色",

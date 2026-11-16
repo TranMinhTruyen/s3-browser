@@ -8,7 +8,7 @@ type StatusDotProps = {
 function StatusDot({ connected }: StatusDotProps) {
   return (
     <ColorSwatch
-      size={10}
+      size="0.625rem"
       withShadow={false}
       color={connected ? 'var(--mantine-color-green-6)' : 'var(--mantine-color-red-6)'}
       style={{ flexShrink: 0 }}

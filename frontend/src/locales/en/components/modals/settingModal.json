@@ -1,6 +1,7 @@
 {
   "title": "Settings",
   "label": {
+    "size": "Interface size",
     "theme": "Theme",
     "font": "Font",
     "language": "Language",
@@ -9,6 +10,7 @@
     "betaUpdate": "Receive beta (pre-release) versions"
   },
   "option": {
+    "size": { "small": "Small", "medium": "Medium", "large": "Large" },
     "theme": { "light": "Light", "dark": "Dark", "auto": "Follow system" },
     "font": {
       "nunito": "Nunito",

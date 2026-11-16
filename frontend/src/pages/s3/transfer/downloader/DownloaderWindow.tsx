@@ -70,14 +70,14 @@ function DownloaderWindow() {
   return rendered ? (
     <>
       {!visible ? (
-        <Affix ref={sizeRef} style={{ bottom: '16px', right: '16px' }}>
+        <Affix ref={sizeRef} style={{ bottom: '1rem', right: '1rem' }}>
           <ActionIcon onClick={openWindow} size="xl" tooltip={t('title')}>
             <Download />
           </ActionIcon>
         </Affix>
       ) : null}
       {visible && (
-        <Affix ref={sizeRef} position={{ bottom: 16, right: 16 }}>
+        <Affix ref={sizeRef} position={{ bottom: '1rem', right: '1rem' }}>
           <TransferPanel
             title={t('title')}
             cancelAllTooltip={t('action.cancelAll')}

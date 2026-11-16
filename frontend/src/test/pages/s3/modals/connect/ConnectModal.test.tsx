@@ -78,6 +78,20 @@ describe('ConnectModal', () => {
     );
   });
 
+  describe('interface size', () => {
+    it('draws the provider logos in rem so they follow the interface size', async () => {
+      await open();
+
+      const logos = Array.from(document.querySelectorAll<HTMLImageElement>('.mantine-SegmentedControl-root img'));
+      expect(logos).toHaveLength(2);
+      for (const logo of logos) {
+        expect(logo.style.width).toBe('1.125rem');
+        expect(logo.style.height).toBe('1.125rem');
+        expect(logo).not.toHaveAttribute('width');
+      }
+    });
+  });
+
   describe('connect mode', () => {
     it('shows the required-field errors and does not call the backend when the form is empty', async () => {
       const user = await open();

@@ -29,8 +29,8 @@ function TabBreadcrumb(props: TabBreadcrumbProps) {
   );
 
   return (
-    <Group gap="xs" p="4px" style={{ flexShrink: 0 }}>
-      <Breadcrumbs separatorMargin="4px" style={{ minWidth: 0, flexWrap: 'wrap' }}>
+    <Group gap="xs" p="0.25rem" style={{ flexShrink: 0 }}>
+      <Breadcrumbs separatorMargin="0.25rem" style={{ minWidth: 0, flexWrap: 'wrap' }}>
         {prefix ? (
           <Anchor data-prefix="" onClick={onClickBreadcrumb}>
             {bucket}

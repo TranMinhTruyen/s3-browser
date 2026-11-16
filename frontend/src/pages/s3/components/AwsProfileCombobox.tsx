@@ -61,7 +61,7 @@ function AwsProfileCombobox(props: AwsProfileComboboxProps) {
   const hasCredentialProcess = profiles.some(p => p.name === current && p.hasCredentialProcess);
 
   return (
-    <Stack gap={4}>
+    <Stack gap="0.25rem">
       <Combobox
         {...rest}
         label={t('awsProfileCombobox.label')}

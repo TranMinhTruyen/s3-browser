@@ -1,11 +1,18 @@
-import { fireEvent, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DroppedFile, DroppedGroup } from '@wails/S3Browser/models/bucket';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_SETTINGS, type UiSizeKey } from '@/common/cnst/settingConst';
+import { useSettingStore } from '@/common/stores/settingStore';
 import { FileRow, GroupRow, rowsHeight, type UploadRow, VirtualRowList } from '@/pages/s3/modals/upload/UploadFileList';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-const virtual = vi.hoisted(() => ({ estimates: [] as number[], getScrollEl: null as null | (() => unknown) }));
+const virtual = vi.hoisted(() => ({
+  estimates: [] as number[],
+  getScrollEl: null as null | (() => unknown),
+  measure: vi.fn(),
+}));
+const setSize = (size: UiSizeKey) => act(() => useSettingStore.setState(st => ({ draft: { ...st.draft, size } })));
 
 // jsdom has no layout, so the real virtualizer would render no row: render every row instead.
 vi.mock('@tanstack/react-virtual', () => ({
@@ -20,6 +27,7 @@ vi.mock('@tanstack/react-virtual', () => ({
     estimateSize: () => number;
     getScrollElement: () => unknown;
   }) => ({
+    measure: () => virtual.measure(),
     getVirtualItems: () => {
       virtual.estimates.push(estimateSize());
       virtual.getScrollEl = getScrollElement;
@@ -145,12 +153,27 @@ describe('FileRow positioning', () => {
   };
   const row = () => screen.getByRole('checkbox').closest('.mantine-Group-root') as HTMLElement;
 
+  beforeEach(() => {
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS } });
+  });
+
   it('places the row with translateY(top) and a fixed height', () => {
     renderWithProviders(<FileRow {...props} top={72} />);
 
     expect(row().style.transform).toBe('translateY(72px)');
     expect(row().style.height).toBe('36px');
     expect(row().style.position).toBe('absolute');
+  });
+
+  it.each([
+    ['small', '31.5px'],
+    ['medium', '36px'],
+    ['large', '40.5px'],
+  ] as const)('scales the fixed height at the %s size (%s)', (size, height) => {
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size } });
+    renderWithProviders(<FileRow {...props} top={0} />);
+
+    expect(row().style.height).toBe(height);
   });
 
   it('moves when top changes', () => {
@@ -243,6 +266,7 @@ describe('VirtualRowList', () => {
   ];
 
   beforeEach(() => {
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS } });
     virtual.estimates.length = 0;
     virtual.getScrollEl = null;
   });
@@ -263,6 +287,27 @@ describe('VirtualRowList', () => {
     expect(renderRow.mock.calls[0][2]).toBe(0);
     expect(renderRow.mock.calls[1][2]).toBe(36);
     expect(screen.getAllByTestId('row').map(r => r.textContent)).toEqual(['group', 'file']);
+  });
+
+  it.each([
+    ['small', 31.5],
+    ['large', 40.5],
+  ] as const)('scales the row size at the %s size', (size, estimate) => {
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size } });
+    renderWithProviders(<VirtualRowList rows={rows} height={200} renderRow={() => null} />);
+
+    expect(virtual.estimates).toContain(estimate);
+    expect(virtual.estimates).not.toContain(36);
+  });
+
+  it('measures once after the size changes and not on mount', async () => {
+    renderWithProviders(<VirtualRowList rows={rows} height={200} renderRow={() => null} />);
+    expect(virtual.measure).not.toHaveBeenCalled();
+
+    await setSize('large');
+
+    expect(virtual.measure).toHaveBeenCalledTimes(1);
+    expect(virtual.estimates.at(-1)).toBe(40.5);
   });
 
   it('gives the virtualizer a 36px row size and the scroll container', () => {

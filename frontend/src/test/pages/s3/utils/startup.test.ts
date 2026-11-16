@@ -25,6 +25,7 @@ const callIPCMock = vi.mocked(callIPC);
 const dark = {
   theme: 'dark',
   font: 'arial',
+  size: 'small',
   language: 'vi',
   launchOnStartup: true,
   autoUpdate: true,

@@ -50,7 +50,7 @@ function DbProfileItem({ profileKey, onConnect }: DbProfileItemProps) {
 
   return (
     <Card
-      padding="8px"
+      padding="0.5rem"
       withBorder
       orientation="horizontal"
       h={CARD_HEIGHT}
@@ -65,7 +65,7 @@ function DbProfileItem({ profileKey, onConnect }: DbProfileItemProps) {
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
-          minWidth: '40px',
+          minWidth: '2.5rem',
           justifyContent: 'center',
           // Status uses Mantine "light" variant colors: connected = green, disconnected = red
           color: profile.isConnected

@@ -163,7 +163,7 @@ function BucketPicker(props: BucketPickerProps) {
         </InputBase>
       </Combobox.Target>
 
-      <Combobox.Dropdown miw={targetWidth}>
+      <Combobox.Dropdown style={{ minWidth: targetWidth }}>
         <Combobox.Search value={keyword} onChange={onChangeKeyword} placeholder={t('searchPlaceholder')} />
         <ComboboxOptions>
           {namedBuckets.map(bucket => {
@@ -171,7 +171,7 @@ function BucketPicker(props: BucketPickerProps) {
             return (
               <Combobox.Option key={bucket.name} value={bucket.name as string} active={bucket.name === value}>
                 <Group gap="xs" wrap="nowrap">
-                  {bucket.name === value && <CheckIcon size={12} />}
+                  {bucket.name === value && <CheckIcon size="0.75rem" />}
                   <TruncatedText>{bucket.name}</TruncatedText>
                   {warning ? <WarningIcon label={warning} /> : null}
                 </Group>

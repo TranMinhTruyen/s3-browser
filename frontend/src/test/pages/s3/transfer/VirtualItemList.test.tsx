@@ -1,5 +1,7 @@
-import { screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_SETTINGS, type UiSizeKey } from '@/common/cnst/settingConst';
+import { useSettingStore } from '@/common/stores/settingStore';
 import VirtualItemList from '@/pages/s3/transfer/VirtualItemList';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
@@ -18,6 +20,7 @@ const itemWrapper = (id: string) => screen.getByText(id).parentElement as HTMLEl
 
 describe('VirtualItemList', () => {
   beforeEach(() => {
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS } });
     for (const [prop, value] of sizes) {
       Object.defineProperty(HTMLElement.prototype, prop, { configurable: true, value });
     }
@@ -93,13 +96,43 @@ describe('VirtualItemList', () => {
     expect(new Set(render.mock.calls.map(c => c[0]))).toEqual(new Set(['a', 'b', 'c']));
   });
 
-  it('limits the height of the scroll area to 260px', () => {
+  it('limits the height of the scroll area to 16.25rem', () => {
     const { container } = renderWithProviders(
       <VirtualItemList ids={ids(1)} gap={8} itemHeight={ITEM_HEIGHT} renderItem={renderItem} />
     );
 
     const box = container.querySelector('[style*="max-height"]') as HTMLElement;
-    expect(box.style.maxHeight).toBe('260px');
+    expect(box.style.maxHeight).toBe('16.25rem');
     expect(box.style.overflow).toBe('auto');
+  });
+
+  describe('interface size', () => {
+    const setSize = (size: UiSizeKey) => act(() => useSettingStore.setState(st => ({ draft: { ...st.draft, size } })));
+
+    it.each([
+      ['small', 70, 7, 77],
+      ['large', 90, 9, 99],
+    ] as const)('scales the item height and the gap at the %s size', async (size, height, gap, offset) => {
+      useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size } });
+      const { container } = renderWithProviders(
+        <VirtualItemList ids={ids(2)} gap={8} itemHeight={ITEM_HEIGHT} renderItem={renderItem} />
+      );
+
+      await screen.findByText('id1');
+      expect(itemWrapper('id0').style.height).toBe(`${height}px`);
+      expect(itemWrapper('id1').style.transform).toBe(`translateY(${offset}px)`);
+      expect(container.querySelector(`[style*="height: ${2 * height + gap}px"]`)).not.toBeNull();
+    });
+
+    it('places the items again after the size changes', async () => {
+      renderWithProviders(<VirtualItemList ids={ids(3)} gap={8} itemHeight={ITEM_HEIGHT} renderItem={renderItem} />);
+      await screen.findByText('id2');
+      expect(itemWrapper('id2').style.transform).toBe('translateY(176px)');
+
+      await setSize('large');
+
+      expect(itemWrapper('id2').style.transform).toBe('translateY(198px)');
+      expect(itemWrapper('id2').style.height).toBe('90px');
+    });
   });
 });

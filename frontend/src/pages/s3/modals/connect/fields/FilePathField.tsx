@@ -67,7 +67,7 @@ function FilePathField({
           tooltip={t('form.button.clearFile')}
           onClick={onClickClearFile}
         >
-          <X size="16px" />
+          <X size="1rem" />
         </ActionIcon>
       ) : null}
 

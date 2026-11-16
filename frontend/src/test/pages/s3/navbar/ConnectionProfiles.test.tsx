@@ -5,6 +5,8 @@ import { DeleteProfileById } from '@wails/S3Browser/internal/handlers/profilehan
 import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { Events } from '@wailsio/runtime';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_SETTINGS, type UiSizeKey } from '@/common/cnst/settingConst';
+import { useSettingStore } from '@/common/stores/settingStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import { showConnectModal, showExportProfileModal } from '@/components/modals/lazyModals';
@@ -17,6 +19,7 @@ import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 const virtual = vi.hoisted(() => ({
   hidden: new Set<string>(),
   options: null as null | Record<string, unknown>,
+  measure: vi.fn(),
 }));
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: (options: {
@@ -30,6 +33,7 @@ vi.mock('@tanstack/react-virtual', () => ({
     const gap = options.gap ?? 0;
     virtual.options = { ...options, estimate: size };
     return {
+      measure: () => virtual.measure(),
       getVirtualItems: () =>
         Array.from({ length: options.count }, (_, index) => ({
           key: options.getItemKey(index),
@@ -103,6 +107,7 @@ describe('ConnectionProfiles', () => {
   beforeEach(() => {
     ipcResult = new Map();
     virtual.hidden = new Set();
+    useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS } });
     handlers = {};
     loadConnectionProfiles.mockResolvedValue(undefined);
     callIPCMock.mockImplementation((async (binding: unknown) => ipcResult.get(binding) ?? null) as never);
@@ -189,6 +194,56 @@ describe('ConnectionProfiles', () => {
       expect(row('a-name')).toHaveStyle({ height: '68px', transform: 'translateY(0px)' });
       expect(row('c-name')).toHaveStyle({ height: '68px', transform: 'translateY(152px)' });
       expect(card('a-name')).not.toHaveAttribute('data-index');
+    });
+
+    describe('interface size', () => {
+      const row = (name: string) => card(name).parentElement as HTMLElement;
+      const setSize = (size: UiSizeKey) =>
+        act(() => useSettingStore.setState(st => ({ draft: { ...st.draft, size } })));
+
+      it('scales the card height, the gap and the positions at the large size', () => {
+        useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size: 'large' } });
+        renderProfiles({ a: profile('a'), b: profile('b'), c: profile('c') });
+
+        const opts = virtual.options as { estimate: number; gap: number };
+        expect(opts.estimate).toBe(76.5);
+        expect(opts.gap).toBe(9);
+        expect(row('a-name')).toHaveStyle({ height: '76.5px', transform: 'translateY(0px)' });
+        expect(row('c-name')).toHaveStyle({ height: '76.5px', transform: 'translateY(171px)' });
+      });
+
+      it('scales down at the small size', () => {
+        useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size: 'small' } });
+        renderProfiles({ a: profile('a') });
+
+        expect((virtual.options as { estimate: number }).estimate).toBe(59.5);
+        expect(row('a-name')).toHaveStyle({ height: '59.5px' });
+      });
+
+      it('measures once after the size changes and not on mount', async () => {
+        renderProfiles({ a: profile('a') });
+        expect(virtual.measure).not.toHaveBeenCalled();
+
+        await setSize('large');
+
+        expect(virtual.measure).toHaveBeenCalledTimes(1);
+        expect(row('a-name')).toHaveStyle({ height: '76.5px' });
+      });
+
+      it('draws the menu icons in rem', async () => {
+        renderProfiles({ a: profile('a') });
+        fireEvent.contextMenu(card('a-name'));
+        const items = await screen.findAllByRole('menuitem');
+        const icons = items.flatMap(i => Array.from(i.querySelectorAll('svg')));
+        expect(icons.length).toBeGreaterThan(0);
+        for (const icon of icons) expect(icon).toHaveAttribute('width', '1rem');
+      });
+
+      it('pads the scroll area in rem', () => {
+        renderProfiles({ a: profile('a') });
+        const scroller = (virtual.options as { getScrollElement: () => HTMLElement }).getScrollElement();
+        expect(scroller.style.padding).toBe('0.5rem');
+      });
     });
 
     it('only renders the rows the virtualizer returns', () => {

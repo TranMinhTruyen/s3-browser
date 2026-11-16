@@ -14,7 +14,7 @@ function TabDragPreview({ label, closable }: TabDragPreviewProps) {
       gap="xs"
       wrap="nowrap"
       justify="space-between"
-      p="8px"
+      p="0.5rem"
       h={TAB_HEIGHT}
       w={TAB_WIDTH}
       style={{
@@ -29,7 +29,12 @@ function TabDragPreview({ label, closable }: TabDragPreviewProps) {
     >
       <div style={{ minWidth: 0, flex: 1 }}>{label}</div>
       {closable && (
-        <CloseButton component="span" size={22} iconSize={16} style={{ flexShrink: 0, pointerEvents: 'none' }} />
+        <CloseButton
+          component="span"
+          size="1.375rem"
+          iconSize="1rem"
+          style={{ flexShrink: 0, pointerEvents: 'none' }}
+        />
       )}
     </Group>
   );

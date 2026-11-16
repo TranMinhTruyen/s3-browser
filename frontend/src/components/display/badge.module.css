@@ -1,0 +1,25 @@
+.root {
+  /* Own compositing layer snaps the badge origin to whole pixels, so border and glyph rounding stay in step at fractional positions */
+  will-change: transform;
+}
+
+.label {
+  /* Trim the line box to cap height so uppercase text centers exactly; symmetric padding keeps accents/descenders inside the label's overflow clip */
+  text-box: trim-both cap alphabetic;
+  padding-block: 0.35em;
+}
+
+/* Measured at DPR 1, 1.25 and 1.5: at 1.25dppx the border rounds down to a device pixel, so snapping is worse there; enable only at 1 and 1.5 */
+@media (resolution: 1dppx), (resolution: 1.5dppx) {
+  /* xs–md: put the cap top on a whole pixel so an odd leftover pixel goes below the text, not above */
+  .snap {
+    align-items: start;
+    /* 2px = 2 × the 0.0625rem border, which Chromium rounds to 1 device px at these resolutions */
+    padding-top: round(nearest, calc((var(--badge-height) - 2px - 1cap) / 2), 1px);
+  }
+
+  /* Cancel the label's clip padding so the cap top sits exactly at the root's padding edge */
+  .snap .label {
+    margin-top: -0.35em;
+  }
+}

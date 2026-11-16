@@ -48,11 +48,11 @@ function WindowControls() {
   return (
     <Group gap="xs" wrap="nowrap">
       <ActionIcon tooltip={t('window.minimise')} {...tintedColor('yellow', 'ai')} onClick={onClickMinimise}>
-        <Minus size={16} />
+        <Minus size="1rem" />
       </ActionIcon>
 
       <ActionIcon tooltip={maximiseLabel} {...tintedColor('green', 'ai')} onClick={onClickMaximise}>
-        {isMaximised ? <Copy size={14} /> : <Square size={14} />}
+        {isMaximised ? <Copy size="0.875rem" /> : <Square size="0.875rem" />}
       </ActionIcon>
 
       <CloseButton size="lg" tooltip={t('window.close')} onClick={onClickClose} />

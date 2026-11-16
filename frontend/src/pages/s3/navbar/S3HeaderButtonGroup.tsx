@@ -53,7 +53,7 @@ function S3HeaderButtonGroup() {
   }, [loadConnectionProfiles]);
 
   return (
-    <Stack p="4px">
+    <Stack p="0.25rem">
       <Group gap="xs">
         <ActionIcon onClick={onClickConnect} tooltip={t('tooltip.connect')}>
           <PlugZap />

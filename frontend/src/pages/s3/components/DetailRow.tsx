@@ -30,7 +30,7 @@ function DetailRow(props: DetailRowProps) {
             <CopyButton value={value}>
               {({ copied, copy }) => (
                 <ActionIcon size="sm" onClick={copy} tooltip={copied ? t('copied') : t('copy')}>
-                  {copied ? <Check size="14px" /> : <Copy size="14px" />}
+                  {copied ? <Check size="0.875rem" /> : <Copy size="0.875rem" />}
                 </ActionIcon>
               )}
             </CopyButton>

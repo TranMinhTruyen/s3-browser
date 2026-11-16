@@ -171,9 +171,9 @@ function FindReplacePanel(props: FindReplacePanelProps) {
       withBorder
       shadow="md"
       p="xs"
-      w={360}
+      w="22.5rem"
       onKeyDown={onKeyDownPanel}
-      style={{ position: 'absolute', top: 8, right: 16, zIndex: 10 }}
+      style={{ position: 'absolute', top: '0.5rem', right: '1rem', zIndex: 10 }}
     >
       <Stack gap="xs">
         <Group justify="space-between" wrap="nowrap">
@@ -188,10 +188,10 @@ function FindReplacePanel(props: FindReplacePanelProps) {
           onChange={onChangeFindText}
           placeholder={t('find.placeholderFind')}
           error={isInvalid}
-          rightSectionWidth={84}
+          rightSectionWidth="5.25rem"
           rightSectionPointerEvents="all"
           rightSection={
-            <Group gap={2} wrap="nowrap">
+            <Group gap="0.125rem" wrap="nowrap">
               {OPTION_ICONS.map(({ key, Icon, label }) => (
                 <ActionIcon
                   key={key}
@@ -203,7 +203,7 @@ function FindReplacePanel(props: FindReplacePanelProps) {
                   tooltip={t(label)}
                   onClick={onClickToggleOption}
                 >
-                  <Icon size={16} />
+                  <Icon size="1rem" />
                 </ActionIcon>
               ))}
             </Group>
@@ -220,7 +220,7 @@ function FindReplacePanel(props: FindReplacePanelProps) {
             {info.total === 0 ? t('find.notFound') : t('find.count', { index: info.index, total: info.total })}
           </Text>
         )}
-        <Group p="8px" justify="flex-end" gap="xs" wrap="nowrap">
+        <Group p="0.5rem" justify="flex-end" gap="xs" wrap="nowrap">
           <Button onClick={onClickFind} disabled={!canSearch}>
             {t('find.find')}
           </Button>

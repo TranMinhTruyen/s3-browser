@@ -34,7 +34,7 @@ function TransferRow(props: TransferRowProps) {
       onMouseLeave={handlerExpanded.close}
     >
       <Card.Section inheritPadding px="xs" withBorder>
-        <Center w="56px" h="100%">
+        <Center w="3.5rem" h="100%">
           <RingProgress
             size={60}
             label={ringLabel}
@@ -45,7 +45,7 @@ function TransferRow(props: TransferRowProps) {
         </Center>
       </Card.Section>
 
-      <Card.Section inheritPadding px="xs" style={{ flex: 1, minWidth: 0, padding: '8px' }}>
+      <Card.Section inheritPadding px="xs" style={{ flex: 1, minWidth: 0, padding: '0.5rem' }}>
         <TruncatedText>{title}</TruncatedText>
         {children}
       </Card.Section>
@@ -60,7 +60,7 @@ function TransferRow(props: TransferRowProps) {
           borderInlineStart: '1px solid var(--mantine-color-default-border)',
         }}
       >
-        <Center w="48px" h="100%">
+        <Center w="3rem" h="100%">
           <ActionIcon {...tintedColor('red', 'ai')} onClick={onCancel} tooltip={cancelTooltip}>
             <X />
           </ActionIcon>

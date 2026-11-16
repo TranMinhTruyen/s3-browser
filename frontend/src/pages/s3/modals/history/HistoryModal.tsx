@@ -5,7 +5,8 @@ import { DownloadHistoryItem } from '@wails/S3Browser/models';
 import dayjs from 'dayjs';
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FULL_DATE_TIME_FORMAT } from '@/common/cnst/commonConst';
+import { FULL_DATE_TIME_FORMAT, LIST_ROW_GAP } from '@/common/cnst/commonConst';
+import { useRemeasureOnScale, useUiScale } from '@/common/hooks/useUiScale';
 import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal } from '@/common/utils/modalUtils';
 import { formatFileSize } from '@/common/utils/stringUtils';
@@ -16,9 +17,10 @@ import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 import { MODAL_CHROME_HEIGHT } from '@/components/modals/modalLayout';
 
 const PAGE_SIZE = 10;
+const HISTORY_ROW_ESTIMATE = 100;
 
 // Fixed body height on tall screens; shrinks on short ones so Modal.Content never exceeds its max-height.
-const BODY_HEIGHT = `min(650px, calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT}))`;
+const BODY_HEIGHT = `min(40.625rem, calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT}))`;
 
 type HistoryCardProps = {
   item: DownloadHistoryItem;
@@ -35,24 +37,24 @@ const HistoryCard = memo(function HistoryCard(props: HistoryCardProps) {
   }, [item.fileName, item.destPath]);
 
   return (
-    <Card padding="8px" orientation="horizontal" withBorder>
+    <Card padding="0.5rem" orientation="horizontal" withBorder>
       <Card.Section inheritPadding px="md" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' }}>
         <Stack style={{ flex: 1, minWidth: 0 }}>
           <TruncatedText size="xl" fw={500}>
             {item.fileName}
           </TruncatedText>
           <Group gap="xl" wrap="nowrap">
-            <Box miw="100px">
+            <Box miw="6.25rem">
               <Text c="dimmed">{t('label.sizeLbl')}</Text>
               <Text>{formatFileSize(item.size ?? 0)}</Text>
             </Box>
 
-            <Box miw="100px">
+            <Box miw="6.25rem">
               <Text c="dimmed">{t('label.downloadAtLbl')}</Text>
               <Text>{dayjs(item.updatedAt).format(FULL_DATE_TIME_FORMAT)}</Text>
             </Box>
 
-            <Box miw="120px">
+            <Box miw="7.5rem">
               <Text c="dimmed">{t('label.statusLbl')}</Text>
               <Text>{item.status}</Text>
             </Box>
@@ -85,6 +87,7 @@ export default createMantineModal<{}, false>(props => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
   const [scrollMargin, setScrollMargin] = useState(0);
+  const scale = useUiScale();
 
   const requestCtrl = useRef<AbortController>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -146,12 +149,14 @@ export default createMantineModal<{}, false>(props => {
   const virtualizer = useVirtualizer({
     count: historyList.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 100,
+    estimateSize: () => HISTORY_ROW_ESTIMATE * scale,
     getItemKey: idx => historyList[idx].id,
-    gap: 8,
+    gap: LIST_ROW_GAP * scale,
     overscan: 5,
     scrollMargin,
   });
+
+  useRemeasureOnScale(virtualizer, scale);
 
   const virtualItems = virtualizer.getVirtualItems();
   const lastVisibleIndex = virtualizer.range?.endIndex ?? -1;
@@ -171,8 +176,8 @@ export default createMantineModal<{}, false>(props => {
       <Modal.Content>
         <Modal.Header
           pos="relative"
-          p="8px"
-          mih="0px"
+          p="0.5rem"
+          mih="0"
           style={{ justifyContent: 'flex-end', backgroundColor: INFO_BG_COLOR }}
         >
           <Group gap="xs" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
@@ -183,7 +188,7 @@ export default createMantineModal<{}, false>(props => {
 
         <Divider />
 
-        <Modal.Body ref={scrollRef} p="8px" style={{ position: 'relative', overflow: 'auto', height: BODY_HEIGHT }}>
+        <Modal.Body ref={scrollRef} p="0.5rem" style={{ position: 'relative', overflow: 'auto', height: BODY_HEIGHT }}>
           <div ref={listRef} style={{ position: 'relative', height: virtualizer.getTotalSize() }}>
             {virtualItems.map(row => {
               const item = historyList[row.index];
@@ -203,7 +208,7 @@ export default createMantineModal<{}, false>(props => {
               );
             })}
             {isLoadingMore ? (
-              <Center style={{ position: 'absolute', top: '100%', width: '100%' }} py="8px">
+              <Center style={{ position: 'absolute', top: '100%', width: '100%' }} py="0.5rem">
                 <Loader size="sm" />
               </Center>
             ) : null}
@@ -212,7 +217,7 @@ export default createMantineModal<{}, false>(props => {
 
         <Divider />
 
-        <Group p="8px" justify="space-between" wrap="nowrap">
+        <Group p="0.5rem" justify="space-between" wrap="nowrap">
           <Button onClick={onClickCancel} color="red">
             {t('common:button.cancel')}
           </Button>

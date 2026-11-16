@@ -50,13 +50,12 @@ const started = (uploadId: string, fileName = `${uploadId}.bin`) => ({
   total: 2048,
 });
 
-// Mantine writes the Affix position as rem values (1rem = 16px).
+// Mantine writes the Affix position as CSS variables; the downloader size stays in raw px (never scaled by rem).
 const affixPosition = () => {
   const affix = document.querySelector<HTMLElement>('.mantine-Affix-root')!;
-  const rem = (v: string) => Number.parseFloat(/calc\(([\d.]+)rem/.exec(v)?.[1] ?? '0') * 16;
   return {
-    bottom: rem(affix.style.getPropertyValue('--affix-bottom')),
-    right: rem(affix.style.getPropertyValue('--affix-right')),
+    bottom: affix.style.getPropertyValue('--affix-bottom'),
+    right: affix.style.getPropertyValue('--affix-right'),
   };
 };
 
@@ -182,24 +181,32 @@ describe('UploaderWindow', () => {
       renderWithProviders(<UploaderWindow />);
       emit('uploader:upload-started', started('u1'));
 
-      expect(affixPosition()).toEqual({ bottom: 16, right: 16 });
+      expect(affixPosition()).toEqual({ bottom: '1rem', right: '1rem' });
     });
 
-    it('moves left of the downloader window', () => {
-      useDownloaderStore.setState({ windowSize: { width: 400, height: 200 } });
+    it('moves left of the downloader window by its measured px width', () => {
+      useDownloaderStore.setState({ windowSize: { width: 412, height: 200 } });
       renderWithProviders(<UploaderWindow />);
       emit('uploader:upload-started', started('u1'));
 
-      expect(affixPosition()).toEqual({ bottom: 16, right: 16 + 400 + 16 });
+      expect(affixPosition()).toEqual({ bottom: '1rem', right: 'calc(2rem + 412px)' });
     });
 
-    it('moves above the downloader button while collapsed', async () => {
-      useDownloaderStore.setState({ windowSize: { width: 40, height: 40 } });
+    it('moves above the downloader button by its measured px height while collapsed', async () => {
+      useDownloaderStore.setState({ windowSize: { width: 40, height: 44 } });
       renderWithProviders(<UploaderWindow />);
       emit('uploader:upload-started', started('u1'));
       await userEvent.click(screen.getByRole('button', { name: 'Close' }));
 
-      expect(affixPosition()).toEqual({ bottom: 16 + 40 + 16, right: 16 });
+      expect(affixPosition()).toEqual({ bottom: 'calc(2rem + 44px)', right: '1rem' });
+    });
+
+    it('keeps the collapsed button at the corner when there is no downloader', async () => {
+      renderWithProviders(<UploaderWindow />);
+      emit('uploader:upload-started', started('u1'));
+      await userEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+      expect(affixPosition()).toEqual({ bottom: '1rem', right: '1rem' });
     });
 
     it.each([
@@ -210,7 +217,7 @@ describe('UploaderWindow', () => {
       renderWithProviders(<UploaderWindow />);
       emit('uploader:upload-started', started('u1'));
 
-      expect(affixPosition()).toEqual({ bottom: 16, right: 16 });
+      expect(affixPosition()).toEqual({ bottom: '1rem', right: '1rem' });
     });
   });
 
