@@ -30,6 +30,7 @@ describe('normalizeSettings', () => {
     const raw = {
       theme: 'dark',
       font: 'jetbrains-mono',
+      size: 'large',
       language: 'ja',
       launchOnStartup: true,
       autoUpdate: false,
@@ -60,6 +61,19 @@ describe('normalizeSettings', () => {
     [1, false],
   ])('reads betaUpdate %j as %s (on only when exactly true)', (betaUpdate, expected) => {
     expect(normalizeSettings({ betaUpdate }).betaUpdate).toBe(expected);
+  });
+
+  it.each([
+    ['small', 'small'],
+    ['medium', 'medium'],
+    ['large', 'large'],
+    ['huge', 'medium'],
+    ['', 'medium'],
+    [null, 'medium'],
+    [2, 'medium'],
+    [undefined, 'medium'],
+  ])('reads size %j as %s', (size, expected) => {
+    expect(normalizeSettings({ size }).size).toBe(expected);
   });
 
   it('replaces unknown values with the defaults', () => {
@@ -114,6 +128,46 @@ describe('applySettings', () => {
     const style = document.documentElement.style;
     expect(style.getPropertyValue('--mantine-font-family')).toBe(getFontFamily('arial', 'en'));
     expect(style.getPropertyValue('--mantine-font-family-headings')).toBe(getFontFamily('arial', 'en'));
+  });
+
+  describe('root font size', () => {
+    beforeEach(() => {
+      document.documentElement.style.fontSize = '';
+    });
+
+    it.each([
+      ['small', '14px'],
+      ['medium', '16px'],
+      ['large', '18px'],
+    ] as const)('sets %s as %s on <html>', async (size, px) => {
+      await applySettings({ ...DEFAULT_SETTINGS, size });
+      expect(document.documentElement.style.fontSize).toBe(px);
+    });
+
+    it('writes the font size only when it changed', async () => {
+      const style = document.documentElement.style;
+      const writes = vi.fn();
+      let value = '';
+      Object.defineProperty(style, 'fontSize', {
+        configurable: true,
+        get: () => value,
+        set: v => {
+          writes(v);
+          value = v;
+        },
+      });
+      try {
+        await applySettings({ ...DEFAULT_SETTINGS, size: 'large' });
+        await applySettings({ ...DEFAULT_SETTINGS, size: 'large', theme: 'dark' });
+        expect(writes).toHaveBeenCalledExactlyOnceWith('18px');
+
+        await applySettings({ ...DEFAULT_SETTINGS, size: 'small' });
+        expect(writes).toHaveBeenCalledTimes(2);
+        expect(writes).toHaveBeenLastCalledWith('14px');
+      } finally {
+        delete (style as unknown as Record<string, unknown>).fontSize;
+      }
+    });
   });
 
   it.each([
@@ -373,6 +427,7 @@ describe('isSettingDirty', () => {
     ['launchOnStartup', true],
     ['autoUpdate', false],
     ['betaUpdate', true],
+    ['size', 'large'],
   ] as const)('is true when only %s differs', (key, value) => {
     expect(isSettingDirty({ ...DEFAULT_SETTINGS, [key]: value }, DEFAULT_SETTINGS)).toBe(true);
   });

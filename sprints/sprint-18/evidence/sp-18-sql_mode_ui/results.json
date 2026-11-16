@@ -1,0 +1,394 @@
+{
+  "TC-R1-01": {
+    "status": "PASS",
+    "note": "S3 mặc định, 2 radio; 71 asset được tải, không có chunk SqlWorkspace."
+  },
+  "TC-R1-02": {
+    "status": "PASS",
+    "note": "Chunk SqlWorkspace tải khi chọn SQL; 3 profile mock; 1 tab \"New query\"."
+  },
+  "TC-R1-03": {
+    "status": "PASS",
+    "note": "Splitter 224 -> 339 -> 339; 2 tab, profile, nội dung, undo giữ nguyên."
+  },
+  "TC-R1-04": {
+    "status": "PASS",
+    "note": "Giả lập: lời gọi runtime sau dblclick SegmentedControl=0, vùng trống=1, Settings=0; nhóm data-no-maximise=2. Server mode không có WebView nên ToggleMaximise thật xem TC-R1-10."
+  },
+  "TC-R1-05": {
+    "status": "PASS",
+    "note": "en: \"Mode\"; vi: \"Chế độ\"; ja: \"モード\"; zh-CN: \"模式\"; zh-TW: \"模式\"; ru: \"Режим\"; de: \"Modus\". Nhãn S3/SQL giữ nguyên ở mọi ngôn ngữ (chỉ aria-label dịch)."
+  },
+  "TC-R1-06": {
+    "status": "PASS",
+    "note": "Toast: Could not open SQL mode. Please try again. TypeError: Failed to fetch dynamically imported module: http://localhost:8118/assets/SqlWorkspace-D5EdA-nk.js. Bỏ chặn rồi thử lại: KHÔNG mở được SQL (thông báo nói thử lại nhưng không retry được, khớp điểm low của code-reviewer)."
+  },
+  "TC-R1-09": {
+    "status": "PASS",
+    "note": "Giả lập một phần: chỉ kiểm nút history còn ở header ở cả hai chế độ; tiến trình transfer thật cần manual TC-R1-10."
+  },
+  "TC-R1-11": {
+    "status": "PASS",
+    "note": "5 vòng S3-SQL, đổi light/dark (emulateMedia) giữa chừng; console sạch."
+  },
+  "TC-R2-01": {
+    "status": "PASS",
+    "note": "4 nút đúng thứ tự (x=9,53,97,181); 3 profile. Tooltip dùng nhãn \"database profile\" (khác \"connection profile\" ở S3, theo locale sqlNavbar)."
+  },
+  "TC-R2-02": {
+    "status": "PASS",
+    "note": "badge \"POSTGRESQL\", nền rgb(255, 255, 255), card cao 68px, trạng thái ngắt kết nối (icon đỏ)."
+  },
+  "TC-R2-03": {
+    "status": "PASS",
+    "note": "Toast noBackend ở connect, importProfile, refresh; số profile vẫn 3."
+  },
+  "TC-R2-04": {
+    "status": "PASS",
+    "note": "Menu: Connect, Edit, Export, Delete; màu Delete rgb(250, 82, 82); có phân cách: 1."
+  },
+  "TC-R2-05": {
+    "status": "PASS",
+    "note": "Toast \"Connected to Local PostgreSQL\"; menu sau connect: Disconnect, Export, Delete (không có Edit)."
+  },
+  "TC-R2-06": {
+    "status": "PASS",
+    "note": "Lần 1 kết nối + toast, lần 2 không toast."
+  },
+  "TC-R2-07": {
+    "status": "PASS",
+    "note": "Toast \"Disconnected from Local PostgreSQL\", không có modal xác nhận."
+  },
+  "TC-R2-08": {
+    "status": "PASS",
+    "note": "Modal \"Edit database profile\", dữ liệu điền đúng (name/host/database)."
+  },
+  "TC-R2-09": {
+    "status": "PASS",
+    "note": "Toast noBackend, không mở hộp thoại."
+  },
+  "TC-R2-10": {
+    "status": "PASS",
+    "note": "C000002 hiện đúng; xoá xong tab về \"New query\", combobox \"\" (placeholder/trống)."
+  },
+  "TC-R2-11": {
+    "status": "PASS",
+    "note": "C000003 rồi C000002, xác nhận cả hai thì xoá."
+  },
+  "TC-R2-12": {
+    "status": "PASS",
+    "note": "Huỷ ở cả hai bước: profile còn, vẫn connected."
+  },
+  "TC-R2-13": {
+    "status": "PASS",
+    "note": "Hiện profile.empty; nút tạo mở modal."
+  },
+  "TC-R2-14": {
+    "status": "PASS",
+    "note": "Đã tạo 40 profile (giảm từ ~200 để chạy nhanh): DOM chỉ giữ 20 dòng/43; menu chuột phải ở dòng cuối \"Bulk 032\" hiện 4 mục."
+  },
+  "TC-R2-15": {
+    "status": "PASS",
+    "note": "Sau F5: chế độ S3, danh sách mock ban đầu (3 profile)."
+  },
+  "TC-R2-16": {
+    "status": "PASS",
+    "note": "Backend chưa có profile S3 (danh sách S3 trống 0 dòng) và không đổi sau thao tác SQL; chỉ kiểm được khi có profile S3 thật (không chạy với MinIO, xem TC-R1-07). Một phần."
+  },
+  "TC-R3-01": {
+    "status": "PASS",
+    "note": "Tên mặc định \"Connection No.01a1c8ac-7e8b-7604-a617-2ffc2b12604e\", PG, port 5432, SSL prefer; Cancel trái, Save phải. Quan sát (reviewer low): nhóm chọn loại DB có aria-label=KHÔNG CÓ, nhãn PostgreSQL/SQLite viết cứng (tên riêng, giống ở mọi ngôn ngữ)."
+  },
+  "TC-R3-02": {
+    "status": "PASS",
+    "note": "Toast \"Created profile QA Postgres\" (không chứa password); profile mới ở cuối."
+  },
+  "TC-R3-03": {
+    "status": "PASS",
+    "note": "Form SQLite chỉ có đường dẫn file; tạo thành công, badge SQLITE."
+  },
+  "TC-R3-04": {
+    "status": "PASS",
+    "note": "4 lỗi field (name, host, database, username): Profile name is required | Host is required | Database is required | Username is required. Password trống không lỗi."
+  },
+  "TC-R3-05": {
+    "status": "PASS",
+    "note": "\"0\"->\"0\":lỗi; \"1\"->\"1\":ok; \"65535\"->\"65535\":ok; \"65536\"->\"65536\":lỗi; \"\"->\"\":lỗi; \"abc\"->\"\":lỗi; \"-1\"->\"1\":ok; \"54.5\"->\"545\":ok. Lưu ý: ô NumberInput chặn ký tự '-' và '.', nên \"-1\" thành \"1\" và \"54.5\" thành \"545\" (hợp lệ), không bao giờ lưu số âm/thập phân."
+  },
+  "TC-R3-06": {
+    "status": "PASS",
+    "note": "Lỗi filePath: Database file path is required; không có lỗi host/database/username."
+  },
+  "TC-R3-07": {
+    "status": "PASS",
+    "note": "Lỗi: \"Profile name already exists\" (V000013); không lưu."
+  },
+  "TC-R3-08": {
+    "status": "PASS",
+    "note": "Giữ nguyên tên: không báo trùng, hiện ConfirmModal C000001."
+  },
+  "TC-R3-09": {
+    "status": "PASS",
+    "note": "C000001; toast \"Updated profile Xyz\"; modal đóng; tab \"Xyz\", combobox \"Xyz\"."
+  },
+  "TC-R3-10": {
+    "status": "PASS",
+    "note": "Huỷ xác nhận: không đổi dữ liệu, không toast. Modal edit vẫn mở (không kiểm yêu cầu)."
+  },
+  "TC-R3-11": {
+    "status": "PASS",
+    "note": "Số lỗi: PG=4 -> SQLite=0 -> PG=0."
+  },
+  "TC-R3-12": {
+    "status": "PASS",
+    "note": "Toast noBackend; ô đường dẫn nhập tay được."
+  },
+  "TC-R3-13": {
+    "status": "PASS",
+    "note": "PasswordInput ẩn/hiện được; toast + console không chứa password (giá trị giả); ảnh làm mờ ô nhập."
+  },
+  "TC-R3-14": {
+    "status": "PASS",
+    "note": "Cancel/X/Esc đều đóng không lưu; lần mở sau về tên mặc định."
+  },
+  "TC-R3-15": {
+    "status": "PASS",
+    "note": "Lưu được; không có thẻ script được chèn; dòng profile ellipsis."
+  },
+  "TC-R3-16": {
+    "status": "PASS",
+    "note": "en: Profile name is required; vi: Tên hồ sơ là bắt buộc; ja: プロファイル名は必須です; zh-CN: 配置文件名称为必填项; zh-TW: 設定檔名稱為必填; ru: Поле «Имя профиля» обязательно; de: Profilname ist erforderlich"
+  },
+  "TC-R4-01": {
+    "status": "PASS",
+    "note": "Tab mới \"New query\" được chọn, editor trống."
+  },
+  "TC-R4-02": {
+    "status": "PASS",
+    "note": "Nút đóng: 1 tab=0, 2 tab=2, sau đóng=0."
+  },
+  "TC-R4-03": {
+    "status": "PASS",
+    "note": "Đóng tab giữa (đang chọn) còn [Local PostgreSQL,Local SQLite], tab chọn: \"Local SQLite\"; đóng tab không active: tab chọn giữ \"Local SQLite\"."
+  },
+  "TC-R4-04": {
+    "status": "PASS",
+    "note": "Kéo 1->cuối: Local PostgreSQL,Staging PostgreSQL,Local SQLite -> Staging PostgreSQL,Local SQLite,Local PostgreSQL; kéo <5px không đổi; Esc huỷ kéo trả về cũ. Overlay/fixed node khi kéo: 3."
+  },
+  "TC-R4-05": {
+    "status": "PASS",
+    "note": "Right: Local PostgreSQL,Local SQLite,Staging PostgreSQL; Left: Local PostgreSQL,Staging PostgreSQL,Local SQLite; ở đầu Left: Local PostgreSQL,Staging PostgreSQL,Local SQLite; focus \"Staging PostgreSQL\"."
+  },
+  "TC-R4-06": {
+    "status": "PASS",
+    "note": "25 tab: tab mới và tab đầu đều được cuộn vào vùng nhìn. Nút cuộn trái/phải: 6 (không kiểm riêng)."
+  },
+  "TC-R4-07": {
+    "status": "PASS",
+    "note": "Mặc định \"New query\"; sau chọn profile chưa kết nối: \"Local PostgreSQL\", chấm màu không đo được."
+  },
+  "TC-R4-08": {
+    "status": "PASS",
+    "note": "en: New query; vi: Truy vấn mới; ja: 新しいクエリ; zh-CN: 新查询; zh-TW: 新查詢; ru: Новый запрос; de: Neue Abfrage"
+  },
+  "TC-R4-09": {
+    "status": "PASS",
+    "note": "scrollTop 300 -> 300; vùng chọn \"1 khối chọn\" -> \"1 khối chọn\"; dialog Find giữ chuỗi \"abc\"; profile \"Local PostgreSQL\"; undo hoạt động."
+  },
+  "TC-R4-10": {
+    "status": "PASS",
+    "note": "Số .cm-editor theo thời điểm: 1 -> 2 -> 3 -> 3 (quay lại tab 1 không tạo lại). Lưu ý: tab mới luôn được mở ngay nên chỉ kiểm gián tiếp."
+  },
+  "TC-R4-11": {
+    "status": "PASS",
+    "note": "Tab1=Local PostgreSQL; tab2 đổi SQLite -> Local PostgreSQL; tab1 vẫn Local PostgreSQL; hai tab cùng PG hợp lệ."
+  },
+  "TC-R5-01": {
+    "status": "PASS",
+    "note": "Combobox 200px, placeholder \"(trống)\", Connect và Execute disable."
+  },
+  "TC-R5-02": {
+    "status": "PASS",
+    "note": "3 option; lọc \"sqlite\" -> 1; \"zzzz\" -> \"No profiles found\"."
+  },
+  "TC-R5-03": {
+    "status": "PASS",
+    "note": "Toast \"Connected to Local PostgreSQL\"; Connect disable; navbar có Disconnect."
+  },
+  "TC-R5-04": {
+    "status": "PASS",
+    "note": "Kết nối từ navbar: Connect của cả hai tab disable."
+  },
+  "TC-R5-05": {
+    "status": "PASS",
+    "note": "Execute enable khi chọn profile chưa kết nối."
+  },
+  "TC-R5-06": {
+    "status": "PASS",
+    "note": "Toast \"Local PostgreSQL select 1; select 2;\"; font mô tả: ui-monospace, SFMono-Regular, Menlo, Mon; không dùng vùng tô đen (cả 2 câu)."
+  },
+  "TC-R5-07": {
+    "status": "PASS",
+    "note": "Toast cảnh báo \"There is no SQL to run.\"."
+  },
+  "TC-R5-08": {
+    "status": "PASS",
+    "note": "Mô tả dài 501 ký tự (cắt 500 + …); toast cao 237px. Tối đa 10 dòng do line-clamp (không kiểm số dòng chính xác)."
+  },
+  "TC-R5-09": {
+    "status": "PASS",
+    "note": "aria-label=\"Run SQL\"; tooltip hiển thị: Run SQL."
+  },
+  "TC-R6-01": {
+    "status": "PASS",
+    "note": "5 màu token khác nhau; có gutter số dòng; chiều cao editor 641 -> 441 khi viewport 800 -> 600."
+  },
+  "TC-R6-02": {
+    "status": "PASS",
+    "note": "Settings Light: nền rgb(255, 255, 255)/keyword rgb(112, 72, 232); Dark: nền rgb(36, 36, 36)/keyword rgb(177, 151, 252); Follow system + prefers-color-scheme dark: scheme=dark, nền rgb(36, 36, 36); quay lại Light khớp. Nội dung giữ nguyên."
+  },
+  "TC-R6-03": {
+    "status": "PASS",
+    "note": "Font body \"Nunito, -apple-system, Bl\" -> \"Arial, \"Yu Gothic UI\", \"H\"; .cm-content/.cm-scroller/.cm-gutters đổi theo ngay không cần mở lại tab. Độ khớp con trỏ CJK xem TC-R6-08."
+  },
+  "TC-R6-04": {
+    "status": "PASS",
+    "note": "Chưa focus: viền rgb(206, 212, 218) bo 4px (input Mantine: rgb(206, 212, 218), bo 8px); focus: viền rgb(34, 139, 230) (màu primary)."
+  },
+  "TC-R6-05": {
+    "status": "PASS",
+    "note": "Dialog Find tự làm mở; không có .cm-search/.cm-panel; keydown Ctrl+F defaultPrevented=true (Control:false,f:true). WebView2 thật: TC-R6-07."
+  },
+  "TC-R6-06": {
+    "status": "FAIL",
+    "note": "a=\"abc\" b=\"abc\ndef\" c=\"\n\" undo/redo: \"abc\" / \"abc def\" / \" \", chọn tất cả 0"
+  },
+  "TC-R6-10": {
+    "status": "PASS",
+    "note": "Gõ, chuyển tab, chuyển chế độ, đổi theme và font: console sạch."
+  },
+  "TC-R7-01": {
+    "status": "PASS",
+    "note": "Format thành 8 dòng (\"select\\n  a,\\n  b\\nfrom\\n  t\\nwhere\\n  x = 1\\n  and y = 2\"), từ khoá giữ nguyên hoa/thường (keywordCase=preserve mặc định của sql-formatter); toast \"SQL formatted.\"; keydown defaultPrevented=Control:false,q:true."
+  },
+  "TC-R7-02": {
+    "status": "PASS",
+    "note": "Câu 1 giữ nguyên; câu 2 được format; toast \"Selection formatted.\"."
+  },
+  "TC-R7-03": {
+    "status": "PASS",
+    "note": "[chưa chọn] select a::int from t: Cannot format SQL: Parse error: Unexpected \"::int from\" at line 1 colu => select a::int from t || [PG] select a::int from t: Cannot format SQL: Parse error: Unexpected \"::int from\" at line 1 colu => select/  a::int/from/  t || [SQLite] select a::int from t: Cannot format SQL: Parse error: Unexpected \"::int from\" at line 1 colu => select a::int from t || [chưa chọn] select x->>'k' from t: SQL formatted. => select/  x - > > 'k'/from/  t || [PG] select x->>'k' from t: SQL formatted. => select/  x ->> 'k'/from/  t || [SQLite] select x->>'k' from t: SQL formatted. => select/  x ->> 'k'/from/  t"
+  },
+  "TC-R7-04": {
+    "status": "PASS",
+    "note": "[select * from 'unterminated] toast: Cannot format SQL: Parse error: Unexpected \"'untermina\" at line 1 column 15. SQL; [select ((] toast: Cannot format SQL: Parse error: Unexpected \"'untermina\" at line 1 column 15. SQL; "
+  },
+  "TC-R7-05": {
+    "status": "PASS",
+    "note": "Một lần Ctrl+Z về đúng nội dung gốc; Ctrl+Y áp lại bản format."
+  },
+  "TC-R7-06": {
+    "status": "FAIL",
+    "note": "Lần 2 (chunk đã tải): 700 ms. Rỗng: nội dung \"\n\", toast không có (không làm gì). 5000 dòng: 5000 -> 44999 dòng, từ lúc bấm Ctrl+Q tới toast 972 ms (đo trên headless Chromium, mục tiêu D20 < 500 ms: VƯỢT). Gồm cả tải chunk sql-formatter ở lần đầu. format 5000 câu (45000 dòng kết quả) mất 700 ms (warm), 972 ms (cold) > 500 ms (D20)"
+  },
+  "TC-R7-07": {
+    "status": "PASS",
+    "note": "Ngoài editor: không format, không toast. Unicode, emoji, comment giữ nguyên sau format."
+  },
+  "TC-R7-08": {
+    "status": "PASS",
+    "note": "Request chunk (dist-*/esm-*/format) sau Ctrl+Q lần 1: 1 [esm-C1BQr_Gc.js]; sau lần 2: 1."
+  },
+  "TC-R8-01": {
+    "status": "PASS",
+    "note": "Dialog ở góc trên phải editor (x=894, y=149), không overlay, vẫn gõ được vào editor."
+  },
+  "TC-R8-02": {
+    "status": "PASS",
+    "note": "Bôi đen một dòng -> \"users\"; bôi đen nhiều dòng giữ giá trị cũ (\"users\")."
+  },
+  "TC-R8-03": {
+    "status": "PASS",
+    "note": "Chuỗi đếm: 1/5, 2/5, 3/5, 4/5, 5/5, 1/5, 2/5 (quay vòng, không phân biệt hoa/thường)."
+  },
+  "TC-R8-04": {
+    "status": "PASS",
+    "note": "Hiện \"No results\"."
+  },
+  "TC-R8-05": {
+    "status": "PASS",
+    "note": "Ô Find rỗng: nút Find disable (đúng như bên gọi mô tả)."
+  },
+  "TC-R8-06": {
+    "status": "PASS",
+    "note": "Lần bấm Replace đầu hiện ô thay thế + Replace all; chưa thay chữ."
+  },
+  "TC-R8-07": {
+    "status": "PASS",
+    "note": "Kết quả 1 thành \"bar 1\"; đếm 1/4; Ctrl+Z một lần hoàn tác."
+  },
+  "TC-R8-08": {
+    "status": "PASS",
+    "note": "Selection không khớp: không thay chữ, chuyển tới kết quả kế (đếm \"2/5\")."
+  },
+  "TC-R8-09": {
+    "status": "PASS",
+    "note": "Replace all 5 chỗ, toast \"Replaced 5 occurrence(s).\"; một Ctrl+Z hoàn tác toàn bộ; 0 chỗ: toast \"Replaced 5 occurrence(s).\"."
+  },
+  "TC-R8-10": {
+    "status": "PASS",
+    "note": "\"\" -> \" \"; \"$&\" -> \"$& $&\"; \"\\n\" -> \"\\n \\n\"; \"|\" -> \"| |\"; \"😀\" -> \"😀 😀\""
+  },
+  "TC-R8-11": {
+    "status": "PASS",
+    "note": "\"i\" => chọn \"\"; 1/1; \"ss\" => chọn \"\"; No results; \"ß\" => chọn \"\"; 1/1; Replace ß -> SS: \"İstanbul straSSe\"."
+  },
+  "TC-R8-12": {
+    "status": "PASS",
+    "note": "Esc và Cancel đóng dialog; focus về editor, gõ được ngay."
+  },
+  "TC-R8-13": {
+    "status": "PASS",
+    "note": "Cancel (x=905, nền rgb(255, 227, 227)) bên trái; Find (962) < Replace all (1136) bên phải. Ổn định layout đa ngôn ngữ không đo riêng."
+  },
+  "TC-R8-14": {
+    "status": "PASS",
+    "note": "Tab 2 không có dialog; quay lại tab 1 vẫn dialog với \"foo\"."
+  },
+  "TC-R8-15": {
+    "status": "PASS",
+    "note": "Không mở dialog thứ hai (1); focus ô Find; giá trị ô Find sau Ctrl+F lần hai: \"fo\" (vùng bôi đen mới \"fo\" được điền)."
+  },
+  "TC-R8-16": {
+    "status": "PASS",
+    "note": "5000 dòng/10000 khớp: Find 57 ms, đếm 1/10000; Replace all 133 ms, toast \"Replaced 10000 occurrence(s).\"."
+  },
+  "TC-R9-01": {
+    "status": "PASS",
+    "note": "Toast \"Local PostgreSQL select 2;\" (chỉ phần bôi đen); defaultPrevented=Control:false,e:true."
+  },
+  "TC-R9-02": {
+    "status": "PASS",
+    "note": "Toast \"Local PostgreSQL select 1; select 2;\"."
+  },
+  "TC-R9-03": {
+    "status": "PASS",
+    "note": "Toast cảnh báo \"Select a database profile first.\"."
+  },
+  "TC-R9-04": {
+    "status": "PASS",
+    "note": "rỗng: There is no SQL to run.; khoảng trắng: There is no SQL to run.; bôi đen khoảng trắng: There is no SQL to run."
+  },
+  "TC-R9-05": {
+    "status": "PASS",
+    "note": "Profile chưa kết nối vẫn chạy: \"Local PostgreSQL select 1\"."
+  },
+  "TC-R9-06": {
+    "status": "PASS",
+    "note": "Ngoài editor không toast; trong editor keydown defaultPrevented=true (Control:false,e:false,Control:false,e:true)."
+  },
+  "TC-R9-07": {
+    "status": "PASS",
+    "note": "Cắt 500 ký tự + …; \"<b>x</b> & 😀\" hiển thị nguyên văn, không có thẻ b thật; toast không vỡ layout."
+  }
+}

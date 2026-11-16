@@ -1,0 +1,19 @@
+{
+  "title": {
+    "defaultTabName": "Hồ sơ mới"
+  },
+  "tooltip": {
+    "connect": "Kết nối",
+    "refresh": "Làm mới {target}",
+    "search": "Tìm kiếm",
+    "clearSearch": "Xoá tìm kiếm",
+    "upload": "Tải file lên",
+    "createBucket": "Tạo bucket"
+  },
+  "search": {
+    "placeholderProfile": "Tìm profile",
+    "emptyProfile": "Không tìm thấy profile",
+    "placeholderObject": "Tìm theo key",
+    "placeholderBucket": "Tìm theo tên"
+  }
+}

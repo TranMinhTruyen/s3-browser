@@ -1,6 +1,7 @@
 {
   "title": "Cài đặt",
   "label": {
+    "size": "Cỡ giao diện",
     "theme": "Giao diện",
     "font": "Phông chữ",
     "language": "Ngôn ngữ",
@@ -9,6 +10,7 @@
     "betaUpdate": "Nhận bản beta (thử nghiệm)"
   },
   "option": {
+    "size": { "small": "Nhỏ", "medium": "Vừa", "large": "Lớn" },
     "theme": { "light": "Sáng", "dark": "Tối", "auto": "Theo hệ thống" },
     "font": {
       "nunito": "Nunito",

@@ -4,18 +4,19 @@
 
 ## 1. Trạng thái hiện tại
 
-- Cập nhật: 2026-11-10.
-- Sprint-17 (dọn issue low: R1 xoá bucket, R2 race updater theo kênh beta, R3 Apply ghi `launchOnStartup` + khoá modal khi bận, R4 policy UI + R5e, R5a-c dọn nhỏ, R5d nhãn KiB/MiB/GiB): **DONE** 2026-11-10; PR #25–#30 đã merge vào `SP-17/release` (đỉnh `03d1fec`). PR `SP-17/sprint_docs` (report, memory, CHANGELOG `[1.0.1-beta.17]` 7 bản, version `1.0.1-beta.17`) vào release và PR `SP-17/release` → `staging` chờ người dùng merge (docs trước, promote sau).
-- Sprint-18 (giao diện SQL mode): `requirement.md` đã có trên `staging`, chưa lập plan.
+- Cập nhật: 2026-11-16.
+- Sprint-18 (chế độ SQL chỉ UI: chuyển S3/SQL, profile DB mock trong RAM, tab SQL với editor, Ctrl+Q/F/E, R8 Find/Replace, R10 cỡ giao diện): **DONE** 2026-11-16; PR #36–#40 đã merge vào `SP-18/release` (đỉnh `d90cb6c`). PR `SP-18/sprint_docs` (report, memory, CHANGELOG `[1.1.0-beta.18]` 7 bản, version `1.1.0-beta.18`) vào release và PR `SP-18/release` → `staging` chờ người dùng merge (docs trước, promote sau).
+- Sprint-17 (dọn issue low, KiB/MiB/GiB): **DONE** 2026-11-10, đã lên `staging` và `master` (`1.0.1`, #35).
+- Chế độ SQL chưa có backend (Go `internal/modules/db`, Rust `s3b_db.dll`) và chưa có tài liệu README/user guide.
 - Sprint-16 (export/import profile, công tắc cập nhật có hiệu lực ngay): **DONE** 2026-11-09, đã lên `staging`; bản `1.0.0` đã lên `master` (#23). Bản dịch vi/ja/zh-CN/zh-TW/ru/de của sprint-16 và 17 chưa có người bản ngữ duyệt.
 - Sprint-15 (tài liệu v0.1: README, user guide + PDF, ARCHITECTURE, CHANGELOG 0.1.0, `shots.mjs` chụp ảnh có ghi chú): **DONE** 2026-11-09, đã lên `staging` (`5570c4d`).
 - Sprint-14 (badge policy type, `CloseButton` dùng chung, auto-update từ GitHub Releases): **DONE** 2026-11-06, đã lên `staging`; #8 đưa sprint-12/13/14 R1-R3 lên `master`. Không có `report.md`.
-- Release: stable mới nhất `1.0.0`; `SP-17/sprint_docs` đổi `build/config.yml` thành `1.0.1-beta.17`. Chỉ build Windows (bỏ macOS/Linux/iOS ở `cedf08a`); có workflow `release.yml` và `pre-release.yml` (pre-release từ `staging`).
+- Release: stable mới nhất `1.0.1`; `SP-18/sprint_docs` đổi `build/config.yml` thành `1.1.0-beta.18`. Chỉ build Windows (bỏ macOS/Linux/iOS ở `cedf08a`); có workflow `release.yml` và `pre-release.yml` (pre-release từ `staging`).
 - Sprint-13 DONE 2026-11-05 (PR #6); sprint-12 DONE 2026-11-04.
 - Repo đã tách khỏi monorepo ngày 2026-11-03 (`TranMinhTruyen/s3-browser`); từ sprint-15 dùng luồng `SP-NN/release` (mục 2).
 - 2026-11-06: thêm agent `go-tester` và quy tắc test hồi quy (xem `CLAUDE.md` mục 4 và 10).
-- Chưa test tay: lưu đè file ở hộp thoại lưu native của Windows, `AddFilter`/`AttachToWindow` của `SaveFile()` (docs Wails 403), tốc độ 600.000 vòng PBKDF2 trên máy yếu; các mục test tay của sprint-13 (bucket khác region, Object Lock/versioning khi xoá, xoá file/folder sau khi sửa `batchDeleter`, tạo bucket public trên AWS) chưa ghi nhận kết quả; gặp lỗi thì mở sprint sửa.
-- Việc tiếp theo: người dùng merge PR `SP-17/sprint_docs` rồi PR `SP-17/release` → `staging` (ra bản `1.0.1-beta.17`), sau đó làm sprint-18.
+- Chưa test tay: lưu đè file ở hộp thoại lưu native của Windows, `AddFilter`/`AttachToWindow` của `SaveFile()` (docs Wails 403), tốc độ 600.000 vòng PBKDF2 trên máy yếu; các mục test tay của sprint-13 (bucket khác region, Object Lock/versioning khi xoá, xoá file/folder sau khi sửa `batchDeleter`, tạo bucket public trên AWS) chưa ghi nhận kết quả; gặp lỗi thì mở sprint sửa. Sprint-18: nút X tab, viền focus SQL editor, hàng upload, hàng đầu `HistoryModal` ở 3 cỡ; checklist badge F14; test case R8 trong `testcases.md` lệch code, cần `qa-tester` cập nhật.
+- Việc tiếp theo: người dùng merge PR `SP-18/sprint_docs` rồi PR `SP-18/release` → `staging` (ra bản `1.1.0-beta.18`); sprint sau làm backend DB cho chế độ SQL.
 
 ## 2. Quyết định
 
@@ -68,6 +69,8 @@
 - 2026-11-10 [sprint-17] Apply trong Settings ghi luôn `launchOnStartup` vào registry; Huỷ sau Apply không hoàn tác trường này (Q2=A).
 - 2026-11-10 [sprint-17] Đổi kênh beta khi đang check update: để check chạy xong, bỏ kết quả kênh cũ, về `idle` rồi check lại đúng một lần (Q3=B); fallback V2 xoá bucket gặp `BucketNotEmpty` báo `S3E064` (Q5).
 - 2026-11-10 [docs] CHANGELOG: mỗi bản beta có mục `## [n.n.n-beta.N] - ngày` riêng (7 bản), mục Known issues của bản cũ giữ nguyên làm lịch sử — người dùng chọn khi đóng sprint-17.
+- 2026-11-16 [sprint-18] R8 Find/Replace chốt theo code: ô Replace luôn hiện, 3 nút match case/whole word/regex, không footer Cancel, Ctrl/Cmd+E/Q bị chặn trong ô Find (#39); Q33=A giữ toast 14px ở medium — người dùng chốt khi review bản release, `requirement.md`/`plan.md` đã sửa theo code (#40).
+- 2026-11-16 [sprint-18] Cỡ giao diện small/medium/large = font-size `<html>` 14/16/18px (Slider 3 nấc), kích thước viết bằng rem; quy tắc vào `CLAUDE.md` mục 9 (`d90cb6c`). Badge căn chữ (D41/F14) là việc phụ của R10: `text-box` + `will-change`, `.snap` chỉ ở DPR 1 và 1.5 vì ở 1.25 xấu hơn.
 
 ## 3. Lỗi và bẫy đã gặp
 
@@ -121,6 +124,10 @@
 - 2026-11-10 [frontend] FE từng chấp nhận `\` trong authority của issuer URL mà backend từ chối — `isSecureIssuerUrl` phải khớp `utils.IsSecureUrl`.
 - 2026-11-10 [docs] Chụp lại ảnh bằng `shots.mjs` làm lệch ghi chú vài pixel và ngày tạo bucket ở ảnh không liên quan — chỉ giữ ảnh có thay đổi thật, khôi phục ảnh khác bằng `git show HEAD:<path>` qua scratchpad (không dùng `git checkout`).
 - 2026-11-10 [quy trình] Rate limit API làm orchestrator dừng giữa sprint — SendMessage cho nó chạy tiếp sau giờ reset; nó kiểm lại git/PR trước khi làm tiếp.
+- 2026-11-16 [sprint-18] Class CSS không đổi được kích thước `CloseButton` Mantine — Mantine ghi `--cb-size`/`--cb-icon-size` inline khi truyền `size`/`iconSize` — bỏ hai prop đó rồi đặt biến trong class `.x.x`.
+- 2026-11-16 [sprint-18] Chữ badge lệch 1px ở small/large — rem ra px lẻ, Chromium làm tròn viền và baseline riêng — `will-change: transform` + làm tròn padding (`badge.module.css`); đo bằng Playwright ở root 14/16/18px.
+- 2026-11-16 [git] Tên branch mới trùng branch đã merge (`SP-18/review_fixes`) làm `git-flow` dừng — kiểm `git ls-remote --heads origin 'SP-NN/*'` trước khi đặt tên.
+- 2026-11-16 [test] `DbProfileModal.test.tsx`, `ConnectModal.auth.test.tsx` cũng timeout khi chạy cả bộ có coverage lúc máy tải — chạy lại riêng file.
 
 ## 4. Tóm tắt cũ
 

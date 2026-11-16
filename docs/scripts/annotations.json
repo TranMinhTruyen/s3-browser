@@ -24,7 +24,7 @@
   "03-connect-modal": {
     "endpoint": {
       "en": "Enter the endpoint, region and access keys of your storage",
-      "vi": "Nhập endpoint, {{components/inputs/inputs:regionCombobox.label}} và access key của kho lưu trữ",
+      "vi": "Nhập endpoint, {{pages/s3/components/inputs:regionCombobox.label}} và access key của kho lưu trữ",
       "ja": "ストレージのエンドポイント、リージョン、アクセスキーを入力します",
       "zh-CN": "输入存储的终端节点、区域和访问密钥",
       "zh-TW": "輸入儲存空間的端點、區域和存取金鑰",
@@ -32,13 +32,13 @@
       "de": "Endpunkt, Region und Zugriffsschlüssel eingeben"
     },
     "save": {
-      "en": "Click \"{{components/modals/connectModal:form.button.createProfile}}\" to save the profile",
-      "vi": "Nhấp \"{{components/modals/connectModal:form.button.createProfile}}\" để lưu hồ sơ",
-      "ja": "「{{components/modals/connectModal:form.button.createProfile}}」をクリックして保存します",
-      "zh-CN": "点击“{{components/modals/connectModal:form.button.createProfile}}”保存配置文件",
-      "zh-TW": "按一下「{{components/modals/connectModal:form.button.createProfile}}」儲存設定檔",
-      "ru": "Нажмите «{{components/modals/connectModal:form.button.createProfile}}», чтобы сохранить профиль",
-      "de": "„{{components/modals/connectModal:form.button.createProfile}}“ anklicken, um das Profil zu speichern"
+      "en": "Click \"{{pages/s3/modals/connectModal:form.button.createProfile}}\" to save the profile",
+      "vi": "Nhấp \"{{pages/s3/modals/connectModal:form.button.createProfile}}\" để lưu hồ sơ",
+      "ja": "「{{pages/s3/modals/connectModal:form.button.createProfile}}」をクリックして保存します",
+      "zh-CN": "点击“{{pages/s3/modals/connectModal:form.button.createProfile}}”保存配置文件",
+      "zh-TW": "按一下「{{pages/s3/modals/connectModal:form.button.createProfile}}」儲存設定檔",
+      "ru": "Нажмите «{{pages/s3/modals/connectModal:form.button.createProfile}}», чтобы сохранить профиль",
+      "de": "„{{pages/s3/modals/connectModal:form.button.createProfile}}“ anklicken, um das Profil zu speichern"
     }
   },
   "04-profile-created": {
@@ -65,13 +65,13 @@
   },
   "06-bucket-list": {
     "profile": {
-      "en": "Select a profile, then click \"{{pages/tab/tabLayout:tooltip.connect}}\" to list its buckets",
-      "vi": "Chọn hồ sơ, rồi nhấp \"{{pages/tab/tabLayout:tooltip.connect}}\" để xem danh sách bucket",
-      "ja": "プロファイルを選び、「{{pages/tab/tabLayout:tooltip.connect}}」をクリックしてバケット一覧を表示します",
-      "zh-CN": "选择配置文件，然后点击“{{pages/tab/tabLayout:tooltip.connect}}”列出存储桶",
-      "zh-TW": "選取設定檔，然後按一下「{{pages/tab/tabLayout:tooltip.connect}}」列出儲存貯體",
-      "ru": "Выберите профиль и нажмите «{{pages/tab/tabLayout:tooltip.connect}}», чтобы увидеть бакеты",
-      "de": "Profil wählen, dann „{{pages/tab/tabLayout:tooltip.connect}}“ anklicken, um die Buckets aufzulisten"
+      "en": "Select a profile, then click \"{{pages/s3/tabLayout:tooltip.connect}}\" to list its buckets",
+      "vi": "Chọn hồ sơ, rồi nhấp \"{{pages/s3/tabLayout:tooltip.connect}}\" để xem danh sách bucket",
+      "ja": "プロファイルを選び、「{{pages/s3/tabLayout:tooltip.connect}}」をクリックしてバケット一覧を表示します",
+      "zh-CN": "选择配置文件，然后点击“{{pages/s3/tabLayout:tooltip.connect}}”列出存储桶",
+      "zh-TW": "選取設定檔，然後按一下「{{pages/s3/tabLayout:tooltip.connect}}」列出儲存貯體",
+      "ru": "Выберите профиль и нажмите «{{pages/s3/tabLayout:tooltip.connect}}», чтобы увидеть бакеты",
+      "de": "Profil wählen, dann „{{pages/s3/tabLayout:tooltip.connect}}“ anklicken, um die Buckets aufzulisten"
     }
   },
   "07-bucket-search": {
@@ -186,13 +186,13 @@
   },
   "17-delete-confirm": {
     "confirm": {
-      "en": "Click \"{{components/modals/deleteConfirmModal:delete}}\" to confirm the deletion",
-      "vi": "Nhấp \"{{components/modals/deleteConfirmModal:delete}}\" để xác nhận xóa",
-      "ja": "「{{components/modals/deleteConfirmModal:delete}}」をクリックして削除を確定します",
-      "zh-CN": "点击“{{components/modals/deleteConfirmModal:delete}}”确认删除",
-      "zh-TW": "按一下「{{components/modals/deleteConfirmModal:delete}}」確認刪除",
-      "ru": "Нажмите «{{components/modals/deleteConfirmModal:delete}}», чтобы подтвердить удаление",
-      "de": "„{{components/modals/deleteConfirmModal:delete}}“ anklicken, um das Löschen zu bestätigen"
+      "en": "Click \"{{pages/s3/modals/deleteConfirmModal:delete}}\" to confirm the deletion",
+      "vi": "Nhấp \"{{pages/s3/modals/deleteConfirmModal:delete}}\" để xác nhận xóa",
+      "ja": "「{{pages/s3/modals/deleteConfirmModal:delete}}」をクリックして削除を確定します",
+      "zh-CN": "点击“{{pages/s3/modals/deleteConfirmModal:delete}}”确认删除",
+      "zh-TW": "按一下「{{pages/s3/modals/deleteConfirmModal:delete}}」確認刪除",
+      "ru": "Нажмите «{{pages/s3/modals/deleteConfirmModal:delete}}», чтобы подтвердить удаление",
+      "de": "„{{pages/s3/modals/deleteConfirmModal:delete}}“ anklicken, um das Löschen zu bestätigen"
     }
   },
   "18-profile-delete-confirm": {
@@ -252,57 +252,57 @@
   },
   "24-auth-assume-role": {
     "type": {
-      "en": "Choose the {{components/modals/connectModal:form.label.authType}}, then fill in its fields below",
+      "en": "Choose the {{pages/s3/modals/connectModal:form.label.authType}}, then fill in its fields below",
       "vi": "Chọn phương thức xác thực, rồi điền các trường bên dưới",
       "ja": "認証方式を選び、下の項目を入力します",
       "zh-CN": "选择身份验证方式，然后填写下方字段",
       "zh-TW": "選取驗證方式，然後填寫下方欄位",
       "ru": "Выберите способ аутентификации и заполните поля ниже",
-      "de": "{{components/modals/connectModal:form.label.authType}} wählen, dann die Felder darunter ausfüllen"
+      "de": "{{pages/s3/modals/connectModal:form.label.authType}} wählen, dann die Felder darunter ausfüllen"
     }
   },
   "25-auth-minio-sts": {
     "type": {
-      "en": "Choose the {{components/modals/connectModal:form.label.authType}}, then fill in its fields below",
+      "en": "Choose the {{pages/s3/modals/connectModal:form.label.authType}}, then fill in its fields below",
       "vi": "Chọn phương thức xác thực, rồi điền các trường bên dưới",
       "ja": "認証方式を選び、下の項目を入力します",
       "zh-CN": "选择身份验证方式，然后填写下方字段",
       "zh-TW": "選取驗證方式，然後填寫下方欄位",
       "ru": "Выберите способ аутентификации и заполните поля ниже",
-      "de": "{{components/modals/connectModal:form.label.authType}} wählen, dann die Felder darunter ausfüllen"
+      "de": "{{pages/s3/modals/connectModal:form.label.authType}} wählen, dann die Felder darunter ausfüllen"
     }
   },
   "26-auth-ldap": {
     "type": {
-      "en": "Choose the {{components/modals/connectModal:form.label.authType}}, then fill in its fields below",
+      "en": "Choose the {{pages/s3/modals/connectModal:form.label.authType}}, then fill in its fields below",
       "vi": "Chọn phương thức xác thực, rồi điền các trường bên dưới",
       "ja": "認証方式を選び、下の項目を入力します",
       "zh-CN": "选择身份验证方式，然后填写下方字段",
       "zh-TW": "選取驗證方式，然後填寫下方欄位",
       "ru": "Выберите способ аутентификации и заполните поля ниже",
-      "de": "{{components/modals/connectModal:form.label.authType}} wählen, dann die Felder darunter ausfüllen"
+      "de": "{{pages/s3/modals/connectModal:form.label.authType}} wählen, dann die Felder darunter ausfüllen"
     }
   },
   "27-auth-oidc": {
     "type": {
-      "en": "Choose the {{components/modals/connectModal:form.label.authType}}, then fill in its fields below",
+      "en": "Choose the {{pages/s3/modals/connectModal:form.label.authType}}, then fill in its fields below",
       "vi": "Chọn phương thức xác thực, rồi điền các trường bên dưới",
       "ja": "認証方式を選び、下の項目を入力します",
       "zh-CN": "选择身份验证方式，然后填写下方字段",
       "zh-TW": "選取驗證方式，然後填寫下方欄位",
       "ru": "Выберите способ аутентификации и заполните поля ниже",
-      "de": "{{components/modals/connectModal:form.label.authType}} wählen, dann die Felder darunter ausfüllen"
+      "de": "{{pages/s3/modals/connectModal:form.label.authType}} wählen, dann die Felder darunter ausfüllen"
     }
   },
   "28-auth-certificate": {
     "type": {
-      "en": "Choose the {{components/modals/connectModal:form.label.authType}}, then fill in its fields below",
+      "en": "Choose the {{pages/s3/modals/connectModal:form.label.authType}}, then fill in its fields below",
       "vi": "Chọn phương thức xác thực, rồi điền các trường bên dưới",
       "ja": "認証方式を選び、下の項目を入力します",
       "zh-CN": "选择身份验证方式，然后填写下方字段",
       "zh-TW": "選取驗證方式，然後填寫下方欄位",
       "ru": "Выберите способ аутентификации и заполните поля ниже",
-      "de": "{{components/modals/connectModal:form.label.authType}} wählen, dann die Felder darunter ausfüllen"
+      "de": "{{pages/s3/modals/connectModal:form.label.authType}} wählen, dann die Felder darunter ausfüllen"
     }
   },
   "29-bucket-menu": {
@@ -404,24 +404,24 @@
   },
   "37-profile-export-menu": {
     "menu": {
-      "en": "Right-click the profile, then choose \"{{components/layouts/navbar/connectionProfiles:contextMenu.export}}\"",
-      "vi": "Bấm chuột phải vào hồ sơ, rồi chọn \"{{components/layouts/navbar/connectionProfiles:contextMenu.export}}\"",
-      "ja": "プロファイルを右クリックし、「{{components/layouts/navbar/connectionProfiles:contextMenu.export}}」を選びます",
-      "zh-CN": "右键点击配置文件，然后选择“{{components/layouts/navbar/connectionProfiles:contextMenu.export}}”",
-      "zh-TW": "在設定檔上按一下滑鼠右鍵，然後選取「{{components/layouts/navbar/connectionProfiles:contextMenu.export}}」",
-      "ru": "Щёлкните профиль правой кнопкой мыши и выберите «{{components/layouts/navbar/connectionProfiles:contextMenu.export}}»",
-      "de": "Rechtsklicken Sie auf das Profil und wählen Sie „{{components/layouts/navbar/connectionProfiles:contextMenu.export}}“"
+      "en": "Right-click the profile, then choose \"{{pages/s3/connectionProfiles:contextMenu.export}}\"",
+      "vi": "Bấm chuột phải vào hồ sơ, rồi chọn \"{{pages/s3/connectionProfiles:contextMenu.export}}\"",
+      "ja": "プロファイルを右クリックし、「{{pages/s3/connectionProfiles:contextMenu.export}}」を選びます",
+      "zh-CN": "右键点击配置文件，然后选择“{{pages/s3/connectionProfiles:contextMenu.export}}”",
+      "zh-TW": "在設定檔上按一下滑鼠右鍵，然後選取「{{pages/s3/connectionProfiles:contextMenu.export}}」",
+      "ru": "Щёлкните профиль правой кнопкой мыши и выберите «{{pages/s3/connectionProfiles:contextMenu.export}}»",
+      "de": "Rechtsklicken Sie auf das Profil und wählen Sie „{{pages/s3/connectionProfiles:contextMenu.export}}“"
     }
   },
   "38-profile-export-modal": {
     "secret": {
-      "en": "Tick \"{{components/modals/exportProfileModal:label.includeSecret}}\" to export the saved secrets, encrypted with a password",
-      "vi": "Chọn \"{{components/modals/exportProfileModal:label.includeSecret}}\" để xuất cả secret đã lưu, được mã hoá bằng mật khẩu",
-      "ja": "「{{components/modals/exportProfileModal:label.includeSecret}}」をオンにすると、保存済みのシークレットをパスワードで暗号化してエクスポートします",
-      "zh-CN": "勾选“{{components/modals/exportProfileModal:label.includeSecret}}”可导出已保存的密钥，并用密码加密",
-      "zh-TW": "勾選「{{components/modals/exportProfileModal:label.includeSecret}}」可匯出已儲存的密鑰，並以密碼加密",
-      "ru": "Включите «{{components/modals/exportProfileModal:label.includeSecret}}», чтобы экспортировать сохранённые секреты, зашифрованные паролем",
-      "de": "Aktivieren Sie „{{components/modals/exportProfileModal:label.includeSecret}}“, um die gespeicherten Geheimnisse mit einem Passwort verschlüsselt zu exportieren"
+      "en": "Tick \"{{pages/s3/modals/exportProfileModal:label.includeSecret}}\" to export the saved secrets, encrypted with a password",
+      "vi": "Chọn \"{{pages/s3/modals/exportProfileModal:label.includeSecret}}\" để xuất cả secret đã lưu, được mã hoá bằng mật khẩu",
+      "ja": "「{{pages/s3/modals/exportProfileModal:label.includeSecret}}」をオンにすると、保存済みのシークレットをパスワードで暗号化してエクスポートします",
+      "zh-CN": "勾选“{{pages/s3/modals/exportProfileModal:label.includeSecret}}”可导出已保存的密钥，并用密码加密",
+      "zh-TW": "勾選「{{pages/s3/modals/exportProfileModal:label.includeSecret}}」可匯出已儲存的密鑰，並以密碼加密",
+      "ru": "Включите «{{pages/s3/modals/exportProfileModal:label.includeSecret}}», чтобы экспортировать сохранённые секреты, зашифрованные паролем",
+      "de": "Aktivieren Sie „{{pages/s3/modals/exportProfileModal:label.includeSecret}}“, um die gespeicherten Geheimnisse mit einem Passwort verschlüsselt zu exportieren"
     },
     "password": {
       "en": "Enter a password of at least 8 characters, then type it again",

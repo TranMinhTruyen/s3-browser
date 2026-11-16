@@ -10,5 +10,6 @@
   "V000009": "{0} darf nicht mit einem reservierten Präfix beginnen",
   "V000010": "{0} darf nicht mit einem reservierten Suffix enden",
   "V000011": "{0} stimmt nicht überein",
-  "V000012": "{0} muss mindestens {1} Zeichen lang sein"
+  "V000012": "{0} muss mindestens {1} Zeichen lang sein",
+  "V000013": "{0} existiert bereits"
 }

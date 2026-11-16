@@ -1,0 +1,19 @@
+{
+  "title": {
+    "defaultTabName": "新設定檔"
+  },
+  "tooltip": {
+    "connect": "連線",
+    "refresh": "重新整理{target}",
+    "search": "搜尋",
+    "clearSearch": "清除搜尋",
+    "upload": "上傳檔案",
+    "createBucket": "建立儲存貯體"
+  },
+  "search": {
+    "placeholderProfile": "搜尋設定檔",
+    "emptyProfile": "找不到設定檔",
+    "placeholderObject": "依金鑰搜尋",
+    "placeholderBucket": "依名稱搜尋"
+  }
+}

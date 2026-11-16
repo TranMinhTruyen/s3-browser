@@ -1,4 +1,4 @@
-import type { BucketItemLabels } from '@/pages/tab/bucket/BucketItem';
+import type { BucketItemLabels } from '@/pages/s3/bucket/BucketItem';
 
 /** English texts of `bucket` / `page` (keyPrefix of the list), as BucketListView passes them to rows. */
 export const BUCKET_ITEM_LABELS: BucketItemLabels = {

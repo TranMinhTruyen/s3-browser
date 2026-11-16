@@ -7,6 +7,20 @@ Mọi thay đổi đáng chú ý của dự án được ghi trong file này.
 
 ## [Chưa phát hành]
 
+## [1.1.0-beta.18] - 2026-11-16
+
+### Thêm mới
+
+- Chế độ SQL (bản xem trước giao diện): công tắc **S3 / SQL** mới trên thanh tiêu đề chuyển toàn bộ ứng dụng giữa trình duyệt S3 và không gian làm việc SQL có cùng bố cục, danh sách hồ sơ và tab. Khi chuyển, trạng thái của cả hai chế độ được giữ nguyên. Chưa có backend cơ sở dữ liệu nên hồ sơ chỉ lưu trong bộ nhớ (có sẵn vài hồ sơ mẫu), và Kết nối, Nhập, Xuất, Chạy chỉ hiện một thông báo.
+- Tạo và sửa hồ sơ cơ sở dữ liệu (PostgreSQL và SQLite) trong hộp thoại giống hộp thoại kết nối S3.
+- Tab SQL với trình soạn mã: tô màu cú pháp, số dòng, tự động hoàn thành từ khoá SQL cùng bảng và cột mẫu (Ctrl+Space), mỗi tab có hồ sơ riêng. Trình soạn theo giao diện sáng/tối và cài đặt phông chữ.
+- **Ctrl+Q** định dạng SQL (toàn bộ văn bản hoặc chỉ phần đang chọn). **Ctrl+F** mở hộp Tìm và thay thế với các tuỳ chọn Phân biệt chữ hoa chữ thường, Khớp toàn bộ từ và biểu thức chính quy, cùng Tìm, Thay thế và Thay thế tất cả. **Ctrl+E** và nút Chạy SQL hiện câu SQL sẽ chạy (phần đang chọn, hoặc toàn bộ).
+- Cỡ giao diện trong Cài đặt: chọn nhỏ, vừa hoặc lớn bằng thanh trượt; toàn bộ ứng dụng, kể cả cửa sổ Downloader và Uploader, đổi cỡ cùng lúc và lựa chọn được lưu cùng các cài đặt khác.
+
+### Vấn đề đã biết
+
+- Bản dịch của chế độ SQL (tiếng Việt, Nhật, Trung giản thể và phồn thể, Nga, Đức) chưa được người bản ngữ duyệt.
+
 ## [1.0.1] - 2026-11-10
 
 ### Thay đổi

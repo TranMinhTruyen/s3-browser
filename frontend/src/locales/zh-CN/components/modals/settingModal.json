@@ -1,6 +1,7 @@
 {
   "title": "设置",
   "label": {
+    "size": "界面大小",
     "theme": "主题",
     "font": "字体",
     "language": "语言",
@@ -9,6 +10,7 @@
     "betaUpdate": "接收测试版 (预发布版本)"
   },
   "option": {
+    "size": { "small": "小", "medium": "中", "large": "大" },
     "theme": {
       "light": "浅色",
       "dark": "深色",

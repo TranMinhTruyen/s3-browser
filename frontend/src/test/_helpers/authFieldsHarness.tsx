@@ -5,7 +5,7 @@ import {
   type ConnectionInfo,
   getDefaultAuthConfig,
   getDefaultConnectionInfo,
-} from '@/components/modals/connect/connectSchema';
+} from '@/pages/s3/modals/connect/connectSchema';
 
 export type Patch = Partial<Omit<ConnectionInfo, 'authConfig'>> & {
   authConfig?: Partial<ConnectionInfo['authConfig']>;

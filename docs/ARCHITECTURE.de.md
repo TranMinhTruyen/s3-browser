@@ -27,7 +27,7 @@ s3-browser
 ├── models/                 Ein-/Ausgabemodelle + alias.go
 ├── frontend/
 │   ├── bindings/           GENERIERTE Wails-Bindings (nicht bearbeiten)
-│   └── src/                common, components, pages (pages/tab), locales, test
+│   └── src/                common, components, pages (pages/s3, pages/sql), locales, test
 ├── build/                  Paketierung je Plattform (Windows NSIS, portable, ...)
 └── docs/                   diese Dokumentation + PDF-Werkzeuge
 ```
@@ -187,9 +187,9 @@ Große Listen (Objekte, Buckets, Uploader, Verlauf, Dateilisten) werden mit `@ta
 
 ### 3.7 Layout und Tabs
 
-`App.tsx` -> `MainLayout` (Navigationsleiste, Uploader-/Downloader-Fenster) -> `RouterItem` -> `TabPage` (lazy, `pages/tab/TabPage.tsx`). `TabPage` enthält die Tab-Leiste (`SortableTab`, Drag-and-drop mit dnd-kit, Umsortieren per Tastatur mit Strg+Umschalt+Links/Rechts) und rendert `TabDetail`, das `pages/tab/bucket` (`BucketListView`, `BucketItem`) oder `pages/tab/object` (`ObjectListView`, `ObjectItem`) zeigt. Gemeinsame Teile liegen in `pages/tab/components` (`BucketDetailDrawer`, `ObjectDetailDrawer`, `TabActionBar`, `TabBreadcrumb`). Der Zustand liegt in `common/stores` (`profileStore`, `tabListStore`, `uploaderStore`, `downloaderStore`, `masterDataStore`, `settingStore`, `updateStore`).
+`App.tsx` -> `MainLayout` (Moduswechsel, Uploader-/Downloader-Fenster) -> `S3Workspace` oder `SqlWorkspace` (lazy in `MainLayout`, beim ersten Besuch des Modus geladen; jeder hat eigene Navigationsleiste und Tab-Seite) -> `S3TabPage` (statisch von `S3Workspace` importiert, `pages/s3/S3TabPage.tsx`). `S3TabPage` enthält die Tab-Leiste (`TabStrip` und `SortableTab` in `components/tabs`, Drag-and-drop mit dnd-kit, Umsortieren per Tastatur mit Strg+Umschalt+Links/Rechts) und rendert `TabDetail`, das `pages/s3/bucket` (`BucketListView`, `BucketItem`) oder `pages/s3/object` (`ObjectListView`, `ObjectItem`) zeigt. Gemeinsame Teile liegen in `pages/s3/components` (`BucketDetailDrawer`, `ObjectDetailDrawer`, `TabActionBar`, `TabBreadcrumb`). Jeder Modus hat einen eigenen Ordner `pages/<mode>` (`s3`, `sql`) mit Unterordnern wie `stores`, `hooks`, `utils`, `modals`, `navbar`, `components` und `transfer`. Der S3-Zustand liegt in `pages/s3/stores` (`profileStore`, `tabListStore`, `uploaderStore`, `downloaderStore`, `masterDataStore`); app-weiter Zustand liegt in `common/stores` (`settingStore`, `updateStore`).
 
-**Gemerkte Tabs**: `useTabPersistence` (in `App.tsx` aufgerufen) speichert Reihenfolge, aktiven Tab und Profil jedes Tabs über `SaveTabState` in `tabs.json`, 500 ms nachdem sie sich nicht mehr ändern, sowie bei `pagehide`. Beim Start lädt `restoreTabsFromDisk` (`common/utils/tabPersistence.ts`) sie mit `GetTabState`. Schlägt das Laden fehl, ist das Speichern für die Sitzung deaktiviert, damit `tabs.json` nie überschrieben wird. Ein Tab, dessen Profil gelöscht wurde, behält seinen Platz, verliert aber das Profil (`normalizeTabProfiles`).
+**Gemerkte Tabs**: `useTabPersistence` (in `App.tsx` aufgerufen) speichert Reihenfolge, aktiven Tab und Profil jedes Tabs über `SaveTabState` in `tabs.json`, 500 ms nachdem sie sich nicht mehr ändern, sowie bei `pagehide`. Beim Start lädt `restoreTabsFromDisk` (`pages/s3/utils/tabPersistence.ts`) sie mit `GetTabState`. Schlägt das Laden fehl, ist das Speichern für die Sitzung deaktiviert, damit `tabs.json` nie überschrieben wird. Ein Tab, dessen Profil gelöscht wurde, behält seinen Platz, verliert aber das Profil (`normalizeTabProfiles`).
 
 ### 3.8 Einstellungen, Design und Updates
 

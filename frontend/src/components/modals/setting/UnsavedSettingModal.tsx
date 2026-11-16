@@ -34,8 +34,8 @@ export default createMantineModal<ModalProps, UnsavedSettingChoice>(
         <Modal.Content>
           <Modal.Header
             pos="relative"
-            p="8px"
-            mih="0px"
+            p="0.5rem"
+            mih="0"
             style={{ justifyContent: 'flex-end', backgroundColor: WARNING_BG_COLOR }}
           >
             <Group
@@ -52,14 +52,14 @@ export default createMantineModal<ModalProps, UnsavedSettingChoice>(
 
           <Divider />
 
-          <Modal.Body p="8px">
+          <Modal.Body p="0.5rem">
             <Text ta="center">{t('unsaved.message')}</Text>
           </Modal.Body>
 
           <Divider />
 
           {/* Back on the left (like Cancel), actions on the right. */}
-          <Group p="8px" justify="space-between" wrap="nowrap">
+          <Group p="0.5rem" justify="space-between" wrap="nowrap">
             <Button color="red" onClick={onClickBack}>
               {t('unsaved.button.back')}
             </Button>

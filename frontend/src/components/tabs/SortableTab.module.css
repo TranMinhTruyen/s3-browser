@@ -1,0 +1,45 @@
+/*
+ * Rounded pill tabs with a small gap around them: inactive tabs have a default border so they stand out,
+ * hover is a soft tint, the active tab uses the primary "light" variant like buttons.
+ * Scoped under .wrapper to outrank Mantine's outline-variant rules. Shared by S3 and SQL tabs.
+ */
+.wrapper .tab {
+  /* No vertical margin (the tab page spaces the strip) and none left of the first tab: lines up with the tab detail. */
+  margin: 0 0.125rem;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  color: var(--mantine-color-text);
+  transition: background-color 150ms ease;
+}
+
+.wrapper:first-child .tab {
+  margin-left: 0;
+}
+
+/* Mantine's 1px corner pieces of the outline active tab. */
+.wrapper .tab::before,
+.wrapper .tab::after {
+  display: none;
+}
+
+.wrapper .tab:not([data-active]):hover {
+  background-color: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-5));
+}
+
+/*
+ * Close button: at the 14/18px root the rem sizes are fractional px and the icon looks off-center. Round the box and
+ * icon to even px (see ActionIcon.module.css). Do not pass size/iconSize to CloseButton: Mantine would write
+ * inline --cb-size/--cb-icon-size that beat any class. Doubled class beats Mantine's single-class rule.
+ * Box/icon: 22/16px at 16px root, 20/14px at 14px, 24/18px at 18px; the gap around the icon is always 3px.
+ */
+.close.close {
+  --cb-size: round(nearest, 1.375rem, 2px);
+  --cb-icon-size: round(nearest, 1rem, 2px);
+}
+
+/* Same 1px border width as inactive tabs so switching tabs never shifts the layout. */
+.wrapper .tab[data-active] {
+  border-color: transparent;
+  background-color: var(--mantine-primary-color-light);
+  color: var(--mantine-primary-color-light-color);
+}

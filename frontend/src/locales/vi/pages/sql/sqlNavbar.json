@@ -1,0 +1,28 @@
+{
+  "contextMenu": {
+    "connect": "Kết nối",
+    "disconnect": "Ngắt kết nối",
+    "edit": "Chỉnh sửa",
+    "export": "Xuất",
+    "delete": "Xóa"
+  },
+  "tooltip": {
+    "connect": "Kết nối",
+    "createProfile": "Tạo hồ sơ cơ sở dữ liệu",
+    "importProfile": "Nhập hồ sơ cơ sở dữ liệu",
+    "refresh": "Làm mới danh sách hồ sơ cơ sở dữ liệu"
+  },
+  "profile": {
+    "empty": "Chưa có hồ sơ cơ sở dữ liệu. Dùng các nút phía trên để tạo mới."
+  },
+  "dbType": {
+    "postgresql": "PostgreSQL",
+    "sqlite": "SQLite"
+  },
+  "toast": {
+    "noBackend": "Tính năng này cần backend cơ sở dữ liệu, hiện chưa có.",
+    "connected": "Đã kết nối {{name}}",
+    "disconnected": "Đã ngắt kết nối {{name}}",
+    "deleted": "Đã xóa {{name}}"
+  }
+}

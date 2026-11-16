@@ -1,32 +1,27 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { GetAllConnectionProfile } from '@wails/S3Browser/internal/handlers/profilehandler';
 import { StrictMode } from 'react';
-import { Outlet } from 'react-router-dom';
 import { toast } from 'sonner';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App';
-import { useCredentialExpiring } from '@/common/hooks/useCredentialExpiring';
-import { useMasterDataStore } from '@/common/stores/masterDataStore';
-import { useProfileStore } from '@/common/stores/profileStore';
-import { useTabListStore } from '@/common/stores/tabListStore';
-import { normalizeTabProfiles } from '@/common/utils/tabPersistence';
 import i18n from '@/locales/i18n';
+import { useCredentialExpiring } from '@/pages/s3/hooks/useCredentialExpiring';
+import { useMasterDataStore } from '@/pages/s3/stores/masterDataStore';
+import { useProfileStore } from '@/pages/s3/stores/profileStore';
+import { useTabListStore } from '@/pages/s3/stores/tabListStore';
+import { normalizeTabProfiles } from '@/pages/s3/utils/tabPersistence';
 
-// The routes are a plain array that tests can extend, to check each route is rendered under its own path.
-const h = vi.hoisted(() => ({ routes: [] as { path: string; prefix: string; page: unknown }[] }));
-
-vi.mock('@/components/layouts/MainLayout', () => ({
-  default: () => (
-    <div>
-      main layout
-      <Outlet />
-    </div>
-  ),
-}));
+vi.mock('@/components/layouts/MainLayout', () => ({ default: () => <div>main layout</div> }));
 vi.mock('@/components/layouts/AppUpdateToast', () => ({ default: () => <div>update toast</div> }));
-vi.mock('@/common/hooks/useCredentialExpiring', () => ({ useCredentialExpiring: vi.fn() }));
-vi.mock('@/components/router/RouterItem', () => ({ default: h.routes }));
-vi.mock('sonner', () => ({ Toaster: () => <div>toaster</div>, toast: { error: vi.fn(), warning: vi.fn() } }));
+vi.mock('@/pages/s3/hooks/useCredentialExpiring', () => ({ useCredentialExpiring: vi.fn() }));
+const toaster = vi.hoisted(() => ({ props: undefined as Record<string, unknown> | undefined }));
+vi.mock('sonner', () => ({
+  Toaster: (props: Record<string, unknown>) => {
+    toaster.props = props;
+    return <div>toaster</div>;
+  },
+  toast: { error: vi.fn(), warning: vi.fn() },
+}));
 vi.mock('@wails/S3Browser/internal/handlers/profilehandler', () => ({ GetAllConnectionProfile: vi.fn() }));
 vi.mock('@wails/S3Browser/internal/handlers/settinghandler', () => ({ GetTabState: vi.fn(), SaveTabState: vi.fn() }));
 
@@ -52,30 +47,34 @@ describe('App', () => {
     useMasterDataStore.setState({ loadAll, reset });
     useProfileStore.getState().reset();
     useTabListStore.getState().reset();
-    h.routes.splice(0, h.routes.length, { path: '/', prefix: '', page: <div>root page</div> });
     vi.mocked(GetAllConnectionProfile).mockResolvedValue(output({}) as never);
   });
 
-  afterEach(() => {
-    window.history.pushState({}, '', '/');
-  });
-
   describe('layout', () => {
-    it('renders the main layout with the root route page and the toaster', async () => {
+    it('renders the main layout directly and the toaster', async () => {
       render(<App />);
       expect(await screen.findByText(/main layout/)).toBeInTheDocument();
-      expect(await screen.findByText('root page')).toBeInTheDocument();
       expect(screen.getByText('toaster')).toBeInTheDocument();
     });
 
-    it('renders the page of each route under its own path', async () => {
-      h.routes.push({ path: '/other', prefix: '', page: <div>other page</div> });
-      window.history.pushState({}, '', '/other');
-
+    it('keeps the toaster position, duration and look', () => {
       render(<App />);
 
-      expect(await screen.findByText('other page')).toBeInTheDocument();
-      expect(screen.queryByText('root page')).not.toBeInTheDocument();
+      expect(toaster.props).toMatchObject({
+        position: 'top-center',
+        richColors: true,
+        closeButton: true,
+        duration: 10000,
+      });
+    });
+
+    it('sizes the toasts in rem so they follow the interface size', () => {
+      render(<App />);
+
+      expect(toaster.props?.style).toEqual({ '--width': '22.25rem' });
+      expect(toaster.props?.toastOptions).toEqual({
+        style: { fontSize: 'var(--mantine-font-size-sm)', padding: '1rem' },
+      });
     });
   });
 

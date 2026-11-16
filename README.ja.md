@@ -112,7 +112,7 @@ bun run --cwd docs build:pdf
 main.go            Wails アプリのエントリーポイント、サービス登録
 internal/          Go バックエンド: handlers、modules (bucket, profile, master, global, setting, update)、pkg (db, logger, portable など)
 models/            フロントエンドと共有する入出力モデル
-frontend/          React 19 + TypeScript の UI (src/pages/tab にバケットとオブジェクトのビューを持つタブページ、bindings は Wails が生成)
+frontend/          React 19 + TypeScript の UI (src/pages/s3 に S3 のビュー (バケットとオブジェクト)、src/pages/sql に SQL のビュー、bindings は Wails が生成)
 build/             Wails のビルド資産とプラットフォーム別 Taskfile (windows)
 docs/              アーキテクチャ文書、ユーザーガイド、PDF とスクリーンショットの生成ツール
 sprints/           スプリントごとの要件と計画
