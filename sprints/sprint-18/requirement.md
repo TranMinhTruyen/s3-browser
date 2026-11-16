@@ -92,17 +92,22 @@ Thêm chế độ **SQL** vào app với giao diện và thao tác **giống ch�
   - [ ] SQL lỗi cú pháp (sql-formatter ném lỗi): toast lỗi, nội dung giữ nguyên.
   - [ ] Format là một bước undo (Ctrl+Z quay về trước khi format).
 
-### R8: Ctrl+F — hộp thoại Find / Replace
-- **Mô tả:** Ctrl+F (khi editor focus) mở dialog có ô **Find** và các nút **Find**, **Replace**, **Cancel**. Bấm **Replace** lần đầu thì hiện thêm ô nhập chuỗi thay thế; khi ô đó đã hiện thì có nút **Replace** (thay kết quả đang chọn rồi chọn kết quả kế tiếp) và **Replace all**.
+### R8: Ctrl+F — hộp Find / Replace
+> Người dùng chốt theo code (2026-11-16, sau PR #37): mô tả và tiêu chí dưới đây ghi đúng hành vi của `pages/sql/components/FindReplacePanel.tsx`, `pages/sql/utils/findReplace.ts` và phần Find trong `pages/sql/components/SqlTabDetail.tsx`, thay bản cũ (ô Replace chỉ hiện sau lần bấm Replace đầu, nút Cancel ở footer, không có tuỳ chọn tìm kiếm).
+- **Mô tả:** Ctrl+F (khi editor focus) mở hộp nổi **Find and replace** ở góc trên bên phải editor (không phải modal). Header có tiêu đề và nút đóng **X** (tooltip "Cancel"). Ô **Find** có 3 nút bật/tắt ở bên phải: **Match case** (phân biệt hoa/thường), **Match whole word** (nguyên từ), **Use regular expression** (regex). Ô **Replace with** **luôn hiện**. Dưới cùng là một hàng nút **Find**, **Replace**, **Replace all** căn phải; **không có footer với nút Cancel**.
 - **Nền tảng:** Cả hai
 - **Màn hình liên quan:** tab SQL
 - **Tiêu chí chấp nhận:**
-  - [ ] Dialog không chặn editor (vẫn nhìn thấy kết quả được chọn), đặt ở góc trên editor, thuộc riêng tab đang mở.
-  - [ ] Đang tô đen một đoạn khi nhấn Ctrl+F thì đoạn đó điền sẵn vào ô Find.
-  - [ ] Find: chọn và cuộn tới kết quả kế tiếp sau con trỏ, hết thì quay lại đầu; hiện số kết quả (ví dụ `2/5`); không có kết quả thì báo "không tìm thấy".
-  - [ ] Replace / Replace all thay đúng chuỗi, mỗi lần là một bước undo; Replace all báo số chỗ đã thay.
-  - [ ] Cancel hoặc Esc đóng dialog và trả focus về editor.
-  - [ ] Footer theo quy ước modal: Cancel (`color="red"`) bên trái, các nút hành động bên phải, `Group p="8px" justify="space-between" wrap="nowrap"`.
+  - [ ] Hộp không chặn editor (vẫn gõ được, vẫn nhìn thấy kết quả được chọn), thuộc riêng tab đang mở. Chữ trong ô Find, ô Replace và 3 tuỳ chọn được giữ khi đóng rồi mở lại hộp và khi đổi tab.
+  - [ ] Ctrl+F khi đang tô đen một đoạn **trên một dòng** thì đoạn đó điền vào ô Find (đang bật regex thì ký tự đặc biệt được escape); vùng chọn rỗng hoặc nhiều dòng thì giữ chữ cũ. Mỗi lần Ctrl+F (kể cả khi hộp đã mở) đều focus và bôi đen ô Find.
+  - [ ] Mặc định 3 tuỳ chọn đều tắt: không phân biệt hoa/thường, khớp cả trong từ, chữ hiểu đúng nghĩa đen. Bật regex: Replace / Replace all mở rộng `$1`, `$&`, `$$`; kết quả rỗng (ví dụ `a*`) bị bỏ qua; regex sai thì ô Find báo lỗi, hiện "Invalid regular expression", 3 nút hành động bị disable và ẩn bộ đếm.
+  - [ ] Ô Find rỗng thì 3 nút Find / Replace / Replace all bị disable.
+  - [ ] Find (nút **Find** hoặc Enter trong ô Find, kể cả Shift+Enter): chọn và cuộn tới kết quả kế tiếp sau vùng chọn, hết thì quay lại đầu. Không có "tìm ngược". Enter trong ô Replace không làm gì.
+  - [ ] Bộ đếm `i/n` chỉ hiện sau khi bấm Find / Replace / Replace all; không có kết quả thì hiện "No results". Gõ vào ô Find thì bộ đếm ẩn. Sửa nội dung editor khi bộ đếm đang hiện thì bộ đếm cập nhật sau khoảng 120 ms (vùng chọn không còn là một kết quả thì hiện `0/n`).
+  - [ ] Replace: vùng chọn đang đúng là một kết quả thì thay nó rồi chọn kết quả kế tiếp; chưa phải thì chỉ chọn kết quả kế tiếp (lần bấm đầu chỉ chọn). Replace all thay mọi kết quả. Mỗi lần bấm là một bước undo. Replace all luôn hiện toast số chỗ đã thay (kể cả 0).
+  - [ ] Nút X, hoặc Esc khi focus đang ở trong hộp, đóng hộp và trả focus về editor. Esc khi focus ở editor không đóng hộp.
+  - [ ] Ctrl+F khi focus ở trong hộp: chặn hộp tìm kiếm của WebView và focus lại ô Find.
+  - [ ] Ctrl/Cmd+E / Ctrl/Cmd+Q khi focus trong hộp Find: `preventDefault`, không chạy lệnh (Execute / Format) (người dùng chốt 2026-11-16; code ở PR #39).
 
 ### R9: Ctrl+E — thực thi SQL
 - **Mô tả:** Thực thi chưa có backend nên chỉ hiện toast.
@@ -159,5 +164,5 @@ Thêm chế độ **SQL** vào app với giao diện và thao tác **giống ch�
 - Hai tab SQL có được chọn cùng một profile không? Đề xuất: được (như S3), vì sau này mỗi tab dùng connection riêng (CLAUDE.md mục 8).
 - Mở chế độ SQL lần đầu có sẵn 1 tab trống không? Đề xuất: có, như S3.
 - Danh sách trường PostgreSQL/SQLite ở R3 là đề xuất; planner xác nhận với người dùng (ví dụ có cần schema mặc định, timeout, SSL cert).
-- Find có phân biệt hoa/thường không? Đề xuất: không phân biệt, chưa có tuỳ chọn.
+- Find có phân biệt hoa/thường không? Đề xuất: không phân biệt, chưa có tuỳ chọn. → Người dùng chốt theo code (2026-11-16): mặc định không phân biệt, có nút bật/tắt Match case, Match whole word và regex (xem R8).
 - Planner kiểm lại Ctrl+E/Ctrl+F có bị WebView2 hoặc Wails chặn trước khi tới JS không.
