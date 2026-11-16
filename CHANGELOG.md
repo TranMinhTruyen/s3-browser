@@ -7,6 +7,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.1.0-beta.18] - 2026-11-16
+
+### Added
+
+- SQL mode (interface preview): a new **S3 / SQL** switch in the title bar changes the whole app between the S3 browser and a SQL workspace with the same layout, profile list and tabs. Switching keeps the state of both modes. There is no database backend yet, so profiles are kept in memory only (a few sample profiles are included) and Connect, Import, Export and Execute only show a message.
+- Create and edit database profiles (PostgreSQL and SQLite) in a dialog that looks like the S3 connection dialog.
+- SQL tabs with a code editor: syntax highlighting, line numbers, auto-complete for SQL keywords and sample tables and columns (Ctrl+Space), and each tab has its own profile. The editor follows the light/dark theme and the font setting.
+- **Ctrl+Q** formats the SQL (the whole text, or only the selection). **Ctrl+F** opens a Find and replace box with Match case, Match whole word and regular expression options, Find, Replace and Replace all. **Ctrl+E** and the Execute button show the SQL that would run (the selection, or everything).
+- Interface size in Settings: choose small, medium or large with a slider; the whole app, including the Downloader and Uploader windows, scales at once and the choice is saved with the other settings.
+
+### Known issues
+
+- The SQL mode translations (Vietnamese, Japanese, Simplified and Traditional Chinese, Russian, German) have not been reviewed by native speakers.
+
 ## [1.0.1] - 2026-11-10
 
 ### Changed
