@@ -11,9 +11,10 @@ describe('appTheme', () => {
   });
 
   it('Badge uses the trimmed label class', () => {
+    expect(badgeClasses.root).toBeTruthy();
     expect(badgeClasses.label).toBeTruthy();
     const badge = appTheme.components?.Badge as { classNames: Record<string, string> };
-    expect(badge.classNames).toEqual({ label: badgeClasses.label });
+    expect(badge.classNames).toEqual({ root: badgeClasses.root, label: badgeClasses.label });
   });
 
   it.each(['Combobox', 'Select', 'MultiSelect', 'Autocomplete', 'TagsInput'])(

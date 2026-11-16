@@ -1,3 +1,8 @@
+.root {
+  /* Own compositing layer snaps the badge origin to whole pixels, so border and glyph rounding stay in step at fractional positions */
+  will-change: transform;
+}
+
 .label {
   /* Trim the line box to cap height so uppercase text centers exactly; symmetric padding keeps accents/descenders inside the label's overflow clip */
   text-box: trim-both cap alphabetic;

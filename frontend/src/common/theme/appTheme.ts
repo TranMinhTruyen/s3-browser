@@ -11,7 +11,7 @@ const dropdownClassNames = { dropdown: classes.dropdown, search: classes.search,
  */
 export const appTheme = createTheme({
   components: {
-    Badge: { classNames: { label: badgeClasses.label } },
+    Badge: { classNames: { root: badgeClasses.root, label: badgeClasses.label } },
     Combobox: { classNames: dropdownClassNames },
     Select: { classNames: dropdownClassNames },
     MultiSelect: { classNames: dropdownClassNames },
