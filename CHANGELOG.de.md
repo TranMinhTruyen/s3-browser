@@ -7,6 +7,20 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unveröffentlicht]
 
+## [1.1.0-beta.18] - 2026-11-16
+
+### Hinzugefügt
+
+- SQL-Modus (Vorschau der Oberfläche): Ein neuer Schalter **S3 / SQL** in der Titelleiste wechselt die gesamte App zwischen dem S3-Browser und einem SQL-Arbeitsbereich mit demselben Layout, derselben Profilliste und denselben Tabs. Beim Wechsel bleibt der Zustand beider Modi erhalten. Es gibt noch kein Datenbank-Backend, daher werden Profile nur im Arbeitsspeicher gehalten (einige Beispielprofile sind enthalten), und Verbinden, Importieren, Exportieren und Ausführen zeigen nur eine Meldung an.
+- Datenbankprofile (PostgreSQL und SQLite) lassen sich in einem Dialog erstellen und bearbeiten, der dem S3-Verbindungsdialog ähnelt.
+- SQL-Tabs mit Code-Editor: Syntaxhervorhebung, Zeilennummern, Autovervollständigung für SQL-Schlüsselwörter sowie Beispieltabellen und -spalten (Strg+Leertaste); jeder Tab hat ein eigenes Profil. Der Editor folgt dem hellen/dunklen Design und der Schrifteinstellung.
+- **Strg+Q** formatiert das SQL (den gesamten Text oder nur die Auswahl). **Strg+F** öffnet ein Feld zum Suchen und Ersetzen mit den Optionen Groß-/Kleinschreibung beachten, Nur ganze Wörter und Regulären Ausdruck verwenden sowie Suchen, Ersetzen und Alle ersetzen. **Strg+E** und die Schaltfläche SQL ausführen zeigen das SQL an, das ausgeführt würde (die Auswahl oder alles).
+- Oberflächengröße in den Einstellungen: Wählen Sie per Schieberegler klein, mittel oder groß; die gesamte App, einschließlich der Fenster Downloader und Uploader, wird auf einmal skaliert, und die Auswahl wird mit den übrigen Einstellungen gespeichert.
+
+### Bekannte Probleme
+
+- Die Übersetzungen des SQL-Modus (Vietnamesisch, Japanisch, vereinfachtes und traditionelles Chinesisch, Russisch, Deutsch) wurden nicht von Muttersprachlern geprüft.
+
 ## [1.0.1] - 2026-11-10
 
 ### Geändert
