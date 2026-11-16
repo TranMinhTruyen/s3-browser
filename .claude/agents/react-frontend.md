@@ -22,6 +22,7 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task (ví dụ `F1, F
    - Handler đặt tên `on` + sự kiện + đối tượng (ví dụ `onClickConnect`).
    - Danh sách lớn dùng `@tanstack/react-virtual`.
    - Dùng wrapper sẵn có trong `components/buttons|inputs|modals` thay vì gọi Mantine trực tiếp.
+   - Code ngay cho đúng cả 3 cỡ giao diện small/medium/large (mục **Kích thước viết bằng rem** của `CLAUDE.md`): kích thước bằng rem, căn giữa và chống tràn theo các cách đã có, không code cho medium rồi để lỗi ở small/large.
    - Không để warning/error trong console của React (thiếu `key`, setState sau unmount, controlled/uncontrolled, DOM lồng sai, prop lạ truyền xuống DOM, thiếu key i18n). Không để `console.log/warn/error` trong code production (theo mục **Console sạch** của `CLAUDE.md`).
 6. i18n: không hard-code chuỗi. Thêm key cho **cả 7 ngôn ngữ** (`en`, `vi`, `ja`, `zh-CN`, `zh-TW`, `ru`, `de`) với đúng tập key và placeholder như bản `en`, dịch thuật ngữ theo mục **i18n** của `CLAUDE.md`, và đăng ký namespace mới trong `resource.ts` của cả 7 ngôn ngữ.
 7. Bạn chạy **sau** `go-backend` và dùng bindings đã được sinh sẵn. Không sửa tay `frontend/bindings/**` (đã bị chặn ghi), không sửa file Go. Đọc mục "Wails bindings" trong kết quả của `go-backend` (bên gọi chuyển cho bạn) để biết binding nào đổi và chỗ frontend cần sửa. Nếu thiếu binding hoặc binding không khớp với plan, dừng và báo lại để `go-backend` sửa và sinh lại.
@@ -48,4 +49,5 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task (ví dụ `F1, F
 - **Function/hook/store action đã sửa** (để `react-tester` kiểm hồi quy).
 - **Test cũ cần cập nhật theo plan** (nếu có).
 - Kết quả tsc / oxlint / biome (nguyên văn lỗi nếu có).
+- **Cỡ giao diện**: đã kiểm small/medium/large thế nào (xem trên app hay đo Playwright ở root 14/16/18px), hoặc ghi "chưa xem tay".
 - **Cần hỏi người dùng**: các điểm chưa rõ (nếu có).

@@ -129,6 +129,8 @@ Checklist dưới đây là nơi cần nhìn, không phải danh sách phải đ
 
 **Tính nhất quán với `CLAUDE.md`**
 - Vi phạm bất kỳ quy ước nào trong `CLAUDE.md` (đặt tên handler `on…`, hàm không bọc `useCallback`, chuỗi hard-code, thiếu key ở 7 ngôn ngữ, thiếu re-export `alias.go`, sửa tay code sinh tự động, dùng tool format khác biome/oxlint...).
+- Kích thước viết bằng px thay vì rem (prop Mantine, CSS module, `style`, `size` icon lucide) ngoài các ngoại lệ ở mục "Kích thước viết bằng rem" của `CLAUDE.md`; px đo được truyền vào prop kích thước Mantine; hằng px của virtualizer không nhân `useUiScale()`.
+- Component mới hoặc đã sửa không được code sẵn cho cả 3 cỡ small/medium/large theo mục "Kích thước viết bằng rem" của `CLAUDE.md`: icon/chữ trong khung cố định có thể lệch tâm vì px lẻ mà không làm tròn hay dùng lại cách đã có, phần tử có thể tràn ngang, cắt chữ, modal cuộn ngang ở large; khi nghi ngờ thì đo bằng Playwright ở root 14/16/18px. Báo cáo của agent code không ghi đã kiểm 3 cỡ cũng là một phát hiện.
 - Cách đặt tên và cấu trúc khớp với code xung quanh.
 - Thay đổi có tạo ra quy ước mới hoặc làm lệch quy ước trong `CLAUDE.md` không. Nếu có, ghi mục **"Cần cập nhật CLAUDE.md"** để người dùng tự sửa (agent không được sửa file này).
 
