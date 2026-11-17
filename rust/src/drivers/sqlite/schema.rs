@@ -1,4 +1,8 @@
 //! Đọc schema SQLite cho cây đối tượng và màn hình cấu trúc table.
+//!
+//! Vị trí trong luồng: `actor` gọi `schema_tree`/`table_info`/`table_exists` khi nhận lệnh
+//! `schemaTree`, `tableInfo`, `tableRows`; dữ liệu lấy từ `sqlite_master` và các `pragma_*`
+//! rồi đóng vào kiểu của `protocol`.
 
 use super::actor::map_sqlx;
 use crate::protocol::{
@@ -13,12 +17,15 @@ use sqlx::sqlite::SqliteConnection;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::atomic::AtomicBool;
 
+/// Lỗi khi đọc schema: không thấy table, hoặc lỗi từ sqlx. `enum` là kiểu "một trong các biến thể".
 pub enum SchemaError {
     NotFound,
     Sqlx(sqlx::Error),
 }
 
 impl SchemaError {
+    /// Đổi sang `DbError` của protocol; `self` (không có `&`) nghĩa là hàm tiêu thụ chính giá trị này.
+    /// `cancel` để lỗi do bị huỷ thành `cancelled` thay vì `sqlError`.
     pub fn into_db(self, cancel: &AtomicBool) -> DbError {
         match self {
             Self::NotFound => DbError::new(TABLE_NOT_FOUND, "table does not exist"),
@@ -27,6 +34,7 @@ impl SchemaError {
     }
 }
 
+/// Cho phép dấu `?` tự đổi `sqlx::Error` thành `SchemaError` trong các hàm bên dưới.
 impl From<sqlx::Error> for SchemaError {
     fn from(e: sqlx::Error) -> Self {
         Self::Sqlx(e)
@@ -70,7 +78,8 @@ pub async fn schema_tree(conn: &mut SqliteConnection) -> Result<SchemaTreeResult
     })
 }
 
-/// DDL của table/view; `None` nếu không có.
+/// Tìm table/view `table` trong `schema`: trả `(type, ddl)` hoặc `None` nếu không có.
+/// `schema` được `quote_ident` vì không bind được tên schema bằng tham số `?`; tên table thì bind.
 async fn find_table(
     conn: &mut SqliteConnection,
     schema: &str,
@@ -87,6 +96,7 @@ async fn find_table(
         .await
 }
 
+/// `true` nếu table/view tồn tại (dùng trước `SELECT *` để báo `tableNotFound` rõ ràng).
 pub async fn table_exists(
     conn: &mut SqliteConnection,
     schema: &str,
@@ -95,6 +105,7 @@ pub async fn table_exists(
     Ok(find_table(conn, schema, table).await?.is_some())
 }
 
+/// Cấu trúc table/view: cột, index, khoá ngoại, ràng buộc và DDL. Lỗi `NotFound` nếu không có.
 pub async fn table_info(
     conn: &mut SqliteConnection,
     schema: &str,
@@ -170,6 +181,7 @@ pub async fn table_info(
     })
 }
 
+/// Danh sách index của table kèm các cột khoá của từng index.
 async fn read_indexes(
     conn: &mut SqliteConnection,
     schema: &str,
@@ -209,6 +221,7 @@ async fn read_indexes(
     Ok(out)
 }
 
+/// Danh sách khoá ngoại của table; nhiều cột cùng `id` gom thành một khoá.
 async fn read_foreign_keys(
     conn: &mut SqliteConnection,
     schema: &str,
@@ -246,11 +259,14 @@ async fn read_foreign_keys(
 }
 
 /// CHECK lấy từ DDL bằng `sqlparser`; không parse được thì trả rỗng (PK/UNIQUE vẫn lấy từ PRAGMA).
+/// `pub(crate)`: chỉ dùng được trong crate này.
 pub(crate) fn check_constraints(ddl: &str) -> Vec<ConstraintInfo> {
-    // Parser ngoài: chặn panic để không làm chết actor của connection.
+    // Parser ngoài: chặn panic để không làm chết actor của connection. `AssertUnwindSafe` báo compiler
+    // rằng closure này an toàn khi panic (ta bỏ kết quả nếu panic).
     let parsed = catch_unwind(AssertUnwindSafe(|| {
         Parser::parse_sql(&SQLiteDialect {}, ddl)
     }));
+    // Lớp ngoài: có panic hay không; lớp trong: parse thành công hay không.
     let Ok(Ok(statements)) = parsed else {
         return Vec::new();
     };
@@ -292,6 +308,7 @@ pub(crate) fn check_constraints(ddl: &str) -> Vec<ConstraintInfo> {
 mod tests {
     use super::check_constraints;
 
+    /// DDL hỏng hoặc không phải CREATE TABLE thì không có CHECK.
     #[test]
     fn broken_or_non_create_ddl_gives_empty() {
         for ddl in [
@@ -305,6 +322,7 @@ mod tests {
         }
     }
 
+    /// Lấy được CHECK mức cột và mức table, kèm tên constraint nếu có.
     #[test]
     fn column_and_table_checks_are_extracted() {
         let c = check_constraints(
@@ -324,6 +342,7 @@ mod tests {
         assert!(c[3].expression.as_deref().unwrap().contains("b < 100"));
     }
 
+    /// DDL hợp lệ nhưng không có CHECK thì rỗng.
     #[test]
     fn valid_ddl_without_check_is_empty() {
         assert!(

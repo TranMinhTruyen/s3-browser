@@ -149,6 +149,7 @@ Tất cả tool Go được khai báo trong `tool (...)` của `go.mod` (wails3,
 - Go load DLL **không dùng cgo** (`golang.org/x/sys/windows`, `CGO_ENABLED=0`), bằng đường dẫn tuyệt đối cạnh exe (`LOAD_LIBRARY_SEARCH_APPLICATION_DIR`). Lớp gọi DLL nằm trong `internal/modules/db`, do `go-backend` viết.
 - Luồng: React → `callIPC` → binding Go → `modules/db` → `s3b_call` (JSON) → Rust. Frontend không biết Rust tồn tại.
 - Phân lớp Rust: `ffi.rs` (chỉ hàm export) → `dispatch.rs` (theo `method`) → `drivers/<db>.rs`; kiểu JSON trong `protocol`.
+- Comment Rust viết bằng **tiếng Việt**, cho người mới học Rust: mỗi file mở đầu bằng `//!` nói file làm gì và nằm ở đâu trong luồng Go → `ffi` → `dispatch` → driver; mọi struct/enum/fn có `///`; khái niệm Rust (ownership/borrow, lifetime, `Arc`/`Mutex`, `Result`/`?`, trait, async/await, `unsafe` kèm `// SAFETY:`, `catch_unwind`) giải thích ngắn ở chỗ dùng đầu tiên trong file, so với Go khi giúp dễ hiểu. Comment nói "vì sao", không đọc lại từng dòng code.
 
 ### Hợp đồng FFI
 

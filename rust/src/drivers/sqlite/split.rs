@@ -3,8 +3,14 @@
 //! Việc tách câu thật do SQLite làm (prepare-tail, xem `raw::prepare_next`); hàm này chỉ để biết
 //! câu vừa prepare có phải câu cuối không mà không cần prepare câu sau (câu sau có thể phụ thuộc
 //! câu trước nên chưa prepare được).
+//!
+//! Vị trí trong luồng: `actor::execute` gọi `only_trivia` để biết còn câu nào không và
+//! `first_statement` để cắt câu lỗi hiển thị cho người dùng. Hai hàm duyệt từng byte (`&[u8]`),
+//! không cấp phát thêm; `&[u8]` là lát (slice) mượn một vùng byte, giống slice của Go.
 
 /// `true` nếu `rest` không còn câu lệnh nào.
+/// `match` bên dưới duyệt từng byte: nhảy qua khoảng trắng/`;`, qua comment `--` và `/* */`;
+/// gặp ký tự khác là còn câu lệnh.
 pub fn only_trivia(rest: &[u8]) -> bool {
     let mut i = 0;
     while i < rest.len() {
@@ -69,6 +75,7 @@ pub fn first_statement(rest: &[u8]) -> &[u8] {
 mod tests {
     use super::{MAX_ERROR_SQL, first_statement, only_trivia};
 
+    /// Chuỗi chỉ có khoảng trắng/comment/`;` thì không còn câu lệnh.
     #[test]
     fn trivia_only() {
         for s in [
@@ -87,6 +94,7 @@ mod tests {
         }
     }
 
+    /// Có ký tự câu lệnh thật (kể cả sau comment) thì còn câu lệnh.
     #[test]
     fn has_statement() {
         for s in [
@@ -102,16 +110,19 @@ mod tests {
         }
     }
 
+    /// Gọi `first_statement` rồi đổi lại thành `String` để dễ so sánh trong test.
     fn first(s: &str) -> String {
         String::from_utf8_lossy(first_statement(s.as_bytes())).into_owned()
     }
 
+    /// Cắt ngay sau `;` đầu tiên.
     #[test]
     fn first_statement_cuts_at_first_semicolon() {
         assert_eq!(first("SELEC 2; SELECT 3"), "SELEC 2;");
         assert_eq!(first(";x"), ";");
     }
 
+    /// `;` trong chuỗi/identifier được bọc không tính là hết câu.
     #[test]
     fn first_statement_ignores_semicolon_in_quotes_and_brackets() {
         assert_eq!(first("a 'x;y' b; c"), "a 'x;y' b;");
@@ -120,6 +131,7 @@ mod tests {
         assert_eq!(first("a [x;y] b; c"), "a [x;y] b;");
     }
 
+    /// `;` trong comment không tính là hết câu.
     #[test]
     fn first_statement_ignores_semicolon_in_comments() {
         assert_eq!(
@@ -133,6 +145,7 @@ mod tests {
         assert_eq!(first("a /* x;y */ b; c"), "a /* x;y */ b;");
     }
 
+    /// Không có `;` (hoặc chuỗi/comment không đóng) thì lấy hết.
     #[test]
     fn first_statement_without_semicolon_returns_all() {
         assert_eq!(first("SELEC 2"), "SELEC 2");
@@ -143,6 +156,7 @@ mod tests {
         assert_eq!(first("a -- x; b"), "a -- x; b");
     }
 
+    /// Kết quả không bao giờ dài quá `MAX_ERROR_SQL` byte.
     #[test]
     fn first_statement_caps_at_max_bytes() {
         let long = "a".repeat(MAX_ERROR_SQL + 100);
