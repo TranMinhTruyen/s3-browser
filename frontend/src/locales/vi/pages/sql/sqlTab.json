@@ -21,7 +21,7 @@
   "message": {
     "rowsAffected": "{{n}} dòng bị ảnh hưởng",
     "rowsReturned": "Trả về {{n}} dòng",
-    "elapsed": "{{ms}} ms",
+    "elapsed": "{{seconds}} s",
     "cancelled": "Đã huỷ thực thi."
   },
   "toast": {

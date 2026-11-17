@@ -21,7 +21,7 @@
   "message": {
     "rowsAffected": "{{n}} Zeile(n) betroffen",
     "rowsReturned": "{{n}} Zeile(n) zurückgegeben",
-    "elapsed": "{{ms}} ms",
+    "elapsed": "{{seconds}} s",
     "cancelled": "Ausführung abgebrochen."
   },
   "toast": {

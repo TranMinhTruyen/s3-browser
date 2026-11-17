@@ -1,5 +1,7 @@
 import { screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { act } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import i18n, { loadLanguage } from '@/locales/i18n';
 import SqlMessageList from '@/pages/sql/components/sqlResult/SqlMessageList';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 import { statement } from '@/test/_helpers/sqlStatement';
@@ -19,24 +21,46 @@ vi.mock('@tanstack/react-virtual', () => ({
 }));
 
 describe('SqlMessageList', () => {
+  afterEach(async () => {
+    await act(() => i18n.changeLanguage('en'));
+  });
+
+  it.each([
+    [12, '0.012 s'],
+    [1534, '1.534 s'],
+    [0, '0.000 s'],
+    [61000, '61.000 s'],
+  ])('shows %i ms as seconds with 3 decimals (%s)', (elapsedMs, text) => {
+    renderWithProviders(<SqlMessageList statements={[statement({ elapsedMs })]} cancelled={false} />);
+    expect(screen.getByText(`1 row(s) returned · ${text}`)).toBeInTheDocument();
+    expect(screen.queryByText(/ ms$/)).not.toBeInTheDocument();
+  });
+
+  it('formats the seconds with the decimal comma of the app language', async () => {
+    await loadLanguage('de');
+    await act(() => i18n.changeLanguage('de'));
+    renderWithProviders(<SqlMessageList statements={[statement({ elapsedMs: 1534 })]} cancelled={false} />);
+    expect(screen.getByText(/· 1,534 s$/)).toBeInTheDocument();
+  });
+
   it('shows the number of rows returned with the time of a SELECT', () => {
     const rows = [statement({ rows: [['1'], ['2']], elapsedMs: 7 })];
     renderWithProviders(<SqlMessageList statements={rows} cancelled={false} />);
     expect(screen.getByText('#1')).toBeInTheDocument();
     expect(screen.getByText('select 1')).toBeInTheDocument();
-    expect(screen.getByText('2 row(s) returned · 7 ms')).toBeInTheDocument();
+    expect(screen.getByText('2 row(s) returned · 0.007 s')).toBeInTheDocument();
   });
 
   it('adds a "+" when more rows can still be loaded', () => {
     renderWithProviders(<SqlMessageList statements={[statement({ cursorId: 4, done: false })]} cancelled={false} />);
-    expect(screen.getByText('1+ row(s) returned · 3 ms')).toBeInTheDocument();
+    expect(screen.getByText('1+ row(s) returned · 0.003 s')).toBeInTheDocument();
   });
 
   it('shows the rows affected by a statement that returns no rows', () => {
     const insert = statement({ sql: 'insert\n  into   t values (1)', kind: 'exec', rows: [], rowsAffected: 5 });
     renderWithProviders(<SqlMessageList statements={[insert]} cancelled={false} />);
     expect(screen.getByText('insert into t values (1)')).toBeInTheDocument();
-    expect(screen.getByText('5 row(s) affected · 3 ms')).toBeInTheDocument();
+    expect(screen.getByText('5 row(s) affected · 0.003 s')).toBeInTheDocument();
   });
 
   it('shows the error of a failed statement instead of its outcome', () => {

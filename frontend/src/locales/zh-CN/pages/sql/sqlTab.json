@@ -21,7 +21,7 @@
   "message": {
     "rowsAffected": "影响了 {{n}} 行",
     "rowsReturned": "返回了 {{n}} 行",
-    "elapsed": "{{ms}} ms",
+    "elapsed": "{{seconds}} s",
     "cancelled": "已取消执行。"
   },
   "toast": {

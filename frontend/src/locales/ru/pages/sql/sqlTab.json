@@ -21,7 +21,7 @@
   "message": {
     "rowsAffected": "Затронуто строк: {{n}}",
     "rowsReturned": "Возвращено строк: {{n}}",
-    "elapsed": "{{ms}} ms",
+    "elapsed": "{{seconds}} с",
     "cancelled": "Выполнение отменено."
   },
   "toast": {

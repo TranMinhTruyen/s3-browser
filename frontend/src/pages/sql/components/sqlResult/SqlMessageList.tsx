@@ -1,7 +1,7 @@
 import { Box, Group, Text } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import type { StatementResult } from '@wails/S3Browser/models';
-import { memo, useRef } from 'react';
+import { memo, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRemeasureOnScale, useUiScale } from '@/common/hooks/useUiScale';
 import TruncatedText from '@/components/display/TruncatedText';
@@ -19,7 +19,11 @@ type SqlMessageListProps = {
 
 /** Messages of a run: per statement its text, the outcome and the time; a failed statement shows the error. */
 function SqlMessageList({ statements, cancelled }: SqlMessageListProps) {
-  const { t } = useTranslation('sqlTab');
+  const { t, i18n } = useTranslation('sqlTab');
+  const secondsFormat = useMemo(
+    () => new Intl.NumberFormat(i18n.language, { minimumFractionDigits: 3, maximumFractionDigits: 3 }),
+    [i18n.language]
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   const scale = useUiScale();
 
@@ -76,7 +80,7 @@ function SqlMessageList({ statements, cancelled }: SqlMessageListProps) {
                               n: `${statement.rows.length}${canLoadMore(statement) ? '+' : ''}`,
                             })
                           : t('message.rowsAffected', { n: statement.rowsAffected })
-                      } · ${t('message.elapsed', { ms: statement.elapsedMs })}`}
+                      } · ${t('message.elapsed', { seconds: secondsFormat.format(statement.elapsedMs / 1000) })}`}
                     </Text>
                   )}
                 </>

@@ -21,7 +21,7 @@
   "message": {
     "rowsAffected": "{{n}} 行が影響を受けました",
     "rowsReturned": "{{n}} 行を返しました",
-    "elapsed": "{{ms}} ms",
+    "elapsed": "{{seconds}} s",
     "cancelled": "実行をキャンセルしました。"
   },
   "toast": {

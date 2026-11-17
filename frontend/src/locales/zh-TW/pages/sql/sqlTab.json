@@ -21,7 +21,7 @@
   "message": {
     "rowsAffected": "影響 {{n}} 筆資料",
     "rowsReturned": "傳回 {{n}} 筆資料",
-    "elapsed": "{{ms}} ms",
+    "elapsed": "{{seconds}} s",
     "cancelled": "已取消執行。"
   },
   "toast": {

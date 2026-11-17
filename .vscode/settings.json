@@ -37,6 +37,10 @@
   "[json]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
+  // Rust/bun installed after VS Code started are missing from its inherited PATH; tasks use this env too
+  "terminal.integrated.env.windows": {
+    "PATH": "${env:USERPROFILE}\\.cargo\\bin;${env:USERPROFILE}\\.bun\\bin;${env:PATH}"
+  },
   "terminal.integrated.defaultProfile.windows": "Git Bash",
   "terminal.integrated.profiles.windows": {
     "Git Bash": {

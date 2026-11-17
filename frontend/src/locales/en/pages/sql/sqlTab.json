@@ -21,7 +21,7 @@
   "message": {
     "rowsAffected": "{{n}} row(s) affected",
     "rowsReturned": "{{n}} row(s) returned",
-    "elapsed": "{{ms}} ms",
+    "elapsed": "{{seconds}} s",
     "cancelled": "Execution canceled."
   },
   "toast": {
