@@ -12,13 +12,18 @@ type Querier interface {
 	CreateDownloadHistory(ctx context.Context, arg CreateDownloadHistoryParams) (DownloadHistory, error)
 	CreateProfile(ctx context.Context, arg CreateProfileParams) (ConnectionProfile, error)
 	DeleteConnectionProfileById(ctx context.Context, id string) error
+	DeleteDbProfileById(ctx context.Context, id string) (int64, error)
+	InsertDbProfile(ctx context.Context, arg InsertDbProfileParams) (DbProfile, error)
 	SelectAllConnectionProfile(ctx context.Context) ([]ConnectionProfile, error)
+	SelectAllDbProfile(ctx context.Context) ([]DbProfile, error)
 	SelectAllDownloadHistory(ctx context.Context, arg SelectAllDownloadHistoryParams) ([]DownloadHistory, error)
 	SelectAllRegion(ctx context.Context) ([]SelectAllRegionRow, error)
 	SelectConnectionProfileById(ctx context.Context, id string) (ConnectionProfile, error)
 	SelectConnectionProfileForUpdate(ctx context.Context, arg SelectConnectionProfileForUpdateParams) (ConnectionProfile, error)
+	SelectDbProfileById(ctx context.Context, id string) (DbProfile, error)
 	SelectMasterByCode(ctx context.Context, code string) ([]SelectMasterByCodeRow, error)
 	UpdateConnectionProfileById(ctx context.Context, arg UpdateConnectionProfileByIdParams) (ConnectionProfile, error)
+	UpdateDbProfileById(ctx context.Context, arg UpdateDbProfileByIdParams) (DbProfile, error)
 	UpdateStatusDownloadHistoryById(ctx context.Context, arg UpdateStatusDownloadHistoryByIdParams) (DownloadHistory, error)
 }
 

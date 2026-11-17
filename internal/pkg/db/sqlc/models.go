@@ -27,6 +27,17 @@ type ConnectionProfile struct {
 	AuthSecret  sql.NullString `json:"auth_secret"`
 }
 
+type DbProfile struct {
+	ID        string         `json:"id"`
+	Name      string         `json:"name"`
+	Color     string         `json:"color"`
+	Provider  string         `json:"provider"`
+	Config    string         `json:"config"`
+	Secret    sql.NullString `json:"secret"`
+	CreatedAt sql.NullTime   `json:"created_at"`
+	UpdatedAt sql.NullTime   `json:"updated_at"`
+}
+
 type DownloadHistory struct {
 	ID        string          `json:"id"`
 	FileName  string          `json:"file_name"`

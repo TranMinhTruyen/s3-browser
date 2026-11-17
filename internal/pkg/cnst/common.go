@@ -8,6 +8,7 @@ var (
 	Bucket  = "bucket"
 	Setting = "setting"
 	Update  = "update"
+	Db      = "db"
 )
 
 var (
