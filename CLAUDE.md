@@ -167,7 +167,7 @@ Tất cả tool Go được khai báo trong `tool (...)` của `go.mod` (wails3,
 ### Lệnh (chạy trong `rust/`)
 
 - Format: `cargo fmt --check`. Lint: `cargo clippy --target x86_64-pc-windows-msvc --all-targets -- -D warnings`.
-- Build: `cargo build --release --target x86_64-pc-windows-msvc` (task `build:native` chạy trước build Go, copy DLL cạnh exe, vào bản portable và NSIS).
+- Build: `cargo build --release --target x86_64-pc-windows-msvc` (task `common:build:dll` chạy trước build Go — `build:native` là task build Go có sẵn, copy DLL cạnh exe, vào bản portable và NSIS).
 - Test: `cargo test` cho protocol, dispatch và driver (SQLite dùng file DB tạm), do `rust-tester` viết và **có commit** (khác test Go tạm).
 
 ## 9. Frontend (React 19 + TS)

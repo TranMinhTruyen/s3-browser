@@ -45,6 +45,20 @@ jobs:
       - if: steps.ver.outputs.skip != 'true'
         uses: oven-sh/setup-bun@v2
 
+      # Rust cho thư viện native s3b_db.dll (rust/); bỏ qua khi repo chưa có Cargo workspace
+      - name: Setup Rust
+        if: steps.ver.outputs.skip != 'true' && hashFiles('rust/Cargo.toml') != ''
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      # Cache ~/.cargo và rust/target: build sqlx + libsqlite3 bundled lần đầu mất vài phút
+      - name: Cache Rust
+        if: steps.ver.outputs.skip != 'true' && hashFiles('rust/Cargo.toml') != ''
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
       - name: Install NSIS
         if: steps.ver.outputs.skip != 'true'
         # choco không thêm NSIS vào PATH, phải tự thêm cho các bước sau (makensis)

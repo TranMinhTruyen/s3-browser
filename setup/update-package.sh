@@ -28,6 +28,19 @@ go mod tidy
 echo
 echo "==> Update complete. Please review go.mod/go.sum manually."
 
+# Rust native library (rust/). Skipped until the Cargo workspace exists.
+# `cargo update` only moves Cargo.lock within the semver ranges of Cargo.toml,
+# so pinned crates (e.g. libsqlite3-sys matching sqlx) stay compatible.
+if [ -f "$PROJECT_ROOT/rust/Cargo.toml" ]; then
+  echo
+  echo "==> Updating Rust dependencies..."
+  if ! command -v cargo >/dev/null 2>&1; then
+    echo "ERROR: cargo not found. Install Rust first: https://rustup.rs"
+    exit 1
+  fi
+  (cd "$PROJECT_ROOT/rust" && cargo update)
+fi
+
 echo
 echo "==> Update react dependencies..."
 cd "$PROJECT_ROOT/frontend"
