@@ -1,0 +1,23 @@
+[package]
+name = "s3b_db"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+name = "s3b_db"
+# cdylib cho Go load; rlib để cargo test gọi được code của crate
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+futures-util = "0.3.34"
+libsqlite3-sys = "*"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154", features = ["raw_value"] }
+sqlparser = "0.64.0"
+sqlx = { version = "0.9.0", default-features = false, features = ["sqlite", "runtime-tokio"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "sync", "macros", "time"] }
+
+[profile.release]
+# catch_unwind ở ranh giới FFI cần unwind, không đổi sang abort
+panic = "unwind"
