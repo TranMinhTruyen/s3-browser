@@ -1,5 +1,5 @@
-import { act, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '@/common/cnst/settingConst';
 import { useSettingStore } from '@/common/stores/settingStore';
 import DataGrid from '@/components/display/dataGrid/DataGrid';
@@ -8,7 +8,7 @@ type Options = {
   count: number;
   horizontal?: boolean;
   paddingStart?: number;
-  estimateSize: () => number;
+  estimateSize: (index?: number) => number;
   getScrollElement: () => unknown;
   overscan?: number;
 };
@@ -32,13 +32,19 @@ vi.mock('@tanstack/react-virtual', () => ({
     else virtual.rowOptions = { ...options, size };
     const first = range ? range[0] : 0;
     const last = range ? Math.min(range[1], options.count - 1) : options.count - 1;
+    const sizes = Array.from({ length: options.count }, (_, i) => options.estimateSize(i));
+    const startOf = (i: number) => pad + sizes.slice(0, i).reduce((a, b) => a + b, 0);
     const items = Array.from({ length: Math.max(0, last - first + 1) }, (_, i) => ({
       key: first + i,
       index: first + i,
-      start: pad + (first + i) * size,
-      size,
+      start: startOf(first + i),
+      size: sizes[first + i],
     }));
-    return { measure: virtual.measure, getVirtualItems: () => items, getTotalSize: () => pad + options.count * size };
+    return {
+      measure: virtual.measure,
+      getVirtualItems: () => items,
+      getTotalSize: () => startOf(options.count),
+    };
   },
 }));
 
@@ -61,6 +67,7 @@ describe('DataGrid', () => {
     useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS } });
     virtual.rows = null;
     virtual.cols = null;
+    virtual.measure.mockClear();
   });
 
   it('shows the column headers and a row number column for the rows', () => {
@@ -135,7 +142,216 @@ describe('DataGrid', () => {
 
     expect(virtual.rowOptions).toMatchObject({ size: 36, paddingStart: 36 });
     expect(virtual.colOptions).toMatchObject({ size: 180, paddingStart: 63 });
-    expect(virtual.measure).toHaveBeenCalledTimes(2);
+    expect(virtual.measure).toHaveBeenCalledTimes(2); // one per virtualizer
+  });
+
+  describe('column resize', () => {
+    let frames: FrameRequestCallback[];
+    let captured: boolean;
+    let measureText: ReturnType<typeof vi.fn>;
+    let hasContext: boolean;
+
+    const resizer = (i: number) => document.querySelector<HTMLElement>(`[data-index="${i}"]`) as HTMLElement;
+    const headerOf = (name: string) => screen.getByText(name);
+    const flush = () =>
+      act(() => {
+        const pending = frames;
+        frames = [];
+        for (const cb of pending) cb(0);
+      });
+    const drag = (i: number, from: number, to: number) => {
+      fireEvent.pointerDown(resizer(i), { clientX: from, pointerId: 1 });
+      fireEvent.pointerMove(resizer(i), { clientX: to, pointerId: 1 });
+      flush();
+    };
+
+    beforeEach(() => {
+      frames = [];
+      captured = true;
+      hasContext = true;
+      measureText = vi.fn((t: string) => ({ width: t.length * 10 }));
+      vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb));
+      vi.stubGlobal('cancelAnimationFrame', (id: number) => {
+        if (id > 0) frames[id - 1] = () => {};
+      });
+      HTMLElement.prototype.setPointerCapture = vi.fn();
+      HTMLElement.prototype.hasPointerCapture = vi.fn(() => captured);
+      HTMLElement.prototype.releasePointerCapture = vi.fn();
+      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation((() =>
+        hasContext ? { font: '', measureText } : null) as never);
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
+
+    it('captures the pointer on pointer down and widens the column by the drag distance', () => {
+      renderGrid();
+      fireEvent.pointerDown(resizer(1), { clientX: 100, pointerId: 7 });
+      expect(HTMLElement.prototype.setPointerCapture).toHaveBeenCalledWith(7);
+      drag(1, 100, 140);
+      expect(headerOf('name')).toHaveStyle({ width: '200px' });
+      expect(headerOf('id')).toHaveStyle({ width: '160px' });
+      expect(headerOf('blob')).toHaveStyle({ left: '416px' });
+      expect(virtual.measure).toHaveBeenCalled();
+    });
+
+    it('never makes a column narrower than 48px', () => {
+      renderGrid();
+      drag(0, 500, 0);
+      expect(headerOf('id')).toHaveStyle({ width: '48px' });
+    });
+
+    it('divides the drag distance by the interface scale', () => {
+      useSettingStore.setState(s => ({ draft: { ...s.draft, size: 'large' } }));
+      renderGrid();
+      drag(0, 0, 90);
+      // 160 + 90 / 1.125 = 240 at the medium size, x 1.125 on screen
+      expect(headerOf('id')).toHaveStyle({ width: '270px' });
+    });
+
+    it('updates once per frame: only the last move counts', () => {
+      renderGrid();
+      fireEvent.pointerDown(resizer(1), { clientX: 0, pointerId: 1 });
+      fireEvent.pointerMove(resizer(1), { clientX: 10, pointerId: 1 });
+      fireEvent.pointerMove(resizer(1), { clientX: 30, pointerId: 1 });
+      flush();
+      expect(headerOf('name')).toHaveStyle({ width: '190px' });
+    });
+
+    it('keeps the state when the width does not change', () => {
+      renderGrid();
+      drag(1, 0, 0);
+      expect(headerOf('name')).toHaveStyle({ width: '160px' });
+      drag(1, 0, 0);
+      expect(headerOf('name')).toHaveStyle({ width: '160px' });
+    });
+
+    it('ignores pointer moves without pointer capture', () => {
+      renderGrid();
+      fireEvent.pointerDown(resizer(1), { clientX: 0, pointerId: 1 });
+      captured = false;
+      fireEvent.pointerMove(resizer(1), { clientX: 50, pointerId: 1 });
+      expect(frames).toHaveLength(0);
+      expect(headerOf('name')).toHaveStyle({ width: '160px' });
+    });
+
+    it('starts the next drag from the width set by the previous one', () => {
+      renderGrid();
+      drag(1, 0, 40);
+      drag(1, 0, 10);
+      expect(headerOf('name')).toHaveStyle({ width: '210px' });
+    });
+
+    it('fits the column to its widest value on double click', () => {
+      renderGrid({
+        rows: [
+          ['1', 'Ann', null],
+          ['2', 'Roberta', 'x'],
+        ],
+      });
+      fireEvent.doubleClick(resizer(1));
+      // widest is "Roberta" (7 x 10) + 17 of cell padding and border
+      expect(headerOf('name')).toHaveStyle({ width: '87px' });
+      expect(measureText).toHaveBeenCalledWith('name');
+    });
+
+    it('fits to the header when it is wider than the values, skipping NULL cells', () => {
+      renderGrid({ rows: [[null, null, null]] });
+      fireEvent.doubleClick(resizer(2));
+      expect(headerOf('blob')).toHaveStyle({ width: '57px' });
+      expect(measureText).toHaveBeenCalledTimes(1);
+    });
+
+    it('never fits narrower than 48px', () => {
+      renderGrid();
+      fireEvent.doubleClick(resizer(0));
+      expect(headerOf('id')).toHaveStyle({ width: '48px' });
+    });
+
+    it('caps the fitted width at 600px and measures at most 200 characters of a value', () => {
+      renderGrid({ rows: [['1', 'a'.repeat(500), 'x']] });
+      fireEvent.doubleClick(resizer(1));
+      expect(measureText).toHaveBeenCalledWith('a'.repeat(200));
+      expect(headerOf('name')).toHaveStyle({ width: '600px' });
+    });
+
+    it('divides the measured text by the interface scale', () => {
+      useSettingStore.setState(s => ({ draft: { ...s.draft, size: 'large' } }));
+      renderGrid({ rows: [['1', 'a'.repeat(45), 'x']] });
+      fireEvent.doubleClick(resizer(1));
+      // 450 / 1.125 + 17 = 417 at the medium size, x 1.125 on screen
+      expect(headerOf('name')).toHaveStyle({ width: '469.125px' });
+    });
+
+    it('cancels a pending drag frame on double click', () => {
+      renderGrid();
+      fireEvent.pointerDown(resizer(1), { clientX: 0, pointerId: 1 });
+      fireEvent.pointerMove(resizer(1), { clientX: 100, pointerId: 1 });
+      fireEvent.doubleClick(resizer(1));
+      flush();
+      expect(headerOf('name')).toHaveStyle({ width: '57px' });
+    });
+
+    it('does nothing on double click when a canvas context is not available', () => {
+      hasContext = false;
+      renderGrid();
+      fireEvent.doubleClick(resizer(1));
+      expect(headerOf('name')).toHaveStyle({ width: '160px' });
+    });
+
+    it('measures the columns once for a drag and not again when the width does not change', () => {
+      renderGrid();
+      drag(1, 0, 40);
+      expect(virtual.measure).toHaveBeenCalledTimes(1);
+      drag(1, 0, 0);
+      expect(virtual.measure).toHaveBeenCalledTimes(1);
+      expect(headerOf('name')).toHaveStyle({ width: '200px' });
+    });
+
+    it('does not measure on double click when the width does not change', () => {
+      renderGrid();
+      fireEvent.doubleClick(resizer(1));
+      expect(virtual.measure).toHaveBeenCalledTimes(1);
+      fireEvent.doubleClick(resizer(1));
+      expect(virtual.measure).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores a pointer down of a button other than the main one', () => {
+      renderGrid();
+      fireEvent.pointerDown(resizer(1), { clientX: 0, pointerId: 1, button: 2 });
+      expect(HTMLElement.prototype.setPointerCapture).not.toHaveBeenCalled();
+    });
+
+    it('prevents the default of the main button pointer down (no text selection) and still fits on double click', () => {
+      renderGrid();
+      const notPrevented = fireEvent.pointerDown(resizer(1), { clientX: 0, pointerId: 1, button: 0 });
+      expect(notPrevented).toBe(false);
+      fireEvent.doubleClick(resizer(1));
+      expect(headerOf('name')).toHaveStyle({ width: '57px' });
+    });
+
+    it('stops measuring rows once the widest allowed width is reached', () => {
+      renderGrid({
+        rows: [
+          ['1', 'a'.repeat(500), 'x'],
+          ['2', 'b', 'x'],
+          ['3', 'c', 'x'],
+        ],
+      });
+      fireEvent.doubleClick(resizer(1));
+      expect(measureText).toHaveBeenCalledTimes(2); // header + first row
+      expect(headerOf('name')).toHaveStyle({ width: '600px' });
+    });
+
+    it('measures no row when the header alone reaches the widest allowed width', () => {
+      const long = 'n'.repeat(60);
+      render(<DataGrid columns={[long]} rows={[['a'], ['b']]} nullText={NULL_TEXT} />);
+      fireEvent.doubleClick(resizer(0));
+      expect(measureText).toHaveBeenCalledTimes(1);
+      expect(screen.getByText(long)).toHaveStyle({ width: '600px' });
+    });
   });
 
   describe('onEndReached', () => {

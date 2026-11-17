@@ -1,11 +1,15 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { memo, useEffect, useRef } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useRemeasureOnScale, useUiScale } from '@/common/hooks/useUiScale';
 import classes from '@/components/display/dataGrid/DataGrid.module.css';
 
 // Sizes in px at the medium interface size (= the rem sizes in DataGrid.module.css x 16); scaled by `useUiScale`.
 const ROW_HEIGHT = 32;
 const COLUMN_WIDTH = 160;
+const MIN_COLUMN_WIDTH = 48;
+const MAX_AUTO_WIDTH = 600;
+/** Cell padding (2 x 0.5rem) + right border, px at the medium size. */
+const CELL_EXTRA = 17;
 const INDEX_WIDTH = 56;
 const HEADER_HEIGHT = 32;
 /** Start loading when the last rendered row is this close to the end of the loaded rows. */
@@ -40,6 +44,9 @@ function DataGrid(props: DataGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const requestedAt = useRef(-1);
   const scale = useUiScale();
+  // Widths changed by the user, in px at the medium size (x scale when used); the others use COLUMN_WIDTH.
+  const [widths, setWidths] = useState<Record<number, number>>({});
+  const drag = useRef({ index: 0, startX: 0, startWidth: 0, width: 0, frame: 0 });
 
   // React Compiler is disabled, so this compiler-only lint does not apply.
   // oxlint-disable-next-line react/incompatible-library
@@ -55,12 +62,69 @@ function DataGrid(props: DataGridProps) {
     horizontal: true,
     count: columns.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => COLUMN_WIDTH * scale,
+    estimateSize: i => (widths[i] ?? COLUMN_WIDTH) * scale,
     paddingStart: INDEX_WIDTH * scale,
     overscan: 2,
   });
   useRemeasureOnScale(rowVirtualizer, scale);
   useRemeasureOnScale(columnVirtualizer, scale);
+
+  const onPointerDownResize = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.button !== 0) return;
+      e.preventDefault(); // no text selection while dragging; click/dblclick still fire (not compatibility mouse events)
+      const index = Number(e.currentTarget.dataset.index);
+      const startWidth = widths[index] ?? COLUMN_WIDTH;
+      drag.current = { index, startX: e.clientX, startWidth, width: startWidth, frame: 0 };
+      e.currentTarget.setPointerCapture(e.pointerId);
+    },
+    [widths]
+  );
+
+  const onPointerMoveResize = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+      const { clientX } = e;
+      cancelAnimationFrame(drag.current.frame);
+      // One update per frame at most.
+      drag.current.frame = requestAnimationFrame(() => {
+        const { index, startX, startWidth } = drag.current;
+        const width = Math.max(MIN_COLUMN_WIDTH, startWidth + (clientX - startX) / scale);
+        if (width === drag.current.width) return;
+        drag.current.width = width;
+        setWidths(prev => ({ ...prev, [index]: width }));
+        // estimateSize reads `widths`: clearing the cache here lets the batched render measure with the new width.
+        columnVirtualizer.measure();
+      });
+    },
+    [scale, columnVirtualizer]
+  );
+
+  const onDoubleClickResize = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const index = Number(e.currentTarget.dataset.index);
+      cancelAnimationFrame(drag.current.frame);
+      const style = getComputedStyle(e.currentTarget);
+      const ctx = document.createElement('canvas').getContext('2d');
+      if (!ctx) return;
+      const font = `${style.fontSize} ${style.fontFamily}`;
+      ctx.font = `600 ${font}`;
+      let max = ctx.measureText(columns[index]).width;
+      ctx.font = font;
+      // Text width that already gives the widest allowed column: no need to measure further.
+      const cap = (MAX_AUTO_WIDTH - CELL_EXTRA) * scale;
+      for (const row of rows) {
+        if (max >= cap) break;
+        const value = row[index];
+        if (value !== null) max = Math.max(max, ctx.measureText(clip(value, MAX_CELL_CHARS)).width);
+      }
+      const width = Math.min(MAX_AUTO_WIDTH, Math.max(MIN_COLUMN_WIDTH, Math.ceil(max / scale) + CELL_EXTRA));
+      if (width === (widths[index] ?? COLUMN_WIDTH)) return;
+      setWidths(prev => ({ ...prev, [index]: width }));
+      columnVirtualizer.measure();
+    },
+    [columns, rows, scale, widths, columnVirtualizer]
+  );
 
   const virtualRows = rowVirtualizer.getVirtualItems();
   const virtualColumns = columnVirtualizer.getVirtualItems();
@@ -88,6 +152,13 @@ function DataGrid(props: DataGridProps) {
               style={{ left: col.start, width: col.size }}
             >
               {columns[col.index]}
+              <div
+                className={classes.resizer}
+                data-index={col.index}
+                onPointerDown={onPointerDownResize}
+                onPointerMove={onPointerMoveResize}
+                onDoubleClick={onDoubleClickResize}
+              />
             </div>
           ))}
         </div>

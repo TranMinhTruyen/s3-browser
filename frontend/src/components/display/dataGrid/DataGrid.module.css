@@ -67,3 +67,19 @@
   font-style: italic;
   color: var(--mantine-color-dimmed);
 }
+
+/* Drag area on the right edge of a header cell; wider than the 1px border so it is easy to catch at every size */
+.resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0.5rem;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+
+.resizer:hover {
+  background-color: light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3));
+}
