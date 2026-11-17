@@ -12,7 +12,8 @@
     "eamodio.gitlens",
     "pkief.material-icon-theme",
     "zhuangtongfa.material-theme",
-    "rust-lang.rust-analyzer"
+    "rust-lang.rust-analyzer",
+    "tamasfe.even-better-toml"
   ],
   "unwantedRecommendations": [
     "ms-vscode.go"
