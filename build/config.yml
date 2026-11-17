@@ -24,6 +24,7 @@ dev_mode:
       - node_modules
       - frontend
       - bin
+      - rust
     file:
       - .DS_Store
       - .gitignore
