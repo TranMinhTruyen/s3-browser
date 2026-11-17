@@ -4,11 +4,25 @@
   },
   "tooltip": {
     "connect": "連線",
-    "execute": "執行 SQL"
+    "execute": "執行 SQL",
+    "cancel": "取消執行"
   },
   "search": {
     "placeholderProfile": "搜尋設定檔",
     "emptyProfile": "找不到設定檔"
+  },
+  "result": {
+    "title": "結果 {{n}}",
+    "messages": "訊息",
+    "firstRowsOnly": "僅顯示前 {{count}} 筆資料",
+    "loading": "正在載入更多資料...",
+    "nullValue": "NULL"
+  },
+  "message": {
+    "rowsAffected": "影響 {{n}} 筆資料",
+    "rowsReturned": "傳回 {{n}} 筆資料",
+    "elapsed": "{{ms}} ms",
+    "cancelled": "已取消執行。"
   },
   "toast": {
     "noProfile": "請先選擇資料庫設定檔。",

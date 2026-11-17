@@ -1,18 +1,21 @@
 import type { EditorView } from '@codemirror/view';
-import { Divider, Paper } from '@mantine/core';
+import { Divider, Paper, Splitter } from '@mantine/core';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 import FindReplacePanel from '@/pages/sql/components/FindReplacePanel';
 import SqlTabActionBar from '@/pages/sql/components/SqlTabActionBar';
-import SqlEditor from '@/pages/sql/components/sqlEditor/SqlEditor';
+import SqlEditor, { type SqlDialect } from '@/pages/sql/components/sqlEditor/SqlEditor';
+import SqlResultPanel from '@/pages/sql/components/sqlResult/SqlResultPanel';
+import { useSqlRunner } from '@/pages/sql/hooks/useSqlRunner';
 import { getMockSchema } from '@/pages/sql/mock/dbSchemaMock';
-import { selectProfileNames, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
+import { type Provider, selectProfileNames, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
 import { DEFAULT_FIND_OPTIONS, escapeRegExp, type FindOptions } from '@/pages/sql/utils/findReplace';
 import { formatEditorSql } from '@/pages/sql/utils/sqlFormat';
-import { runSql } from '@/pages/sql/utils/sqlToast';
+
+const PROVIDER_DIALECT: Record<Provider, SqlDialect> = { sqlite: 'sqlite', postgres: 'postgresql' };
 
 type SqlTabDetailProps = {
   tabId: string;
@@ -27,9 +30,12 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
   // Only id -> name, so a profile change that keeps its name does not re-render every tab.
   const profileNames = useDbProfileStore(useShallow(selectProfileNames));
   const isConnected = useDbProfileStore(s => !!(selectedProfileId && s.dbProfiles[selectedProfileId]?.isConnected));
-  const setConnected = useDbProfileStore(s => s.setConnected);
-  const dialect = useDbProfileStore(s => (selectedProfileId ? s.dbProfiles[selectedProfileId]?.dbType : null) ?? null);
-  const schema = useMemo(() => getMockSchema(selectedProfileId), [selectedProfileId]);
+  const connectDbProfile = useDbProfileStore(s => s.connectDbProfile);
+  const provider = useDbProfileStore(
+    s => (selectedProfileId ? s.dbProfiles[selectedProfileId]?.provider : null) ?? null
+  );
+  const dialect = provider ? PROVIDER_DIALECT[provider] : null;
+  const schema = useMemo(() => getMockSchema(provider), [provider]);
   const editorRef = useRef<EditorView | null>(null);
   // Find state lives here (not in the panel) so it survives closing the panel and switching tabs.
   const [findOpen, setFindOpen] = useState(false);
@@ -39,6 +45,7 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
   // The open panel puts its counter refresh here; the editor calls it after every text change.
   const docChangeRef = useRef<(() => void) | null>(null);
   const [focusKey, setFocusKey] = useState(0);
+  const { runId, statements, cancelled, running, loadingMore, run, cancel, detach, loadMore } = useSqlRunner(tabId);
 
   const optionsData = useMemo(
     () => Object.entries(profileNames).map(([key, name]) => ({ name, value: key })),
@@ -46,20 +53,24 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
   );
 
   const onChangeSelectProfile = useCallback(
-    (value: string | null) => setTabProfile(tabId, value),
-    [tabId, setTabProfile]
+    (value: string | null) => {
+      if (value !== selectedProfileId) detach();
+      setTabProfile(tabId, value);
+    },
+    [tabId, selectedProfileId, setTabProfile, detach]
   );
 
-  // Connecting is fake for now: it only flips the flag.
-  const onClickConnect = useCallback(() => {
+  // SQLite connects for real; PostgreSQL is still fake (only the flag).
+  const onClickConnect = useCallback(async () => {
     if (!selectedProfileId || isConnected) return;
-    setConnected(selectedProfileId, true);
-    toast.success(t('toast.connected', { name: profileNames[selectedProfileId] }));
-  }, [selectedProfileId, isConnected, setConnected, profileNames, t]);
+    if (await connectDbProfile(selectedProfileId)) {
+      toast.success(t('toast.connected', { name: profileNames[selectedProfileId] }));
+    }
+  }, [selectedProfileId, isConnected, connectDbProfile, profileNames, t]);
 
   const onClickExecute = useCallback(
-    () => runSql(selectedProfileId, editorRef.current?.state.doc.toString() ?? ''),
-    [selectedProfileId]
+    () => run(selectedProfileId, editorRef.current?.state.doc.toString() ?? ''),
+    [run, selectedProfileId]
   );
 
   // Ctrl+E: run the selection, or the whole text when nothing is selected.
@@ -67,8 +78,8 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
     const view = editorRef.current;
     if (!view) return;
     const { from, to } = view.state.selection.main;
-    runSql(selectedProfileId, from === to ? view.state.doc.toString() : view.state.sliceDoc(from, to));
-  }, [selectedProfileId]);
+    void run(selectedProfileId, from === to ? view.state.doc.toString() : view.state.sliceDoc(from, to));
+  }, [run, selectedProfileId]);
 
   // Ctrl+Q: format the selection or the whole text. An empty text does nothing.
   const onFormatShortcut = useCallback(async () => {
@@ -106,35 +117,51 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
         onChangeSelectProfile={onChangeSelectProfile}
         onClickConnect={onClickConnect}
         onClickExecute={onClickExecute}
+        running={running}
+        onClickCancel={cancel}
       />
 
       <Divider />
 
-      <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-        <SqlEditor
-          viewRef={editorRef}
-          dialect={dialect}
-          schema={schema}
-          onFormat={onFormatShortcut}
-          onFind={onFindShortcut}
-          onExecute={onExecuteShortcut}
-          onDocChange={onDocChange}
-        />
-        {findOpen && (
-          <FindReplacePanel
-            viewRef={editorRef}
-            find={findText}
-            replace={replaceText}
-            options={findOptions}
-            docChangeRef={docChangeRef}
-            focusKey={focusKey}
-            onChangeFind={setFindText}
-            onChangeReplace={setReplaceText}
-            onChangeOptions={setFindOptions}
-            onClose={onCloseFind}
+      <Splitter orientation="vertical" style={{ flex: 1, minHeight: 0 }}>
+        <Splitter.Pane defaultSize="60%" min="20%">
+          <div style={{ height: '100%', position: 'relative' }}>
+            <SqlEditor
+              viewRef={editorRef}
+              dialect={dialect}
+              schema={schema}
+              onFormat={onFormatShortcut}
+              onFind={onFindShortcut}
+              onExecute={onExecuteShortcut}
+              onDocChange={onDocChange}
+            />
+            {findOpen && (
+              <FindReplacePanel
+                viewRef={editorRef}
+                find={findText}
+                replace={replaceText}
+                options={findOptions}
+                docChangeRef={docChangeRef}
+                focusKey={focusKey}
+                onChangeFind={setFindText}
+                onChangeReplace={setReplaceText}
+                onChangeOptions={setFindOptions}
+                onClose={onCloseFind}
+              />
+            )}
+          </div>
+        </Splitter.Pane>
+        <Splitter.Pane defaultSize="40%" min="10%">
+          <SqlResultPanel
+            key={runId}
+            statements={statements}
+            cancelled={cancelled}
+            running={running}
+            loadingMore={loadingMore}
+            onLoadMore={loadMore}
           />
-        )}
-      </div>
+        </Splitter.Pane>
+      </Splitter>
     </Paper>
   );
 }

@@ -4,11 +4,25 @@
   },
   "tooltip": {
     "connect": "Подключиться",
-    "execute": "Выполнить SQL"
+    "execute": "Выполнить SQL",
+    "cancel": "Отменить выполнение"
   },
   "search": {
     "placeholderProfile": "Поиск профиля",
     "emptyProfile": "Профили не найдены"
+  },
+  "result": {
+    "title": "Результат {{n}}",
+    "messages": "Сообщения",
+    "firstRowsOnly": "Показаны только первые строки: {{count}}",
+    "loading": "Загрузка строк...",
+    "nullValue": "NULL"
+  },
+  "message": {
+    "rowsAffected": "Затронуто строк: {{n}}",
+    "rowsReturned": "Возвращено строк: {{n}}",
+    "elapsed": "{{ms}} ms",
+    "cancelled": "Выполнение отменено."
   },
   "toast": {
     "noProfile": "Сначала выберите профиль базы данных.",

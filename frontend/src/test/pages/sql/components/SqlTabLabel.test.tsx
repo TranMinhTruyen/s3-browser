@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import SqlTabLabel from '@/pages/sql/components/SqlTabLabel';
 import { useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
+import { pgProfile, toProfileMap } from '@/test/_helpers/dbProfiles';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 const tabId = () => useSqlTabStore.getState().activeTab;
@@ -11,6 +12,12 @@ const swatch = (container: HTMLElement) => container.querySelector<HTMLElement>(
 describe('SqlTabLabel', () => {
   beforeEach(() => {
     useDbProfileStore.getState().reset();
+    useDbProfileStore.setState({
+      dbProfiles: toProfileMap(
+        pgProfile('mock-pg-local', { name: 'Local PostgreSQL' }),
+        pgProfile('mock-pg-staging', { name: 'Staging PostgreSQL' })
+      ),
+    });
     useSqlTabStore.getState().reset();
   });
 
@@ -61,10 +68,10 @@ describe('SqlTabLabel', () => {
   it('follows the store when the profile is chosen, renamed and deleted', () => {
     renderWithProviders(<SqlTabLabel tabId={tabId()} />);
 
-    act(() => useSqlTabStore.getState().setTabProfile(tabId(), 'mock-sqlite-local'));
-    expect(screen.getByText('Local SQLite')).toBeInTheDocument();
+    act(() => useSqlTabStore.getState().setTabProfile(tabId(), 'mock-pg-staging'));
+    expect(screen.getByText('Staging PostgreSQL')).toBeInTheDocument();
 
-    act(() => useDbProfileStore.getState().deleteDbProfile('mock-sqlite-local'));
+    act(() => useDbProfileStore.getState().deleteDbProfile('mock-pg-staging'));
     expect(screen.getByText('New query')).toBeInTheDocument();
   });
 });

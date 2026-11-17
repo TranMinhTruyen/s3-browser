@@ -27,30 +27,29 @@ function DbProfiles() {
   // Only the connected flag of the profile owning the shared menu is needed (undefined = no menu / deleted).
   const menuConnected = useDbProfileStore(s => (menuKey ? s.dbProfiles[menuKey]?.isConnected : undefined));
   const getDbProfileById = useDbProfileStore(s => s.getDbProfileById);
-  const deleteDbProfile = useDbProfileStore(s => s.deleteDbProfile);
-  const setConnected = useDbProfileStore(s => s.setConnected);
+  const removeDbProfile = useDbProfileStore(s => s.removeDbProfile);
+  const connectDbProfile = useDbProfileStore(s => s.connectDbProfile);
+  const disconnectDbProfile = useDbProfileStore(s => s.disconnectDbProfile);
   const clearProfile = useSqlTabStore(s => s.clearProfile);
 
   // Handlers take the key and read the latest profile from the store, so they stay stable for memoized items.
-  // Connecting is fake for now: it only flips the flag.
+  // SQLite connects for real; PostgreSQL is still fake (only the flag). The store keeps the flag when it fails.
   const onClickConnect = useCallback(
-    (key: string) => {
+    async (key: string) => {
       const profile = getDbProfileById(key);
       if (!profile || profile.isConnected) return;
-      setConnected(key, true);
-      toast.success(t('toast.connected', { name: profile.name }));
+      if (await connectDbProfile(key)) toast.success(t('toast.connected', { name: profile.name }));
     },
-    [getDbProfileById, setConnected, t]
+    [getDbProfileById, connectDbProfile, t]
   );
 
   const onClickDisconnect = useCallback(
-    (key: string) => {
+    async (key: string) => {
       const profile = getDbProfileById(key);
       if (!profile?.isConnected) return;
-      setConnected(key, false);
-      toast.success(t('toast.disconnected', { name: profile.name }));
+      if (await disconnectDbProfile(key)) toast.success(t('toast.disconnected', { name: profile.name }));
     },
-    [getDbProfileById, setConnected, t]
+    [getDbProfileById, disconnectDbProfile, t]
   );
 
   const onClickEditProfile = useCallback(
@@ -74,11 +73,11 @@ function DbProfiles() {
       const confirmDelete = await ConfirmModal.show({ type: 'warning', confirmCode: 'C000002' });
       if (!confirmDelete) return;
 
-      deleteDbProfile(key);
+      if (!(await removeDbProfile(key))) return;
       clearProfile(key);
       toast.success(t('toast.deleted', { name: profile.name }));
     },
-    [getDbProfileById, deleteDbProfile, clearProfile, t]
+    [getDbProfileById, removeDbProfile, clearProfile, t]
   );
 
   // One shared context menu for all rows (a Menu per row is costly with hundreds of profiles).

@@ -1,4 +1,4 @@
-import { act } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SqlTabDetail from '@/pages/sql/components/SqlTabDetail';
@@ -16,6 +16,7 @@ vi.mock('@/pages/sql/components/SqlTabActionBar', () => ({
 }));
 vi.mock('@/pages/sql/components/sqlEditor/SqlEditor', () => ({ default: () => <div /> }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
+vi.mock('@/pages/sql/components/sqlResult/SqlResultPanel', () => ({ default: () => <div /> }));
 
 const tabId = () => useSqlTabStore.getState().activeTab;
 
@@ -25,24 +26,25 @@ describe('SqlTabDetail guards that the disabled buttons normally hide', () => {
     useSqlTabStore.getState().reset();
   });
 
-  it('Connect without a chosen profile does nothing', () => {
+  it('Connect without a chosen profile does nothing', async () => {
     renderWithProviders(<SqlTabDetail tabId={tabId()} />);
-    act(() => bar.props.onClickConnect());
+    await act(async () => bar.props.onClickConnect());
     expect(toast.success).not.toHaveBeenCalled();
     expect(Object.values(useDbProfileStore.getState().dbProfiles).some(p => p?.isConnected)).toBe(false);
   });
 
-  it('Connect on an already connected profile does not toast again', () => {
+  it('Connect on an already connected profile does not toast again', async () => {
     useSqlTabStore.getState().setTabProfile(tabId(), 'mock-pg-local');
     useDbProfileStore.getState().setConnected('mock-pg-local', true);
     renderWithProviders(<SqlTabDetail tabId={tabId()} />);
-    act(() => bar.props.onClickConnect());
+    await act(async () => bar.props.onClickConnect());
     expect(toast.success).not.toHaveBeenCalled();
   });
 
-  it('lists a missing profile entry with an empty name', () => {
+  it('lists a missing profile entry with an empty name', async () => {
     useDbProfileStore.setState(state => ({ dbProfiles: { ...state.dbProfiles, broken: undefined } }));
     renderWithProviders(<SqlTabDetail tabId={tabId()} />);
+    await screen.findByTestId('bar');
     expect(bar.props.profileOptions).toContainEqual({ name: '', value: 'broken' });
   });
 });

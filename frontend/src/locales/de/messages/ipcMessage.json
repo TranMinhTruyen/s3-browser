@@ -93,6 +93,23 @@
     "S3W011": "Bucket {bucket} wurde erstellt, aber seine Berechtigung konnte nicht festgelegt werden. Sie können sie später unter Zugriffsberechtigung ändern.",
     "S3W012": "Bucket {bucket} wurde erstellt, aber „Öffentlichen Zugriff blockieren“ erlaubt keine öffentliche Richtlinie, daher bleibt er privat."
   },
+  "db": {
+    "DBE001": "Ungültige Anfrage an die Datenbank-Engine.",
+    "DBE002": "Die Datenbankdatei {path} kann nicht geöffnet werden.",
+    "DBE003": "Die Datei ist keine SQLite-Datenbank.",
+    "DBE004": "Die Verbindung wurde geschlossen. Bitte erneut verbinden.",
+    "DBE005": "Das Ergebnis ist nicht mehr verfügbar. Führen Sie die Abfrage erneut aus.",
+    "DBE006": "SQL-Fehler.",
+    "DBE007": "Tabelle [{name}] existiert nicht.",
+    "DBE008": "Fehler der Datenbank-Engine.",
+    "DBE009": "Die Datenbank-Engine (s3b_db.dll) konnte nicht geladen werden.",
+    "DBE010": "Datenbankprofil [{name}] kann nicht gespeichert werden.",
+    "DBE011": "Datenbankprofil [{name}] kann nicht gelöscht werden.",
+    "DBE012": "Datenbankprofile können nicht geladen werden.",
+    "DBE013": "Der Dateidialog kann nicht geöffnet werden.",
+    "DBE014": "Profil [{name}] ist nicht verbunden.",
+    "DBE015": "Der Vorgang hat nach {timeout} das Zeitlimit überschritten."
+  },
   "master": {
     "MTE001": "Fehler beim Laden der Stammdaten."
   },

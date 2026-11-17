@@ -4,11 +4,25 @@
   },
   "tooltip": {
     "connect": "Verbinden",
-    "execute": "SQL ausführen"
+    "execute": "SQL ausführen",
+    "cancel": "Ausführung abbrechen"
   },
   "search": {
     "placeholderProfile": "Profil suchen",
     "emptyProfile": "Keine Profile gefunden"
+  },
+  "result": {
+    "title": "Ergebnis {{n}}",
+    "messages": "Meldungen",
+    "firstRowsOnly": "Nur die ersten {{count}} Zeilen werden angezeigt",
+    "loading": "Weitere Zeilen werden geladen...",
+    "nullValue": "NULL"
+  },
+  "message": {
+    "rowsAffected": "{{n}} Zeile(n) betroffen",
+    "rowsReturned": "{{n}} Zeile(n) zurückgegeben",
+    "elapsed": "{{ms}} ms",
+    "cancelled": "Ausführung abgebrochen."
   },
   "toast": {
     "noProfile": "Wählen Sie zuerst ein Datenbankprofil aus.",

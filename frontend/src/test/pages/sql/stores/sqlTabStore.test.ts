@@ -1,8 +1,10 @@
+import { CloseDbTab } from '@wails/S3Browser/internal/handlers/dbhandler';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { invalidateLoads } from '@/common/utils/ipcUtils';
+import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
 
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
+vi.mock('@wails/S3Browser/internal/handlers/dbhandler', () => ({ CloseDbTab: vi.fn() }));
 
 const store = () => useSqlTabStore.getState();
 const ids = () => Object.keys(store().tabList);
@@ -58,12 +60,22 @@ describe('sqlTabStore', () => {
     it('does not close the last tab', () => {
       store().closeTab(ids()[0]);
       expect(ids()).toHaveLength(1);
+      expect(callIPC).not.toHaveBeenCalled();
+    });
+
+    it('tells the backend to close the database connection of the closed tab', () => {
+      store().addTab();
+      const [a] = ids();
+      store().closeTab(a);
+      expect(callIPC).toHaveBeenCalledTimes(1);
+      expect(callIPC).toHaveBeenCalledWith(CloseDbTab, [{ tabId: a }]);
     });
 
     it('ignores an unknown tab id', () => {
       store().addTab();
       store().closeTab('nope');
       expect(ids()).toHaveLength(2);
+      expect(callIPC).not.toHaveBeenCalled();
     });
 
     it('closing an inactive tab keeps the active tab', () => {
@@ -136,6 +148,35 @@ describe('sqlTabStore', () => {
       expect(store().tabList[b].profileId).toBeNull();
       store().setTabProfile(a, null);
       expect(store().tabList[a].profileId).toBeNull();
+    });
+
+    it('setTabProfile does not touch the backend while the tab has no profile yet', () => {
+      store().setTabProfile(ids()[0], 'p1');
+      expect(callIPC).not.toHaveBeenCalled();
+    });
+
+    it('setTabProfile closes the backend connection once when the profile changes', () => {
+      const [a] = ids();
+      store().setTabProfile(a, 'p1');
+      store().setTabProfile(a, 'p2');
+      expect(callIPC).toHaveBeenCalledTimes(1);
+      expect(callIPC).toHaveBeenCalledWith(CloseDbTab, [{ tabId: a }]);
+      expect(store().tabList[a].profileId).toBe('p2');
+    });
+
+    it('setTabProfile closes the backend connection when the profile is cleared', () => {
+      const [a] = ids();
+      store().setTabProfile(a, 'p1');
+      store().setTabProfile(a, null);
+      expect(callIPC).toHaveBeenCalledTimes(1);
+      expect(callIPC).toHaveBeenCalledWith(CloseDbTab, [{ tabId: a }]);
+    });
+
+    it('setTabProfile does not close the connection when the same profile is selected again', () => {
+      const [a] = ids();
+      store().setTabProfile(a, 'p1');
+      store().setTabProfile(a, 'p1');
+      expect(callIPC).not.toHaveBeenCalled();
     });
 
     it('setTabProfile ignores an unknown tab', () => {

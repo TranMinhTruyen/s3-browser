@@ -8,13 +8,6 @@ const SAMPLE_SCHEMA: SQLNamespace = {
   products: ['id', 'name', 'price', 'stock'],
 };
 
-// profileId -> schema. 'mock-sqlite-local' has a smaller one; unknown profiles have none.
-const MOCK_DB_SCHEMAS: Record<string, SQLNamespace> = {
-  'mock-pg-local': SAMPLE_SCHEMA,
-  'mock-pg-staging': SAMPLE_SCHEMA,
-  'mock-sqlite-local': { users: ['id', 'name', 'email'], notes: ['id', 'user_id', 'body'] },
-};
-
-/** Schema for autocomplete of a profile; undefined when no profile is chosen or it has no schema. */
-export const getMockSchema = (profileId: string | null): SQLNamespace | undefined =>
-  profileId ? MOCK_DB_SCHEMAS[profileId] : undefined;
+/** Schema for autocomplete of a profile by provider; only PostgreSQL has one for now. */
+export const getMockSchema = (provider: string | null): SQLNamespace | undefined =>
+  provider === 'postgres' ? SAMPLE_SCHEMA : undefined;

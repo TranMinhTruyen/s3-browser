@@ -5,7 +5,7 @@ import {
   type DbProfileForm,
   getDefaultDbProfileForm,
   SSL_MODES,
-  toDbProfile,
+  toDbProfileInput,
   toFormValues,
 } from '@/pages/sql/modals/dbProfile/dbProfileSchema';
 import type { DbProfile } from '@/pages/sql/stores/dbProfileStore';
@@ -30,7 +30,7 @@ describe('getDefaultDbProfileForm', () => {
     expect(getDefaultDbProfileForm('X')).toEqual({
       name: 'X',
       color: DEFAULT_PROFILE_COLOR,
-      dbType: 'postgresql',
+      provider: 'postgres',
       host: '',
       port: 5432,
       database: '',
@@ -38,6 +38,7 @@ describe('getDefaultDbProfileForm', () => {
       password: '',
       sslMode: 'prefer',
       filePath: '',
+      readOnly: false,
     });
   });
 });
@@ -54,7 +55,7 @@ describe('createDbProfileSchema', () => {
   });
 
   it('accepts a complete SQLite form without PostgreSQL fields', () => {
-    expect(errors(pg({ dbType: 'sqlite', host: '', database: '', username: '', filePath: 'C:/a.db' }))).toEqual({});
+    expect(errors(pg({ provider: 'sqlite', host: '', database: '', username: '', filePath: 'C:/a.db' }))).toEqual({});
   });
 
   it('requires a non-blank name (trimmed)', () => {
@@ -79,11 +80,11 @@ describe('createDbProfileSchema', () => {
   });
 
   it('requires the file path for SQLite and ignores the PostgreSQL fields', () => {
-    expect(errors(pg({ dbType: 'sqlite', host: '', filePath: ' ' }))).toEqual({ filePath: 'V000001' });
+    expect(errors(pg({ provider: 'sqlite', host: '', filePath: ' ' }))).toEqual({ filePath: 'V000001' });
   });
 
   it('does not require the PostgreSQL fields to be empty for SQLite', () => {
-    expect(errors(pg({ dbType: 'sqlite', port: '', filePath: 'a.db' }))).toEqual({});
+    expect(errors(pg({ provider: 'sqlite', port: '', filePath: 'a.db' }))).toEqual({});
   });
 
   it.each([
@@ -107,28 +108,56 @@ describe('toFormValues', () => {
     id: 'p1',
     name: 'N',
     color: '#fff',
-    dbType: 'postgresql',
-    host: 'h',
-    port: 6543,
-    database: 'd',
-    username: 'u',
-    password: 'pw',
-    sslMode: 'require',
-    filePath: '',
+    provider: 'postgres',
+    config: { host: 'h', port: 6543, database: 'd', username: 'u', sslMode: 'require' },
+    hasSecret: true,
     isConnected: true,
   };
 
-  it('copies the profile values', () => {
-    expect(toFormValues(saved)).toMatchObject({ name: 'N', host: 'h', port: 6543, sslMode: 'require' });
+  it('copies the profile values and never loads the password', () => {
+    expect(toFormValues(saved)).toEqual({
+      name: 'N',
+      color: '#fff',
+      provider: 'postgres',
+      host: 'h',
+      port: 6543,
+      database: 'd',
+      username: 'u',
+      password: '',
+      sslMode: 'require',
+      filePath: '',
+      readOnly: false,
+    });
   });
 
-  it('uses the default port when the saved port is 0 (SQLite)', () => {
-    expect(toFormValues({ ...saved, dbType: 'sqlite', port: 0 }).port).toBe(5432);
+  it('reads the SQLite file path and read-only flag, with the default port and SSL mode', () => {
+    expect(
+      toFormValues({ ...saved, provider: 'sqlite', config: { filePath: 'C:/a.db', readOnly: true } })
+    ).toMatchObject({
+      provider: 'sqlite',
+      filePath: 'C:/a.db',
+      readOnly: true,
+      host: '',
+      port: 5432,
+      sslMode: 'prefer',
+    });
+  });
+
+  it('falls back to empty values for an empty config', () => {
+    expect(toFormValues({ ...saved, config: {} })).toMatchObject({
+      host: '',
+      port: 5432,
+      database: '',
+      username: '',
+      sslMode: 'prefer',
+      filePath: '',
+      readOnly: false,
+    });
   });
 });
 
-describe('toDbProfile', () => {
-  it('keeps the PostgreSQL fields (trimmed, port as number) and empties the file path', () => {
+describe('toDbProfileInput', () => {
+  it('sends only the PostgreSQL config (trimmed, port as number) and the password as secret', () => {
     const values = pg({
       name: ' N ',
       host: ' h ',
@@ -138,38 +167,57 @@ describe('toDbProfile', () => {
       port: '6543',
       sslMode: 'verify-full',
       filePath: 'leftover.db',
+      readOnly: true,
     });
-    expect(toDbProfile(values, 'id1', true)).toEqual({
+    expect(toDbProfileInput(values, 'id1')).toEqual({
       id: 'id1',
       name: 'N',
       color: DEFAULT_PROFILE_COLOR,
-      dbType: 'postgresql',
-      isConnected: true,
-      host: 'h',
-      port: 6543,
-      database: 'd',
-      username: 'u',
-      password: ' pw ',
-      sslMode: 'verify-full',
-      filePath: '',
+      provider: 'postgres',
+      config: { host: 'h', port: 6543, database: 'd', username: 'u', sslMode: 'verify-full' },
+      secret: ' pw ',
     });
   });
 
-  it('keeps only the file path (trimmed) for SQLite and empties everything else', () => {
-    const values = pg({ dbType: 'sqlite', filePath: ' C:/a.db ', password: 'secret', sslMode: 'require' });
-    expect(toDbProfile(values, 'id2', false)).toEqual({
+  it('sends only the file path (trimmed) and read-only flag for SQLite, without a secret', () => {
+    const values = pg({ provider: 'sqlite', filePath: ' C:/a.db ', password: 'secret', sslMode: 'require' });
+    const input = toDbProfileInput(values, 'id2');
+    expect(input).toEqual({
       id: 'id2',
       name: 'Main',
       color: DEFAULT_PROFILE_COLOR,
-      dbType: 'sqlite',
-      isConnected: false,
-      host: '',
-      port: 0,
-      database: '',
-      username: '',
-      password: '',
-      sslMode: 'prefer',
-      filePath: 'C:/a.db',
+      provider: 'sqlite',
+      config: { filePath: 'C:/a.db', readOnly: false },
     });
+    expect('secret' in input).toBe(false);
+  });
+
+  it('leaves the id undefined when creating', () => {
+    expect(toDbProfileInput(pg()).id).toBeUndefined();
+  });
+
+  it('keeps the read-only flag for SQLite', () => {
+    const values = pg({ provider: 'sqlite', filePath: 'C:/a.db', readOnly: true });
+    expect(toDbProfileInput(values, 'id3').config.readOnly).toBe(true);
+  });
+});
+
+describe('read-only flag', () => {
+  it('is carried between the form and a saved SQLite profile', () => {
+    const input = toDbProfileInput(pg({ provider: 'sqlite', filePath: 'C:/a.db', readOnly: true }), 'id5');
+    const saved: DbProfile = {
+      id: 'id5',
+      name: input.name ?? '',
+      color: input.color ?? '',
+      provider: 'sqlite',
+      config: input.config,
+      hasSecret: false,
+      isConnected: false,
+    };
+    expect(toFormValues(saved).readOnly).toBe(true);
+  });
+
+  it('does not affect validation', () => {
+    expect(errors(pg({ provider: 'sqlite', filePath: 'C:/a.db', readOnly: true }))).toEqual({});
   });
 });

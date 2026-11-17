@@ -14,7 +14,13 @@
       "username": "Username",
       "password": "Password (optional)",
       "sslMode": "SSL mode",
-      "filePath": "Database file path"
+      "filePath": "Database file path",
+      "readOnly": "Open read-only"
+    },
+    "description": {
+      "readOnly": "Changes are rejected, so the file stays untouched.",
+      "disconnectToEdit": "Disconnect to edit the file path, read-only mode and database type.",
+      "keepPassword": "Leave empty to keep the saved password."
     },
     "sslMode": {
       "disable": "Disable",
