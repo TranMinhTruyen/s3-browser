@@ -19,22 +19,19 @@ use crate::protocol::{
     StatementResult, TABLE_NOT_FOUND,
 };
 use crate::registry;
-use sqlx::sqlite::{LockedSqliteHandle, SqliteConnection};
+use sqlx::sqlite::SqliteConnection;
 use sqlx::{AssertSqlSafe, Connection};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 use tokio::sync::mpsc;
 
-/// Cursor đang mở: câu SELECT đọc dần từng dòng (không nạp cả kết quả vào RAM). `_handle` mượn
-/// connection (`'c`) nên actor không dùng được connection cho tới khi bỏ cursor, đồng thời khoá
-/// worker thread của sqlx để nó không đụng vào handle trong lúc ta `step`.
+/// Cursor đang mở: câu SELECT đọc dần từng dòng (không nạp cả kết quả vào RAM). `stmt` mượn
+/// connection (`'c`, nó giữ luôn khoá handle) nên actor không dùng được connection cho tới khi
+/// bỏ cursor, đồng thời worker thread của sqlx không đụng vào handle trong lúc ta `step`.
 /// Vì vậy actor chuyển sang `hold` để chỉ phục vụ `fetch` cho tới khi cursor kết thúc.
 struct Held<'c> {
     cursor_id: u64,
-    /// Phải khai báo TRƯỚC `_handle`: field drop theo thứ tự khai báo, câu phải finalize trước
-    /// khi nhả connection (xem `raw::Stmt`).
-    stmt: raw::Stmt,
-    _handle: LockedSqliteHandle<'c>,
+    stmt: raw::Stmt<'c>,
 }
 
 /// Giới hạn một trang kết quả.
@@ -110,10 +107,12 @@ pub async fn run(id: u64, mut conn: SqliteConnection, mut rx: mpsc::Receiver<Cmd
                 // `held` là `Some` khi còn dòng và cần giữ cursor; `&mut conn` mượn connection cho `execute`.
                 let (res, held) =
                     execute(&mut conn, &job.params.sql, limits, &job.cancel, next_cursor).await;
+                // Gỡ `running` TRƯỚC khi trả lời (xem `drop_cursor_if_cancelled`).
+                reg.set_running(id, 0);
+                let (res, held) = drop_cursor_if_cancelled(res, held, &job.cancel);
                 let _ = job
                     .reply
                     .send(res.map(|statements| ExecuteResult { statements }));
-                reg.set_running(id, 0);
                 if let Some(held) = held {
                     // `hold` giữ cursor tới khi hết dòng hoặc có lệnh khác tới (trả về qua `pending`).
                     pending = hold(id, held, &mut rx).await;
@@ -122,8 +121,9 @@ pub async fn run(id: u64, mut conn: SqliteConnection, mut rx: mpsc::Receiver<Cmd
             Cmd::TableRows(job) => {
                 next_cursor += 1;
                 let (res, held) = table_rows(&mut conn, &job, next_cursor).await;
-                let _ = job.reply.send(res);
                 reg.set_running(id, 0);
+                let (res, held) = drop_cursor_if_cancelled(res, held, &job.cancel);
+                let _ = job.reply.send(res);
                 if let Some(held) = held {
                     pending = hold(id, held, &mut rx).await;
                 }
@@ -166,6 +166,12 @@ async fn hold(conn_id: u64, mut held: Held<'_>, rx: &mut mpsc::Receiver<Cmd>) ->
                 match page {
                     Ok(page) => {
                         let done = page.done;
+                        // `running` đã về 0: cờ huỷ bật lúc này nghĩa là cursor còn lại có thể
+                        // mang cờ interrupt treo, nên bỏ cursor và trả `cancelled`.
+                        if !done && job.cancel.load(Ordering::SeqCst) {
+                            let _ = job.reply.send(Err(cancelled()));
+                            return None;
+                        }
                         let _ = job.reply.send(Ok(FetchResult {
                             rows: page.rows,
                             done,
@@ -186,6 +192,25 @@ async fn hold(conn_id: u64, mut held: Held<'_>, rx: &mut mpsc::Receiver<Cmd>) ->
             }
             other => return Some(other),
         }
+    }
+}
+
+/// Xử lý race giữa `s3b_cancel` và lúc request vừa đọc xong trang: `cancel` có thể chạy sau khi
+/// `read_page` xong nhưng trước `set_running(0)`, để lại cờ interrupt treo của SQLite trong cursor
+/// còn mở (lần `fetch` sau sẽ lỗi `interrupted` thay vì `cancelled`).
+///
+/// Gọi SAU `set_running(id, 0)` (cùng lock với `cancel`, nên từ đây không còn interrupt nào cho
+/// request này); mọi interrupt trước đó đều đi sau khi cờ huỷ bật, nên chỉ cần kiểm cờ. Cờ đã bật
+/// mà còn giữ cursor thì bỏ cursor (finalize) và trả `cancelled`.
+fn drop_cursor_if_cancelled<'c, T>(
+    res: DbResult<T>,
+    held: Option<Held<'c>>,
+    cancel: &AtomicBool,
+) -> (DbResult<T>, Option<Held<'c>>) {
+    if held.is_some() && cancel.load(Ordering::SeqCst) {
+        (Err(cancelled()), None)
+    } else {
+        (res, held)
     }
 }
 
@@ -227,7 +252,7 @@ pub fn map_sqlx(e: sqlx::Error, cancel: &AtomicBool) -> DbError {
 /// Hàm đồng bộ (không `async`): `sqlite3_step` chặn thread cho tới khi có dòng, có thể rất lâu với
 /// câu nặng. `block_in_place` báo cho tokio chuyển các task khác sang thread khác trong lúc đó để
 /// không làm đói runtime (chỉ dùng được trên runtime multi-thread, đúng cái `runtime.rs` tạo).
-fn read_page(stmt: &mut raw::Stmt, limits: Limits, cancel: &AtomicBool) -> DbResult<Page> {
+fn read_page(stmt: &mut raw::Stmt<'_>, limits: Limits, cancel: &AtomicBool) -> DbResult<Page> {
     tokio::task::block_in_place(|| {
         // Cấp sẵn chỗ nhưng tối đa 1024 để `pageSize` lớn không chiếm RAM trước khi có dữ liệu.
         let mut rows = Vec::with_capacity(limits.page_size.min(1024));
@@ -309,6 +334,9 @@ async fn execute<'c>(
         };
         let prepared = match prepared {
             Ok(p) => p,
+            // `s3b_cancel` có thể bật cờ ngay sau kiểm tra đầu vòng lặp rồi interrupt làm prepare
+            // lỗi `interrupted`: đó là huỷ chứ không phải lỗi SQL của câu.
+            Err(_) if cancel.load(Ordering::SeqCst) => return (Err(cancelled()), None),
             Err(msg) => {
                 let text = String::from_utf8_lossy(split::first_statement(rest));
                 out.push(statement_error(index, text.trim(), start, msg));
@@ -362,6 +390,8 @@ async fn execute<'c>(
             match page {
                 Ok(page) => out.push(rows_statement(index, text, columns, page, None, start)),
                 Err(e) if e.code == CANCELLED => return (Err(e), None),
+                // `open_cursor` không biết cờ huỷ: interrupt làm prepare lỗi vẫn là huỷ.
+                Err(_) if cancel.load(Ordering::SeqCst) => return (Err(cancelled()), None),
                 Err(e) => {
                     out.push(statement_error(index, &text, start, e.message));
                     return (Ok(out), None);
@@ -373,6 +403,7 @@ async fn execute<'c>(
         // Câu cuối: mọi nhánh bên dưới đều return, nên borrow `'c` của cursor không chặn vòng lặp.
         let mut held = match open_cursor(conn, &text, cursor_id).await {
             Ok(held) => held,
+            Err(_) if cancel.load(Ordering::SeqCst) => return (Err(cancelled()), None),
             Err(e) => {
                 out.push(statement_error(index, &text, start, e.message));
                 return (Ok(out), None);
@@ -403,17 +434,14 @@ async fn open_cursor<'c>(
     sql: &str,
     cursor_id: u64,
 ) -> DbResult<Held<'c>> {
-    let mut handle = conn
+    let handle = conn
         .lock_handle()
         .await
         .map_err(|e| DbError::internal(e.to_string()))?;
-    let stmt = raw::Stmt::prepare(&mut handle, sql.as_bytes())
-        .map_err(|msg| DbError::new(SQL_ERROR, msg))?;
-    Ok(Held {
-        cursor_id,
-        stmt,
-        _handle: handle,
-    })
+    // `prepare` nhận handle theo giá trị: khoá được cất vào `Stmt` và sống cùng câu.
+    let stmt =
+        raw::Stmt::prepare(handle, sql.as_bytes()).map_err(|msg| DbError::new(SQL_ERROR, msg))?;
+    Ok(Held { cursor_id, stmt })
 }
 
 /// Dựng `StatementResult` loại `rows` từ một trang. `cursor_id` có nghĩa là actor sẽ giữ cursor.
@@ -661,8 +689,13 @@ mod tests {
     async fn interrupt_infinite_step(set_flag: bool) -> DbError {
         let mut conn = mem().await;
         let cancel = Arc::new(AtomicBool::new(false));
+        // Lấy handle interrupt TRƯỚC khi `open_cursor` (khoá nằm trong `Stmt` sau đó).
+        let handle = {
+            let mut h = conn.lock_handle().await.unwrap();
+            // SAFETY: `conn` sống hơn `handle`, `handle` chỉ dùng trong test này.
+            unsafe { raw::InterruptHandle::of(&mut h) }
+        };
         let mut held = open_cursor(&mut conn, INFINITE_STEP, 1).await.ok().unwrap();
-        let handle = raw::InterruptHandle::of(&mut held._handle);
         let stop = Arc::new(AtomicBool::new(false));
         let (flag, stop2) = (cancel.clone(), stop.clone());
         let t = std::thread::spawn(move || {
@@ -926,5 +959,98 @@ mod tests {
         drop(tx);
         assert!(hold(0, held.unwrap(), &mut rx).await.is_none());
         conn.close().await.unwrap();
+    }
+
+    /// Fetch mang cờ huỷ đã bật: `hold` trả `cancelled`, bỏ cursor (finalize) và kết thúc; connection
+    /// dùng lại và đóng sạch được.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn hold_fetch_with_cancel_flag_replies_cancelled_and_drops_cursor() {
+        let mut conn = mem().await;
+        let cancel = AtomicBool::new(false);
+        let (_, held) = execute(&mut conn, &series(5), limits(2, BIG), &cancel, 5).await;
+        let (tx, mut rx) = mpsc::channel(8);
+        let (fetch, fetch_rx) = fetch_job(5, 2);
+        let Cmd::Fetch(job) = &fetch else {
+            panic!("fetch_job phải trả Cmd::Fetch");
+        };
+        job.cancel.store(true, Ordering::SeqCst);
+        tx.send(fetch).await.ok().unwrap();
+        assert!(hold(0, held.unwrap(), &mut rx).await.is_none());
+        assert_eq!(fetch_rx.await.unwrap().err().unwrap().code, CANCELLED);
+        let (res, held) = execute(&mut conn, "SELECT 1", limits(10, BIG), &cancel, 6).await;
+        assert!(held.is_none());
+        drop(held);
+        assert_eq!(
+            res.unwrap()[0].rows.as_ref().unwrap()[0][0].as_deref(),
+            Some("1")
+        );
+        conn.close().await.unwrap();
+    }
+
+    // ---------- drop_cursor_if_cancelled ----------
+
+    /// Cờ huỷ bật + còn cursor (cursor có thể mang cờ interrupt treo do `cancel` chạy muộn):
+    /// trả `cancelled`, bỏ cursor; connection không còn bị `interrupted` và đóng sạch được.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn drop_cursor_if_cancelled_flag_on_with_cursor_drops_and_clears_interrupt() {
+        let mut conn = mem().await;
+        let handle = {
+            let mut h = conn.lock_handle().await.unwrap();
+            // SAFETY: `conn` sống hơn `handle`, `handle` chỉ dùng trong test này.
+            unsafe { raw::InterruptHandle::of(&mut h) }
+        };
+        let no_cancel = AtomicBool::new(false);
+        let (res, held) = execute(&mut conn, &series(5), limits(2, BIG), &no_cancel, 3).await;
+        assert!(res.is_ok() && held.is_some());
+        // Mô phỏng `cancel` chạy sau khi trang đã đọc xong: cờ bật rồi interrupt, cursor còn mở.
+        let cancel = AtomicBool::new(true);
+        handle.interrupt();
+        let (res, held) = drop_cursor_if_cancelled(res, held, &cancel);
+        assert_eq!(res.err().unwrap(), cancelled());
+        assert!(held.is_none());
+        drop(held);
+        // Cursor đã finalize nên cờ interrupt treo được SQLite xoá: câu kế chạy bình thường.
+        let (res, held) = execute(&mut conn, "SELECT 1", limits(10, BIG), &no_cancel, 4).await;
+        assert!(held.is_none());
+        drop(held);
+        assert_eq!(
+            res.unwrap()[0].rows.as_ref().unwrap()[0][0].as_deref(),
+            Some("1")
+        );
+        conn.close().await.unwrap();
+    }
+
+    /// Cờ huỷ không bật: kết quả và cursor giữ nguyên, cursor đọc tiếp được đúng chỗ.
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn drop_cursor_if_cancelled_flag_off_keeps_result_and_cursor() {
+        let mut conn = mem().await;
+        let cancel = AtomicBool::new(false);
+        let (res, held) = execute(&mut conn, &series(5), limits(2, BIG), &cancel, 3).await;
+        let (res, held) = drop_cursor_if_cancelled(res, held, &cancel);
+        let st = res.unwrap();
+        assert_eq!(st[0].cursor_id, Some(3));
+        assert_eq!(st[0].rows.as_ref().unwrap().len(), 2);
+        let mut held = held.unwrap();
+        assert_eq!(held.cursor_id, 3);
+        let p = read_page(&mut held.stmt, limits(10, BIG), &cancel).unwrap();
+        assert_eq!(first_col(&p), ["3", "4", "5"]);
+        assert!(p.done);
+    }
+
+    /// Không còn cursor thì kết quả không đổi dù cờ huỷ bật hay không: `Ok` giữ `Ok`, lỗi gốc giữ
+    /// nguyên mã (không bị đổi thành `cancelled`).
+    #[test]
+    fn drop_cursor_if_cancelled_without_cursor_keeps_result() {
+        for flag in [false, true] {
+            let cancel = AtomicBool::new(flag);
+            let (res, held) = drop_cursor_if_cancelled(Ok(42u32), None, &cancel);
+            assert_eq!(res.unwrap(), 42, "flag={flag}");
+            assert!(held.is_none(), "flag={flag}");
+
+            let original = DbError::new(SQL_ERROR, "boom");
+            let (res, held) = drop_cursor_if_cancelled::<u32>(Err(original.clone()), None, &cancel);
+            assert_eq!(res.err().unwrap(), original, "flag={flag}");
+            assert!(held.is_none(), "flag={flag}");
+        }
     }
 }

@@ -22,8 +22,10 @@ use std::slice;
 /// Handle chỉ dùng để `sqlite3_interrupt` từ thread khác. `NonNull` là con trỏ thô đảm bảo không null;
 /// `Copy` cho phép sao chép rẻ như số nguyên.
 ///
-/// Hợp đồng: registry gỡ handle (dưới lock) trước khi connection bị đóng và chỉ gọi
-/// `interrupt` dưới cùng lock đó, nên handle luôn còn sống khi dùng.
+/// Con trỏ thô không mang lifetime nên compiler không biết connection đã đóng chưa; hợp đồng do
+/// người tạo (`of`, là `unsafe fn`) giữ: handle chỉ được giữ khi connection còn sống. Registry
+/// thực hiện bằng cách gỡ handle (dưới lock) trước khi connection bị đóng và chỉ gọi `interrupt`
+/// dưới cùng lock đó.
 #[derive(Clone, Copy)]
 pub struct InterruptHandle(NonNull<ffi::sqlite3>);
 
@@ -36,13 +38,18 @@ unsafe impl Sync for InterruptHandle {}
 
 impl InterruptHandle {
     /// Lấy handle từ `LockedSqliteHandle` (sqlx giữ khoá worker thread trong lúc ta lấy con trỏ).
-    pub fn of(handle: &mut LockedSqliteHandle<'_>) -> Self {
+    ///
+    /// # Safety
+    /// Handle trả về là bản sao con trỏ, không còn gắn với connection. Người gọi phải đảm bảo
+    /// không còn dùng (`interrupt`) nó sau khi connection bị đóng/drop, ví dụ bằng cách gỡ nó
+    /// khỏi nơi lưu (registry) trước khi đóng connection.
+    pub unsafe fn of(handle: &mut LockedSqliteHandle<'_>) -> Self {
         Self(handle.as_raw_handle())
     }
 
     /// Ngắt câu SQL đang chạy trên connection; câu đó sẽ trả lỗi `interrupted`.
     pub fn interrupt(&self) {
-        // SAFETY: xem hợp đồng của `InterruptHandle`; `sqlite3_interrupt` an toàn đa luồng.
+        // SAFETY: hợp đồng của `of` đảm bảo connection còn sống; `sqlite3_interrupt` an toàn đa luồng.
         unsafe { ffi::sqlite3_interrupt(self.0.as_ptr()) }
     }
 }
@@ -137,37 +144,50 @@ pub fn prepare_next(handle: &mut LockedSqliteHandle<'_>, sql: &[u8]) -> Result<P
 
 /// Câu SELECT đã prepare, đọc dần từng dòng bằng `sqlite3_step`.
 ///
-/// `Drop` finalize câu (RAII, giống `defer` của Go). Bắt buộc drop trước khi connection đóng:
-/// sqlx panic nếu `sqlite3_close` còn thấy câu chưa finalize. Actor đảm bảo bằng cách giữ `Stmt`
-/// cùng `LockedSqliteHandle` (mượn connection) trong `Held`, `Stmt` khai báo trước nên drop trước.
-pub struct Stmt {
+/// `Stmt` sở hữu luôn `LockedSqliteHandle` (khoá connection) nên câu không thể sống lâu hơn khoá
+/// của connection: compiler chặn mọi cách để connection đóng trong lúc câu còn tồn tại. Lifetime
+/// `'c` là thời gian mượn connection.
+///
+/// `Drop` finalize câu (RAII, giống `defer` của Go) rồi các field mới được drop, trong đó
+/// `_handle` nhả khoá. Thứ tự này bắt buộc: sqlx panic nếu `sqlite3_close` còn thấy câu chưa
+/// finalize, và finalize cần connection còn nguyên.
+pub struct Stmt<'c> {
     ptr: NonNull<ffi::sqlite3_stmt>,
     /// Số cột, đọc một lần lúc prepare.
     ncols: c_int,
+    /// Chỉ để giữ khoá worker của sqlx (không đọc). Khai báo sau `ptr`/`ncols`; `Drop::drop` của
+    /// `Stmt` chạy trước khi field này bị drop.
+    _handle: LockedSqliteHandle<'c>,
 }
 
 // `Send`: cho phép chuyển `Stmt` giữa các thread (task tokio có thể đổi thread sau mỗi `.await`).
-// SAFETY: SQLite build ở chế độ serialized (SQLITE_THREADSAFE=1, mặc định của libsqlite3-sys), cho
-// phép dùng handle/stmt từ nhiều thread miễn không đồng thời; `Stmt` chỉ do actor của connection
-// dùng, mỗi lúc một thread, và không có bản sao con trỏ nào khác. Không `Sync`: không chia sẻ `&Stmt`.
-unsafe impl Send for Stmt {}
+// SAFETY: sqlx mở connection ở chế độ multi-thread (SQLITE_OPEN_NOMUTEX, không phải serialized):
+// handle/stmt dùng được từ thread khác miễn không có hai thread dùng đồng thời. `Stmt` giữ
+// `LockedSqliteHandle` nên worker thread của sqlx bị chặn, và chỉ một task (actor của connection)
+// dùng `Stmt` tại một thời điểm; không có bản sao con trỏ nào khác. Không `Sync`: không chia sẻ `&Stmt`.
+unsafe impl Send for Stmt<'_> {}
 
-impl Drop for Stmt {
+impl Drop for Stmt<'_> {
     fn drop(&mut self) {
-        // SAFETY: `ptr` do `prepare` cấp, chưa finalize (chỉ finalize ở đây, `Stmt` không `Clone`).
+        // SAFETY: `ptr` do `prepare` cấp, chưa finalize (chỉ finalize ở đây, `Stmt` không `Clone`);
+        // `_handle` còn giữ khoá nên connection còn sống.
         unsafe { ffi::sqlite3_finalize(self.ptr.as_ptr()) };
     }
 }
 
-impl Stmt {
-    /// Prepare đúng một câu (đã được `prepare_next` xác nhận là câu có cột). Giữ `handle` mượn
-    /// trong lúc gọi để worker của sqlx không dùng handle đồng thời.
-    pub fn prepare(handle: &mut LockedSqliteHandle<'_>, sql: &[u8]) -> Result<Self, String> {
+impl<'c> Stmt<'c> {
+    /// Prepare đúng một câu (đã được `prepare_next` xác nhận là câu có cột). Nhận `handle` theo
+    /// giá trị (move) và cất vào `Stmt` để khoá sống cùng câu. Lỗi thì `handle` được nhả lại.
+    pub fn prepare(mut handle: LockedSqliteHandle<'c>, sql: &[u8]) -> Result<Self, String> {
         let (stmt, _) = prepare_raw(handle.as_raw_handle().as_ptr(), sql)?;
         let ptr = NonNull::new(stmt).ok_or_else(|| "empty statement".to_owned())?;
         // SAFETY: `ptr` vừa được prepare, chưa finalize.
         let ncols = unsafe { ffi::sqlite3_column_count(ptr.as_ptr()) };
-        Ok(Self { ptr, ncols })
+        Ok(Self {
+            ptr,
+            ncols,
+            _handle: handle,
+        })
     }
 
     /// Chạy tới dòng kế và đổi mọi ô sang chuỗi. `Ok(None)` là hết dòng.
@@ -249,10 +269,10 @@ mod tests {
         SqliteConnection::connect("sqlite::memory:").await.unwrap()
     }
 
-    /// Đọc hết kết quả bằng đường mới (`Stmt`). `stmt` khai báo sau `handle` nên drop trước.
+    /// Đọc hết kết quả bằng đường mới (`Stmt`, giữ luôn handle).
     async fn read_new(conn: &mut SqliteConnection, sql: &str) -> Result<Vec<Cells>, String> {
-        let mut handle = conn.lock_handle().await.unwrap();
-        let mut stmt = Stmt::prepare(&mut handle, sql.as_bytes())?;
+        let handle = conn.lock_handle().await.unwrap();
+        let mut stmt = Stmt::prepare(handle, sql.as_bytes())?;
         let mut rows = Vec::new();
         while let Some(row) = stmt.next_row()? {
             rows.push(row);
@@ -448,16 +468,17 @@ mod tests {
     #[tokio::test]
     async fn prepare_errors() {
         let mut conn = mem().await;
-        let mut handle = conn.lock_handle().await.unwrap();
-        let syntax = Stmt::prepare(&mut handle, b"SELEC 1").err().unwrap();
+        // `prepare` nhận handle theo giá trị và nhả lại khi lỗi, nên mỗi lần khoá một handle mới.
+        let handle = conn.lock_handle().await.unwrap();
+        let syntax = Stmt::prepare(handle, b"SELEC 1").err().unwrap();
         assert!(syntax.contains("syntax error"), "{syntax}");
-        let missing = Stmt::prepare(&mut handle, b"SELECT * FROM nope")
-            .err()
-            .unwrap();
+        let handle = conn.lock_handle().await.unwrap();
+        let missing = Stmt::prepare(handle, b"SELECT * FROM nope").err().unwrap();
         assert!(missing.contains("nope"), "{missing}");
         // Chỉ khoảng trắng/comment/`;` không có câu lệnh để prepare.
         for sql in ["", "   ", "-- c\n", ";"] {
-            let e = Stmt::prepare(&mut handle, sql.as_bytes()).err().unwrap();
+            let handle = conn.lock_handle().await.unwrap();
+            let e = Stmt::prepare(handle, sql.as_bytes()).err().unwrap();
             assert_eq!(e, "empty statement", "{sql:?}");
         }
     }
@@ -466,9 +487,9 @@ mod tests {
     #[tokio::test]
     async fn step_error_surfaces_message() {
         let mut conn = mem().await;
-        let mut handle = conn.lock_handle().await.unwrap();
+        let handle = conn.lock_handle().await.unwrap();
         let mut stmt = Stmt::prepare(
-            &mut handle,
+            handle,
             b"SELECT abs(x) FROM (SELECT 1 AS x UNION ALL SELECT -9223372036854775807-1)",
         )
         .unwrap();
@@ -482,9 +503,9 @@ mod tests {
     async fn drop_mid_result_then_close_is_clean() {
         let mut conn = mem().await;
         {
-            let mut handle = conn.lock_handle().await.unwrap();
+            let handle = conn.lock_handle().await.unwrap();
             let mut stmt = Stmt::prepare(
-                &mut handle,
+                handle,
                 b"WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM c WHERE x<10) SELECT x FROM c",
             )
             .unwrap();
@@ -585,7 +606,8 @@ mod tests {
     #[tokio::test]
     async fn interrupt_when_idle_is_harmless() {
         let mut conn = mem().await;
-        let handle = InterruptHandle::of(&mut conn.lock_handle().await.unwrap());
+        // SAFETY: `conn` sống tới hết test, `handle` không được dùng sau đó.
+        let handle = unsafe { InterruptHandle::of(&mut conn.lock_handle().await.unwrap()) };
         for _ in 0..3 {
             handle.interrupt();
         }
@@ -600,9 +622,10 @@ mod tests {
         let mut conn = mem().await;
         {
             let mut handle = conn.lock_handle().await.unwrap();
-            let ih = InterruptHandle::of(&mut handle);
+            // SAFETY: `conn` sống hơn `ih`, `ih` chỉ dùng trong khối này.
+            let ih = unsafe { InterruptHandle::of(&mut handle) };
             let mut stmt = Stmt::prepare(
-                &mut handle,
+                handle,
                 b"WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM c) SELECT x FROM c",
             )
             .unwrap();
@@ -615,6 +638,47 @@ mod tests {
             read_new(&mut conn, "SELECT 2").await.unwrap(),
             vec![vec![s("2")]]
         );
+    }
+
+    /// `Stmt` sở hữu khoá handle: drop `Stmt` (giữa kết quả, hoặc sau khi `step` lỗi) phải nhả khoá
+    /// để lần `lock_handle` kế tiếp xong ngay (timeout chỉ là chốt chặn chống treo test), rồi đóng
+    /// connection sạch (câu đã finalize trước khi nhả khoá).
+    #[tokio::test]
+    async fn dropping_stmt_releases_lock_then_close_is_clean() {
+        use std::time::Duration;
+        let mut conn = mem().await;
+        let wait = Duration::from_secs(10);
+
+        // Drop giữa kết quả.
+        let handle = conn.lock_handle().await.unwrap();
+        let mut stmt = Stmt::prepare(handle, b"SELECT 1 UNION ALL SELECT 2").unwrap();
+        assert_eq!(stmt.next_row().unwrap(), Some(vec![s("1")]));
+        drop(stmt);
+        let handle = tokio::time::timeout(wait, conn.lock_handle())
+            .await
+            .expect("khoá phải được nhả sau khi drop Stmt")
+            .unwrap();
+
+        // Drop sau khi `step` lỗi: khoá cũng được nhả.
+        let mut stmt = Stmt::prepare(
+            handle,
+            b"SELECT abs(x) FROM (SELECT 1 AS x UNION ALL SELECT -9223372036854775807-1)",
+        )
+        .unwrap();
+        assert!(stmt.next_row().is_ok());
+        assert!(stmt.next_row().is_err());
+        drop(stmt);
+        let handle = tokio::time::timeout(wait, conn.lock_handle())
+            .await
+            .expect("khoá phải được nhả sau khi drop Stmt lỗi")
+            .unwrap();
+        drop(handle);
+
+        assert_eq!(
+            read_new(&mut conn, "SELECT 7").await.unwrap(),
+            vec![vec![s("7")]]
+        );
+        conn.close().await.unwrap();
     }
 
     /// `bytes`: con trỏ null hoặc độ dài <= 0 cho slice rỗng, không đọc bộ nhớ.
@@ -635,6 +699,6 @@ mod tests {
     #[test]
     fn stmt_is_send() {
         fn assert_send<T: Send>() {}
-        assert_send::<Stmt>();
+        assert_send::<Stmt<'_>>();
     }
 }

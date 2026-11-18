@@ -12,7 +12,7 @@
 /// Vòng lặp actor và việc chạy câu SQL, cursor.
 mod actor;
 /// Gọi SQLite C API (toàn bộ `unsafe` ở đây).
-pub mod raw;
+pub(crate) mod raw;
 /// Đọc cấu trúc database (cây đối tượng, thông tin table).
 mod schema;
 /// Nhận biết phần SQL còn lại chỉ là khoảng trắng/comment.
@@ -140,7 +140,9 @@ pub async fn open(p: OpenParams) -> DbResult<OpenResult> {
 
     // Lấy handle `sqlite3*` thô để `s3b_cancel` có thể ngắt câu đang chạy từ thread khác.
     let interrupt = match conn.lock_handle().await {
-        Ok(mut h) => raw::InterruptHandle::of(&mut h),
+        // SAFETY: handle chỉ được dùng qua registry; actor gỡ nó khỏi registry (`RegistryGuard`,
+        // `Close`) trước khi connection bị đóng/drop, và `close` cũng gỡ trước khi gửi `Close`.
+        Ok(mut h) => unsafe { raw::InterruptHandle::of(&mut h) },
         Err(e) => return Err(DbError::internal(e.to_string())),
     };
     let reg = registry::global();

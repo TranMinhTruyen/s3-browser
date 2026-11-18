@@ -6,7 +6,8 @@ mod common;
 use common::*;
 use serde_json::{Value, json};
 use std::collections::BTreeSet;
-use std::sync::mpsc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, mpsc};
 use std::thread;
 use std::time::Duration;
 
@@ -992,4 +993,97 @@ fn cancelled_fetch_does_not_affect_next_request_on_same_connection() {
         ok(&fetch(db.conn, cur))["rows"].as_array().unwrap().len(),
         500
     );
+}
+
+// ---------- huỷ đua với lúc request vừa xong (B1) ----------
+
+/// Gọi `method` trong khi thread khác spam `s3b_cancel(id)` cho tới khi gọi xong, để `cancel` có
+/// cơ hội rơi vào mọi pha của request (xếp hàng, đang đọc, vừa đọc xong, vừa trả lời).
+fn call_while_cancelling(id: u64, method: &str, params: Value) -> Value {
+    let stop = Arc::new(AtomicBool::new(false));
+    let flag = stop.clone();
+    let canceller = thread::spawn(move || {
+        while !flag.load(Ordering::SeqCst) {
+            cancel(id);
+            thread::yield_now();
+        }
+    });
+    let r = call_with_id(id, method, params);
+    stop.store(true, Ordering::SeqCst);
+    canceller.join().unwrap();
+    r
+}
+
+/// Chạy `execute` 300 lần trong lúc có thread spam `s3b_cancel`. Mỗi lần kết quả hợp lệ là:
+/// `cancelled` (không còn cursor), hoặc `ok` kèm cursor đọc tiếp được. `ok` mà `fetch` sau đó báo
+/// `interrupted` là lỗi B1 (cancel interrupt cursor sau khi đã trả lời). `ok` mang lỗi câu
+/// `interrupted` (prepare bị interrupt, không phải `cancelled`) thì `strict` mới coi là lỗi.
+fn race_execute(strict: bool) {
+    let db = Db::new();
+    for _ in 0..300 {
+        let id = next_id();
+        let r = call_while_cancelling(
+            id,
+            "execute",
+            json!({"connId": db.conn, "sql": series(50), "pageSize": 10, "maxPageBytes": MAX_BYTES}),
+        );
+        if r["ok"] == true {
+            let st = &statements(&r)[0];
+            if st["error"].is_object() {
+                assert!(!strict, "huỷ đua phải là `cancelled`, thực tế: {r}");
+                assert_eq!(st["error"]["message"], "interrupted", "{r}");
+            } else {
+                let cur = st["cursorId"].as_u64().unwrap();
+                let f = fetch_page(db.conn, cur, 10, MAX_BYTES);
+                assert_eq!(ok(&f)["rows"][0], json!(["11"]), "{f}");
+            }
+        } else {
+            assert_eq!(err_code(&r), "cancelled");
+        }
+        // Connection luôn dùng lại được (cũng bỏ cursor còn mở nếu có).
+        assert_eq!(rows(&statements(&db.exec("SELECT 5"))[0])[0], json!(["5"]));
+    }
+}
+
+/// Test căng (stress), không xác định theo thời điểm: với code đúng luôn qua; code để `cancel`
+/// interrupt cursor sau khi đã trả lời `ok` (B1) sẽ thỉnh thoảng làm `fetch` kế tiếp lỗi.
+#[test]
+fn cancel_racing_execute_never_leaves_interrupted_cursor() {
+    race_execute(false);
+}
+
+/// Bản chặt: `execute` bị huỷ đua không được trả `ok` kèm lỗi câu `sqlError: interrupted`.
+#[test]
+fn cancel_racing_execute_is_cancelled_not_statement_error() {
+    race_execute(true);
+}
+
+/// Như trên cho `fetch`: huỷ đua thì `cancelled` (cursor bị bỏ, `fetch` sau đó `cursorNotFound`)
+/// hoặc `ok`; không bao giờ `sqlError`.
+#[test]
+fn cancel_racing_fetch_never_yields_sql_error() {
+    let db = Db::new();
+    let new_cursor = || {
+        let r = exec_page(db.conn, &series(5000), 10, MAX_BYTES);
+        statements(&r)[0]["cursorId"].as_u64().unwrap()
+    };
+    let mut cur = new_cursor();
+    for _ in 0..300 {
+        let id = next_id();
+        let r = call_while_cancelling(
+            id,
+            "fetch",
+            json!({"connId": db.conn, "cursorId": cur, "pageSize": 10, "maxPageBytes": MAX_BYTES}),
+        );
+        if r["ok"] == true {
+            assert!(!ok(&r)["rows"].as_array().unwrap().is_empty(), "{r}");
+        } else {
+            assert_eq!(err_code(&r), "cancelled");
+            assert_eq!(
+                err_code(&fetch_page(db.conn, cur, 10, MAX_BYTES)),
+                "cursorNotFound"
+            );
+            cur = new_cursor();
+        }
+    }
 }
