@@ -1,15 +1,17 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ConnectDb, DeleteDbProfileById, DisconnectDb } from '@wails/S3Browser/internal/handlers/dbhandler';
 import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, type UiSizeKey } from '@/common/cnst/settingConst';
 import { useSettingStore } from '@/common/stores/settingStore';
+import { callIPC } from '@/common/utils/ipcUtils';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
-import { MOCK_DB_PROFILES } from '@/pages/sql/mock/dbProfileMock';
 import DbProfileModal from '@/pages/sql/modals/dbProfile/DbProfileModal';
 import DbProfiles from '@/pages/sql/navbar/DbProfiles';
-import { useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
+import { type DbProfile, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
+import { pgProfile, sqliteProfile, toProfileMap } from '@/test/_helpers/dbProfiles';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 // jsdom has no layout, so render every row.
@@ -37,12 +39,33 @@ vi.mock('@tanstack/react-virtual', () => ({
     };
   },
 }));
+vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
+vi.mock('@wails/S3Browser/internal/handlers/dbhandler', () => ({
+  ConnectDb: vi.fn(),
+  DeleteDbProfileById: vi.fn(),
+  DisconnectDb: vi.fn(),
+  GetAllDbProfile: vi.fn(),
+}));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), info: vi.fn() } }));
 vi.mock('@/components/modals/confirm/ConfirmModal', () => ({ default: { show: vi.fn() } }));
 vi.mock('@/pages/sql/modals/dbProfile/DbProfileModal', () => ({ default: { show: vi.fn() } }));
 
 const confirmMock = vi.mocked(ConfirmModal.show);
 const modalMock = vi.mocked(DbProfileModal.show);
+const callIPCMock = vi.mocked(callIPC);
+
+const PG_PROFILES = [
+  pgProfile('mock-pg-local', { name: 'Local PostgreSQL' }),
+  pgProfile('mock-pg-staging', { name: 'Staging PostgreSQL', color: '#d3f9d8' }),
+];
+
+const addSqlite = (extra: Partial<DbProfile> = {}) =>
+  useDbProfileStore.setState(state => ({
+    dbProfiles: {
+      ...state.dbProfiles,
+      'sqlite-1': sqliteProfile('sqlite-1', { name: 'Local SQLite', ...extra }),
+    },
+  }));
 const flush = () => act(async () => {});
 
 const card = (name: string) => screen.getByText(name).closest<HTMLElement>('.mantine-Card-root')!;
@@ -61,6 +84,7 @@ async function clickMenuItem(user: ReturnType<typeof userEvent.setup>, name: str
 describe('DbProfiles', () => {
   beforeEach(() => {
     useDbProfileStore.getState().reset();
+    useDbProfileStore.setState({ dbProfiles: toProfileMap(...PG_PROFILES) });
     useSqlTabStore.getState().reset();
     useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS } });
     confirmMock.mockResolvedValue(true as never);
@@ -69,7 +93,7 @@ describe('DbProfiles', () => {
   it('lists every profile in store order', () => {
     renderWithProviders(<DbProfiles />);
     expect(screen.getAllByText(/PostgreSQL$|SQLite$/).filter(e => e.closest('.mantine-Card-root'))).not.toHaveLength(0);
-    for (const p of Object.values(MOCK_DB_PROFILES)) expect(screen.getByText(p.name)).toBeInTheDocument();
+    for (const p of PG_PROFILES) expect(screen.getByText(p.name)).toBeInTheDocument();
     expect(screen.queryByText(/No database profiles yet/)).not.toBeInTheDocument();
   });
 
@@ -129,6 +153,90 @@ describe('DbProfiles', () => {
     });
   });
 
+  describe('SQLite profile (real backend)', () => {
+    beforeEach(() => addSqlite());
+
+    it('double click connects through ConnectDb, sets the flag and toasts', async () => {
+      callIPCMock.mockResolvedValue(true as never);
+      renderWithProviders(<DbProfiles />);
+
+      fireEvent.doubleClick(card('Local SQLite'));
+      await flush();
+
+      expect(callIPCMock).toHaveBeenCalledWith(ConnectDb, [{ profileId: 'sqlite-1' }]);
+      expect(profile('sqlite-1')?.isConnected).toBe(true);
+      expect(toast.success).toHaveBeenCalledWith('Connected to Local SQLite');
+    });
+
+    it('does not change the flag nor toast when the connect fails', async () => {
+      callIPCMock.mockResolvedValue(null);
+      renderWithProviders(<DbProfiles />);
+
+      fireEvent.doubleClick(card('Local SQLite'));
+      await flush();
+
+      expect(profile('sqlite-1')?.isConnected).toBe(false);
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('Disconnect calls DisconnectDb, clears the flag and toasts', async () => {
+      addSqlite({ isConnected: true });
+      callIPCMock.mockResolvedValue(true as never);
+      renderWithProviders(<DbProfiles />);
+
+      await clickMenuItem(userEvent.setup(), 'Local SQLite', 'Disconnect');
+
+      await waitFor(() => expect(profile('sqlite-1')?.isConnected).toBe(false));
+      expect(callIPCMock).toHaveBeenCalledWith(DisconnectDb, [{ profileId: 'sqlite-1' }]);
+      expect(toast.success).toHaveBeenCalledWith('Disconnected from Local SQLite');
+    });
+
+    it('keeps the profile connected and silent when the disconnect fails', async () => {
+      addSqlite({ isConnected: true });
+      callIPCMock.mockResolvedValue(null);
+      renderWithProviders(<DbProfiles />);
+
+      await clickMenuItem(userEvent.setup(), 'Local SQLite', 'Disconnect');
+
+      await waitFor(() => expect(callIPCMock).toHaveBeenCalled());
+      expect(profile('sqlite-1')?.isConnected).toBe(true);
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('deleting a connected profile asks twice, calls DeleteDbProfileById, then removes it and clears tabs', async () => {
+      addSqlite({ isConnected: true });
+      const tabId = useSqlTabStore.getState().activeTab;
+      useSqlTabStore.getState().setTabProfile(tabId, 'sqlite-1');
+      callIPCMock.mockResolvedValue(true as never);
+      renderWithProviders(<DbProfiles />);
+
+      await clickMenuItem(userEvent.setup(), 'Local SQLite', 'Delete');
+
+      await waitFor(() => expect(profile('sqlite-1')).toBeUndefined());
+      expect(confirmMock).toHaveBeenCalledTimes(2);
+      expect(callIPCMock).toHaveBeenCalledWith(DeleteDbProfileById, [
+        { id: 'sqlite-1', name: 'Local SQLite', config: {} },
+      ]);
+      expect(useSqlTabStore.getState().tabList[tabId].profileId).toBeNull();
+      expect(toast.success).toHaveBeenCalledWith('Deleted Local SQLite');
+    });
+
+    it('keeps the profile, the tab link and shows no toast when the backend refuses to delete', async () => {
+      const tabId = useSqlTabStore.getState().activeTab;
+      useSqlTabStore.getState().setTabProfile(tabId, 'sqlite-1');
+      callIPCMock.mockResolvedValue(null);
+      renderWithProviders(<DbProfiles />);
+
+      await clickMenuItem(userEvent.setup(), 'Local SQLite', 'Delete');
+
+      await waitFor(() => expect(callIPCMock).toHaveBeenCalledWith(DeleteDbProfileById, expect.anything()));
+      await flush();
+      expect(profile('sqlite-1')).toBeDefined();
+      expect(useSqlTabStore.getState().tabList[tabId].profileId).toBe('sqlite-1');
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+  });
+
   describe('context menu', () => {
     it('offers Connect, Edit, Export and Delete for a disconnected profile', async () => {
       renderWithProviders(<DbProfiles />);
@@ -149,6 +257,7 @@ describe('DbProfiles', () => {
     it('Connect connects the right-clicked profile', async () => {
       renderWithProviders(<DbProfiles />);
       await clickMenuItem(userEvent.setup(), 'Staging PostgreSQL', 'Connect');
+      expect(callIPCMock).not.toHaveBeenCalled(); // PostgreSQL is still fake
       expect(profile('mock-pg-staging')?.isConnected).toBe(true);
       expect(profile('mock-pg-local')?.isConnected).toBe(false);
       expect(toast.success).toHaveBeenCalledWith('Connected to Staging PostgreSQL');
@@ -164,17 +273,30 @@ describe('DbProfiles', () => {
 
     it('Edit opens the profile modal with the current profile', async () => {
       renderWithProviders(<DbProfiles />);
-      await clickMenuItem(userEvent.setup(), 'Local SQLite', 'Edit');
-      expect(modalMock).toHaveBeenCalledWith({ profile: profile('mock-sqlite-local') });
+      await clickMenuItem(userEvent.setup(), 'Staging PostgreSQL', 'Edit');
+      expect(modalMock).toHaveBeenCalledWith({ profile: profile('mock-pg-staging') });
     });
 
     it('Export only tells that the backend is missing', async () => {
       renderWithProviders(<DbProfiles />);
-      await clickMenuItem(userEvent.setup(), 'Local SQLite', 'Export');
+      await clickMenuItem(userEvent.setup(), 'Staging PostgreSQL', 'Export');
       expect(toast.info).toHaveBeenCalledWith('This feature needs the database backend, which is not available yet.');
     });
 
     describe('Delete', () => {
+      beforeEach(() => callIPCMock.mockResolvedValue(true as never));
+
+      it('deletes a PostgreSQL profile through the backend too', async () => {
+        renderWithProviders(<DbProfiles />);
+
+        await clickMenuItem(userEvent.setup(), 'Local PostgreSQL', 'Delete');
+
+        await waitFor(() => expect(profile('mock-pg-local')).toBeUndefined());
+        expect(callIPCMock).toHaveBeenCalledWith(DeleteDbProfileById, [
+          { id: 'mock-pg-local', name: 'Local PostgreSQL', config: {} },
+        ]);
+      });
+
       it('confirms once for a disconnected profile, deletes it and clears it from tabs', async () => {
         const tabId = useSqlTabStore.getState().activeTab;
         useSqlTabStore.getState().setTabProfile(tabId, 'mock-pg-local');

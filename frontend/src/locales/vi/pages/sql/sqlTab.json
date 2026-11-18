@@ -4,11 +4,25 @@
   },
   "tooltip": {
     "connect": "Kết nối",
-    "execute": "Chạy SQL"
+    "execute": "Chạy SQL",
+    "cancel": "Huỷ thực thi"
   },
   "search": {
     "placeholderProfile": "Tìm profile",
     "emptyProfile": "Không tìm thấy profile"
+  },
+  "result": {
+    "title": "Kết quả {{n}}",
+    "messages": "Thông báo",
+    "firstRowsOnly": "Chỉ hiện {{count}} dòng đầu",
+    "loading": "Đang tải thêm dòng...",
+    "nullValue": "NULL"
+  },
+  "message": {
+    "rowsAffected": "{{n}} dòng bị ảnh hưởng",
+    "rowsReturned": "Trả về {{n}} dòng",
+    "elapsed": "{{seconds}} s",
+    "cancelled": "Đã huỷ thực thi."
   },
   "toast": {
     "noProfile": "Hãy chọn hồ sơ cơ sở dữ liệu trước.",

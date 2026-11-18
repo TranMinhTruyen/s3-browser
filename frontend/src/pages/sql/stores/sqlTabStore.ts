@@ -1,5 +1,6 @@
+import { CloseDbTab } from '@wails/S3Browser/internal/handlers/dbhandler';
 import { createAppStore } from '@/common/stores/createStore';
-import { invalidateLoads } from '@/common/utils/ipcUtils';
+import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
 import { createUUID } from '@/common/utils/stringUtils';
 
 /** Metadata of one SQL tab. The editor content lives in the editor itself, not here. */
@@ -15,6 +16,7 @@ interface SqlTabState {
 interface SqlTabAction {
   setActiveTab: (tabId: string | null) => void;
   addTab: () => void;
+  /** Closes the tab and tells the backend to close its database connection. */
   closeTab: (tabId: string) => void;
   // Move a tab to the position of `overId`. Does not change the active tab.
   moveTab: (activeId: string, overId: string) => void;
@@ -67,6 +69,7 @@ export const useSqlTabStore = createAppStore<SqlTabState & SqlTabAction>(
         undefined,
         `${SCOPE}/closeTab`
       );
+      void callIPC(CloseDbTab, [{ tabId }]);
     },
 
     moveTab: (activeId, overId) => {
@@ -82,6 +85,7 @@ export const useSqlTabStore = createAppStore<SqlTabState & SqlTabAction>(
     },
 
     setTabProfile: (tabId, profileId) => {
+      const previous = get().tabList[tabId]?.profileId;
       set(
         state => {
           const tab = state.tabList[tabId];
@@ -90,6 +94,8 @@ export const useSqlTabStore = createAppStore<SqlTabState & SqlTabAction>(
         undefined,
         `${SCOPE}/setTabProfile`
       );
+      // The backend connection belongs to the old profile; drop it so the tab opens a new one.
+      if (previous && previous !== profileId) void callIPC(CloseDbTab, [{ tabId }]);
     },
 
     clearProfile: profileId => {

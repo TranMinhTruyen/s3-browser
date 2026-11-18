@@ -33,8 +33,17 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteConnectionProfileByIdStmt, err = db.PrepareContext(ctx, deleteConnectionProfileById); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteConnectionProfileById: %w", err)
 	}
+	if q.deleteDbProfileByIdStmt, err = db.PrepareContext(ctx, deleteDbProfileById); err != nil {
+		return nil, fmt.Errorf("error preparing query DeleteDbProfileById: %w", err)
+	}
+	if q.insertDbProfileStmt, err = db.PrepareContext(ctx, insertDbProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query InsertDbProfile: %w", err)
+	}
 	if q.selectAllConnectionProfileStmt, err = db.PrepareContext(ctx, selectAllConnectionProfile); err != nil {
 		return nil, fmt.Errorf("error preparing query SelectAllConnectionProfile: %w", err)
+	}
+	if q.selectAllDbProfileStmt, err = db.PrepareContext(ctx, selectAllDbProfile); err != nil {
+		return nil, fmt.Errorf("error preparing query SelectAllDbProfile: %w", err)
 	}
 	if q.selectAllDownloadHistoryStmt, err = db.PrepareContext(ctx, selectAllDownloadHistory); err != nil {
 		return nil, fmt.Errorf("error preparing query SelectAllDownloadHistory: %w", err)
@@ -48,11 +57,17 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.selectConnectionProfileForUpdateStmt, err = db.PrepareContext(ctx, selectConnectionProfileForUpdate); err != nil {
 		return nil, fmt.Errorf("error preparing query SelectConnectionProfileForUpdate: %w", err)
 	}
+	if q.selectDbProfileByIdStmt, err = db.PrepareContext(ctx, selectDbProfileById); err != nil {
+		return nil, fmt.Errorf("error preparing query SelectDbProfileById: %w", err)
+	}
 	if q.selectMasterByCodeStmt, err = db.PrepareContext(ctx, selectMasterByCode); err != nil {
 		return nil, fmt.Errorf("error preparing query SelectMasterByCode: %w", err)
 	}
 	if q.updateConnectionProfileByIdStmt, err = db.PrepareContext(ctx, updateConnectionProfileById); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateConnectionProfileById: %w", err)
+	}
+	if q.updateDbProfileByIdStmt, err = db.PrepareContext(ctx, updateDbProfileById); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateDbProfileById: %w", err)
 	}
 	if q.updateStatusDownloadHistoryByIdStmt, err = db.PrepareContext(ctx, updateStatusDownloadHistoryById); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateStatusDownloadHistoryById: %w", err)
@@ -77,9 +92,24 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing deleteConnectionProfileByIdStmt: %w", cerr)
 		}
 	}
+	if q.deleteDbProfileByIdStmt != nil {
+		if cerr := q.deleteDbProfileByIdStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing deleteDbProfileByIdStmt: %w", cerr)
+		}
+	}
+	if q.insertDbProfileStmt != nil {
+		if cerr := q.insertDbProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing insertDbProfileStmt: %w", cerr)
+		}
+	}
 	if q.selectAllConnectionProfileStmt != nil {
 		if cerr := q.selectAllConnectionProfileStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing selectAllConnectionProfileStmt: %w", cerr)
+		}
+	}
+	if q.selectAllDbProfileStmt != nil {
+		if cerr := q.selectAllDbProfileStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing selectAllDbProfileStmt: %w", cerr)
 		}
 	}
 	if q.selectAllDownloadHistoryStmt != nil {
@@ -102,6 +132,11 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing selectConnectionProfileForUpdateStmt: %w", cerr)
 		}
 	}
+	if q.selectDbProfileByIdStmt != nil {
+		if cerr := q.selectDbProfileByIdStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing selectDbProfileByIdStmt: %w", cerr)
+		}
+	}
 	if q.selectMasterByCodeStmt != nil {
 		if cerr := q.selectMasterByCodeStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing selectMasterByCodeStmt: %w", cerr)
@@ -110,6 +145,11 @@ func (q *Queries) Close() error {
 	if q.updateConnectionProfileByIdStmt != nil {
 		if cerr := q.updateConnectionProfileByIdStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateConnectionProfileByIdStmt: %w", cerr)
+		}
+	}
+	if q.updateDbProfileByIdStmt != nil {
+		if cerr := q.updateDbProfileByIdStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateDbProfileByIdStmt: %w", cerr)
 		}
 	}
 	if q.updateStatusDownloadHistoryByIdStmt != nil {
@@ -159,13 +199,18 @@ type Queries struct {
 	createDownloadHistoryStmt            *sql.Stmt
 	createProfileStmt                    *sql.Stmt
 	deleteConnectionProfileByIdStmt      *sql.Stmt
+	deleteDbProfileByIdStmt              *sql.Stmt
+	insertDbProfileStmt                  *sql.Stmt
 	selectAllConnectionProfileStmt       *sql.Stmt
+	selectAllDbProfileStmt               *sql.Stmt
 	selectAllDownloadHistoryStmt         *sql.Stmt
 	selectAllRegionStmt                  *sql.Stmt
 	selectConnectionProfileByIdStmt      *sql.Stmt
 	selectConnectionProfileForUpdateStmt *sql.Stmt
+	selectDbProfileByIdStmt              *sql.Stmt
 	selectMasterByCodeStmt               *sql.Stmt
 	updateConnectionProfileByIdStmt      *sql.Stmt
+	updateDbProfileByIdStmt              *sql.Stmt
 	updateStatusDownloadHistoryByIdStmt  *sql.Stmt
 }
 
@@ -176,13 +221,18 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		createDownloadHistoryStmt:            q.createDownloadHistoryStmt,
 		createProfileStmt:                    q.createProfileStmt,
 		deleteConnectionProfileByIdStmt:      q.deleteConnectionProfileByIdStmt,
+		deleteDbProfileByIdStmt:              q.deleteDbProfileByIdStmt,
+		insertDbProfileStmt:                  q.insertDbProfileStmt,
 		selectAllConnectionProfileStmt:       q.selectAllConnectionProfileStmt,
+		selectAllDbProfileStmt:               q.selectAllDbProfileStmt,
 		selectAllDownloadHistoryStmt:         q.selectAllDownloadHistoryStmt,
 		selectAllRegionStmt:                  q.selectAllRegionStmt,
 		selectConnectionProfileByIdStmt:      q.selectConnectionProfileByIdStmt,
 		selectConnectionProfileForUpdateStmt: q.selectConnectionProfileForUpdateStmt,
+		selectDbProfileByIdStmt:              q.selectDbProfileByIdStmt,
 		selectMasterByCodeStmt:               q.selectMasterByCodeStmt,
 		updateConnectionProfileByIdStmt:      q.updateConnectionProfileByIdStmt,
+		updateDbProfileByIdStmt:              q.updateDbProfileByIdStmt,
 		updateStatusDownloadHistoryByIdStmt:  q.updateStatusDownloadHistoryByIdStmt,
 	}
 }

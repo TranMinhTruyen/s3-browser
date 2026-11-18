@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 import { notifyNoBackend, runSql, truncateSql } from '@/pages/sql/utils/sqlToast';
+import { pgProfile, toProfileMap } from '@/test/_helpers/dbProfiles';
 
 vi.mock('sonner', () => ({ toast: { info: vi.fn(), warning: vi.fn() } }));
 
@@ -26,6 +27,12 @@ describe('notifyNoBackend', () => {
 describe('runSql', () => {
   beforeEach(() => {
     useDbProfileStore.getState().reset();
+    useDbProfileStore.setState({
+      dbProfiles: toProfileMap(
+        pgProfile('mock-pg-local', { name: 'Local PostgreSQL' }),
+        pgProfile('mock-pg-staging', { name: 'Staging PostgreSQL' })
+      ),
+    });
   });
 
   it.each([

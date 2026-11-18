@@ -4,11 +4,25 @@
   },
   "tooltip": {
     "connect": "Connect",
-    "execute": "Run SQL"
+    "execute": "Run SQL",
+    "cancel": "Cancel execution"
   },
   "search": {
     "placeholderProfile": "Search profile",
     "emptyProfile": "No profiles found"
+  },
+  "result": {
+    "title": "Result {{n}}",
+    "messages": "Messages",
+    "firstRowsOnly": "Only the first {{count}} rows are shown",
+    "loading": "Loading more rows...",
+    "nullValue": "NULL"
+  },
+  "message": {
+    "rowsAffected": "{{n}} row(s) affected",
+    "rowsReturned": "{{n}} row(s) returned",
+    "elapsed": "{{seconds}} s",
+    "cancelled": "Execution canceled."
   },
   "toast": {
     "noProfile": "Select a database profile first.",

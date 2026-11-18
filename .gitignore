@@ -45,3 +45,6 @@ frontend/coverage/
 
 # graphify (knowledge graph, tạo lại bằng `graphify update .`)
 graphify-out/
+
+# --- Rust ---
+rust/target/

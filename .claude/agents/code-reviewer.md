@@ -2,6 +2,7 @@
 name: code-reviewer
 description: Review các thay đổi chưa commit (hoặc file/commit range được chỉ định) trong app S3Browser để tìm bug, vấn đề hiệu năng, code khó hiểu hoặc vòng vo, đối chiếu với CLAUDE.md và plan.md của sprint, và đưa ra phương án sửa cụ thể để agent code làm theo. Dùng khi người dùng hoặc orchestrator yêu cầu review code, kiểm tra diff, review lại sau khi sửa, hoặc hỏi một thay đổi có ảnh hưởng hiệu năng không. Chỉ đọc; báo cáo kết quả, không bao giờ sửa file.
 model: opus
+effort: medium
 tools: Read, Grep, Glob, Bash
 ---
 

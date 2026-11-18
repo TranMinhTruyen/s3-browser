@@ -61,7 +61,7 @@ Hãy tự hỏi: "Liệu một kỹ sư cấp cao có cho rằng cách làm này
 | B2   | Lập plan, chia task backend/frontend, liệt kê rủi ro                                                                                                                                                                                                                                                                                                              | `planner`                                                                                            |
 | B3   | Hỏi người dùng có triển khai không; chưa được đồng ý thì dừng                                                                                                                                                                                                                                                                                                     | `orchestrator`                                                                                       |
 | B3.5 | Tạo `SP-NN/release` từ `origin/staging` (push lên remote). Mỗi yêu cầu một branch `SP-NN/<slug>` tách từ `origin/SP-NN/release` khi tới lượt (trừ khi plan gộp), không chờ PR trước merge                                                                                                                                                                         | `git-flow`                                                                                           |
-| B4   | Làm **lần lượt từng branch**. Trong mỗi branch, **tuần tự**: Go → skill `wails3-bindings` (`go tool wails3 generate bindings -clean=true -ts`) → Go test hồi quy (tạm, xoá sau khi chạy) → Frontend → FE test → verify → review. Lặp lại **tối đa 3 vòng**; quá 3 vòng thì dừng và hỏi người dùng. Đạt thì commit, push và tạo PR vào `SP-NN/release` (không hỏi) | `go-backend`, `go-tester`, `react-frontend`, `react-tester`, `verifier`, `code-reviewer`, `git-flow` |
+| B4   | Làm **lần lượt từng branch**. Trong mỗi branch, **tuần tự**: Go → skill `wails3-bindings` (`go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts`) → Go test hồi quy (tạm, xoá sau khi chạy) → Frontend → FE test → verify → review. Lặp lại **tối đa 3 vòng**; quá 3 vòng thì dừng và hỏi người dùng. Đạt thì commit, push và tạo PR vào `SP-NN/release` (không hỏi) | `go-backend`, `go-tester`, `react-frontend`, `react-tester`, `verifier`, `code-reviewer`, `git-flow` |
 | B5   | Báo cáo: số dòng thêm/xoá, file sửa, file mới, phần chưa làm được; cập nhật `memory/MEMORY.md`                                                                                                                                                                                                                                                                    | `orchestrator`                                                                                       |
 | B6   | Người dùng merge PR feature, test trên `SP-NN/release` rồi báo DONE. Khi đó: hỏi người dùng version beta và sửa `build/config.yml`, branch `SP-NN/sprint_docs` (requirement, plan, testcases và evidence nếu có, report, memory, `build/config.yml`) PR vào `SP-NN/release`, và PR `SP-NN/release` → `staging` để ra bản beta (người dùng tự merge)                                                                                                                        | `orchestrator`, `git-flow`                                                                           |
 - **Version** nằm ở `info.version` trong `build/config.yml`; workflow bỏ qua nếu tag `v<version>` đã có, nên mỗi lần ra bản phải đổi version và **luôn hỏi người dùng**, không tự đặt:
@@ -137,7 +137,7 @@ Tất cả tool Go được khai báo trong `tool (...)` của `go.mod` (wails3,
 
 - Format/lint: `go tool golangci-lint run ./...` theo `.golangci.yml` (errcheck, govet, staticcheck, lll 120, goimports, golines 120).
 - Kiểm tra: `go vet ./...`, `go build ./...` (chạy ở gốc repo).
-- Sinh bindings: `go tool wails3 generate bindings -clean=true -ts` (chạy qua skill `wails3-bindings` để có luôn bước kiểm tra frontend).
+- Sinh bindings: `go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts` (chạy qua skill `wails3-bindings` để có luôn bước kiểm tra frontend). Tag `wailsgen` bắt buộc: các model kết quả trong `models/db` có `MarshalJSON` (file `//go:build !wailsgen`) để Go chuyển nguyên JSON của Rust ra FE, mà generator render type có `MarshalJSON` thành `any`; thiếu tag thì `StatementResult`, `ExecuteSqlOutput`, `FetchRowsOutput` mất class và `tsc` báo lỗi. Build app và `go test` không dùng tag.
 - Sinh sqlc: `go tool sqlc generate`.
 - Chạy dev: `go tool wails3 task dev`.
 
@@ -148,7 +148,9 @@ Tất cả tool Go được khai báo trong `tool (...)` của `go.mod` (wails3,
 - Thư viện `s3b_db.dll` (Cargo workspace ở `rust/`, `crate-type = ["cdylib"]`), chỉ build Windows `x86_64-pc-windows-msvc`. Do agent `rust-native` viết.
 - Go load DLL **không dùng cgo** (`golang.org/x/sys/windows`, `CGO_ENABLED=0`), bằng đường dẫn tuyệt đối cạnh exe (`LOAD_LIBRARY_SEARCH_APPLICATION_DIR`). Lớp gọi DLL nằm trong `internal/modules/db`, do `go-backend` viết.
 - Luồng: React → `callIPC` → binding Go → `modules/db` → `s3b_call` (JSON) → Rust. Frontend không biết Rust tồn tại.
+- **Mọi việc với DB người dùng kết nối do Rust làm** (kết nối, chạy SQL/lệnh, tách câu, metadata/cây object, phân trang, chuyển kiểu dữ liệu, export/import, huỷ) để ưu tiên tối đa hiệu năng. `modules/db` của Go chỉ là interface: kiểm input, gửi request, map lỗi sang message, chuyển kết quả Rust trả về cho FE; không mở connection, không chạy hay phân tích SQL, không xử lý lại từng dòng dữ liệu. Thiếu khả năng nào thì thêm `method` bên Rust, không làm tạm ở Go. Ngoại lệ: DB nội bộ của app (xem mục Driver).
 - Phân lớp Rust: `ffi.rs` (chỉ hàm export) → `dispatch.rs` (theo `method`) → `drivers/<db>.rs`; kiểu JSON trong `protocol`.
+- Comment Rust viết bằng **tiếng Việt**, cho người mới học Rust: mỗi file mở đầu bằng `//!` nói file làm gì và nằm ở đâu trong luồng Go → `ffi` → `dispatch` → driver; mọi struct/enum/fn có `///`; khái niệm Rust (ownership/borrow, lifetime, `Arc`/`Mutex`, `Result`/`?`, trait, async/await, `unsafe` kèm `// SAFETY:`, `catch_unwind`) giải thích ngắn ở chỗ dùng đầu tiên trong file, so với Go khi giúp dễ hiểu. Comment nói "vì sao", không đọc lại từng dòng code.
 
 ### Hợp đồng FFI
 
@@ -160,7 +162,19 @@ Tất cả tool Go được khai báo trong `tool (...)` của `go.mod` (wails3,
 
 ### Driver
 
-- PostgreSQL: `sqlx` (hoặc `tokio-postgres`); SQLite: `sqlx` với libsqlite3 bundled; MongoDB: `mongodb`. Runtime `tokio`.
+- **Ưu tiên hiệu năng tối đa.** Mục tiêu: `elapsedMs` của Rust cho trang 10.000 dòng (~2 MB JSON) **< 40 ms, nhắm < 20 ms**, đo bằng bản release, không chạy dưới debugger (debugger bật debug heap của Windows làm cấp phát chậm ~10 lần), với DB chạy trên máy local. Thay đổi đường đọc dòng phải kèm số đo trước/sau.
+- Dùng driver **mức thấp nhất** của từng DB, không dùng lớp trừu tượng (sqlx...) cho đường đọc dòng: tự đọc dòng thô và chuyển thẳng sang chuỗi/JSON, cấp sẵn capacity, không cấp phát thừa mỗi ô. Không tự viết giao thức DB.
+
+  | DB | Driver |
+  | --- | --- |
+  | SQLite | `libsqlite3-sys` (C API, bundled); `sqlx` chỉ còn cho mở connection và câu không trả dòng |
+  | PostgreSQL | `tokio-postgres` |
+  | MySQL / MariaDB | `mysql_async` |
+  | SQL Server | `tiberius` |
+  | MongoDB | `mongodb` (đọc BSON thô) |
+  | Redis | `redis` |
+
+- Runtime `tokio` multi_thread; gọi C API chặn thread thì bọc `block_in_place`. Go chuyển nguyên JSON kết quả của Rust ra FE (model `models/db` có `MarshalJSON`, xem tag `wailsgen` ở mục 7), không decode lại.
 - Mỗi tab một connection riêng; kết quả trả theo trang qua `cursorId`, không đọc cả kết quả vào RAM; export ghi thẳng ra file.
 - Không log secret hay dữ liệu truy vấn. SQLite của app (profile, setting) vẫn ở Go `modernc.org/sqlite`.
 

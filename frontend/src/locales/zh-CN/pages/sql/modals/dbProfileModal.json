@@ -14,7 +14,13 @@
       "username": "用户名",
       "password": "密码（可选）",
       "sslMode": "SSL 模式",
-      "filePath": "数据库文件路径"
+      "filePath": "数据库文件路径",
+      "readOnly": "以只读方式打开"
+    },
+    "description": {
+      "readOnly": "所有更改都会被拒绝，因此文件不会被修改。",
+      "disconnectToEdit": "请先断开连接，再修改文件路径、只读模式和数据库类型。",
+      "keepPassword": "留空则保留已保存的密码。"
     },
     "sslMode": {
       "disable": "禁用",

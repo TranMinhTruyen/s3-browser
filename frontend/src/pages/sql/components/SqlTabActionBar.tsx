@@ -1,5 +1,5 @@
 import { Group } from '@mantine/core';
-import { Play, PlugZap } from 'lucide-react';
+import { Play, PlugZap, Square } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/buttons/ActionIcon';
@@ -12,12 +12,23 @@ type SqlTabActionBarProps = {
   onChangeSelectProfile: (value: string | null) => void;
   onClickConnect: () => void;
   onClickExecute: () => void;
+  /** A run is in flight: Execute is off and Cancel shows. */
+  running: boolean;
+  onClickCancel: () => void;
 };
 
-/** Toolbar of a SQL tab: profile picker, connect and execute. */
+/** Toolbar of a SQL tab: profile picker, connect, execute and cancel. */
 function SqlTabActionBar(props: SqlTabActionBarProps) {
-  const { isConnected, selectedProfileId, profileOptions, onChangeSelectProfile, onClickConnect, onClickExecute } =
-    props;
+  const {
+    isConnected,
+    selectedProfileId,
+    profileOptions,
+    onChangeSelectProfile,
+    onClickConnect,
+    onClickExecute,
+    running,
+    onClickCancel,
+  } = props;
   const { t } = useTranslation('sqlTab');
 
   return (
@@ -36,9 +47,15 @@ function SqlTabActionBar(props: SqlTabActionBarProps) {
       </ActionIcon>
 
       {/* Running only needs a chosen profile, not a connection. */}
-      <ActionIcon onClick={onClickExecute} tooltip={t('tooltip.execute')} disabled={!selectedProfileId}>
+      <ActionIcon onClick={onClickExecute} tooltip={t('tooltip.execute')} disabled={!selectedProfileId || running}>
         <Play />
       </ActionIcon>
+
+      {running && (
+        <ActionIcon onClick={onClickCancel} tooltip={t('tooltip.cancel')} color="var(--mantine-color-red-6)">
+          <Square />
+        </ActionIcon>
+      )}
     </Group>
   );
 }

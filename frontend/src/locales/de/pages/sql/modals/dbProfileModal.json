@@ -14,7 +14,13 @@
       "username": "Benutzername",
       "password": "Passwort (optional)",
       "sslMode": "SSL-Modus",
-      "filePath": "Pfad der Datenbankdatei"
+      "filePath": "Pfad der Datenbankdatei",
+      "readOnly": "Schreibgeschützt öffnen"
+    },
+    "description": {
+      "readOnly": "Änderungen werden abgelehnt, die Datei bleibt unverändert.",
+      "disconnectToEdit": "Trennen Sie die Verbindung, um Dateipfad, Schreibschutz und Datenbanktyp zu ändern.",
+      "keepPassword": "Leer lassen, um das gespeicherte Passwort beizubehalten."
     },
     "sslMode": {
       "disable": "Deaktivieren",

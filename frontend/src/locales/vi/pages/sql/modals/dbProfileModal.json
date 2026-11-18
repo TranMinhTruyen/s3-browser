@@ -14,7 +14,13 @@
       "username": "Tên người dùng",
       "password": "Mật khẩu (không bắt buộc)",
       "sslMode": "Chế độ SSL",
-      "filePath": "Đường dẫn tệp cơ sở dữ liệu"
+      "filePath": "Đường dẫn tệp cơ sở dữ liệu",
+      "readOnly": "Mở ở chế độ chỉ đọc"
+    },
+    "description": {
+      "readOnly": "Mọi thay đổi bị từ chối nên tệp được giữ nguyên.",
+      "disconnectToEdit": "Hãy ngắt kết nối để sửa đường dẫn tệp, chế độ chỉ đọc và loại cơ sở dữ liệu.",
+      "keepPassword": "Để trống để giữ mật khẩu đã lưu."
     },
     "sslMode": {
       "disable": "Tắt",

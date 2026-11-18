@@ -1,9 +1,11 @@
-import { Divider, Group, Modal, Paper, Stack, Title } from '@mantine/core';
+import { Divider, Group, Modal, Paper, Stack, Text, Title } from '@mantine/core';
 import { schemaResolver, useForm } from '@mantine/form';
+import { ChooseDbFile } from '@wails/S3Browser/internal/handlers/dbhandler';
 import { FolderOpen } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { callIPC } from '@/common/utils/ipcUtils';
 import { createMantineModal } from '@/common/utils/modalUtils';
 import { createUUID } from '@/common/utils/stringUtils';
 import ActionIcon from '@/components/buttons/ActionIcon';
@@ -12,6 +14,7 @@ import CloseButton from '@/components/buttons/CloseButton';
 import FieldInput from '@/components/inputs/FieldInput';
 import SegmentedControl from '@/components/inputs/SegmentedControl';
 import SelectInput from '@/components/inputs/SelectInput';
+import SwitchInput from '@/components/inputs/SwitchInput';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 import {
@@ -19,11 +22,10 @@ import {
   type DbProfileForm,
   getDefaultDbProfileForm,
   SSL_MODES,
-  toDbProfile,
+  toDbProfileInput,
   toFormValues,
 } from '@/pages/sql/modals/dbProfile/dbProfileSchema';
-import { type DbProfile, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
-import { notifyNoBackend } from '@/pages/sql/utils/sqlToast';
+import { type DbProfile, PROVIDER_LABEL_KEY, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 
 type DbProfileModalProps = {
   /** Profile to edit; without it the modal creates a new one. */
@@ -31,14 +33,16 @@ type DbProfileModalProps = {
 };
 
 /**
- * Modal to create or edit a database profile (kept in RAM for now). Both save paths close the modal;
- * editing asks for confirmation first. Resolves `false` when dismissed.
+ * Modal to create or edit a database profile (saved by the backend). While the profile is connected, the file path,
+ * read-only switch and DB type are locked. A failed save keeps the modal open; editing asks for confirmation first. Resolves `false` when dismissed.
  */
 export default createMantineModal<DbProfileModalProps, false>(
   props => {
     const { profile, mantine } = props;
     const { t } = useTranslation('dbProfileModal');
     const saveDbProfile = useDbProfileStore(s => s.saveDbProfile);
+    // Live flag (the `profile` prop is a snapshot): the profile may connect or disconnect while the modal is open.
+    const locked = useDbProfileStore(s => !!(profile && s.dbProfiles[profile.id]?.isConnected));
 
     // useForm only reads initialValues on mount; compute them once instead of on every keystroke.
     const [initialValues] = useState(() =>
@@ -58,30 +62,38 @@ export default createMantineModal<DbProfileModalProps, false>(
       },
     });
 
-    const dbType = form.useWatchValue('dbType');
+    const provider = form.useWatchValue('provider');
 
-    form.watch('dbType', () => form.clearErrors()); // errors of the other DB type no longer apply
+    form.watch('provider', () => form.clearErrors()); // errors of the other DB type no longer apply
 
-    const dbTypeOptions = useMemo(
+    const providerOptions = useMemo(
       () => [
-        { value: 'postgresql', label: t('form.dbType.postgresql') },
-        { value: 'sqlite', label: t('form.dbType.sqlite') },
+        { value: 'postgres', label: t(`form.dbType.${PROVIDER_LABEL_KEY.postgres}`) },
+        { value: 'sqlite', label: t(`form.dbType.${PROVIDER_LABEL_KEY.sqlite}`) },
       ],
       [t]
     );
+
+    // Editing keeps the stored password only while the provider stays the same.
+    const showKeepPassword = !!profile?.hasSecret && provider === profile.provider;
 
     const sslOptions = useMemo(() => SSL_MODES.map(value => ({ value, label: t(`form.sslMode.${value}`) })), [t]);
 
     const onSubmitProfile = useCallback(
       async (values: DbProfileForm) => {
         if (profile && !(await ConfirmModal.show({ type: 'info', confirmCode: 'C000001' }))) return;
-        const saved = toDbProfile(values, profile?.id ?? createUUID(), profile?.isConnected ?? false);
-        saveDbProfile(saved);
-        toast.success(t(profile ? 'toast.updated' : 'toast.created', { name: saved.name }));
+        const input = toDbProfileInput(values, profile?.id);
+        if (!(await saveDbProfile(input, !!profile))) return;
+        toast.success(t(profile ? 'toast.updated' : 'toast.created', { name: input.name }));
         mantine.handler.hide();
       },
       [profile, saveDbProfile, t, mantine.handler]
     );
+
+    const onClickChooseFile = useCallback(async () => {
+      const path = await callIPC(ChooseDbFile, []);
+      if (path) form.setFieldValue('filePath', path); // empty = dialog canceled
+    }, [form]);
 
     return (
       <Modal.Root {...mantine.props} centered size="lg">
@@ -108,11 +120,18 @@ export default createMantineModal<DbProfileModalProps, false>(
             <Modal.Body p="1rem">
               <Paper withBorder p="md">
                 <Stack gap="sm">
+                  {locked && provider === 'sqlite' && (
+                    <Text size="sm" c="dimmed">
+                      {t('form.description.disconnectToEdit')}
+                    </Text>
+                  )}
+
                   <SegmentedControl
-                    data={dbTypeOptions}
+                    data={providerOptions}
                     aria-label={t('form.label.dbType')}
-                    key={form.key('dbType')}
-                    {...form.getInputProps('dbType')}
+                    disabled={locked}
+                    key={form.key('provider')}
+                    {...form.getInputProps('provider')}
                   />
 
                   <FieldInput
@@ -132,7 +151,7 @@ export default createMantineModal<DbProfileModalProps, false>(
                     {...form.getInputProps('color')}
                   />
 
-                  {dbType === 'postgresql' ? (
+                  {provider === 'postgres' ? (
                     <>
                       <FieldInput
                         type="text"
@@ -177,6 +196,7 @@ export default createMantineModal<DbProfileModalProps, false>(
                         type="password"
                         label={t('form.label.password')}
                         placeholder={t('form.label.password')}
+                        description={showKeepPassword ? t('form.description.keepPassword') : undefined}
                         key={form.key('password')}
                         {...form.getInputProps('password')}
                       />
@@ -190,19 +210,34 @@ export default createMantineModal<DbProfileModalProps, false>(
                       />
                     </>
                   ) : (
-                    <FieldInput
-                      type="text"
-                      label={t('form.label.filePath')}
-                      placeholder={t('form.label.filePath')}
-                      withAsterisk
-                      rightSection={
-                        <ActionIcon variant="subtle" onClick={notifyNoBackend} tooltip={t('form.tooltip.chooseFile')}>
-                          <FolderOpen size="1rem" />
-                        </ActionIcon>
-                      }
-                      key={form.key('filePath')}
-                      {...form.getInputProps('filePath')}
-                    />
+                    <>
+                      <FieldInput
+                        type="text"
+                        label={t('form.label.filePath')}
+                        placeholder={t('form.label.filePath')}
+                        withAsterisk
+                        disabled={locked}
+                        rightSection={
+                          <ActionIcon
+                            variant="subtle"
+                            disabled={locked}
+                            onClick={onClickChooseFile}
+                            tooltip={t('form.tooltip.chooseFile')}
+                          >
+                            <FolderOpen size="1rem" />
+                          </ActionIcon>
+                        }
+                        key={form.key('filePath')}
+                        {...form.getInputProps('filePath')}
+                      />
+                      <SwitchInput
+                        label={t('form.label.readOnly')}
+                        description={t('form.description.readOnly')}
+                        disabled={locked}
+                        key={form.key('readOnly')}
+                        {...form.getInputProps('readOnly', { type: 'checkbox' })}
+                      />
+                    </>
                   )}
                 </Stack>
               </Paper>

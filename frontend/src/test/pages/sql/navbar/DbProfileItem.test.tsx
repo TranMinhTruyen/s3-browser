@@ -3,6 +3,7 @@ import { Profiler } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DbProfileItem, { CARD_HEIGHT } from '@/pages/sql/navbar/DbProfileItem';
 import { type DbProfile, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
+import { pgProfile } from '@/test/_helpers/dbProfiles';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 const scheme = vi.hoisted(() => ({ value: 'light' as 'light' | 'dark' }));
@@ -13,20 +14,10 @@ vi.mock('@mantine/core', async importActual => {
 
 const onConnect = vi.fn();
 
-const pg: DbProfile = {
-  id: 'p1',
+const pg: DbProfile = pgProfile('p1', {
   name: 'My PG',
-  color: '#d0ebff',
-  dbType: 'postgresql',
-  host: 'db.local',
-  port: 5433,
-  database: 'app',
-  username: 'u',
-  password: '',
-  sslMode: 'prefer',
-  filePath: '',
-  isConnected: false,
-};
+  config: { host: 'db.local', port: 5433, database: 'app', username: 'u', sslMode: 'prefer' },
+});
 
 function renderItem(profile: Partial<DbProfile> = {}) {
   useDbProfileStore.setState({ dbProfiles: { p1: { ...pg, ...profile } } });
@@ -55,7 +46,7 @@ describe('DbProfileItem', () => {
   });
 
   it('shows the file path and the SQLite badge for SQLite', () => {
-    renderItem({ dbType: 'sqlite', filePath: 'C:/data/a.db', host: '', port: 0, database: '' });
+    renderItem({ provider: 'sqlite', config: { filePath: 'C:/data/a.db', readOnly: false } });
     expect(screen.getByText('C:/data/a.db')).toBeInTheDocument();
     expect(screen.getByText('SQLite')).toBeInTheDocument();
   });

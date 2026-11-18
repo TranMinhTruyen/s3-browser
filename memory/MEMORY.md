@@ -4,10 +4,12 @@
 
 ## 1. Trạng thái hiện tại
 
-- Cập nhật: 2026-11-16.
+- Cập nhật: 2026-11-17.
+- Sprint-19 (backend SQLite cho chế độ SQL: Rust `s3b_db.dll` + Go `modules/db` + FE nối): R2 đã commit ở `SP-19/sqlite_native_backend`, PR #43 vào `SP-19/release` chờ người dùng merge (review 3/3 ĐẠT, verifier PASS). R1 `SP-19/db_object_tree` (F5, F6, F7, chỉ FE) CHƯA làm: tách sau khi PR #43 merge. Chưa DONE, chưa version beta. `plan.md` (modified) và `report.md` chỉ vào `SP-19/sprint_docs`. Còn dở mức low: Q6, Q8, B7 (xem `report.md`).
+- Chế độ SQL: SQLite chạy qua backend thật; PostgreSQL profile lưu DB app nhưng Connect/cây/dữ liệu vẫn mock.
 - Sprint-18 (chế độ SQL chỉ UI: chuyển S3/SQL, profile DB mock trong RAM, tab SQL với editor, Ctrl+Q/F/E, R8 Find/Replace, R10 cỡ giao diện): **DONE** 2026-11-16; PR #36–#40 đã merge vào `SP-18/release` (đỉnh `d90cb6c`). PR `SP-18/sprint_docs` (report, memory, CHANGELOG `[1.1.0-beta.18]` 7 bản, version `1.1.0-beta.18`) vào release và PR `SP-18/release` → `staging` chờ người dùng merge (docs trước, promote sau).
 - Sprint-17 (dọn issue low, KiB/MiB/GiB): **DONE** 2026-11-10, đã lên `staging` và `master` (`1.0.1`, #35).
-- Chế độ SQL chưa có backend (Go `internal/modules/db`, Rust `s3b_db.dll`) và chưa có tài liệu README/user guide.
+- Chế độ SQL chưa có tài liệu README/user guide.
 - Sprint-16 (export/import profile, công tắc cập nhật có hiệu lực ngay): **DONE** 2026-11-09, đã lên `staging`; bản `1.0.0` đã lên `master` (#23). Bản dịch vi/ja/zh-CN/zh-TW/ru/de của sprint-16 và 17 chưa có người bản ngữ duyệt.
 - Sprint-15 (tài liệu v0.1: README, user guide + PDF, ARCHITECTURE, CHANGELOG 0.1.0, `shots.mjs` chụp ảnh có ghi chú): **DONE** 2026-11-09, đã lên `staging` (`5570c4d`).
 - Sprint-14 (badge policy type, `CloseButton` dùng chung, auto-update từ GitHub Releases): **DONE** 2026-11-06, đã lên `staging`; #8 đưa sprint-12/13/14 R1-R3 lên `master`. Không có `report.md`.
@@ -16,7 +18,7 @@
 - Repo đã tách khỏi monorepo ngày 2026-11-03 (`TranMinhTruyen/s3-browser`); từ sprint-15 dùng luồng `SP-NN/release` (mục 2).
 - 2026-11-06: thêm agent `go-tester` và quy tắc test hồi quy (xem `CLAUDE.md` mục 4 và 10).
 - Chưa test tay: lưu đè file ở hộp thoại lưu native của Windows, `AddFilter`/`AttachToWindow` của `SaveFile()` (docs Wails 403), tốc độ 600.000 vòng PBKDF2 trên máy yếu; các mục test tay của sprint-13 (bucket khác region, Object Lock/versioning khi xoá, xoá file/folder sau khi sửa `batchDeleter`, tạo bucket public trên AWS) chưa ghi nhận kết quả; gặp lỗi thì mở sprint sửa. Sprint-18: nút X tab, viền focus SQL editor, hàng upload, hàng đầu `HistoryModal` ở 3 cỡ; checklist badge F14; test case R8 trong `testcases.md` lệch code, cần `qa-tester` cập nhật.
-- Việc tiếp theo: người dùng merge PR `SP-18/sprint_docs` rồi PR `SP-18/release` → `staging` (ra bản `1.1.0-beta.18`); sprint sau làm backend DB cho chế độ SQL.
+- Việc tiếp theo: người dùng merge PR #43, rồi làm R1 (`SP-19/db_object_tree`); test tay R2 (chạy app với DLL, 3 cỡ giao diện, NSIS/portable). Sprint-18 đã DONE và lên `staging` (`1.1.0-beta.18`, #42).
 
 ## 2. Quyết định
 
@@ -71,6 +73,11 @@
 - 2026-11-10 [docs] CHANGELOG: mỗi bản beta có mục `## [n.n.n-beta.N] - ngày` riêng (7 bản), mục Known issues của bản cũ giữ nguyên làm lịch sử — người dùng chọn khi đóng sprint-17.
 - 2026-11-16 [sprint-18] R8 Find/Replace chốt theo code: ô Replace luôn hiện, 3 nút match case/whole word/regex, không footer Cancel, Ctrl/Cmd+E/Q bị chặn trong ô Find (#39); Q33=A giữ toast 14px ở medium — người dùng chốt khi review bản release, `requirement.md`/`plan.md` đã sửa theo code (#40).
 - 2026-11-16 [sprint-18] Cỡ giao diện small/medium/large = font-size `<html>` 14/16/18px (Slider 3 nấc), kích thước viết bằng rem; quy tắc vào `CLAUDE.md` mục 9 (`d90cb6c`). Badge căn chữ (D41/F14) là việc phụ của R10: `text-box` + `will-change`, `.snap` chỉ ở DPR 1 và 1.5 vì ở 1.25 xấu hơn.
+- 2026-11-17 [sprint-19] Backend DB: Rust sqlx 0.9 + tokio + sqlparser, `libsqlite3-sys = "*"` (Cargo.lock ghim), trang kết quả 500 dòng / 16 MiB, BLOB hiện hex đầy đủ, timeout truy vấn 5 phút (DBE015), metadata 30 giây — người dùng chốt Q1–Q12.
+- 2026-11-17 [sprint-19] Toolchain Rust `stable` + target msvc không ghim số, cho agent cài Rust/VS Build Tools qua winget; DLL link `crt-static` để không cần VCRUNTIME140.
+- 2026-11-17 [sprint-19] Bảng `db_profiles` lưu mọi provider (`provider`, `config` JSON, `secret` mã hoá KeyManager), FE dùng `provider` `sqlite`/`postgres` nhưng giữ key i18n `form.dbType.*`; sửa thẳng migration 000003 vì chưa phát hành; sửa profile để trống mật khẩu thì giữ secret cũ nếu cùng provider, đổi provider thì bỏ (Q13, Q14).
+- 2026-11-17 [sprint-19] Profile đang kết nối: khoá ô loại DB/filePath/readOnly kèm gợi ý "ngắt kết nối để sửa", không tự đóng connection (B2=B). Đổi profile của tab thì `CloseDbTab` và `detach` runner.
+- 2026-11-17 [quy trình] Sprint-19 chia 2 branch: R2 (backend + FE nối) trước, R1 cây object sau khi người dùng merge PR R2 (Q1=A).
 
 ## 3. Lỗi và bẫy đã gặp
 
@@ -128,6 +135,13 @@
 - 2026-11-16 [sprint-18] Chữ badge lệch 1px ở small/large — rem ra px lẻ, Chromium làm tròn viền và baseline riêng — `will-change: transform` + làm tròn padding (`badge.module.css`); đo bằng Playwright ở root 14/16/18px.
 - 2026-11-16 [git] Tên branch mới trùng branch đã merge (`SP-18/review_fixes`) làm `git-flow` dừng — kiểm `git ls-remote --heads origin 'SP-NN/*'` trước khi đặt tên.
 - 2026-11-16 [test] `DbProfileModal.test.tsx`, `ConnectModal.auth.test.tsx` cũng timeout khi chạy cả bộ có coverage lúc máy tải — chạy lại riêng file.
+- 2026-11-17 [sprint-19] `cargo` không có trong PATH của agent — thêm `export PATH="$HOME/.cargo/bin:$PATH";` đầu mọi lệnh Rust; task build DLL tên `common:build:dll`.
+- 2026-11-17 [sprint-19] DLL Rust phụ thuộc VCRUNTIME140 trên máy không cài VC++ — `.cargo/config.toml` `+crt-static`, kiểm import table.
+- 2026-11-17 [sprint-19] `s3b_cancel` huỷ nhầm request mới của cùng connection — registry giữ `running` (id đang chạy) dưới lock, chỉ interrupt khi `running == id`.
+- 2026-11-17 [sprint-19] Đổi profile của tab sau `CloseDbTab` làm cuộn kết quả cũ gọi `FetchRows` báo DBE004 — `detach()` ở `useSqlRunner` trước khi `setTabProfile`.
+- 2026-11-17 [sprint-19] sqlx 0.9 yêu cầu `AssertSqlSafe` cho SQL động — bọc khi chạy SQL người dùng.
+- 2026-11-17 [sprint-19] Máy dev đã áp migration 000003 cũ sai schema sau khi sửa migration — xoá bảng `db_profiles` hoặc `goose down` một bậc.
+- 2026-11-17 [sprint-19] `copy:dll` lỗi "file in use" khi app dev đang giữ DLL — tắt app trước khi build.
 
 ## 4. Tóm tắt cũ
 

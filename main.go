@@ -125,6 +125,7 @@ func main() {
 	}
 	mainApp.OnShutdown(app.Shutdown)
 	mainApp.RegisterService(application.NewService(app.BucketHandler))
+	mainApp.RegisterService(application.NewService(app.DbHandler))
 	mainApp.RegisterService(application.NewService(app.MasterHandler))
 	mainApp.RegisterService(application.NewService(app.ProfileHandler))
 	mainApp.RegisterService(application.NewService(app.SettingHandler))

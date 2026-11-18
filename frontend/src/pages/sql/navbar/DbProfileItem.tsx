@@ -4,7 +4,7 @@ import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import classes from '@/components/display/ProfileCard.module.css';
 import TruncatedText from '@/components/display/TruncatedText';
-import { type DbProfile, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
+import { type DbProfile, PROVIDER_LABEL_KEY, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 
 /** Fixed card height, same as the S3 profile card, so the virtual list can use it as-is. */
 export const CARD_HEIGHT = 68;
@@ -27,8 +27,8 @@ const getProfileBackground = (color: string | undefined, dark: boolean) => {
 };
 
 /** Second line of the card: where the database is. */
-const getLocation = ({ dbType, host, port, database, filePath }: DbProfile) =>
-  dbType === 'sqlite' ? filePath : `${host}:${port}/${database}`;
+const getLocation = ({ provider, config }: DbProfile) =>
+  provider === 'sqlite' ? (config.filePath ?? '') : `${config.host}:${config.port}/${config.database}`;
 
 type DbProfileItemProps = {
   profileKey: string;
@@ -95,7 +95,7 @@ function DbProfileItem({ profileKey, onConnect }: DbProfileItemProps) {
               {getLocation(profile)}
             </TruncatedText>
             <Badge size="xs" variant="outline" className={classes.badge} style={{ flexShrink: 0 }}>
-              {t(`dbType.${profile.dbType}`)}
+              {t(`dbType.${PROVIDER_LABEL_KEY[profile.provider]}`)}
             </Badge>
           </Group>
         </Box>

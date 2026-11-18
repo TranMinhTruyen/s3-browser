@@ -168,6 +168,37 @@ tasks:
 
 
 
+  build:dll:
+    summary: Builds the Rust native DB library (s3b_db.dll) and copies it next to the exe
+    run: once
+    sources:
+      - rust/Cargo.toml
+      - rust/Cargo.lock
+      - rust/rust-toolchain.toml
+      - rust/.cargo/config.toml
+      - rust/src/**/*.rs
+    generates:
+      - rust/target/x86_64-pc-windows-msvc/release/s3b_db.dll
+    preconditions:
+      - sh: cargo --version
+        msg: "cargo not found. Install Rust via https://rustup.rs"
+    cmds:
+      - cd rust && cargo build --release --target x86_64-pc-windows-msvc
+
+  copy:dll:
+    summary: Copies s3b_db.dll into OUT_DIR (default BIN_DIR)
+    internal: true
+    deps:
+      - task: build:dll
+    # Skipped while the DLL is unchanged: a running app keeps the copy locked, and overwriting it would fail.
+    sources:
+      - rust/target/x86_64-pc-windows-msvc/release/s3b_db.dll
+    generates:
+      - '{{.OUT_DIR | default .BIN_DIR}}/s3b_db.dll'
+    cmds:
+      - cmd: powershell -NoProfile -Command "New-Item -ItemType Directory -Force '{{.OUT_DIR | default .BIN_DIR}}' | Out-Null; try { Copy-Item -Force 'rust/target/x86_64-pc-windows-msvc/release/s3b_db.dll' '{{.OUT_DIR | default .BIN_DIR}}/s3b_db.dll' -ErrorAction Stop } catch { Write-Error 's3b_db.dll is in use. Stop the running app, then build again.'; exit 1 }"
+        platforms: [windows]
+
   generate:bindings:
     summary: Generates bindings for the frontend
     run: once
@@ -180,10 +211,14 @@ tasks:
       - "**/*.go"
       - go.mod
       - go.sum
+    vars:
+      # Only the generator gets the tag wailsgen: it hides MarshalJSON of the db result models, which the
+      # generator would render as `any`. The app build (BUILD_FLAGS) stays without it.
+      GEN_FLAGS: '{{if contains "-tags " .BUILD_FLAGS}}{{replace "-tags " "-tags wailsgen," .BUILD_FLAGS}}{{else}}{{.BUILD_FLAGS}} -tags wailsgen{{end}}'
     generates:
       - frontend/bindings/**/*
     cmds:
-      - go tool wails3 generate bindings -f '{{.BUILD_FLAGS}}' -clean=true{{if eq .OBFUSCATED "true"}} -obfuscated{{end}} -ts
+      - go tool wails3 generate bindings -f '{{.GEN_FLAGS}}' -clean=true{{if eq .OBFUSCATED "true"}} -obfuscated{{end}} -ts
 
   generate:icons:
     summary: Generates the Windows `.ico` from an image (Windows-only release, no Mac `.icns`)

@@ -2,6 +2,7 @@
 name: go-tester
 description: Viết unit test Go TẠM để test hồi quy các function backend vừa sửa trong S3Browser (và nơi gọi tới chúng), chạy go test, báo kết quả rồi xoá hết file test đã tạo. Dùng sau go-backend trong sprint, hoặc gọi thẳng sau một lần sửa nhỏ Go. Không sửa code production, không bao giờ để lại file *_test.go.
 model: sonnet
+effort: high
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 

@@ -4,6 +4,7 @@ package internal
 import (
 	"S3Browser/internal/handlers"
 	"S3Browser/internal/modules/bucket"
+	dbmodule "S3Browser/internal/modules/db"
 	"S3Browser/internal/modules/global"
 	"S3Browser/internal/modules/master"
 	"S3Browser/internal/modules/profile"
@@ -24,11 +25,13 @@ type App struct {
 	app    *application.App
 
 	BucketHandler  *handlers.BucketHandler
+	DbHandler      *handlers.DbHandler
 	MasterHandler  *handlers.MasterHandler
 	ProfileHandler *handlers.ProfileHandler
 	SettingHandler *handlers.SettingHandler
 	UpdateHandler  *handlers.UpdateHandler
 
+	dbModule     *dbmodule.Module
 	updateModule *update.Module
 }
 
@@ -58,11 +61,13 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) (*App, error)
 	profileModule := profile.NewModule(app, logger, globalModule, sqlDb, km)
 	bucketModule := bucket.NewModule(app, logger, globalModule, sqlDb, profileModule)
 	masterModule := master.NewModule(app, logger, sqlDb)
+	dbModule := dbmodule.NewModule(app, logger, sqlDb, km)
 	settingModule := setting.NewModule(logger, cfg.Name)
 	updateModule := update.NewModule(app, logger, settingModule, cfg.Version, cfg.DevMode)
 
 	profileHandler := handlers.NewProfileHandler(profileModule)
 	bucketHandler := handlers.NewBucketHandler(bucketModule)
+	dbHandler := handlers.NewDbHandler(dbModule)
 	masterHandler := handlers.NewMasterHandler(masterModule)
 	settingHandler := handlers.NewSettingHandler(settingModule, updateModule)
 	updateHandler := handlers.NewUpdateHandler(updateModule)
@@ -72,10 +77,12 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) (*App, error)
 		sqlDb:          sqlDb,
 		app:            app,
 		BucketHandler:  bucketHandler,
+		DbHandler:      dbHandler,
 		MasterHandler:  masterHandler,
 		ProfileHandler: profileHandler,
 		SettingHandler: settingHandler,
 		UpdateHandler:  updateHandler,
+		dbModule:       dbModule,
 		updateModule:   updateModule,
 	}, nil
 }
@@ -86,6 +93,7 @@ func (a *App) Shutdown() {
 	a.BucketHandler.CancelAllDownloads()
 	a.BucketHandler.CancelAllUploads()
 	a.BucketHandler.DisconnectAll()
+	a.dbModule.Close()
 	a.app.Event.Reset()
 	if a.sqlDb != nil {
 		if err := a.sqlDb.Close(); err != nil {

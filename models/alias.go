@@ -5,6 +5,7 @@ package models
 import (
 	"S3Browser/models/bucket"
 	"S3Browser/models/common"
+	"S3Browser/models/db"
 	"S3Browser/models/master"
 	"S3Browser/models/profile"
 	"S3Browser/models/setting"
@@ -155,6 +156,55 @@ type (
 	AuthSecret = profile.AuthSecret
 	// AwsProfileOutput re-exports profile.AwsProfileOutput.
 	AwsProfileOutput = profile.AwsProfileOutput
+)
+
+type (
+	// DbProfileConfig re-exports db.DbProfileConfig.
+	DbProfileConfig = db.DbProfileConfig
+	// DbProfileInput re-exports db.DbProfileInput.
+	DbProfileInput = db.DbProfileInput
+	// DbProfileRefInput re-exports db.DbProfileRefInput.
+	DbProfileRefInput = db.DbProfileRefInput
+	// DbProfileOutput re-exports db.DbProfileOutput.
+	DbProfileOutput = db.DbProfileOutput
+	// GetAllDbProfileOutput re-exports db.GetAllDbProfileOutput.
+	GetAllDbProfileOutput = db.GetAllDbProfileOutput
+	// TableInfoInput re-exports db.TableInfoInput.
+	TableInfoInput = db.TableInfoInput
+	// ExecuteSqlInput re-exports db.ExecuteSqlInput.
+	ExecuteSqlInput = db.ExecuteSqlInput
+	// OpenTableRowsInput re-exports db.OpenTableRowsInput.
+	OpenTableRowsInput = db.OpenTableRowsInput
+	// FetchRowsInput re-exports db.FetchRowsInput.
+	FetchRowsInput = db.FetchRowsInput
+	// CloseDbTabInput re-exports db.CloseDbTabInput.
+	CloseDbTabInput = db.CloseDbTabInput
+	// DbColumn re-exports db.DbColumn.
+	DbColumn = db.DbColumn
+	// StatementError re-exports db.StatementError.
+	StatementError = db.StatementError
+	// StatementResult re-exports db.StatementResult.
+	StatementResult = db.StatementResult
+	// ExecuteSqlOutput re-exports db.ExecuteSqlOutput.
+	ExecuteSqlOutput = db.ExecuteSqlOutput
+	// FetchRowsOutput re-exports db.FetchRowsOutput.
+	FetchRowsOutput = db.FetchRowsOutput
+	// DbObject re-exports db.DbObject.
+	DbObject = db.DbObject
+	// DbSchema re-exports db.DbSchema.
+	DbSchema = db.DbSchema
+	// SchemaTreeOutput re-exports db.SchemaTreeOutput.
+	SchemaTreeOutput = db.SchemaTreeOutput
+	// TableColumn re-exports db.TableColumn.
+	TableColumn = db.TableColumn
+	// TableIndex re-exports db.TableIndex.
+	TableIndex = db.TableIndex
+	// TableConstraint re-exports db.TableConstraint.
+	TableConstraint = db.TableConstraint
+	// TableForeignKey re-exports db.TableForeignKey.
+	TableForeignKey = db.TableForeignKey
+	// TableInfoOutput re-exports db.TableInfoOutput.
+	TableInfoOutput = db.TableInfoOutput
 )
 
 // common functions
