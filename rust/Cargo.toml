@@ -10,7 +10,6 @@ name = "s3b_db"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-futures-util = "0.3.34"
 libsqlite3-sys = "*"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["raw_value"] }

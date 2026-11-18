@@ -68,7 +68,7 @@ const (
 	metaTimeout = 30 * time.Second
 
 	// pageSize is the rows of the first page and of each FetchRows page.
-	pageSize = 500
+	pageSize = 10000
 	// maxPageBytes caps the text of one page (always at least one row), so a page of big values stays small.
 	maxPageBytes = 16 << 20
 )

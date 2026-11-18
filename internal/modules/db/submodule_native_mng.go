@@ -3,6 +3,7 @@ package db
 import (
 	"S3Browser/internal/pkg/cnst"
 	"S3Browser/models"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -84,24 +85,43 @@ func (m *submoduleNativeMng) get() (nativeCaller, error) {
 	return m.caller, nil
 }
 
-// response is the envelope of a native response; Result decodes straight into T.
-type response[T any] struct {
-	Ok     bool         `json:"ok"`
-	Result T            `json:"result"`
-	Error  *nativeError `json:"error"`
+// response is the envelope of a native response when it is not the expected success shape.
+type response struct {
+	Ok     bool            `json:"ok"`
+	Result json.RawMessage `json:"result"`
+	Error  *nativeError    `json:"error"`
 }
 
-// callNative sends one request and decodes the result into T. When ctx ends first it asks the library to
-// cancel; the library then answers "cancelled" and the error carries that code.
-func callNative[T any](ctx context.Context, m *submoduleNativeMng, method string, params any) (T, error) {
-	var zero T
+// okPrefix starts every success response (ok_response in protocol/mod.rs), so the result is the bytes after it
+// up to the closing brace. Taking them without parsing keeps a big page from being scanned again.
+var okPrefix = []byte(`{"ok":true,"result":`)
 
+// callNative sends one request and decodes the result into T.
+func callNative[T any](ctx context.Context, m *submoduleNativeMng, method string, params any) (T, error) {
+	var res T
+
+	result, err := callNativeRaw(ctx, m, method, params)
+	if err != nil {
+		return res, err
+	}
+	if len(result) > 0 {
+		if err := json.Unmarshal(result, &res); err != nil {
+			var zero T
+			return zero, &nativeError{Code: codeInternal, Message: "decode response: " + err.Error()}
+		}
+	}
+	return res, nil
+}
+
+// callNativeRaw sends one request and returns the JSON of the result as the library wrote it. When ctx ends
+// first it asks the library to cancel; the library then answers "cancelled" and the error carries that code.
+func callNativeRaw(ctx context.Context, m *submoduleNativeMng, method string, params any) (json.RawMessage, error) {
 	caller, err := m.get()
 	if err != nil {
-		return zero, err
+		return nil, err
 	}
 	if err := ctx.Err(); err != nil {
-		return zero, err
+		return nil, err
 	}
 
 	id := m.nextId.Add(1)
@@ -111,7 +131,7 @@ func callNative[T any](ctx context.Context, m *submoduleNativeMng, method string
 		Params any    `json:"params"`
 	}{id, method, params})
 	if err != nil {
-		return zero, &nativeError{Code: codeInternal, Message: err.Error()}
+		return nil, &nativeError{Code: codeInternal, Message: err.Error()}
 	}
 
 	finished := make(chan struct{})
@@ -136,18 +156,22 @@ func callNative[T any](ctx context.Context, m *submoduleNativeMng, method string
 
 	raw, err := caller.call(req)
 	if err != nil {
-		return zero, &nativeError{Code: codeInternal, Message: err.Error()}
+		return nil, &nativeError{Code: codeInternal, Message: err.Error()}
 	}
 
-	var resp response[T]
+	if bytes.HasPrefix(raw, okPrefix) && raw[len(raw)-1] == '}' {
+		return raw[len(okPrefix) : len(raw)-1], nil
+	}
+
+	var resp response
 	if err := json.Unmarshal(raw, &resp); err != nil {
-		return zero, &nativeError{Code: codeInternal, Message: "decode response: " + err.Error()}
+		return nil, &nativeError{Code: codeInternal, Message: "decode response: " + err.Error()}
 	}
 	if !resp.Ok {
 		if resp.Error == nil {
-			return zero, &nativeError{Code: codeInternal, Message: "response without error"}
+			return nil, &nativeError{Code: codeInternal, Message: "response without error"}
 		}
-		return zero, resp.Error
+		return nil, resp.Error
 	}
 	return resp.Result, nil
 }

@@ -1,36 +1,10 @@
-//! Đổi giá trị ô SQLite sang chuỗi theo kiểu lưu thực của từng ô.
+//! Định dạng chuỗi cho giá trị ô SQLite (REAL, BLOB).
 //!
-//! Vị trí trong luồng: `actor::read_page` gọi `row_cells` cho mỗi dòng đọc từ stream; kết quả
-//! là `Vec<Option<String>>` đưa thẳng vào JSON (`None` là NULL). SQLite gõ kiểu theo từng ô
-//! chứ không theo cột, nên phải hỏi kiểu lưu thực của ô.
-
-use sqlx::sqlite::SqliteRow;
-use sqlx::{Row, TypeInfo, ValueRef};
-
-/// NULL -> `None`; INTEGER/REAL/TEXT -> chuỗi; BLOB -> toàn bộ hex `0x...`.
-pub fn cell(row: &SqliteRow, i: usize) -> Result<Option<String>, sqlx::Error> {
-    let raw = row.try_get_raw(i)?;
-    if raw.is_null() {
-        return Ok(None);
-    }
-    // `type_info()` trả giá trị tạm (`Cow`) bị huỷ cuối câu lệnh, nên copy tên kiểu ra `String` mới dùng tiếp được.
-    let name = raw.type_info().name().to_owned();
-    Ok(Some(match name.as_str() {
-        "INTEGER" => row.try_get_unchecked::<i64, _>(i)?.to_string(),
-        "REAL" => real(row.try_get_unchecked::<f64, _>(i)?),
-        "BLOB" => hex(row.try_get_unchecked::<&[u8], _>(i)?),
-        // TEXT: lấy byte rồi chuyển lossy để TEXT không phải UTF-8 hợp lệ vẫn hiển thị được.
-        _ => String::from_utf8_lossy(row.try_get_unchecked::<&[u8], _>(i)?).into_owned(),
-    }))
-}
-
-/// Đổi mọi ô của một dòng sang chuỗi; ô nào lỗi thì cả hàm trả lỗi (`collect` gom `Result`).
-pub fn row_cells(row: &SqliteRow) -> Result<Vec<Option<String>>, sqlx::Error> {
-    (0..row.len()).map(|i| cell(row, i)).collect()
-}
+//! Vị trí trong luồng: `raw::Stmt::cell` đọc ô từ SQLite theo kiểu lưu thực rồi gọi các hàm ở
+//! đây cho REAL/BLOB; kết quả là chuỗi đưa thẳng vào JSON (NULL là `None`, xử lý ở `raw`).
 
 /// REAL giữ dấu `.0` như SQLite (`1.0`), không dùng ký hiệu mũ.
-fn real(v: f64) -> String {
+pub(super) fn real(v: f64) -> String {
     if v.is_nan() {
         "NaN".to_owned()
     } else if v.is_infinite() {
@@ -44,7 +18,7 @@ fn real(v: f64) -> String {
 
 /// BLOB -> chuỗi hex, ví dụ `[0x0a, 0xff]` -> `0x0aff`.
 /// Một lần cấp phát đúng cỡ: `0x` + 2 ký tự mỗi byte (tránh `format!` cho mỗi byte, BLOB có thể lớn).
-fn hex(bytes: &[u8]) -> String {
+pub(super) fn hex(bytes: &[u8]) -> String {
     const DIGITS: &[u8; 16] = b"0123456789abcdef";
     let mut s = String::with_capacity(bytes.len() * 2 + 2);
     s.push_str("0x");
@@ -77,5 +51,49 @@ mod tests {
         assert_eq!(real(f64::NAN), "NaN");
         assert_eq!(real(f64::INFINITY), "Inf");
         assert_eq!(real(f64::NEG_INFINITY), "-Inf");
+    }
+
+    /// Biên 1e15: dưới ngưỡng giữ `.0`, từ ngưỡng trở lên in số nguyên không `.0`; -0.0 giữ dấu.
+    #[test]
+    fn real_boundaries() {
+        assert_eq!(real(999_999_999_999_999.0), "999999999999999.0");
+        assert_eq!(real(-999_999_999_999_999.0), "-999999999999999.0");
+        assert_eq!(real(1e15), "1000000000000000");
+        assert_eq!(real(-1e15), "-1000000000000000");
+        assert_eq!(real(0.0), "0.0");
+        assert_eq!(real(-0.0), "-0.0");
+        assert_eq!(real(1e-7), "0.0000001");
+        assert_eq!(real(0.1 + 0.2), "0.30000000000000004");
+        assert_eq!(real(123_456_789.125), "123456789.125");
+        // Không bao giờ có ký hiệu mũ, kể cả số cực nhỏ/lớn.
+        for v in [
+            f64::MIN_POSITIVE,
+            5e-324,
+            f64::MAX,
+            f64::MIN,
+            1e300,
+            1.5e-300,
+        ] {
+            let s = real(v);
+            assert!(!s.contains(['e', 'E']), "{v:e} -> {s}");
+            assert_eq!(s.parse::<f64>().unwrap(), v, "{s}");
+        }
+    }
+
+    /// Hex dùng chữ thường, đủ 256 giá trị byte, độ dài đúng `2 + 2n`.
+    #[test]
+    fn hex_all_byte_values() {
+        let all: Vec<u8> = (0..=255).collect();
+        let h = hex(&all);
+        assert_eq!(h.len(), 2 + 512);
+        assert!(h.starts_with("0x000102"));
+        assert!(h.ends_with("fdfeff"));
+        assert_eq!(
+            h,
+            format!(
+                "0x{}",
+                all.iter().map(|b| format!("{b:02x}")).collect::<String>()
+            )
+        );
     }
 }

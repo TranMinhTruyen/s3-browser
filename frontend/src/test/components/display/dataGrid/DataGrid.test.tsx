@@ -423,5 +423,53 @@ describe('DataGrid', () => {
       expect(onEndReached).toHaveBeenCalledTimes(1); // lastIndex -1 is within threshold of an empty list
       expect(() => renderGrid({ hasMore: true })).not.toThrow();
     });
+
+    describe('with a page of 10,000 rows', () => {
+      it('renders only the rows in view, not all 10,000', () => {
+        virtual.rows = [0, 29];
+        renderGrid({ rows: manyRows(10_000), hasMore: true, onEndReached: vi.fn() });
+        expect(screen.getByText('r29')).toBeInTheDocument();
+        expect(screen.queryByText('r30')).not.toBeInTheDocument();
+        expect(screen.queryByText('r9999')).not.toBeInTheDocument();
+      });
+
+      it('asks for the next page only when the view gets within 10 rows of row 10,000', () => {
+        const onEndReached = vi.fn();
+        virtual.rows = [5000, 5030];
+        const { unmount } = renderGrid({ rows: manyRows(10_000), hasMore: true, onEndReached });
+        expect(onEndReached).not.toHaveBeenCalled();
+        unmount();
+
+        virtual.rows = [9970, 9998]; // last row in view is 9998 = rows.length - 1 - 1
+        renderGrid({ rows: manyRows(10_000), hasMore: true, onEndReached });
+        expect(onEndReached).toHaveBeenCalledTimes(1);
+      });
+
+      it('asks again once the next 10,000 rows are appended and the view is near the new end', () => {
+        const onEndReached = vi.fn();
+        virtual.rows = [9980, 9999];
+        const { rerender } = renderGrid({ rows: manyRows(10_000), hasMore: true, onEndReached });
+        expect(onEndReached).toHaveBeenCalledTimes(1);
+
+        virtual.rows = [19_980, 19_999];
+        rerender(
+          <DataGrid
+            columns={columns}
+            rows={manyRows(20_000)}
+            nullText={NULL_TEXT}
+            hasMore
+            onEndReached={onEndReached}
+          />
+        );
+        expect(onEndReached).toHaveBeenCalledTimes(2);
+      });
+
+      it('does not ask after the last page (hasMore false)', () => {
+        const onEndReached = vi.fn();
+        virtual.rows = [9980, 9999];
+        renderGrid({ rows: manyRows(10_000), hasMore: false, onEndReached });
+        expect(onEndReached).not.toHaveBeenCalled();
+      });
+    });
   });
 });

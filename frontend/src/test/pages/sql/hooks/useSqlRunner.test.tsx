@@ -446,5 +446,60 @@ describe('useSqlRunner', () => {
       await act(() => result.current.loadMore());
       expect(callsOf(FetchRows)).toHaveLength(0);
     });
+
+    describe('with full pages of 10,000 rows', () => {
+      const PAGE = 10_000;
+      const page = (from: number, count = PAGE) => Array.from({ length: count }, (_, i) => [String(from + i)]);
+
+      it('appends a 10,000-row page after a 10,000-row first page in order, and stops on done', async () => {
+        const { result } = await runOpen([open({ rows: page(0) })]);
+        expect(result.current.statements[0].rows).toHaveLength(PAGE);
+
+        reply({ fetch: { rows: page(PAGE), done: false } });
+        await act(() => result.current.loadMore());
+        let rows = result.current.statements[0].rows;
+        expect(rows).toHaveLength(2 * PAGE);
+        expect(rows[0]).toEqual(['0']);
+        expect(rows[PAGE - 1]).toEqual(['9999']);
+        expect(rows[PAGE]).toEqual(['10000']);
+        expect(rows[2 * PAGE - 1]).toEqual(['19999']);
+        expect(result.current.statements[0].done).toBe(false);
+
+        reply({ fetch: { rows: page(2 * PAGE, 1234), done: true } });
+        await act(() => result.current.loadMore());
+        rows = result.current.statements[0].rows;
+        expect(rows).toHaveLength(2 * PAGE + 1234);
+        expect(rows[2 * PAGE]).toEqual(['20000']);
+        expect(rows.at(-1)).toEqual(['21233']);
+        expect(result.current.statements[0].done).toBe(true);
+
+        const calls = callsOf(FetchRows).length;
+        await act(() => result.current.loadMore());
+        expect(callsOf(FetchRows)).toHaveLength(calls);
+        expect(
+          callsOf(FetchRows).every(c => JSON.stringify(c[1]) === JSON.stringify([{ tabId: TAB, cursorId: 7 }]))
+        ).toBe(true);
+      });
+
+      it('does not mutate the rows array of the previous page when appending', async () => {
+        const first = page(0);
+        const { result } = await runOpen([open({ rows: first })]);
+        reply({ fetch: { rows: page(PAGE), done: true } });
+
+        await act(() => result.current.loadMore());
+
+        expect(first).toHaveLength(PAGE);
+        expect(result.current.statements[0].rows).not.toBe(first);
+      });
+
+      it('keeps asking for the next page even when a full page is smaller than 10,000, until done', async () => {
+        const { result } = await runOpen([open({ rows: page(0, 500) })]);
+        reply({ fetch: { rows: page(500, 500), done: false } });
+        await act(() => result.current.loadMore());
+        expect(result.current.statements[0]).toMatchObject({ done: false });
+        expect(canLoadMore(result.current.statements[0])).toBe(true);
+        expect(result.current.statements[0].rows).toHaveLength(1000);
+      });
+    });
   });
 });
