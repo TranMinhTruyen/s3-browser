@@ -1,0 +1,271 @@
+[
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              }
+            ],
+            "done": false,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ],
+              [
+                "2"
+              ],
+              [
+                "3"
+              ],
+              [
+                "4"
+              ],
+              [
+                "5"
+              ]
+            ],
+            "sql": "SELECT id FROM p ORDER BY id;",
+            "truncated": true
+          },
+          {
+            "columns": [
+              {
+                "name": "name",
+                "type": "TEXT"
+              }
+            ],
+            "cursorId": 1,
+            "done": false,
+            "elapsedMs": 0,
+            "index": 1,
+            "kind": "rows",
+            "rows": [
+              [
+                "row-001"
+              ],
+              [
+                "row-002"
+              ],
+              [
+                "row-003"
+              ],
+              [
+                "row-004"
+              ],
+              [
+                "row-005"
+              ]
+            ],
+            "sql": "SELECT name FROM p ORDER BY id"
+          }
+        ]
+      }
+    },
+    "step": "two selects, first cut by pageSize"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "1",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ],
+            "sql": "SELECT 1;"
+          },
+          {
+            "columns": [
+              {
+                "name": "2",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 1,
+            "kind": "rows",
+            "rows": [
+              [
+                "2"
+              ]
+            ],
+            "sql": "SELECT 2"
+          }
+        ]
+      }
+    },
+    "step": "two selects, both fit"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "name",
+                "type": "TEXT"
+              }
+            ],
+            "done": false,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "row-001"
+              ],
+              [
+                "row-002"
+              ],
+              [
+                "row-003"
+              ]
+            ],
+            "sql": "SELECT name FROM p;",
+            "truncated": true
+          },
+          {
+            "columns": [
+              {
+                "name": "'last'",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 1,
+            "kind": "rows",
+            "rows": [
+              [
+                "last"
+              ]
+            ],
+            "sql": "SELECT 'last'"
+          }
+        ]
+      }
+    },
+    "step": "first cut by maxPageBytes"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              }
+            ],
+            "done": false,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ],
+              [
+                "2"
+              ],
+              [
+                "3"
+              ]
+            ],
+            "sql": "SELECT id FROM p;",
+            "truncated": true
+          },
+          {
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 1,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ],
+              [
+                "2"
+              ]
+            ],
+            "sql": "SELECT id FROM p WHERE id < 3;"
+          },
+          {
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              }
+            ],
+            "cursorId": 1,
+            "done": false,
+            "elapsedMs": 0,
+            "index": 2,
+            "kind": "rows",
+            "rows": [
+              [
+                "21"
+              ],
+              [
+                "22"
+              ],
+              [
+                "23"
+              ]
+            ],
+            "sql": "SELECT id FROM p WHERE id > 20"
+          }
+        ]
+      }
+    },
+    "step": "three selects, only last keeps cursor"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": true,
+        "rows": [
+          [
+            "24"
+          ],
+          [
+            "25"
+          ]
+        ]
+      }
+    },
+    "step": "fetch #1 pageSize=3 maxPageBytes=16777216"
+  }
+]

@@ -1,0 +1,53 @@
+[
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "schemas": [
+          {
+            "indexes": [
+              {
+                "name": "child_qty",
+                "table": "child"
+              }
+            ],
+            "name": "main",
+            "tables": [
+              "child",
+              "no_rowid",
+              "parent",
+              "we ird"
+            ],
+            "triggers": [
+              {
+                "name": "tr_child",
+                "table": "child"
+              }
+            ],
+            "views": [
+              "v_child"
+            ]
+          }
+        ]
+      }
+    },
+    "step": "schemaTree"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "schemas": [
+          {
+            "indexes": [],
+            "name": "main",
+            "tables": [],
+            "triggers": [],
+            "views": []
+          }
+        ]
+      }
+    },
+    "step": "schemaTree on empty db"
+  }
+]

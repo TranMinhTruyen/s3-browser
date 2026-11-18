@@ -1,0 +1,284 @@
+[
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "columns": [
+          {
+            "cid": 0,
+            "defaultValue": null,
+            "name": "id",
+            "notNull": false,
+            "pk": 1,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "defaultValue": "'x'",
+            "name": "name",
+            "notNull": true,
+            "pk": 0,
+            "type": "TEXT"
+          }
+        ],
+        "constraints": [
+          {
+            "columns": [
+              "id"
+            ],
+            "expression": null,
+            "kind": "PRIMARY KEY",
+            "name": null
+          }
+        ],
+        "ddl": "CREATE TABLE parent(id INTEGER PRIMARY KEY, name TEXT NOT NULL DEFAULT 'x')",
+        "foreignKeys": [],
+        "indexes": []
+      }
+    },
+    "step": "tableInfo parent"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "columns": [
+          {
+            "cid": 0,
+            "defaultValue": null,
+            "name": "id",
+            "notNull": false,
+            "pk": 1,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "defaultValue": null,
+            "name": "pid",
+            "notNull": false,
+            "pk": 2,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 2,
+            "defaultValue": null,
+            "name": "code",
+            "notNull": false,
+            "pk": 0,
+            "type": "TEXT"
+          },
+          {
+            "cid": 3,
+            "defaultValue": null,
+            "name": "qty",
+            "notNull": false,
+            "pk": 0,
+            "type": "INT"
+          },
+          {
+            "cid": 4,
+            "defaultValue": null,
+            "name": "note",
+            "notNull": false,
+            "pk": 0,
+            "type": "TEXT"
+          }
+        ],
+        "constraints": [
+          {
+            "columns": [
+              "id",
+              "pid"
+            ],
+            "expression": null,
+            "kind": "PRIMARY KEY",
+            "name": null
+          },
+          {
+            "columns": [
+              "code"
+            ],
+            "expression": null,
+            "kind": "UNIQUE",
+            "name": null
+          },
+          {
+            "columns": [
+              "qty"
+            ],
+            "expression": "qty > 0",
+            "kind": "CHECK",
+            "name": null
+          }
+        ],
+        "ddl": "CREATE TABLE child(id INTEGER, pid INTEGER REFERENCES parent(id) ON DELETE CASCADE ON UPDATE SET NULL, code TEXT UNIQUE, qty INT CHECK(qty > 0), note TEXT GENERATED ALWAYS AS (code || '!') VIRTUAL, PRIMARY KEY(id, pid))",
+        "foreignKeys": [
+          {
+            "columns": [
+              "pid"
+            ],
+            "id": 0,
+            "onDelete": "CASCADE",
+            "onUpdate": "SET NULL",
+            "refColumns": [
+              "id"
+            ],
+            "refTable": "parent"
+          }
+        ],
+        "indexes": [
+          {
+            "columns": [
+              "qty"
+            ],
+            "name": "child_qty",
+            "origin": "c",
+            "partial": true,
+            "unique": false
+          },
+          {
+            "columns": [
+              "id",
+              "pid"
+            ],
+            "name": "sqlite_autoindex_child_2",
+            "origin": "pk",
+            "partial": false,
+            "unique": true
+          },
+          {
+            "columns": [
+              "code"
+            ],
+            "name": "sqlite_autoindex_child_1",
+            "origin": "u",
+            "partial": false,
+            "unique": true
+          }
+        ]
+      }
+    },
+    "step": "tableInfo child"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "columns": [
+          {
+            "cid": 0,
+            "defaultValue": null,
+            "name": "id",
+            "notNull": false,
+            "pk": 0,
+            "type": "INTEGER"
+          },
+          {
+            "cid": 1,
+            "defaultValue": null,
+            "name": "code",
+            "notNull": false,
+            "pk": 0,
+            "type": "TEXT"
+          }
+        ],
+        "constraints": [],
+        "ddl": "CREATE VIEW v_child AS SELECT id, code FROM child",
+        "foreignKeys": [],
+        "indexes": []
+      }
+    },
+    "step": "tableInfo v_child"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "columns": [
+          {
+            "cid": 0,
+            "defaultValue": null,
+            "name": "k",
+            "notNull": true,
+            "pk": 1,
+            "type": "TEXT"
+          },
+          {
+            "cid": 1,
+            "defaultValue": null,
+            "name": "v",
+            "notNull": false,
+            "pk": 0,
+            "type": ""
+          }
+        ],
+        "constraints": [
+          {
+            "columns": [
+              "k"
+            ],
+            "expression": null,
+            "kind": "PRIMARY KEY",
+            "name": null
+          }
+        ],
+        "ddl": "CREATE TABLE no_rowid(k TEXT PRIMARY KEY, v) WITHOUT ROWID",
+        "foreignKeys": [],
+        "indexes": [
+          {
+            "columns": [
+              "k"
+            ],
+            "name": "sqlite_autoindex_no_rowid_1",
+            "origin": "pk",
+            "partial": false,
+            "unique": true
+          }
+        ]
+      }
+    },
+    "step": "tableInfo no_rowid"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "columns": [
+          {
+            "cid": 0,
+            "defaultValue": null,
+            "name": "a b",
+            "notNull": false,
+            "pk": 0,
+            "type": "INTEGER"
+          }
+        ],
+        "constraints": [],
+        "ddl": "CREATE TABLE \"we ird\"(\"a b\" INTEGER)",
+        "foreignKeys": [],
+        "indexes": []
+      }
+    },
+    "step": "tableInfo we ird"
+  },
+  {
+    "response": {
+      "error": {
+        "code": "tableNotFound",
+        "message": "table does not exist"
+      },
+      "ok": false
+    },
+    "step": "tableInfo nope"
+  },
+  {
+    "response": {
+      "error": {
+        "code": "sqlError",
+        "message": "no such table: other.sqlite_master"
+      },
+      "ok": false
+    },
+    "step": "tableInfo unknown schema"
+  }
+]

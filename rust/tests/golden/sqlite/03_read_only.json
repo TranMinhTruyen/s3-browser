@@ -1,0 +1,139 @@
+[
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "a",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ],
+              [
+                "2"
+              ]
+            ],
+            "sql": "SELECT a FROM ro_t ORDER BY a"
+          }
+        ]
+      }
+    },
+    "step": "select"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "elapsedMs": 0,
+            "error": {
+              "code": "sqlError",
+              "message": "attempt to write a readonly database"
+            },
+            "index": 0,
+            "kind": "affected",
+            "sql": "INSERT INTO ro_t VALUES(3)"
+          }
+        ]
+      }
+    },
+    "step": "insert"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "elapsedMs": 0,
+            "error": {
+              "code": "sqlError",
+              "message": "attempt to write a readonly database"
+            },
+            "index": 0,
+            "kind": "affected",
+            "sql": "CREATE TABLE ro_new(a)"
+          }
+        ]
+      }
+    },
+    "step": "create table"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "1",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ],
+            "sql": "SELECT 1;"
+          },
+          {
+            "elapsedMs": 0,
+            "error": {
+              "code": "sqlError",
+              "message": "attempt to write a readonly database"
+            },
+            "index": 1,
+            "kind": "affected",
+            "sql": "DELETE FROM ro_t;"
+          }
+        ]
+      }
+    },
+    "step": "write after select in one script"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "count(*)",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "2"
+              ]
+            ],
+            "sql": "SELECT count(*) FROM ro_t"
+          }
+        ]
+      }
+    },
+    "step": "select again"
+  }
+]

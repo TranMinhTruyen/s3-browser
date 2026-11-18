@@ -1,0 +1,123 @@
+[
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              },
+              {
+                "name": "data",
+                "type": "BLOB"
+              },
+              {
+                "name": "length(data)",
+                "type": ""
+              },
+              {
+                "name": "typeof(data)",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1",
+                "0x",
+                "0",
+                "blob"
+              ],
+              [
+                "2",
+                "0x00",
+                "1",
+                "blob"
+              ],
+              [
+                "3",
+                "0x0aff",
+                "2",
+                "blob"
+              ],
+              [
+                "4",
+                "0x00000000",
+                "4",
+                "blob"
+              ],
+              [
+                "5",
+                "0xa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ffa5ff",
+                "2000",
+                "blob"
+              ],
+              [
+                "6",
+                null,
+                null,
+                "null"
+              ]
+            ],
+            "sql": "SELECT id, data, length(data), typeof(data) FROM b ORDER BY id"
+          }
+        ]
+      }
+    },
+    "step": "table blob column"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "x''",
+                "type": ""
+              },
+              {
+                "name": "x'00'",
+                "type": ""
+              },
+              {
+                "name": "x'DEADBEEF'",
+                "type": ""
+              },
+              {
+                "name": "zeroblob(0)",
+                "type": ""
+              },
+              {
+                "name": "zeroblob(3)",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "0x",
+                "0x00",
+                "0xdeadbeef",
+                "0x",
+                "0x000000"
+              ]
+            ],
+            "sql": "SELECT x'', x'00', x'DEADBEEF', zeroblob(0), zeroblob(3)"
+          }
+        ]
+      }
+    },
+    "step": "blob literals"
+  }
+]

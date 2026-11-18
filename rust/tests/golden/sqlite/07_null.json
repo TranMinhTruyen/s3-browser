@@ -1,0 +1,105 @@
+[
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "a",
+                "type": "INTEGER"
+              },
+              {
+                "name": "b",
+                "type": "TEXT"
+              },
+              {
+                "name": "c",
+                "type": "REAL"
+              },
+              {
+                "name": "d",
+                "type": "BLOB"
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                null,
+                null,
+                null,
+                null
+              ],
+              [
+                "0",
+                "",
+                "0.0",
+                "0x"
+              ],
+              [
+                "1",
+                "NULL",
+                "1.5",
+                "0x01"
+              ]
+            ],
+            "sql": "SELECT a, b, c, d FROM n ORDER BY rowid"
+          }
+        ]
+      }
+    },
+    "step": "null vs empty"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "NULL",
+                "type": ""
+              },
+              {
+                "name": "NULL IS NULL",
+                "type": ""
+              },
+              {
+                "name": "1+NULL",
+                "type": ""
+              },
+              {
+                "name": "coalesce(NULL, 'x')",
+                "type": ""
+              },
+              {
+                "name": "''",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                null,
+                "1",
+                null,
+                "x",
+                ""
+              ]
+            ],
+            "sql": "SELECT NULL, NULL IS NULL, 1+NULL, coalesce(NULL, 'x'), ''"
+          }
+        ]
+      }
+    },
+    "step": "null expressions"
+  }
+]

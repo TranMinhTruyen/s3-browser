@@ -1,0 +1,144 @@
+[
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "affected",
+            "rowsAffected": 0,
+            "sql": "CREATE TABLE m1(a INTEGER, b TEXT);"
+          },
+          {
+            "elapsedMs": 0,
+            "index": 1,
+            "kind": "affected",
+            "rowsAffected": 3,
+            "sql": "INSERT INTO m1 VALUES(1,'x'),(2,'y'),(3,'z');"
+          },
+          {
+            "columns": [
+              {
+                "name": "a",
+                "type": "INTEGER"
+              },
+              {
+                "name": "b",
+                "type": "TEXT"
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 2,
+            "kind": "rows",
+            "rows": [
+              [
+                "1",
+                "x"
+              ],
+              [
+                "2",
+                "y"
+              ],
+              [
+                "3",
+                "z"
+              ]
+            ],
+            "sql": "SELECT a, b FROM m1 ORDER BY a;"
+          },
+          {
+            "elapsedMs": 0,
+            "index": 3,
+            "kind": "affected",
+            "rowsAffected": 2,
+            "sql": "UPDATE m1 SET a = a * 10 WHERE a < 3;"
+          },
+          {
+            "elapsedMs": 0,
+            "index": 4,
+            "kind": "affected",
+            "rowsAffected": 1,
+            "sql": "DELETE FROM m1 WHERE a = 3;"
+          },
+          {
+            "columns": [
+              {
+                "name": "a",
+                "type": "INTEGER"
+              },
+              {
+                "name": "b",
+                "type": "TEXT"
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 5,
+            "kind": "rows",
+            "rows": [
+              [
+                "10",
+                "x"
+              ],
+              [
+                "20",
+                "y"
+              ]
+            ],
+            "sql": "SELECT a, b FROM m1 ORDER BY a"
+          }
+        ]
+      }
+    },
+    "step": "script create/insert/select/update/delete/select"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "1",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ],
+            "sql": "/* c */ SELECT 1;"
+          },
+          {
+            "columns": [
+              {
+                "name": "two",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 1,
+            "kind": "rows",
+            "rows": [
+              [
+                "2"
+              ]
+            ],
+            "sql": "; -- tail\n SELECT 2 AS two;"
+          }
+        ]
+      }
+    },
+    "step": "comments, empty statements and trailing semicolon"
+  }
+]
