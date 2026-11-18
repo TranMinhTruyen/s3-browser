@@ -1,6 +1,6 @@
 ---
 name: wails3-bindings
-description: Sinh lại Wails v3 bindings TypeScript cho S3Browser bằng `go tool wails3 generate bindings -clean=true -ts`, rồi kiểm tra frontend còn import và gọi binding đúng không. Dùng ngay sau khi sửa handler, model hay event Go, hoặc khi cần xác nhận frontend/bindings khớp với code Go.
+description: Sinh lại Wails v3 bindings TypeScript cho S3Browser bằng `go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts`, rồi kiểm tra frontend còn import và gọi binding đúng không. Dùng ngay sau khi sửa handler, model hay event Go, hoặc khi cần xác nhận frontend/bindings khớp với code Go.
 allowed-tools: Bash(go tool wails3 generate bindings *), Bash(go build *), Bash(git status *), Bash(cp -r frontend/bindings *), Bash(rm -rf "${TMPDIR:-/tmp}/s3browser-bindings-before"), Bash(diff *), Bash(find *), Bash(node_modules/.bin/tsc *), Bash(node_modules/.bin/tsc.exe *), Read, Grep, Glob
 ---
 
@@ -26,7 +26,7 @@ Mọi lệnh chạy ở gốc repo (trừ `tsc` chạy trong `frontend/`). Khôn
    ```
 3. Sinh bindings (luôn chạy, kể cả khi nghĩ signature không đổi):
    ```bash
-   go tool wails3 generate bindings -clean=true -ts
+   go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts
    ```
    - `-ts`: sinh file `.ts`. `-clean=true`: xoá bindings cũ trước khi sinh, để binding của service/method đã xoá không còn sót lại.
    - Output: `frontend/bindings/S3Browser/<go package path>/<file>.ts`, frontend import qua alias `@wails/...` (ví dụ `@wails/S3Browser/internal/handlers/buckethandler`, `@wails/S3Browser/models/bucket`).
@@ -59,7 +59,7 @@ Phần B chỉ bắt được lỗi import và lỗi kiểu. Nó **không** bắ
 
 ```markdown
 ## Wails bindings
-- Lệnh sinh: `go tool wails3 generate bindings -clean=true -ts`: THÀNH CÔNG | LỖI | KHÔNG CHẠY (chỉ kiểm tra)
+- Lệnh sinh: `go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts`: THÀNH CÔNG | LỖI | KHÔNG CHẠY (chỉ kiểm tra)
 - tsc --noEmit: PASS | FAIL | BỎ QUA (lý do)
 - Bindings cũ: KHÔNG | CÓ THỂ (danh sách file Go mới hơn)
 

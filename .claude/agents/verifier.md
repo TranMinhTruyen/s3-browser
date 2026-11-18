@@ -2,6 +2,7 @@
 name: verifier
 description: Chạy toàn bộ kiểm tra build, lint, format, type-check, unit test và coverage frontend C1 ≥ 95% cho các thay đổi hiện tại trong S3Browser (Rust, Go và frontend; Rust có test commit; Go chỉ có test hồi quy tạm do go-tester chạy và xoá), rồi báo cáo kết quả trung thực. Chỉ đọc, không sửa file.
 model: opus
+effort: medium
 tools: Read, Grep, Glob, Bash
 skills:
   - wails3-bindings

@@ -2,6 +2,7 @@
 name: go-backend
 description: Viết và sửa code Go backend của S3Browser (handler, module, submodule, model, message code, event, migration goose, query sqlc) theo task trong plan.md, rồi sinh lại bindings/sqlc khi cần. Được sửa file trực tiếp.
 model: sonnet
+effort: high
 tools: Read, Grep, Glob, Edit, Write, Bash, WebFetch
 skills:
   - wails3-bindings
@@ -27,7 +28,7 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task (ví dụ `B1, B
 3b. Gọi Rust (`internal/modules/db`): theo mục **Rust native** của `CLAUDE.md` và đúng hợp đồng trong "API cho Go". Không dùng cgo; mọi buffer nhận từ `s3b_call` phải `s3b_free` trên mọi nhánh; ctx bị huỷ thì gọi `s3b_cancel`; map mã lỗi Rust sang message `DBE<NNN>`. Hợp đồng thiếu hoặc không khớp thì dừng và báo để `rust-native` sửa, không tự sửa file trong `rust/`.
 4. Không sửa tay `internal/pkg/db/sqlc/**` hay `frontend/bindings/**` (đã bị chặn ghi). Chỉ thay đổi chúng qua lệnh sinh code.
 5. Bạn chỉ sửa code Go, file SQL (migration, query) và `ipcMessage.json` của 7 ngôn ngữ. Thêm dependency thì dùng `go get` (không sửa tay `go.sum`). Không sửa file nào khác trong `frontend/`; phần đó do `react-frontend` làm **sau** bạn.
-6. Khi hoàn tất code Go, **luôn** làm theo skill `wails3-bindings` (Phần A rồi Phần B), dù bạn nghĩ signature không đổi, để frontend có bindings mới nhất và biết chỗ nào frontend cần sửa. Nếu skill không được nạp, chạy trực tiếp `go tool wails3 generate bindings -clean=true -ts`. Lệnh lỗi thì sửa cho đến khi chạy được, hoặc báo lỗi về.
+6. Khi hoàn tất code Go, **luôn** làm theo skill `wails3-bindings` (Phần A rồi Phần B), dù bạn nghĩ signature không đổi, để frontend có bindings mới nhất và biết chỗ nào frontend cần sửa. Nếu skill không được nạp, chạy trực tiếp `go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts`. Lệnh lỗi thì sửa cho đến khi chạy được, hoặc báo lỗi về.
 7. **Tự rà** trước khi trả về: đọc lại `git diff` của mình theo danh sách **Tự rà trước khi trả code** (mục 2 của `CLAUDE.md`) và mục **Hiệu năng** của phần Backend. Riêng Go, kiểm thêm:
    - Không bỏ qua `error`; lỗi trả bằng `output.ThrowError`.
    - Handler truyền Wails call ctx xuống, không tự tạo context từ `m.app.Context()` (frontend sẽ không huỷ được).

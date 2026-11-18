@@ -2,6 +2,7 @@
 name: git-flow
 description: Agent duy nhất được thay đổi git trong quy trình sprint của S3Browser. Chế độ `release` tạo branch SP-NN/release từ origin/staging, `branch` tách feature SP-NN/<slug> từ origin/SP-NN/release, `commit` commit local, `publish` push feature và tạo PR vào SP-NN/release, `promote` tạo PR SP-NN/release → staging, `stable` tạo release/v<version> từ origin/staging và PR đổi version vào staging, `master` tạo PR staging → master. Chỉ orchestrator gọi, không sửa code.
 model: sonnet
+effort: high
 tools: Bash, Read, Grep, Glob
 ---
 
