@@ -454,12 +454,20 @@ fn json_contract_field_names() {
     let db = Db::new();
     ok(&db.exec("CREATE TABLE t(a INTEGER)"));
 
+    // Key thời gian từng pha chỉ có ở câu trả dòng khi bật feature `bench-timing`.
+    let timing: &'static [&'static str] = if cfg!(feature = "bench-timing") {
+        &["readMs", "convertMs"]
+    } else {
+        &[]
+    };
+    let with_timing = |base: &[&'static str]| set(&[base, timing].concat());
+
     // rows + cursor
     let r = db.exec(&series(600));
     let st = &statements(&r)[0];
     assert_eq!(
         keys(st),
-        set(&[
+        with_timing(&[
             "index",
             "sql",
             "kind",
@@ -481,7 +489,7 @@ fn json_contract_field_names() {
     let r = db.exec("SELECT 1");
     assert_eq!(
         keys(&statements(&r)[0]),
-        set(&[
+        with_timing(&[
             "index",
             "sql",
             "kind",
@@ -496,7 +504,7 @@ fn json_contract_field_names() {
     let r = db.exec(&format!("{}; SELECT 1", series(600)));
     assert_eq!(
         keys(&statements(&r)[0]),
-        set(&[
+        with_timing(&[
             "index",
             "sql",
             "kind",

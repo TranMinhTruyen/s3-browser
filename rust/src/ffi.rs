@@ -10,6 +10,7 @@
 //! - `catch_unwind`: bắt panic (giống `recover` của Go); panic mà lan ra ngoài hàm C sẽ làm
 //!   chết cả app. Nó trả `Err` nếu có panic, ta đổi thành mã `ERR_PANIC`.
 
+use crate::drivers::tls;
 use crate::{dispatch, registry, runtime};
 use std::panic::catch_unwind;
 use std::{ptr, slice};
@@ -23,11 +24,14 @@ const ERR_INIT: i32 = 2;
 /// Có panic bên trong hàm.
 const ERR_PANIC: i32 = -1;
 
-/// Tạo runtime tokio (một lần). Gọi nhiều lần vô hại. Trả 0 nếu thành công.
+/// Tạo runtime tokio và cài provider mã hoá TLS (một lần). Gọi nhiều lần vô hại. Trả 0 nếu thành công.
 #[unsafe(no_mangle)]
 pub extern "C" fn s3b_init() -> i32 {
     catch_unwind(|| match runtime::init() {
-        Ok(()) => OK,
+        Ok(()) => {
+            tls::install_provider();
+            OK
+        }
         Err(_) => ERR_INIT,
     })
     .unwrap_or(ERR_PANIC)

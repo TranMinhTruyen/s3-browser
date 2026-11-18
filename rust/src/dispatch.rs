@@ -1,10 +1,11 @@
 //! Chọn xử lý theo `method`; mọi kết quả (kể cả lỗi) thành một buffer JSON response.
 //!
-//! Vị trí trong luồng: `ffi::s3b_call` -> `call` (file này) -> `route` -> `drivers::sqlite`.
+//! Vị trí trong luồng: `ffi::s3b_call` -> `call` (file này) -> `route` -> `drivers`
+//! (`open`/`close`/`request`, các hàm này chọn driver).
 //! Mỗi `method` parse `params` thành kiểu riêng trong `protocol`, gọi driver, rồi đóng gói
 //! kết quả thành `{"ok":true,...}` hoặc `{"ok":false,"error":...}`.
 
-use crate::drivers::sqlite::{self, Cmd};
+use crate::drivers::{self, Cmd};
 use crate::protocol::{
     ConnParams, DbError, DbResult, ExecuteParams, FetchParams, INVALID_REQUEST, OpenParams,
     Request, TableParams, TableRowsParams, error_response, ok_response,
@@ -31,39 +32,39 @@ async fn route(req: &Request<'_>) -> DbResult<Vec<u8>> {
     let raw = req.params;
     match req.method.as_str() {
         "open" => Ok(ok_response(
-            &sqlite::open(parse_params::<OpenParams>(raw)?).await?,
+            &drivers::open(parse_params::<OpenParams>(raw)?).await?,
         )),
         "close" => {
             let p: ConnParams = parse_params(raw)?;
-            Ok(ok_response(&sqlite::close(p.conn_id).await?))
+            Ok(ok_response(&drivers::close(p.conn_id).await?))
         }
         "execute" => {
             let p: ExecuteParams = parse_params(raw)?;
             let conn_id = p.conn_id;
-            let r = sqlite::request(id, conn_id, p, Cmd::Execute).await?;
+            let r = drivers::request(id, conn_id, p, Cmd::Execute).await?;
             Ok(ok_response(&r))
         }
         "fetch" => {
             let p: FetchParams = parse_params(raw)?;
             let conn_id = p.conn_id;
-            let r = sqlite::request(id, conn_id, p, Cmd::Fetch).await?;
+            let r = drivers::request(id, conn_id, p, Cmd::Fetch).await?;
             Ok(ok_response(&r))
         }
         "schemaTree" => {
             let p: ConnParams = parse_params(raw)?;
-            let r = sqlite::request(id, p.conn_id, (), Cmd::SchemaTree).await?;
+            let r = drivers::request(id, p.conn_id, (), Cmd::SchemaTree).await?;
             Ok(ok_response(&r))
         }
         "tableInfo" => {
             let p: TableParams = parse_params(raw)?;
             let conn_id = p.conn_id;
-            let r = sqlite::request(id, conn_id, p, Cmd::TableInfo).await?;
+            let r = drivers::request(id, conn_id, p, Cmd::TableInfo).await?;
             Ok(ok_response(&r))
         }
         "tableRows" => {
             let p: TableRowsParams = parse_params(raw)?;
             let conn_id = p.conn_id;
-            let r = sqlite::request(id, conn_id, p, Cmd::TableRows).await?;
+            let r = drivers::request(id, conn_id, p, Cmd::TableRows).await?;
             Ok(ok_response(&r))
         }
         // Chỉ bản debug: để test thấy panic trong task tokio thành `internal`.

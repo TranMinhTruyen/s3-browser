@@ -1,7 +1,7 @@
-//! Định dạng chuỗi cho giá trị ô SQLite (REAL, BLOB).
+//! Định dạng chuỗi cho giá trị ô SQLite (REAL; BLOB dùng `common::hex`).
 //!
-//! Vị trí trong luồng: `raw::Stmt::cell` đọc ô từ SQLite theo kiểu lưu thực rồi gọi các hàm ở
-//! đây cho REAL/BLOB; kết quả là chuỗi đưa thẳng vào JSON (NULL là `None`, xử lý ở `raw`).
+//! Vị trí trong luồng: `raw::Stmt::cell` đọc ô từ SQLite theo kiểu lưu thực rồi gọi hàm ở
+//! đây cho REAL (BLOB đi qua `common::hex`); kết quả là chuỗi đưa thẳng vào JSON (NULL là `None`, xử lý ở `raw`).
 
 /// REAL giữ dấu `.0` như SQLite (`1.0`), không dùng ký hiệu mũ.
 pub(super) fn real(v: f64) -> String {
@@ -16,22 +16,10 @@ pub(super) fn real(v: f64) -> String {
     }
 }
 
-/// BLOB -> chuỗi hex, ví dụ `[0x0a, 0xff]` -> `0x0aff`.
-/// Một lần cấp phát đúng cỡ: `0x` + 2 ký tự mỗi byte (tránh `format!` cho mỗi byte, BLOB có thể lớn).
-pub(super) fn hex(bytes: &[u8]) -> String {
-    const DIGITS: &[u8; 16] = b"0123456789abcdef";
-    let mut s = String::with_capacity(bytes.len() * 2 + 2);
-    s.push_str("0x");
-    for &b in bytes {
-        s.push(DIGITS[usize::from(b >> 4)] as char);
-        s.push(DIGITS[usize::from(b & 0x0f)] as char);
-    }
-    s
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{hex, real};
+    use super::real;
+    use crate::drivers::common::hex;
 
     /// Hex in đủ mọi byte, kể cả mảng rỗng.
     #[test]

@@ -30,7 +30,10 @@ const BIG: u64 = 16 * 1024 * 1024;
 fn normalize(v: &mut Value) {
     match v {
         Value::Object(map) => {
-            map.remove("firstRowMs");
+            // readMs/convertMs chỉ có khi bật feature `bench-timing`.
+            for key in ["firstRowMs", "readMs", "convertMs"] {
+                map.remove(key);
+            }
             for (k, child) in map.iter_mut() {
                 match k.as_str() {
                     "elapsedMs" => *child = json!(0),

@@ -12,7 +12,9 @@
 //! sqlx đang không dùng handle trong lúc ta gọi.
 
 use super::value;
+use crate::drivers::common::hex;
 use crate::protocol::Column;
+use crate::registry::Interrupt;
 use libsqlite3_sys as ffi;
 use sqlx::sqlite::LockedSqliteHandle;
 use std::ffi::{CStr, c_char, c_int, c_void};
@@ -51,6 +53,13 @@ impl InterruptHandle {
     pub fn interrupt(&self) {
         // SAFETY: hợp đồng của `of` đảm bảo connection còn sống; `sqlite3_interrupt` an toàn đa luồng.
         unsafe { ffi::sqlite3_interrupt(self.0.as_ptr()) }
+    }
+}
+
+/// Cho registry ngắt câu đang chạy qua trait chung `Interrupt` (gọi hàm `interrupt` ở trên).
+impl Interrupt for InterruptHandle {
+    fn interrupt(&self) {
+        InterruptHandle::interrupt(self);
     }
 }
 
@@ -222,7 +231,7 @@ impl<'c> Stmt<'c> {
                 ffi::SQLITE_FLOAT => Some(value::real(ffi::sqlite3_column_double(stmt, i))),
                 ffi::SQLITE_BLOB => {
                     let p = ffi::sqlite3_column_blob(stmt, i);
-                    Some(value::hex(bytes(p, ffi::sqlite3_column_bytes(stmt, i))))
+                    Some(hex(bytes(p, ffi::sqlite3_column_bytes(stmt, i))))
                 }
                 // TEXT: chuyển lossy để TEXT không phải UTF-8 hợp lệ vẫn hiển thị được.
                 _ => {
@@ -257,6 +266,7 @@ pub fn total_changes(handle: &mut LockedSqliteHandle<'_>) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::{InterruptHandle, Stmt, bytes, prepare_next, total_changes, value};
+    use crate::drivers::common::hex;
     use sqlx::sqlite::{SqliteConnection, SqliteRow};
     use sqlx::{AssertSqlSafe, Connection, Row, TypeInfo, ValueRef};
     use std::ffi::c_void;
@@ -290,7 +300,7 @@ mod tests {
         Some(match name.as_str() {
             "INTEGER" => row.try_get_unchecked::<i64, _>(i).unwrap().to_string(),
             "REAL" => value::real(row.try_get_unchecked::<f64, _>(i).unwrap()),
-            "BLOB" => value::hex(row.try_get_unchecked::<&[u8], _>(i).unwrap()),
+            "BLOB" => hex(row.try_get_unchecked::<&[u8], _>(i).unwrap()),
             _ => {
                 String::from_utf8_lossy(row.try_get_unchecked::<&[u8], _>(i).unwrap()).into_owned()
             }

@@ -13,12 +13,16 @@
 //! Dòng của câu SELECT đọc thẳng bằng SQLite C API (`raw::Stmt`), không qua stream của sqlx, vì
 //! đường sqlx tốn thêm nhiều lần cấp phát và chuyển kiểu cho mỗi ô (xem `read_page`).
 
-use super::{Cmd, Job, raw, schema, split};
-use crate::protocol::{
-    CANCELLED, CURSOR_NOT_FOUND, Column, DbError, DbResult, ExecuteResult, FetchResult, SQL_ERROR,
-    StatementResult, TABLE_NOT_FOUND,
+use super::{raw, schema, split};
+use crate::drivers::common::{
+    Cursor, Limits, Page, PageBuilder, RegistryGuard, affected_statement, cancelled,
+    cursor_not_found, hold, rows_statement, statement_error,
 };
-use crate::registry;
+use crate::drivers::{Cmd, Job};
+use crate::protocol::{
+    CANCELLED, DbError, DbResult, ExecuteResult, SQL_ERROR, StatementResult, TABLE_NOT_FOUND,
+};
+use crate::registry::{self, CancelSignal};
 use sqlx::sqlite::SqliteConnection;
 use sqlx::{AssertSqlSafe, Connection};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -34,29 +38,14 @@ struct Held<'c> {
     stmt: raw::Stmt<'c>,
 }
 
-/// Giới hạn một trang kết quả.
-#[derive(Clone, Copy)]
-struct Limits {
-    /// Số dòng tối đa.
-    page_size: usize,
-    /// Ngưỡng tổng byte chuỗi; vượt thì dừng trang sớm.
-    max_bytes: usize,
-}
+/// `Held` là cursor của SQLite: mỗi trang đọc bằng `read_page` (đồng bộ, `block_in_place`).
+impl Cursor for Held<'_> {
+    fn id(&self) -> u64 {
+        self.cursor_id
+    }
 
-/// Một trang dòng đã đọc; `done` là stream đã hết.
-struct Page {
-    rows: Vec<Vec<Option<String>>>,
-    done: bool,
-}
-
-/// Gỡ connection khỏi registry khi actor kết thúc (kể cả panic), trước khi connection bị drop,
-/// để `s3b_cancel` không bao giờ interrupt handle đã đóng.
-struct RegistryGuard(u64);
-
-/// `Drop` chạy tự động khi giá trị bị huỷ, giống `defer` của Go.
-impl Drop for RegistryGuard {
-    fn drop(&mut self) {
-        registry::global().remove_conn(self.0, false);
+    async fn next_page(&mut self, limits: Limits, cancel: &CancelSignal) -> DbResult<Page> {
+        read_page(&mut self.stmt, limits, cancel.flag())
     }
 }
 
@@ -93,7 +82,7 @@ pub async fn run(id: u64, mut conn: SqliteConnection, mut rx: mpsc::Receiver<Cmd
         // và interrupt đúng request này.
         if let Some((request_id, cancel)) = cmd.request() {
             reg.set_running(id, request_id);
-            if cancel.load(Ordering::SeqCst) {
+            if cancel.is_cancelled() {
                 reg.set_running(id, 0);
                 cmd.reject_cancelled();
                 continue;
@@ -105,11 +94,17 @@ pub async fn run(id: u64, mut conn: SqliteConnection, mut rx: mpsc::Receiver<Cmd
                 next_cursor += 1;
                 let limits = Limits::new(job.params.page_size, job.params.max_page_bytes);
                 // `held` là `Some` khi còn dòng và cần giữ cursor; `&mut conn` mượn connection cho `execute`.
-                let (res, held) =
-                    execute(&mut conn, &job.params.sql, limits, &job.cancel, next_cursor).await;
+                let (res, held) = execute(
+                    &mut conn,
+                    &job.params.sql,
+                    limits,
+                    job.cancel.flag(),
+                    next_cursor,
+                )
+                .await;
                 // Gỡ `running` TRƯỚC khi trả lời (xem `drop_cursor_if_cancelled`).
                 reg.set_running(id, 0);
-                let (res, held) = drop_cursor_if_cancelled(res, held, &job.cancel);
+                let (res, held) = drop_cursor_if_cancelled(res, held, job.cancel.flag());
                 let _ = job
                     .reply
                     .send(res.map(|statements| ExecuteResult { statements }));
@@ -122,7 +117,7 @@ pub async fn run(id: u64, mut conn: SqliteConnection, mut rx: mpsc::Receiver<Cmd
                 next_cursor += 1;
                 let (res, held) = table_rows(&mut conn, &job, next_cursor).await;
                 reg.set_running(id, 0);
-                let (res, held) = drop_cursor_if_cancelled(res, held, &job.cancel);
+                let (res, held) = drop_cursor_if_cancelled(res, held, job.cancel.flag());
                 let _ = job.reply.send(res);
                 if let Some(held) = held {
                     pending = hold(id, held, &mut rx).await;
@@ -135,64 +130,23 @@ pub async fn run(id: u64, mut conn: SqliteConnection, mut rx: mpsc::Receiver<Cmd
             }
             Cmd::SchemaTree(job) => {
                 let res = schema::schema_tree(&mut conn).await;
-                let _ = job.reply.send(res.map_err(|e| e.into_db(&job.cancel)));
+                let _ = job
+                    .reply
+                    .send(res.map_err(|e| e.into_db(job.cancel.flag())));
                 reg.set_running(id, 0);
             }
             Cmd::TableInfo(job) => {
                 let res =
                     schema::table_info(&mut conn, &job.params.schema, &job.params.table).await;
-                let _ = job.reply.send(res.map_err(|e| e.into_db(&job.cancel)));
+                let _ = job
+                    .reply
+                    .send(res.map_err(|e| e.into_db(job.cancel.flag())));
                 reg.set_running(id, 0);
             }
         }
     }
     // Kênh đóng mà không có lệnh Close (registry bị gỡ): vẫn đóng connection cho sạch.
     let _ = conn.close().await;
-}
-
-/// Giữ cursor và phục vụ `fetch` cho tới khi hết dòng; lệnh khác tới thì bỏ cursor và trả lệnh đó.
-/// `None` nghĩa là không còn lệnh nào chờ xử lý (cursor đã xong hoặc kênh đóng).
-async fn hold(conn_id: u64, mut held: Held<'_>, rx: &mut mpsc::Receiver<Cmd>) -> Option<Cmd> {
-    let reg = registry::global();
-    loop {
-        // `?` trên `Option`: kênh đóng (`None`) thì thoát hàm trả `None`.
-        match rx.recv().await? {
-            // `if` sau mẫu là match guard: chỉ khớp khi `cursorId` đúng cursor đang giữ.
-            Cmd::Fetch(job) if job.params.cursor_id == held.cursor_id => {
-                let limits = Limits::new(job.params.page_size, job.params.max_page_bytes);
-                reg.set_running(conn_id, job.id);
-                let page = read_page(&mut held.stmt, limits, &job.cancel);
-                reg.set_running(conn_id, 0);
-                match page {
-                    Ok(page) => {
-                        let done = page.done;
-                        // `running` đã về 0: cờ huỷ bật lúc này nghĩa là cursor còn lại có thể
-                        // mang cờ interrupt treo, nên bỏ cursor và trả `cancelled`.
-                        if !done && job.cancel.load(Ordering::SeqCst) {
-                            let _ = job.reply.send(Err(cancelled()));
-                            return None;
-                        }
-                        let _ = job.reply.send(Ok(FetchResult {
-                            rows: page.rows,
-                            done,
-                        }));
-                        if done {
-                            return None;
-                        }
-                    }
-                    Err(e) => {
-                        // Câu lỗi hoặc bị huỷ thì không đọc tiếp được.
-                        let _ = job.reply.send(Err(e));
-                        return None;
-                    }
-                }
-            }
-            Cmd::Fetch(job) => {
-                let _ = job.reply.send(Err(cursor_not_found()));
-            }
-            other => return Some(other),
-        }
-    }
 }
 
 /// Xử lý race giữa `s3b_cancel` và lúc request vừa đọc xong trang: `cancel` có thể chạy sau khi
@@ -214,26 +168,6 @@ fn drop_cursor_if_cancelled<'c, T>(
     }
 }
 
-/// Lỗi `cursorNotFound`: cursor đã hết, đã bị bỏ hoặc id sai.
-fn cursor_not_found() -> DbError {
-    DbError::new(CURSOR_NOT_FOUND, "cursor is closed")
-}
-
-impl Limits {
-    /// Chuẩn hoá giới hạn: ít nhất 1 dòng mỗi trang (tránh vòng lặp không tiến triển khi `pageSize = 0`).
-    fn new(page_size: usize, max_bytes: usize) -> Self {
-        Self {
-            page_size: page_size.max(1),
-            max_bytes,
-        }
-    }
-}
-
-/// Lỗi `cancelled`: request bị huỷ qua `s3b_cancel`.
-pub fn cancelled() -> DbError {
-    DbError::new(CANCELLED, "request cancelled")
-}
-
 /// Lỗi sqlx -> `cancelled` nếu request bị huỷ, ngược lại `sqlError`.
 /// Huỷ bằng `sqlite3_interrupt` làm SQLite trả lỗi `interrupted`; ta nhận ra qua cờ `cancel`.
 pub fn map_sqlx(e: sqlx::Error, cancel: &AtomicBool) -> DbError {
@@ -247,56 +181,29 @@ pub fn map_sqlx(e: sqlx::Error, cancel: &AtomicBool) -> DbError {
     DbError::new(SQL_ERROR, msg)
 }
 
-/// Đọc một trang: tối đa `page_size` dòng và dừng sớm khi vượt `max_bytes` (luôn có ≥ 1 dòng).
+/// Đọc một trang: tối đa `page_size` dòng và dừng sớm khi vượt `max_bytes` (luôn có ≥ 1 dòng,
+/// xem `PageBuilder`).
 ///
 /// Hàm đồng bộ (không `async`): `sqlite3_step` chặn thread cho tới khi có dòng, có thể rất lâu với
 /// câu nặng. `block_in_place` báo cho tokio chuyển các task khác sang thread khác trong lúc đó để
 /// không làm đói runtime (chỉ dùng được trên runtime multi-thread, đúng cái `runtime.rs` tạo).
 fn read_page(stmt: &mut raw::Stmt<'_>, limits: Limits, cancel: &AtomicBool) -> DbResult<Page> {
     tokio::task::block_in_place(|| {
-        // Cấp sẵn chỗ nhưng tối đa 1024 để `pageSize` lớn không chiếm RAM trước khi có dữ liệu.
-        let mut rows = Vec::with_capacity(limits.page_size.min(1024));
-        let mut bytes = 0usize;
-        // Điều kiện `rows.is_empty() ||` đảm bảo luôn lấy ít nhất một dòng dù dòng đó vượt `max_bytes`.
-        while rows.len() < limits.page_size && (rows.is_empty() || bytes < limits.max_bytes) {
+        let mut page = PageBuilder::new(limits);
+        while !page.is_full() {
             if cancel.load(Ordering::SeqCst) {
                 return Err(cancelled());
             }
-            match stmt.next_row() {
-                Ok(None) => return Ok(Page { rows, done: true }),
-                Ok(Some(cells)) => {
-                    bytes += cells.iter().flatten().map(String::len).sum::<usize>();
-                    rows.push(cells);
-                }
+            match page.read(|| stmt.next_row()) {
+                Ok(None) => return Ok(page.finish(true)),
+                Ok(Some(cells)) => page.push(cells),
                 // Huỷ bằng `sqlite3_interrupt` làm SQLite trả lỗi `interrupted`; nhận ra qua cờ `cancel`.
                 Err(_) if cancel.load(Ordering::SeqCst) => return Err(cancelled()),
                 Err(msg) => return Err(DbError::new(SQL_ERROR, msg)),
             }
         }
-        Ok(Page { rows, done: false })
+        Ok(page.finish(false))
     })
-}
-
-/// Mili giây từ `start`; `try_from` đổi `u128` sang `u64`, tràn thì lấy giá trị lớn nhất thay vì panic.
-fn elapsed_ms(start: Instant) -> u64 {
-    u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX)
-}
-
-/// Dựng `StatementResult` cho câu lỗi (kết quả của riêng câu, không làm hỏng cả request).
-fn statement_error(index: usize, sql: &str, start: Instant, message: String) -> StatementResult {
-    StatementResult {
-        index,
-        sql: sql.to_owned(),
-        kind: "affected",
-        columns: None,
-        rows: None,
-        cursor_id: None,
-        done: None,
-        truncated: None,
-        rows_affected: None,
-        elapsed_ms: elapsed_ms(start),
-        error: Some(DbError::new(SQL_ERROR, message)),
-    }
 }
 
 /// Chạy lần lượt các câu trong `sql`, dừng ở câu lỗi đầu tiên (lỗi từng câu nằm trong
@@ -359,19 +266,7 @@ async fn execute<'c>(
         // Không có cột: INSERT/UPDATE/DDL... chạy rồi báo số dòng bị ảnh hưởng.
         if columns.is_empty() {
             match run_affected(conn, &text, cancel).await {
-                Ok(n) => out.push(StatementResult {
-                    index,
-                    sql: text,
-                    kind: "affected",
-                    columns: None,
-                    rows: None,
-                    cursor_id: None,
-                    done: None,
-                    truncated: None,
-                    rows_affected: Some(n),
-                    elapsed_ms: elapsed_ms(start),
-                    error: None,
-                }),
+                Ok(n) => out.push(affected_statement(index, text, n, start)),
                 Err(e) if e.code == CANCELLED => return (Err(e), None),
                 Err(e) => {
                     out.push(statement_error(index, &text, start, e.message));
@@ -444,31 +339,6 @@ async fn open_cursor<'c>(
     Ok(Held { cursor_id, stmt })
 }
 
-/// Dựng `StatementResult` loại `rows` từ một trang. `cursor_id` có nghĩa là actor sẽ giữ cursor.
-fn rows_statement(
-    index: usize,
-    sql: String,
-    columns: Vec<Column>,
-    page: Page,
-    cursor_id: Option<u64>,
-    start: Instant,
-) -> StatementResult {
-    StatementResult {
-        index,
-        sql,
-        kind: "rows",
-        columns: Some(columns),
-        rows: Some(page.rows),
-        cursor_id,
-        done: Some(page.done),
-        // Còn dòng nhưng không giữ cursor (câu không phải cuối): Result bị cắt.
-        truncated: (!page.done && cursor_id.is_none()).then_some(true),
-        rows_affected: None,
-        elapsed_ms: elapsed_ms(start),
-        error: None,
-    }
-}
-
 /// Chạy câu không trả cột. `sqlx` báo `rows_affected` của câu DML gần nhất kể cả khi câu này là
 /// DDL, nên chỉ tin nó khi tổng số thay đổi của connection thật sự tăng.
 /// Trả `Ok(số dòng)`; `.execute(&mut *conn)` mượn tạm connection (reborrow) để dùng lại `conn` ngay sau đó.
@@ -516,7 +386,7 @@ async fn table_rows<'c>(
                 None,
             );
         }
-        Err(e) => return (Err(e.into_db(&job.cancel)), None),
+        Err(e) => return (Err(e.into_db(job.cancel.flag())), None),
     }
     let sql = format!(
         "SELECT * FROM {}.{}",
@@ -524,7 +394,7 @@ async fn table_rows<'c>(
         schema::quote_ident(&p.table)
     );
     let limits = Limits::new(p.page_size, p.max_page_bytes);
-    let (res, held) = execute(conn, &sql, limits, &job.cancel, cursor_id).await;
+    let (res, held) = execute(conn, &sql, limits, job.cancel.flag(), cursor_id).await;
     // `and_then`: chỉ chạy closure khi `res` là `Ok`; lấy câu đầu tiên, lỗi của câu đó thành lỗi cả request.
     let first = res.and_then(|statements| {
         let first = statements.into_iter().next();
@@ -542,7 +412,7 @@ async fn table_rows<'c>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::protocol::{FetchParams, SchemaTreeResult};
+    use crate::protocol::{CURSOR_NOT_FOUND, FetchParams, FetchResult, SchemaTreeResult};
     use std::sync::Arc;
     use tokio::sync::oneshot;
 
@@ -864,7 +734,7 @@ mod tests {
                 page_size: page,
                 max_page_bytes: BIG,
             },
-            cancel: Arc::new(AtomicBool::new(false)),
+            cancel: Arc::new(CancelSignal::new()),
             reply,
         };
         (Cmd::Fetch(job), rx)
@@ -912,7 +782,7 @@ mod tests {
         let other = Cmd::SchemaTree(Job {
             id: 2,
             params: (),
-            cancel: Arc::new(AtomicBool::new(false)),
+            cancel: Arc::new(CancelSignal::new()),
             reply,
         });
         tx.send(other).await.ok().unwrap();
@@ -973,7 +843,7 @@ mod tests {
         let Cmd::Fetch(job) = &fetch else {
             panic!("fetch_job phải trả Cmd::Fetch");
         };
-        job.cancel.store(true, Ordering::SeqCst);
+        job.cancel.cancel();
         tx.send(fetch).await.ok().unwrap();
         assert!(hold(0, held.unwrap(), &mut rx).await.is_none());
         assert_eq!(fetch_rx.await.unwrap().err().unwrap().code, CANCELLED);

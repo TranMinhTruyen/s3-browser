@@ -1,13 +1,12 @@
 //! Driver SQLite: mỗi connection là một actor tokio sở hữu `SqliteConnection`.
 //!
-//! Vị trí trong luồng: `dispatch` gọi `open`/`close`/`request` ở file này; `request` gửi lệnh
+//! Vị trí trong luồng: `drivers::open` gọi `open` ở file này; `drivers::request` gửi `Cmd`
 //! qua kênh tới `actor::run` của connection, actor chạy SQL (dùng `raw`, `schema`, `split`,
-//! `value`) rồi trả kết quả ngược qua kênh.
+//! `value`) rồi trả kết quả ngược qua kênh. Kiểu lệnh `Cmd`/`Job` và các hàm `close`/`request`
+//! dùng chung nằm ở `drivers`.
 //!
 //! Actor = một task chạy vòng lặp, là nơi *duy nhất* chạm vào connection; bên ngoài chỉ gửi
-//! tin nhắn. Nhờ vậy không cần khoá quanh connection (giống mô hình goroutine + channel của Go).
-//! `mpsc` là kênh nhiều-gửi-một-nhận (như `chan`); `oneshot` là kênh dùng đúng một lần để
-//! trả kết quả cho người gửi lệnh.
+//! tin nhắn (xem `drivers`).
 
 /// Vòng lặp actor và việc chạy câu SQL, cursor.
 mod actor;
@@ -21,71 +20,17 @@ mod split;
 mod value;
 
 use crate::protocol::{
-    CONN_NOT_FOUND, DbError, DbResult, Empty, ExecuteParams, ExecuteResult, FetchParams,
-    FetchResult, INVALID_REQUEST, NOT_A_DATABASE, OPEN_FAILED, OpenParams, OpenResult,
-    SchemaTreeResult, StatementResult, TableInfoResult, TableParams, TableRowsParams,
+    DbError, DbResult, INVALID_REQUEST, NOT_A_DATABASE, OPEN_FAILED, OpenParams, OpenResult,
 };
 use crate::registry;
 use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::{ConnectOptions, Connection};
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 use std::time::Duration;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 
-/// Đầu gửi của kênh `oneshot` để actor trả `DbResult<T>` cho người chờ.
-pub type Reply<T> = oneshot::Sender<DbResult<T>>;
-
-/// Một lệnh gửi tới actor: tham số, cờ huỷ của request và kênh trả kết quả.
-/// `P` là kiểu params, `R` là kiểu kết quả (generic, tương tự type parameter của Go).
-pub struct Job<P, R> {
-    /// Id request (cùng id với `s3b_cancel`).
-    pub id: u64,
-    pub params: P,
-    /// Cờ huỷ dùng chung với registry; actor kiểm trong lúc chạy.
-    pub cancel: Arc<AtomicBool>,
-    pub reply: Reply<R>,
-}
-
-/// Các lệnh actor hiểu. `enum` của Rust mang theo dữ liệu riêng cho từng biến thể.
-/// Mỗi biến thể ứng với một `method` của `dispatch`, trừ `Close` do `close` gửi.
-pub enum Cmd {
-    Execute(Job<ExecuteParams, ExecuteResult>),
-    Fetch(Job<FetchParams, FetchResult>),
-    TableRows(Job<TableRowsParams, StatementResult>),
-    SchemaTree(Job<(), SchemaTreeResult>),
-    TableInfo(Job<TableParams, TableInfoResult>),
-    /// Đóng connection; actor báo xong qua kênh này.
-    Close(oneshot::Sender<()>),
-}
-
-impl Cmd {
-    /// Id request và cờ huỷ của lệnh (`Close` không có).
-    pub fn request(&self) -> Option<(u64, &AtomicBool)> {
-        match self {
-            Cmd::Execute(j) => Some((j.id, &j.cancel)),
-            Cmd::Fetch(j) => Some((j.id, &j.cancel)),
-            Cmd::TableRows(j) => Some((j.id, &j.cancel)),
-            Cmd::SchemaTree(j) => Some((j.id, &j.cancel)),
-            Cmd::TableInfo(j) => Some((j.id, &j.cancel)),
-            Cmd::Close(_) => None,
-        }
-    }
-
-    /// Trả `cancelled` cho request chưa kịp chạy.
-    pub fn reject_cancelled(self) {
-        // Gán hàm vào biến để gọi lại `err()` ở từng nhánh (mỗi nhánh cần một `DbError` mới).
-        let err = actor::cancelled;
-        match self {
-            Cmd::Execute(j) => drop(j.reply.send(Err(err()))),
-            Cmd::Fetch(j) => drop(j.reply.send(Err(err()))),
-            Cmd::TableRows(j) => drop(j.reply.send(Err(err()))),
-            Cmd::SchemaTree(j) => drop(j.reply.send(Err(err()))),
-            Cmd::TableInfo(j) => drop(j.reply.send(Err(err()))),
-            Cmd::Close(done) => drop(done.send(())),
-        }
-    }
-}
+/// Tên driver trong `open.driver`.
+pub const DRIVER: &str = "sqlite";
 
 /// Chờ tối đa bao lâu khi file đang bị tiến trình khác khoá, trước khi báo lỗi.
 const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
@@ -113,13 +58,14 @@ fn open_error(e: &sqlx::Error) -> DbError {
 
 /// Mở connection (không tạo file mới), kiểm đúng là SQLite rồi chạy actor.
 pub async fn open(p: OpenParams) -> DbResult<OpenResult> {
-    if p.driver != "sqlite" {
-        return Err(DbError::new(INVALID_REQUEST, "unsupported driver"));
-    }
+    // `path` là `Option<String>` (có thể vắng trong JSON): thiếu thì là yêu cầu sai.
+    let Some(path) = p.path.as_deref() else {
+        return Err(DbError::new(INVALID_REQUEST, "missing path"));
+    };
     // Giữ mặc định của SQLite (không ép foreign_keys, journal_mode) để không đổi hành vi file người dùng.
     // Chuỗi builder: mỗi hàm trả lại options đã chỉnh; `.await?` chờ kết nối, lỗi thì thoát hàm.
     let mut conn = SqliteConnectOptions::new()
-        .filename(&p.path)
+        .filename(path)
         .create_if_missing(false)
         .read_only(p.read_only)
         .busy_timeout(BUSY_TIMEOUT)
@@ -148,48 +94,8 @@ pub async fn open(p: OpenParams) -> DbResult<OpenResult> {
     let reg = registry::global();
     let id = reg.next_conn_id();
     let (tx, rx) = mpsc::channel(8);
-    reg.add_conn(id, tx, interrupt);
+    reg.add_conn(id, DRIVER, tx, Arc::new(interrupt));
     // `conn` được chuyển (move) vào actor; sau dòng này hàm `open` không còn dùng được nó.
     tokio::spawn(actor::run(id, conn, rx));
     Ok(OpenResult { conn_id: id })
-}
-
-/// Đóng connection (và cursor đang mở). Id không còn thì coi như đã đóng.
-pub async fn close(conn_id: u64) -> DbResult<Empty> {
-    // Ngắt câu đang chạy để lệnh đóng không phải chờ; gỡ khỏi registry trước khi actor đóng connection.
-    if let Some(tx) = registry::global().remove_conn(conn_id, true) {
-        let (reply, done) = oneshot::channel();
-        if tx.send(Cmd::Close(reply)).await.is_ok() {
-            let _ = done.await;
-        }
-    }
-    Ok(Empty {})
-}
-
-/// Gửi một lệnh tới actor của `conn_id` rồi chờ kết quả; request được đăng ký để `s3b_cancel` huỷ được.
-/// `wrap` bọc `Job` thành đúng biến thể `Cmd` (ví dụ `Cmd::Execute`); `impl FnOnce` là một hàm/closure
-/// chỉ gọi được một lần. `guard` sống tới hết hàm nên request tự gỡ khỏi registry khi xong.
-pub async fn request<P, R>(
-    id: u64,
-    conn_id: u64,
-    params: P,
-    wrap: impl FnOnce(Job<P, R>) -> Cmd,
-) -> DbResult<R> {
-    let reg = registry::global();
-    let tx = reg
-        .conn_tx(conn_id)
-        .ok_or_else(|| DbError::new(CONN_NOT_FOUND, "connection is closed"))?;
-    let guard = reg.begin_request(id, conn_id);
-    let (reply, rx) = oneshot::channel();
-    let cmd = wrap(Job {
-        id,
-        params,
-        cancel: guard.flag.clone(),
-        reply,
-    });
-    tx.send(cmd)
-        .await
-        .map_err(|_| DbError::internal("connection actor stopped"))?;
-    rx.await
-        .map_err(|_| DbError::internal("connection actor stopped"))?
 }

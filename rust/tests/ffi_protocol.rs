@@ -7,7 +7,6 @@ use s3b_db::ffi::{s3b_call, s3b_cancel, s3b_free, s3b_init};
 use s3b_db::protocol::{DbError, error_response, ok_response};
 use s3b_db::registry::Registry;
 use serde_json::{Value, json};
-use std::sync::atomic::Ordering;
 use std::{ptr, slice};
 
 #[test]
@@ -163,16 +162,16 @@ fn many_calls_do_not_leak_or_crash() {
 fn registry_request_cancel_flag() {
     let reg: &'static Registry = Box::leak(Box::default());
     let g = reg.begin_request(7, 1);
-    assert!(!g.flag.load(Ordering::SeqCst));
+    assert!(!g.flag.is_cancelled());
     reg.cancel(8); // id lạ
-    assert!(!g.flag.load(Ordering::SeqCst));
+    assert!(!g.flag.is_cancelled());
     reg.cancel(7);
-    assert!(g.flag.load(Ordering::SeqCst));
+    assert!(g.flag.is_cancelled());
     let flag = g.flag.clone();
     drop(g);
     // đã xong: cancel sau đó bỏ qua, không panic
     reg.cancel(7);
-    assert!(flag.load(Ordering::SeqCst));
+    assert!(flag.is_cancelled());
 }
 
 #[test]
