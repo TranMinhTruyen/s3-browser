@@ -21,6 +21,9 @@ Yêu cầu: Docker Desktop (hoặc Docker Engine + compose plugin). Không cần
   keycloak/s3browser-realm.json   Realm s3browser: client public s3browser (PKCE), user mẫu, claim policy
   scripts/gen-certs.sh            Sinh CA, cert server và cert client vào certs/ (cần openssl)
   scripts/minio-tls-init.sh       Tạo bucket s3b-tls cho MinIO TLS
+  docker-compose-db.yml           6 DB cho driver Rust: MySQL, MariaDB, PostgreSQL, SQL Server, MongoDB, Redis (mục 10)
+  db/db.env                       Cổng, user, mật khẩu test của 6 DB (dùng chung cho compose, test, bench)
+  db/mssql.conf                   Bật TLS tuỳ chọn cho SQL Server
   certs/                          (sinh ra bởi gen-certs.sh) Đã nằm trong .gitignore, không commit.
   generated/                 (sinh ra khi chạy Floci) floci-config, floci-credentials.
                              Đã nằm trong .gitignore, không commit.
@@ -73,6 +76,8 @@ Cổng mặc định có thể đổi bằng biến môi trường khi chạy `u
 
   MINIO_API_PORT (10010), MINIO_CONSOLE_PORT (10011), LDAP_PORT (10389), FLOCI_PORT (4566),
   KEYCLOAK_PORT (8180), MINIO_TLS_API_PORT (10020), MINIO_TLS_CONSOLE_PORT (10021)
+  DB (mục 10): MYSQL_PORT (10030), MARIADB_PORT (10031), POSTGRES_PORT (10032), MSSQL_PORT (10033),
+  MONGO_PORT (10034), REDIS_PORT (10035), REDIS_TLS_PORT (10036) - đặt trong db/db.env.
   Đổi KEYCLOAK_PORT thì Issuer URL trong app đổi theo (http://localhost:<port>/realms/s3browser).
 
   PowerShell:  $env:FLOCI_PORT = "24566"; docker compose -f docker-compose-floci.yml -p s3b-floci-test up -d
@@ -162,3 +167,50 @@ Chạy trong thư mục này, theo đúng thứ tự.
     hãy dùng cổng S3 API (10010).
   - Đổi nội dung ldap/s3browser.ldif không có tác dụng: LDIF chỉ được nạp lần đầu. Chạy
     `down -v` rồi `up -d` lại.
+
+
+10. Dựng 6 DB cho driver Rust (MySQL, MariaDB, PostgreSQL, SQL Server, MongoDB, Redis)
+--------------------------------------------------------------------------------------
+
+Dùng cho test tích hợp và bài đo hiệu năng của driver Rust (rust/). Image ghim tag patch để số đo lặp lại được:
+mysql:8.4.13, mariadb:11.4.13, postgres:17.12, mssql/server:2022-CU28-ubuntu-22.04, mongo:8.0.38, redis:7.4.12.
+
+  (a) Sinh chứng chỉ (Git Bash, cần openssl). Cert server dùng chung nằm ở certs/db/ (SAN: localhost, 127.0.0.1,
+      ::1, tên service), CA là certs/ca.pem:
+        sh scripts/gen-certs.sh
+      Chạy lại script sinh CA mới và xoá certs/: container đang chạy giữ file cũ, phải tạo lại bằng
+      `up -d --wait --force-recreate` (và MinIO TLS cũng vậy nếu đang chạy).
+
+  (b) Dựng (chạy trong thư mục này; lần đầu kéo ~6 GB image, mất vài phút):
+        docker compose -f docker-compose-db.yml --env-file db/db.env -p s3b-db-test up -d --wait
+      Chỉ một DB: thêm tên service ở cuối (mysql, mariadb, postgres, mssql, mongo, redis).
+
+  (c) Dừng giữ dữ liệu / xoá hết (named volume):
+        docker compose -f docker-compose-db.yml --env-file db/db.env -p s3b-db-test stop
+        docker compose -f docker-compose-db.yml --env-file db/db.env -p s3b-db-test down -v
+
+  DB          Container           Cổng máy   Tài khoản (mật khẩu chung DB_PASSWORD trong db/db.env)
+  ----------  ------------------  ---------  -----------------------------------------------------
+  MySQL       s3b-test-mysql      10030      root, database s3b
+  MariaDB     s3b-test-mariadb    10031      root, database s3b
+  PostgreSQL  s3b-test-postgres   10032      postgres, database s3b
+  SQL Server  s3b-test-mssql      10033      sa (tạo database khi cần)
+  MongoDB     s3b-test-mongo      10034      root, authSource admin
+  Redis       s3b-test-redis      10035      chỉ mật khẩu (requirepass), DEBUG command bật
+  Redis TLS   s3b-test-redis      10036      cổng TLS, cùng mật khẩu
+
+  TLS bật tuỳ chọn trên cả 6 DB: client không TLS vẫn nối được, client TLS kiểm bằng certs/ca.pem
+  (hostname localhost hoặc 127.0.0.1). PostgreSQL copy key vào container và chmod 0600 khi khởi động;
+  SQL Server dùng cert qua db/mssql.conf (forceencryption=0); MongoDB `allowTLS` không đòi cert client;
+  Redis chạy cổng thường 6379 và cổng TLS 6380 song song.
+
+  Yêu cầu: SQL Server cần >= 2 GB RAM trống cho Docker (đã giới hạn MSSQL_MEMORY_LIMIT_MB=2048, thực đo ~0,7 GB
+  khi rảnh); image chỉ có x86_64. Cả 6 DB rảnh dùng khoảng 1,4 GB RAM.
+
+  Test Rust (trong rust/): sau khi (a)+(b), `cargo test --target x86_64-pc-windows-msvc` tự nối vào các cổng trên;
+  DB không chạy hoặc chưa sinh cert thì test in `SKIP ...` rồi bỏ qua. Bài đo: test-env/db-bench.ps1 (báo cáo
+  .xlsx ghi vào db/report/, đã gitignore).
+
+  Thử tay trong container (ví dụ):
+    docker exec -e PGPASSWORD=S3bTest2026 s3b-test-postgres psql "host=localhost user=postgres dbname=s3b sslmode=verify-full sslrootcert=/certs/ca.pem"
+    docker exec s3b-test-redis redis-cli -p 6380 --tls --cacert /certs/ca.pem --sni localhost ping
