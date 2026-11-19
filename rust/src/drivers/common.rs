@@ -119,6 +119,18 @@ impl PageBuilder {
         f()
     }
 
+    /// Cộng thời gian chờ driver mạng trả dòng (đã `await` nên không bọc được bằng `read`).
+    #[cfg(feature = "bench-timing")]
+    pub fn add_read(&mut self, elapsed: std::time::Duration) {
+        self.phases.read += elapsed;
+    }
+
+    /// Cộng thời gian giải mã dòng sang chuỗi của driver mạng.
+    #[cfg(feature = "bench-timing")]
+    pub fn add_convert(&mut self, elapsed: std::time::Duration) {
+        self.phases.convert += elapsed;
+    }
+
     /// Chốt trang; `done` là driver đã hết dòng.
     pub fn finish(self, done: bool) -> Page {
         Page {
@@ -728,6 +740,32 @@ mod tests {
             Instant::now(),
         ));
         assert!(v["readMs"].as_u64().unwrap() >= 6, "{v}");
+    }
+
+    #[cfg(feature = "bench-timing")]
+    #[test]
+    fn with_bench_timing_add_read_and_add_convert_accumulate_for_network_drivers() {
+        use std::time::Duration;
+        let mut b = PageBuilder::new(Limits::new(10, 100));
+        // Driver mạng đã `await` nên tự đo rồi cộng vào pha, nhiều lần thì dồn lại.
+        b.add_read(Duration::from_millis(7));
+        b.add_read(Duration::from_millis(5));
+        b.add_convert(Duration::from_millis(3));
+        b.add_convert(Duration::from_millis(4));
+        let p = b.finish(true);
+        assert_eq!(p.phases.read, Duration::from_millis(12));
+        // Chưa `push` dòng nào nên pha convert chỉ gồm phần `add_convert`.
+        assert_eq!(p.phases.convert, Duration::from_millis(7));
+        let v = json_of(&rows_statement(
+            0,
+            "S".into(),
+            vec![column("c")],
+            p,
+            None,
+            Instant::now(),
+        ));
+        assert_eq!(v["readMs"], 12, "{v}");
+        assert_eq!(v["convertMs"], 7, "{v}");
     }
 
     // ---- hold với Cursor giả ----

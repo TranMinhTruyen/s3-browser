@@ -14,6 +14,8 @@
 pub mod common;
 /// Đổi số ngày/micro giây/ticks sang chuỗi ngày giờ ISO.
 pub mod datetime;
+/// Driver PostgreSQL.
+pub mod postgres;
 /// Tách một đoạn SQL thành từng câu (PostgreSQL, MySQL/MariaDB, SQL Server).
 pub mod split_sql;
 /// Driver SQLite.
@@ -97,7 +99,8 @@ impl Cmd {
 pub async fn open(p: OpenParams) -> DbResult<OpenResult> {
     match p.driver.as_str() {
         sqlite::DRIVER => sqlite::open(p).await,
-        "postgres" | "mysql" | "mariadb" | "sqlserver" | "mongodb" | "redis" => {
+        postgres::DRIVER => postgres::open(p).await,
+        "mysql" | "mariadb" | "sqlserver" | "mongodb" | "redis" => {
             if p.host.as_deref().is_none_or(str::is_empty) {
                 return Err(DbError::new(INVALID_REQUEST, "missing host"));
             }

@@ -63,18 +63,39 @@ fn network_drivers_without_a_host_are_invalid_request() {
     }
 }
 
-/// Đổi khi N5–N9 cài driver thật: lúc đó `open` tới host không tồn tại phải là `openFailed`,
-/// còn "chưa cài" biến mất.
+/// Đổi khi N6–N9 cài driver thật: lúc đó `open` tới host không tồn tại phải là `openFailed`,
+/// còn "chưa cài" biến mất. PostgreSQL (N5) đã cài nên có test riêng bên dưới.
 #[test]
 fn network_drivers_with_a_host_are_not_implemented_yet() {
-    for driver in NETWORK_DRIVERS {
+    for driver in NETWORK_DRIVERS.into_iter().filter(|d| *d != "postgres") {
         let r = call(
             "open",
-            json!({"driver": driver, "host": "127.0.0.1", "port": 1}),
+            json!({"driver": driver, "host": "127.0.0.1", "port": 1, "username": "u"}),
         );
         assert_eq!(err_code(&r), "invalidRequest", "{driver}");
         assert_eq!(message(&r), "driver not implemented yet", "{driver}");
     }
+}
+
+/// PostgreSQL đã có driver thật: cổng 1 không có server nên `openFailed` (không còn "chưa cài"),
+/// thông báo không chứa mật khẩu; thiếu host/username vẫn là `invalidRequest`.
+#[test]
+fn postgres_open_to_a_closed_port_is_open_failed_and_never_echoes_the_password() {
+    let r = call(
+        "open",
+        json!({
+            "driver": "postgres", "host": "127.0.0.1", "port": 1,
+            "username": "u", "password": SECRET
+        }),
+    );
+    assert_eq!(err_code(&r), "openFailed");
+    assert_ne!(message(&r), "driver not implemented yet");
+    assert!(!r.to_string().contains(SECRET), "{r}");
+
+    let r = call("open", json!({"driver": "postgres", "username": "u"}));
+    assert_eq!(err_code(&r), "invalidRequest");
+    let r = call("open", json!({"driver": "postgres", "host": "127.0.0.1"}));
+    assert_eq!(err_code(&r), "invalidRequest");
 }
 
 #[test]
