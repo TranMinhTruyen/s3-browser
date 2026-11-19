@@ -64,12 +64,12 @@ fn network_drivers_without_a_host_are_invalid_request() {
 }
 
 /// Đổi khi N6–N9 cài driver thật: lúc đó `open` tới host không tồn tại phải là `openFailed`,
-/// còn "chưa cài" biến mất. PostgreSQL (N5), MySQL/MariaDB (N6) đã cài nên loại khỏi test này.
+/// còn "chưa cài" biến mất. PostgreSQL (N5), MySQL/MariaDB (N6), SQL Server (N7) đã cài nên loại khỏi test này.
 #[test]
 fn network_drivers_with_a_host_are_not_implemented_yet() {
     for driver in NETWORK_DRIVERS
         .into_iter()
-        .filter(|d| !["postgres", "mysql", "mariadb"].contains(d))
+        .filter(|d| !["postgres", "mysql", "mariadb", "sqlserver"].contains(d))
     {
         let r = call(
             "open",
@@ -168,6 +168,97 @@ fn mysql_and_mariadb_verify_modes_with_an_unreadable_ca_file_fail_before_connect
             assert!(!r.to_string().contains(SECRET), "{driver} {mode}: {r}");
         }
     }
+}
+
+/// SQL Server (N7) có driver thật: cổng 1 không có server nên `openFailed` (không còn "chưa cài"),
+/// thông báo không chứa mật khẩu; thiếu host/username vẫn là `invalidRequest`.
+#[test]
+fn sqlserver_open_to_a_closed_port_is_open_failed_and_never_echoes_the_password() {
+    let r = call(
+        "open",
+        json!({
+            "driver": "sqlserver", "host": "127.0.0.1", "port": 1,
+            "username": "sa", "password": SECRET
+        }),
+    );
+    assert_eq!(err_code(&r), "openFailed");
+    assert_ne!(message(&r), "driver not implemented yet");
+    assert!(!r.to_string().contains(SECRET), "{r}");
+
+    let r = call("open", json!({"driver": "sqlserver", "username": "sa"}));
+    assert_eq!(err_code(&r), "invalidRequest");
+    assert_eq!(message(&r), "missing host");
+    let r = call("open", json!({"driver": "sqlserver", "host": "127.0.0.1"}));
+    assert_eq!(err_code(&r), "invalidRequest");
+    assert_eq!(message(&r), "missing username");
+    for (host, user) in [("", "sa"), ("127.0.0.1", ""), ("", "")] {
+        let r = call(
+            "open",
+            json!({"driver": "sqlserver", "host": host, "username": user, "password": SECRET}),
+        );
+        assert_eq!(err_code(&r), "invalidRequest", "{host:?} {user:?}");
+        assert!(!r.to_string().contains(SECRET), "{r}");
+    }
+}
+
+/// MongoDB và Redis chưa có driver: vẫn là "chưa cài" (chỉ SQL Server được loại khỏi danh sách).
+#[test]
+fn mongodb_and_redis_are_still_not_implemented_when_sqlserver_is() {
+    for driver in ["mongodb", "redis"] {
+        let r = call(
+            "open",
+            json!({"driver": driver, "host": "127.0.0.1", "port": 1, "username": "u"}),
+        );
+        assert_eq!(err_code(&r), "invalidRequest", "{driver}");
+        assert_eq!(message(&r), "driver not implemented yet", "{driver}");
+    }
+}
+
+/// Các lỗi tham số của SQL Server không nối mạng và không lộ mật khẩu.
+#[test]
+fn sqlserver_bad_open_params_never_echo_the_password() {
+    let cases = [
+        json!({"driver": "sqlserver", "host": "h", "username": "sa", "password": SECRET, "tls": {"mode": "bogus"}}),
+        json!({"driver": "sqlserver", "host": "h", "username": "sa", "password": SECRET, "port": 70000}),
+        json!({"driver": "sqlserver", "host": "h", "username": "sa", "password": SECRET, "port": "abc"}),
+        json!({"driver": "sqlserver", "host": "h", "username": "sa", "password": SECRET, "tls": {"caFile": 5}}),
+        json!({"driver": "sqlserver", "host": "h", "username": "sa", "password": 123}),
+    ];
+    for params in cases {
+        let r = call("open", params.clone());
+        assert_eq!(err_code(&r), "invalidRequest", "{params}");
+        assert!(!r.to_string().contains(SECRET), "lộ mật khẩu: {r}");
+    }
+}
+
+/// `caFile` đọc không được: mode verify-* báo `openFailed` TRƯỚC khi nối, nên cổng đóng cũng ra
+/// lỗi về caFile chứ không phải lỗi nối; đường dẫn không bị lặp lại trong thông báo.
+#[test]
+fn sqlserver_verify_modes_with_an_unreadable_ca_file_fail_before_connecting() {
+    for mode in ["verify-ca", "verify-full"] {
+        let r = call(
+            "open",
+            json!({
+                "driver": "sqlserver", "host": "127.0.0.1", "port": 1, "username": "sa",
+                "password": SECRET,
+                "tls": {"mode": mode, "caFile": "Z:/khong/ton/tai/ca-secret-name.pem"}
+            }),
+        );
+        assert_eq!(err_code(&r), "openFailed", "{mode}");
+        assert!(message(&r).contains("caFile"), "{mode}: {r}");
+        assert!(!r.to_string().contains(SECRET), "{mode}: {r}");
+        assert!(!r.to_string().contains("ca-secret-name"), "{mode}: {r}");
+    }
+}
+
+/// Mode lạ là `invalidRequest` cho SQL Server, kể cả khi thiếu host (kiểm params trước).
+#[test]
+fn sqlserver_unknown_tls_mode_is_invalid_request() {
+    let r = call(
+        "open",
+        json!({"driver": "sqlserver", "host": "h", "username": "sa", "tls": {"mode": "yes-please"}}),
+    );
+    assert_eq!(err_code(&r), "invalidRequest");
 }
 
 #[test]

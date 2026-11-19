@@ -22,6 +22,8 @@ pub mod postgres;
 pub mod split_sql;
 /// Driver SQLite.
 pub mod sqlite;
+/// Driver SQL Server.
+pub mod sqlserver;
 /// Cấu hình TLS (rustls) cho các driver mạng.
 pub mod tls;
 
@@ -103,7 +105,8 @@ pub async fn open(p: OpenParams) -> DbResult<OpenResult> {
         sqlite::DRIVER => sqlite::open(p).await,
         postgres::DRIVER => postgres::open(p).await,
         mysql::DRIVER | mysql::MARIADB => mysql::open(p).await,
-        "sqlserver" | "mongodb" | "redis" => {
+        sqlserver::DRIVER => sqlserver::open(p).await,
+        "mongodb" | "redis" => {
             if p.host.as_deref().is_none_or(str::is_empty) {
                 return Err(DbError::new(INVALID_REQUEST, "missing host"));
             }

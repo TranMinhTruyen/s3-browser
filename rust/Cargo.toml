@@ -23,9 +23,11 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["raw_value"] }
 sqlparser = "0.64.0"
 sqlx = { version = "0.9.0", default-features = false, features = ["sqlite", "runtime-tokio"] }
-tokio = { version = "1.54.1", features = ["rt-multi-thread", "sync", "macros", "time"] }
+tiberius = { version = "0.13.0", default-features = false, features = ["tds73", "rustls"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "sync", "macros", "time", "net"] }
 tokio-postgres = { version = "0.7.18", default-features = false, features = ["runtime"] }
 tokio-postgres-rustls = { version = "0.14.0", default-features = false }
+tokio-util = { version = "0.7", features = ["compat"] }
 
 [profile.release]
 # catch_unwind ở ranh giới FFI cần unwind, không đổi sang abort
