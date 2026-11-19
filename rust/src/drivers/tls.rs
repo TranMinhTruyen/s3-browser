@@ -140,28 +140,68 @@ fn roots(ca: Option<&str>) -> DbResult<Arc<RootCertStore>> {
     let Some(path) = ca else {
         return Ok(system_roots().clone());
     };
-    let bytes = std::fs::read(path)
-        .map_err(|e| open_failed(format!("cannot read caFile: {}", e.kind())))?;
-    // `pem_slice_iter` đọc từng khối `-----BEGIN CERTIFICATE-----`, bỏ qua khối loại khác.
-    let certs = CertificateDer::pem_slice_iter(&bytes)
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|_| open_failed("caFile is not valid PEM"))?;
     let mut store = RootCertStore::empty();
-    let (added, _ignored) = store.add_parsable_certificates(certs);
+    let (added, _ignored) = store.add_parsable_certificates(ca_file_certs(path)?);
     if added == 0 {
         return Err(open_failed("caFile has no usable certificates"));
     }
     Ok(Arc::new(store))
 }
 
-/// Kho chứng chỉ của Windows, nạp một lần cho cả process (gọi API crypt32, hơi chậm). Chứng
-/// chỉ lỗi bị bỏ qua; kho rỗng thì `build` báo lỗi rõ ràng khi dựng verifier.
+/// Đọc mọi chứng chỉ trong `caFile` (PEM). Lỗi không chứa đường dẫn hay nội dung file.
+fn ca_file_certs(path: &str) -> DbResult<Vec<CertificateDer<'static>>> {
+    let bytes = std::fs::read(path)
+        .map_err(|e| open_failed(format!("cannot read caFile: {}", e.kind())))?;
+    // `pem_slice_iter` đọc từng khối `-----BEGIN CERTIFICATE-----`, bỏ qua khối loại khác.
+    CertificateDer::pem_slice_iter(&bytes)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|_| open_failed("caFile is not valid PEM"))
+}
+
+/// Root CA tin cậy dạng DER cho crate tự dựng `ClientConfig` từ chứng chỉ thô (`mysql_async`):
+/// chỉ các CA trong `caFile` nếu có, không thì kho chứng chỉ của Windows. Chỉ giữ chứng chỉ
+/// rustls dùng được, vì `mysql_async` hỏng cả kết nối nếu gặp một chứng chỉ không đọc được.
+/// Lỗi (`openFailed`) giống `client_config`.
+pub fn root_certs_der(ca: Option<&str>) -> DbResult<Vec<CertificateDer<'static>>> {
+    let ca = ca.filter(|path| !path.is_empty());
+    let Some(path) = ca else {
+        return match native_certs() {
+            [] => Err(open_failed("no trusted CA certificates")),
+            certs => Ok(certs.to_vec()),
+        };
+    };
+    let usable: Vec<_> = ca_file_certs(path)?
+        .into_iter()
+        .filter(is_usable_root)
+        .collect();
+    if usable.is_empty() {
+        return Err(open_failed("caFile has no usable certificates"));
+    }
+    Ok(usable)
+}
+
+/// rustls nhận chứng chỉ này làm root không.
+fn is_usable_root(cert: &CertificateDer<'static>) -> bool {
+    RootCertStore::empty().add(cert.clone()).is_ok()
+}
+
+/// Chứng chỉ gốc của Windows dùng được, nạp một lần cho cả process (gọi API crypt32, hơi
+/// chậm). Chứng chỉ lỗi bị bỏ qua.
+fn native_certs() -> &'static [CertificateDer<'static>] {
+    static CERTS: OnceLock<Vec<CertificateDer<'static>>> = OnceLock::new();
+    CERTS.get_or_init(|| {
+        let loaded = rustls_native_certs::load_native_certs();
+        loaded.certs.into_iter().filter(is_usable_root).collect()
+    })
+}
+
+/// Kho chứng chỉ của Windows, dựng một lần từ `native_certs`. Kho rỗng thì `build` báo lỗi rõ
+/// ràng khi dựng verifier.
 fn system_roots() -> &'static Arc<RootCertStore> {
     static ROOTS: OnceLock<Arc<RootCertStore>> = OnceLock::new();
     ROOTS.get_or_init(|| {
-        let loaded = rustls_native_certs::load_native_certs();
         let mut store = RootCertStore::empty();
-        store.add_parsable_certificates(loaded.certs);
+        store.add_parsable_certificates(native_certs().iter().cloned());
         Arc::new(store)
     })
 }
@@ -761,6 +801,71 @@ mod tests {
         std::fs::write(&file.0, std::fs::read(fx("ca.pem")).unwrap()).unwrap();
         file.set_mtime(1_000_000_010);
         assert!(serial(&tls(TlsMode::VerifyFull, Some(file.path()))).is_ok());
+    }
+
+    // ---- root_certs_der (cho mysql_async) ----
+
+    const GARBAGE_CERT: &str = "-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n";
+
+    #[test]
+    fn root_certs_der_with_ca_file_returns_exactly_its_certificates() {
+        let ca = fx("ca.pem");
+        assert_eq!(root_certs_der(Some(&ca)).unwrap(), [cert("ca.pem")]);
+
+        let mut bundle = std::fs::read(fx("ca.pem")).unwrap();
+        bundle.extend(std::fs::read(fx("ca_other.pem")).unwrap());
+        let file = TempFile::new(&bundle);
+        assert_eq!(
+            root_certs_der(Some(file.path())).unwrap(),
+            [cert("ca.pem"), cert("ca_other.pem")]
+        );
+    }
+
+    #[test]
+    fn root_certs_der_without_ca_file_returns_the_windows_store() {
+        let store = native_certs().to_vec();
+        assert!(!store.is_empty(), "kho chứng chỉ Windows rỗng");
+        assert_eq!(root_certs_der(None).unwrap(), store);
+        // Chuỗi rỗng coi như không có caFile.
+        assert_eq!(root_certs_der(Some("")).unwrap(), store);
+    }
+
+    #[test]
+    fn root_certs_der_drops_unusable_certificates_but_keeps_the_good_ones() {
+        let mixed = format!(
+            "{}{GARBAGE_CERT}",
+            std::fs::read_to_string(fx("ca.pem")).unwrap()
+        );
+        let file = TempFile::new(mixed.as_bytes());
+        assert_eq!(root_certs_der(Some(file.path())).unwrap(), [cert("ca.pem")]);
+    }
+
+    #[test]
+    fn root_certs_der_bad_ca_file_is_open_failed_without_leaking_path_or_content() {
+        let secret = "SECRET-CONTENT-123";
+        let bad_pem =
+            format!("-----BEGIN CERTIFICATE-----\n{secret}!!!\n-----END CERTIFICATE-----\n");
+        let key_only = std::fs::read_to_string(fx("server.key")).unwrap();
+        let files = [
+            TempFile::new(bad_pem.as_bytes()),
+            // PEM hợp lệ nhưng không phải chứng chỉ rustls dùng được: không còn CA nào.
+            TempFile::new(GARBAGE_CERT.as_bytes()),
+            TempFile::new(key_only.as_bytes()),
+            TempFile::new(b""),
+            TempFile::new(secret.as_bytes()),
+        ];
+        let mut paths: Vec<String> = files.iter().map(|f| f.path().to_owned()).collect();
+        paths.push("Z:/no/such/dir/ca.pem".to_owned());
+        paths.push(std::env::temp_dir().to_str().unwrap().to_owned());
+        for path in &paths {
+            let Err(e) = root_certs_der(Some(path)) else {
+                panic!("{path} should fail");
+            };
+            assert_eq!(e.code, OPEN_FAILED, "{path}");
+            assert!(!e.message.is_empty());
+            assert!(!e.message.contains(path.as_str()), "{}", e.message);
+            assert!(!e.message.contains(secret), "{}", e.message);
+        }
     }
 
     // ---- kho chứng chỉ Windows ----

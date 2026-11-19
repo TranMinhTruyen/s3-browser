@@ -64,10 +64,13 @@ fn network_drivers_without_a_host_are_invalid_request() {
 }
 
 /// Đổi khi N6–N9 cài driver thật: lúc đó `open` tới host không tồn tại phải là `openFailed`,
-/// còn "chưa cài" biến mất. PostgreSQL (N5) đã cài nên có test riêng bên dưới.
+/// còn "chưa cài" biến mất. PostgreSQL (N5), MySQL/MariaDB (N6) đã cài nên loại khỏi test này.
 #[test]
 fn network_drivers_with_a_host_are_not_implemented_yet() {
-    for driver in NETWORK_DRIVERS.into_iter().filter(|d| *d != "postgres") {
+    for driver in NETWORK_DRIVERS
+        .into_iter()
+        .filter(|d| !["postgres", "mysql", "mariadb"].contains(d))
+    {
         let r = call(
             "open",
             json!({"driver": driver, "host": "127.0.0.1", "port": 1, "username": "u"}),
@@ -98,9 +101,78 @@ fn postgres_open_to_a_closed_port_is_open_failed_and_never_echoes_the_password()
     assert_eq!(err_code(&r), "invalidRequest");
 }
 
+/// MySQL và MariaDB (N6) cũng có driver thật: giống PostgreSQL ở trên.
+#[test]
+fn mysql_and_mariadb_open_to_a_closed_port_is_open_failed_and_never_echoes_the_password() {
+    for driver in ["mysql", "mariadb"] {
+        let r = call(
+            "open",
+            json!({
+                "driver": driver, "host": "127.0.0.1", "port": 1,
+                "username": "u", "password": SECRET
+            }),
+        );
+        assert_eq!(err_code(&r), "openFailed", "{driver}");
+        assert_ne!(message(&r), "driver not implemented yet", "{driver}");
+        assert!(!r.to_string().contains(SECRET), "{driver}: {r}");
+
+        let r = call("open", json!({"driver": driver, "username": "u"}));
+        assert_eq!(err_code(&r), "invalidRequest", "{driver}");
+        assert_eq!(message(&r), "missing host", "{driver}");
+        let r = call("open", json!({"driver": driver, "host": "127.0.0.1"}));
+        assert_eq!(err_code(&r), "invalidRequest", "{driver}");
+        assert_eq!(message(&r), "missing username", "{driver}");
+        let r = call(
+            "open",
+            json!({"driver": driver, "host": "", "username": "", "password": SECRET}),
+        );
+        assert_eq!(err_code(&r), "invalidRequest", "{driver}");
+        assert!(!r.to_string().contains(SECRET), "{driver}: {r}");
+    }
+}
+
+/// Các lỗi tham số của MySQL/MariaDB không nối mạng và không lộ mật khẩu.
+#[test]
+fn mysql_and_mariadb_bad_open_params_never_echo_the_password() {
+    for driver in ["mysql", "mariadb"] {
+        let cases = [
+            json!({"driver": driver, "host": "h", "password": SECRET, "tls": {"mode": "bogus"}}),
+            json!({"driver": driver, "host": "h", "password": SECRET, "port": 70000}),
+            json!({"driver": driver, "host": "h", "password": SECRET, "port": "abc"}),
+            json!({"driver": driver, "host": "h", "password": SECRET, "tls": {"caFile": 5}}),
+        ];
+        for params in cases {
+            let r = call("open", params.clone());
+            assert_eq!(err_code(&r), "invalidRequest", "{params}");
+            assert!(!r.to_string().contains(SECRET), "lộ mật khẩu: {r}");
+        }
+    }
+}
+
+/// `caFile` đọc không được: mode verify-* báo `openFailed` TRƯỚC khi nối, nên cổng đóng cũng ra
+/// lỗi về caFile chứ không phải lỗi nối.
+#[test]
+fn mysql_and_mariadb_verify_modes_with_an_unreadable_ca_file_fail_before_connecting() {
+    for driver in ["mysql", "mariadb"] {
+        for mode in ["verify-ca", "verify-full"] {
+            let r = call(
+                "open",
+                json!({
+                    "driver": driver, "host": "127.0.0.1", "port": 1, "username": "u",
+                    "password": SECRET,
+                    "tls": {"mode": mode, "caFile": "Z:/khong/ton/tai/ca.pem"}
+                }),
+            );
+            assert_eq!(err_code(&r), "openFailed", "{driver} {mode}");
+            assert!(message(&r).contains("caFile"), "{driver} {mode}: {r}");
+            assert!(!r.to_string().contains(SECRET), "{driver} {mode}: {r}");
+        }
+    }
+}
+
 #[test]
 fn unknown_tls_mode_is_invalid_request_for_every_driver() {
-    for driver in ["sqlite", "postgres", "mysql"] {
+    for driver in ["sqlite", "postgres", "mysql", "mariadb"] {
         let r = call(
             "open",
             json!({"driver": driver, "host": "h", "path": "x", "tls": {"mode": "yes-please"}}),
