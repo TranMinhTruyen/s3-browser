@@ -252,7 +252,7 @@ mongo! {
         let _ = std::fs::remove_file(&junk);
     }
 
-    /// Không có `caFile` thì verify dùng bộ CA gốc đóng gói sẵn, không có CA của test-env nên
+    /// Không có `caFile` thì verify dùng kho chứng chỉ gốc của Windows, không có CA của test-env nên
     /// chứng chỉ bị từ chối.
     fn verify_modes_without_a_ca_file_reject_the_untrusted_test_ca(s: &Server) {
         let runs: Vec<_> = ["verify-ca", "verify-full"]

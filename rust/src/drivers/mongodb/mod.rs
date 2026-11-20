@@ -12,15 +12,19 @@
 //! `mongodb+srv://`.
 //!
 //! TLS: `mongodb` (rustls + `ring`) chỉ nhận đường dẫn file CA chứ không nhận chứng chỉ thô hay
-//! verifier riêng, nên 6 mode ánh xạ như sau (xem `attempts`):
+//! verifier riêng, nên 6 mode ánh xạ như sau (xem `attempts` và `new_client`):
 //! - `disable`: không TLS.
 //! - `allow`/`prefer`/`require`: TLS với `allow_invalid_certificates` (mã hoá, không kiểm chứng
 //!   chỉ).
 //! - `verify-ca`/`verify-full`: TLS kiểm chuỗi CA **và hostname**. Crate không có cách bỏ riêng
 //!   kiểm hostname (chỉ có khi build với OpenSSL, mà ta không dùng), nên `verify-ca` thực tế
 //!   nghiêm ngặt như `verify-full`. Tin cậy: chỉ các CA trong `caFile` nếu có; không có `caFile`
-//!   thì dùng bộ CA gốc của Mozilla đóng gói sẵn (`webpki-roots`), **không** dùng kho chứng chỉ
-//!   của Windows như các driver khác.
+//!   thì dùng kho chứng chỉ của Windows như các driver khác (`tls::root_certs_der`, đã cache),
+//!   **không** dùng bộ CA `webpki-roots` đóng gói sẵn của crate. Vì crate chỉ đọc CA từ file,
+//!   `new_client` ghi các CA công khai đó ra một file PEM tạm (`RootsFile`, tên ngẫu nhiên, tạo
+//!   độc quyền bằng `create_new`), đưa đường dẫn cho crate rồi xoá file ngay khi
+//!   `Client::with_options` trả về (crate đọc file đồng bộ trong hàm này), kể cả khi lỗi hay
+//!   panic. File chỉ chứa chứng chỉ gốc công khai, không có khoá hay secret.
 //!
 //! Huỷ: actor tự chọn giữa "chờ crate" và "tín hiệu huỷ" (`select!`), nên `Interrupt` của
 //! registry không phải làm gì.
@@ -29,6 +33,8 @@
 //! - `Vec<Option<T>>`/`Option::map`: `Option` là "có hoặc không có giá trị" (thay cho `nil`);
 //!   `map` chỉ chạy hàm khi có giá trị.
 //! - `tokio::time::timeout`: bọc một future, quá hạn thì bỏ nó và trả `Err(Elapsed)`.
+//! - `Drop`: hàm `drop` chạy tự động khi giá trị ra khỏi phạm vi (kể cả khi lỗi hay panic), như
+//!   `defer` của Go nhưng gắn vào kiểu dữ liệu; `RootsFile` dùng nó để luôn xoá file tạm.
 
 /// Vòng lặp actor, chạy lệnh, cursor.
 mod actor;
@@ -42,10 +48,16 @@ use crate::protocol::{
     DbError, DbResult, INVALID_REQUEST, OPEN_FAILED, OpenParams, OpenResult, TlsMode,
 };
 use crate::registry::{self, Interrupt};
+use base64::Engine as _;
+use base64::engine::general_purpose::STANDARD;
 use mongodb::Client;
 use mongodb::bson::doc;
 use mongodb::error::{Error as MongoError, ErrorKind};
 use mongodb::options::{ClientOptions, Credential, ServerAddress, Tls, TlsOptions};
+use std::collections::hash_map::RandomState;
+use std::fs::OpenOptions;
+use std::hash::{BuildHasher, Hasher};
+use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -127,6 +139,8 @@ fn attempts(p: &OpenParams, host: &str) -> DbResult<Vec<ClientOptions>> {
                 tls::root_certs_der(Some(path))?;
                 t.ca_file_path = Some(PathBuf::from(path));
             }
+            // Không có `caFile`: để trống `ca_file_path`; `new_client` sẽ thay bằng file PEM tạm
+            // chứa kho chứng chỉ Windows (xem `needs_system_roots`).
             vec![Some(Tls::Enabled(t))]
         }
     };
@@ -161,8 +175,16 @@ async fn connect_any(tries: Vec<ClientOptions>) -> DbResult<Client> {
     let budget = budget(tries.len());
     let mut last = DbError::new(OPEN_FAILED, "connection failed");
     for options in tries {
-        match tokio::time::timeout(budget, connect(options)).await {
-            Ok(Ok(client)) => return Ok(client),
+        // Dựng client là việc đồng bộ và nhanh (đọc CA, không chạm mạng) nên nằm ngoài `timeout`.
+        let client = match new_client(options) {
+            Ok(client) => client,
+            Err(e) => {
+                last = e;
+                continue;
+            }
+        };
+        match tokio::time::timeout(budget, ping(&client)).await {
+            Ok(Ok(())) => return Ok(client),
             Ok(Err(e)) => {
                 let answered = matches!(
                     e.kind.as_ref(),
@@ -179,14 +201,103 @@ async fn connect_any(tries: Vec<ClientOptions>) -> DbResult<Client> {
     Err(last)
 }
 
-/// Tạo `Client` (chưa nối, crate nối lười) rồi `ping` để thật sự nối và xác thực.
-async fn connect(options: ClientOptions) -> Result<Client, MongoError> {
-    let client = Client::with_options(options)?;
+/// `options` có cần tin cậy kho chứng chỉ hệ thống không: TLS có kiểm chứng chỉ mà không chỉ
+/// định file CA (để nguyên thì crate rơi về bộ `webpki-roots` đóng gói sẵn).
+fn needs_system_roots(options: &ClientOptions) -> bool {
+    matches!(
+        &options.tls,
+        Some(Tls::Enabled(t))
+            if t.ca_file_path.is_none() && t.allow_invalid_certificates != Some(true)
+    )
+}
+
+/// Tạo `Client` (chưa nối, crate nối lười). Cần kho chứng chỉ hệ thống thì ghi nó ra file PEM
+/// tạm cho crate đọc; `Client::with_options` đọc file đồng bộ nên xoá được ngay sau đó.
+fn new_client(mut options: ClientOptions) -> DbResult<Client> {
+    let roots = if needs_system_roots(&options) {
+        let file = RootsFile::create()?;
+        if let Some(Tls::Enabled(t)) = &mut options.tls {
+            t.ca_file_path = Some(file.0.clone());
+        }
+        Some(file)
+    } else {
+        None
+    };
+    let client = Client::with_options(options);
+    // Crate đã đọc xong file: xoá ngay. Nếu `with_options` panic thì `roots` vẫn bị drop khi
+    // unwind nên file cũng được xoá.
+    drop(roots);
+    client.map_err(|e| DbError::new(OPEN_FAILED, error_text(&e)))
+}
+
+/// `ping` để thật sự nối và xác thực.
+async fn ping(client: &Client) -> Result<(), MongoError> {
     client
         .database(ADMIN_DB)
         .run_command(doc! { "ping": 1 })
         .await?;
-    Ok(client)
+    Ok(())
+}
+
+/// File PEM tạm chứa các root CA của Windows, để đưa cho `TlsOptions::ca_file_path` (crate không
+/// nhận chứng chỉ trong bộ nhớ). Chỉ có chứng chỉ gốc công khai, không có khoá hay secret. Tên
+/// ngẫu nhiên và tạo bằng `create_new` (lỗi nếu đã tồn tại, không ghi đè hay đi theo symlink).
+/// Xoá file khi `drop`.
+struct RootsFile(PathBuf);
+
+impl RootsFile {
+    /// Ghi kho chứng chỉ Windows (`tls::root_certs_der(None)`, đã cache) ra file tạm.
+    /// Lỗi (`openFailed`): kho rỗng hoặc không tạo/ghi được file; thông báo không chứa đường dẫn.
+    fn create() -> DbResult<Self> {
+        let certs = tls::root_certs_der(None)?;
+        // PEM = base64 của DER chia dòng 64 ký tự, kèm dòng BEGIN/END.
+        let mut pem = String::with_capacity(certs.iter().map(|c| c.len() * 4 / 3 + 100).sum());
+        for der in &certs {
+            pem.push_str("-----BEGIN CERTIFICATE-----\n");
+            let b64 = STANDARD.encode(der.as_ref());
+            // base64 chỉ có ký tự ASCII nên cắt ở byte nào cũng đúng ranh giới ký tự.
+            let mut rest = b64.as_str();
+            while !rest.is_empty() {
+                let (line, tail) = rest.split_at(rest.len().min(64));
+                pem.push_str(line);
+                pem.push('\n');
+                rest = tail;
+            }
+            pem.push_str("-----END CERTIFICATE-----\n");
+        }
+
+        // `RandomState` được seed ngẫu nhiên từ hệ điều hành cho mỗi lần tạo.
+        let random = RandomState::new().build_hasher().finish();
+        let path =
+            std::env::temp_dir().join(format!("s3b-ca-{}-{random:016x}.pem", std::process::id()));
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+            .map_err(|e| {
+                DbError::new(
+                    OPEN_FAILED,
+                    format!("cannot create temporary CA file: {}", e.kind()),
+                )
+            })?;
+        // Guard tạo sau `file` nên khi ghi lỗi nó bị drop trước (xoá file vừa tạo; Windows vẫn
+        // xoá được vì Rust mở file với `FILE_SHARE_DELETE`).
+        let guard = Self(path);
+        file.write_all(pem.as_bytes()).map_err(|e| {
+            DbError::new(
+                OPEN_FAILED,
+                format!("cannot write temporary CA file: {}", e.kind()),
+            )
+        })?;
+        Ok(guard)
+    }
+}
+
+impl Drop for RootsFile {
+    fn drop(&mut self) {
+        // Không xoá được thì không còn gì làm thêm (file chỉ có CA công khai).
+        let _ = std::fs::remove_file(&self.0);
+    }
 }
 
 /// Đóng `Client` gọn gàng (chờ các `killCursors` ngầm), có giới hạn thời gian.
@@ -428,7 +539,7 @@ mod tests {
     }
 
     #[test]
-    fn verify_modes_without_a_ca_file_use_the_bundled_roots() {
+    fn verify_modes_without_a_ca_file_use_the_system_roots() {
         for ca in [None, Some(String::new())] {
             for mode in ["verify-ca", "verify-full"] {
                 let mut p = base(mode);
@@ -569,6 +680,120 @@ mod tests {
         assert!(!e.message.is_empty());
         assert!(!e.message.contains(PASSWORD), "{}", e.message);
         assert!(started.elapsed() < Duration::from_secs(8));
+    }
+
+    // ---- kho chứng chỉ hệ thống: needs_system_roots, RootsFile, new_client ----
+
+    /// Các test tạo file tạm chạy lần lượt để so tập file trước/sau không bị test khác chen vào.
+    static ROOTS_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// File `s3b-ca-<pid hiện tại>-*.pem` đang có trong `%TEMP%`.
+    fn own_roots_files() -> Vec<PathBuf> {
+        let prefix = format!("s3b-ca-{}-", std::process::id());
+        std::fs::read_dir(std::env::temp_dir())
+            .unwrap()
+            .filter_map(|e| e.ok())
+            .filter(|e| e.file_name().to_string_lossy().starts_with(&prefix))
+            .map(|e| e.path())
+            .collect()
+    }
+
+    fn first_try(p: &OpenParams) -> ClientOptions {
+        attempts(p, "db.example").unwrap().remove(0)
+    }
+
+    #[test]
+    fn needs_system_roots_only_for_verify_modes_without_a_ca_file() {
+        for mode in ["verify-ca", "verify-full"] {
+            for ca in [None, Some(String::new())] {
+                let mut p = base(mode);
+                p.tls.ca_file = ca.clone();
+                assert!(needs_system_roots(&first_try(&p)), "{mode} {ca:?}");
+            }
+            let mut p = base(mode);
+            p.tls.ca_file = Some(fx("ca.pem"));
+            assert!(!needs_system_roots(&first_try(&p)), "{mode} có caFile");
+        }
+        for mode in ["disable", "allow", "prefer", "require"] {
+            for one in attempts(&base(mode), "db.example").unwrap() {
+                assert!(!needs_system_roots(&one), "{mode}");
+            }
+        }
+    }
+
+    #[test]
+    fn roots_file_holds_the_windows_store_as_pem_and_is_removed_on_drop() {
+        use rustls::pki_types::CertificateDer;
+        use rustls::pki_types::pem::PemObject;
+        let _serial = ROOTS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let guard = RootsFile::create().unwrap();
+        let path = guard.0.clone();
+        assert!(path.exists());
+        let name = path.file_name().unwrap().to_string_lossy().into_owned();
+        assert!(
+            name.starts_with(&format!("s3b-ca-{}-", std::process::id())),
+            "{name}"
+        );
+        assert!(name.ends_with(".pem"), "{name}");
+        let parsed: Vec<CertificateDer<'static>> = CertificateDer::pem_file_iter(&path)
+            .unwrap()
+            .collect::<Result<_, _>>()
+            .unwrap();
+        assert!(!parsed.is_empty());
+        assert_eq!(parsed, tls::root_certs_der(None).unwrap());
+        drop(guard);
+        assert!(!path.exists());
+    }
+
+    #[test]
+    fn roots_file_names_differ_between_creations() {
+        let _serial = ROOTS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let a = RootsFile::create().unwrap();
+        let b = RootsFile::create().unwrap();
+        assert_ne!(a.0, b.0);
+        assert!(a.0.exists() && b.0.exists());
+    }
+
+    #[tokio::test]
+    async fn new_client_removes_its_temporary_roots_file() {
+        let _serial = ROOTS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let before = own_roots_files();
+        for mode in ["verify-ca", "verify-full"] {
+            let mut p = base(mode);
+            p.tls.ca_file = None;
+            let opts = first_try(&p);
+            assert!(needs_system_roots(&opts));
+            let client = new_client(opts).expect("dựng client không chạm mạng");
+            // Crate đã đọc xong file nên file đã bị xoá dù client còn sống.
+            assert_eq!(own_roots_files(), before, "{mode}");
+            drop(client);
+        }
+    }
+
+    #[tokio::test]
+    async fn new_client_with_an_unreadable_ca_file_errors_and_leaves_no_temporary_file() {
+        let _serial = ROOTS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let mut p = base("verify-full");
+        p.tls.ca_file = Some(fx("ca.pem"));
+        let mut opts = first_try(&p);
+        if let Some(Tls::Enabled(t)) = &mut opts.tls {
+            t.ca_file_path = Some(PathBuf::from("Z:/khong/ton/tai/ca.pem"));
+        }
+        let before = own_roots_files();
+        assert!(new_client(opts).is_err());
+        assert_eq!(own_roots_files(), before);
+    }
+
+    #[tokio::test]
+    async fn new_client_without_verification_creates_no_temporary_file() {
+        let _serial = ROOTS_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let before = own_roots_files();
+        for mode in ["disable", "require"] {
+            for opts in attempts(&base(mode), "db.example").unwrap() {
+                drop(new_client(opts).unwrap());
+            }
+        }
+        assert_eq!(own_roots_files(), before);
     }
 
     #[test]
