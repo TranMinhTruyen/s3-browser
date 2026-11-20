@@ -44,4 +44,10 @@ bench-timing = []
 
 [dev-dependencies]
 mysql_common = { version = "0.37.3", default-features = false }
+rust_xlsxwriter = "0.103.0"
 tokio = { version = "1.54.1", features = ["test-util"] }
+
+# Bench hiệu năng 6 DB + báo cáo Excel (chạy bằng test-env/db-bench.ps1); `test = true` để chạy test của example
+[[example]]
+name = "db_bench"
+test = true

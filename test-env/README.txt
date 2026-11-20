@@ -208,8 +208,20 @@ mysql:8.4.13, mariadb:11.4.13, postgres:17.12, mssql/server:2022-CU28-ubuntu-22.
   khi rảnh); image chỉ có x86_64. Cả 6 DB rảnh dùng khoảng 1,4 GB RAM.
 
   Test Rust (trong rust/): sau khi (a)+(b), `cargo test --target x86_64-pc-windows-msvc` tự nối vào các cổng trên;
-  DB không chạy hoặc chưa sinh cert thì test in `SKIP ...` rồi bỏ qua. Bài đo: test-env/db-bench.ps1 (báo cáo
-  .xlsx ghi vào db/report/, đã gitignore).
+  DB không chạy hoặc chưa sinh cert thì test in `SKIP ...` rồi bỏ qua.
+
+  (d) Chạy lại bài đo hiệu năng (PowerShell, trong thư mục này; bản release, không chạy dưới debugger, không chạy
+      cùng lúc với cargo test):
+        .\db-bench.ps1
+      Script tự `docker compose up -d --wait` các DB cần, build DLL release, chạy rust/examples/db_bench (feature
+      bench-timing) rồi in đường dẫn db/report/db_bench_<ngày>_<giờ>.xlsx (thư mục report đã gitignore). Sheet Summary
+      có SQLite + 6 DB x 1.000/10.000/100.000 dòng (min/trung vị/p95/max của elapsedMs và callMs, trung vị từng pha,
+      đạt < 40 ms / nhắm < 20 ms cho 10.000 dòng), sheet Runs có mọi lần đo, sheet Env có máy, phiên bản DB/crate/image.
+      Mất vài phút (nạp tới 100.000 dòng mỗi DB). Dữ liệu bench (bảng/collection/list tiền tố s3b_bench_) tự dọn sau khi đo.
+      Rút gọn: -Dbs sqlite,postgres  -Rows 10000  -Runs 5  -Warmup 1  -NoDocker (DB đã chạy sẵn).
+      DB nào không tới được thì ghi SKIP trong báo cáo, bài đo vẫn ra file.
+      Lưu ý: Docker Desktop (WSL2) có sàn mạng ~24 ms cho 2,5 MB, nên mục tiêu 40 ms chỉ công bằng cho DB cài trực
+      tiếp trên máy host; số đo qua Docker dùng để so sánh các driver với nhau và theo dõi hồi quy.
 
   Thử tay trong container (ví dụ):
     docker exec -e PGPASSWORD=S3bTest2026 s3b-test-postgres psql "host=localhost user=postgres dbname=s3b sslmode=verify-full sslrootcert=/certs/ca.pem"
