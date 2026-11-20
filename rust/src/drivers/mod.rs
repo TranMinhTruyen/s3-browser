@@ -20,6 +20,8 @@ pub mod mongodb;
 pub mod mysql;
 /// Driver PostgreSQL.
 pub mod postgres;
+/// Driver Redis.
+pub mod redis;
 /// Tách một đoạn SQL thành từng câu (PostgreSQL, MySQL/MariaDB, SQL Server).
 pub mod split_sql;
 /// Driver SQLite.
@@ -109,12 +111,7 @@ pub async fn open(p: OpenParams) -> DbResult<OpenResult> {
         mysql::DRIVER | mysql::MARIADB => mysql::open(p).await,
         sqlserver::DRIVER => sqlserver::open(p).await,
         mongodb::DRIVER => mongodb::open(p).await,
-        "redis" => {
-            if p.host.as_deref().is_none_or(str::is_empty) {
-                return Err(DbError::new(INVALID_REQUEST, "missing host"));
-            }
-            Err(DbError::new(INVALID_REQUEST, "driver not implemented yet"))
-        }
+        redis::DRIVER => redis::open(p).await,
         _ => Err(DbError::new(INVALID_REQUEST, "unknown driver")),
     }
 }

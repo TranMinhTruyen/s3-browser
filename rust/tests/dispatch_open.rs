@@ -63,20 +63,21 @@ fn network_drivers_without_a_host_are_invalid_request() {
     }
 }
 
-/// Đổi khi N6–N9 cài driver thật: lúc đó `open` tới host không tồn tại phải là `openFailed`,
-/// còn "chưa cài" biến mất. PostgreSQL (N5), MySQL/MariaDB (N6), SQL Server (N7), MongoDB (N8) đã cài nên loại khỏi test này.
+/// Cả 6 driver mạng đã được nối vào `open` (N5–N9): không còn driver nào là "unknown driver" hay
+/// "chưa cài". `caFile` không tồn tại với mode `verify-ca` khiến mỗi driver dừng ở bước dựng cấu
+/// hình TLS, trước khi nối mạng, nên test không chờ hết thời gian nối.
 #[test]
-fn network_drivers_with_a_host_are_not_implemented_yet() {
-    for driver in NETWORK_DRIVERS
-        .into_iter()
-        .filter(|d| !["postgres", "mysql", "mariadb", "sqlserver", "mongodb"].contains(d))
-    {
+fn every_network_driver_is_wired_into_open() {
+    for driver in NETWORK_DRIVERS {
         let r = call(
             "open",
-            json!({"driver": driver, "host": "127.0.0.1", "port": 1, "username": "u"}),
+            json!({
+                "driver": driver, "host": "127.0.0.1", "port": 1, "username": "u",
+                "tls": {"mode": "verify-ca", "caFile": "Z:/no/such/ca.pem"}
+            }),
         );
-        assert_eq!(err_code(&r), "invalidRequest", "{driver}");
-        assert_eq!(message(&r), "driver not implemented yet", "{driver}");
+        assert_eq!(err_code(&r), "openFailed", "{driver}: {r}");
+        assert!(message(&r).contains("caFile"), "{driver}: {r}");
     }
 }
 
@@ -201,16 +202,32 @@ fn sqlserver_open_to_a_closed_port_is_open_failed_and_never_echoes_the_password(
     }
 }
 
-/// Redis chưa có driver: vẫn là "chưa cài" (các driver mạng khác đã có và được loại khỏi danh sách).
+/// Redis (N9) có driver thật: cổng 1 không có server nên `openFailed`, thông báo không chứa mật
+/// khẩu; thiếu host vẫn là `invalidRequest`; `database` không phải số không âm bị từ chối trước
+/// khi nối mạng.
 #[test]
-fn redis_is_still_not_implemented() {
-    let driver = "redis";
+fn redis_open_to_a_closed_port_is_open_failed_and_bad_params_never_echo_the_password() {
     let r = call(
         "open",
-        json!({"driver": driver, "host": "127.0.0.1", "port": 1, "username": "u"}),
+        json!({"driver": "redis", "host": "127.0.0.1", "port": 1, "password": SECRET}),
     );
-    assert_eq!(err_code(&r), "invalidRequest", "{driver}");
-    assert_eq!(message(&r), "driver not implemented yet", "{driver}");
+    assert_eq!(err_code(&r), "openFailed", "{r}");
+    assert!(!r.to_string().contains(SECRET), "{r}");
+
+    for params in [
+        json!({"driver": "redis", "password": SECRET}),
+        json!({"driver": "redis", "host": "", "password": SECRET}),
+        json!({"driver": "redis", "host": "127.0.0.1", "database": "abc", "password": SECRET}),
+        json!({"driver": "redis", "host": "127.0.0.1", "database": "-1", "password": SECRET}),
+        json!({"driver": "redis", "host": "127.0.0.1", "database": 3, "password": SECRET}),
+        json!({"driver": "redis", "host": "127.0.0.1", "password": SECRET, "tls": {"mode": "bogus"}}),
+        json!({"driver": "redis", "host": "127.0.0.1", "password": SECRET, "port": 70000}),
+        json!({"driver": "redis", "host": "127.0.0.1", "password": 123}),
+    ] {
+        let r = call("open", params.clone());
+        assert_eq!(err_code(&r), "invalidRequest", "{params}");
+        assert!(!r.to_string().contains(SECRET), "{r}");
+    }
 }
 
 /// Các lỗi tham số của SQL Server không nối mạng và không lộ mật khẩu.
