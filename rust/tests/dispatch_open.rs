@@ -64,12 +64,12 @@ fn network_drivers_without_a_host_are_invalid_request() {
 }
 
 /// Đổi khi N6–N9 cài driver thật: lúc đó `open` tới host không tồn tại phải là `openFailed`,
-/// còn "chưa cài" biến mất. PostgreSQL (N5), MySQL/MariaDB (N6), SQL Server (N7) đã cài nên loại khỏi test này.
+/// còn "chưa cài" biến mất. PostgreSQL (N5), MySQL/MariaDB (N6), SQL Server (N7), MongoDB (N8) đã cài nên loại khỏi test này.
 #[test]
 fn network_drivers_with_a_host_are_not_implemented_yet() {
     for driver in NETWORK_DRIVERS
         .into_iter()
-        .filter(|d| !["postgres", "mysql", "mariadb", "sqlserver"].contains(d))
+        .filter(|d| !["postgres", "mysql", "mariadb", "sqlserver", "mongodb"].contains(d))
     {
         let r = call(
             "open",
@@ -201,17 +201,16 @@ fn sqlserver_open_to_a_closed_port_is_open_failed_and_never_echoes_the_password(
     }
 }
 
-/// MongoDB và Redis chưa có driver: vẫn là "chưa cài" (chỉ SQL Server được loại khỏi danh sách).
+/// Redis chưa có driver: vẫn là "chưa cài" (các driver mạng khác đã có và được loại khỏi danh sách).
 #[test]
-fn mongodb_and_redis_are_still_not_implemented_when_sqlserver_is() {
-    for driver in ["mongodb", "redis"] {
-        let r = call(
-            "open",
-            json!({"driver": driver, "host": "127.0.0.1", "port": 1, "username": "u"}),
-        );
-        assert_eq!(err_code(&r), "invalidRequest", "{driver}");
-        assert_eq!(message(&r), "driver not implemented yet", "{driver}");
-    }
+fn redis_is_still_not_implemented() {
+    let driver = "redis";
+    let r = call(
+        "open",
+        json!({"driver": driver, "host": "127.0.0.1", "port": 1, "username": "u"}),
+    );
+    assert_eq!(err_code(&r), "invalidRequest", "{driver}");
+    assert_eq!(message(&r), "driver not implemented yet", "{driver}");
 }
 
 /// Các lỗi tham số của SQL Server không nối mạng và không lộ mật khẩu.

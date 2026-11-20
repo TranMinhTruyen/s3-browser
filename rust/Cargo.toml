@@ -10,15 +10,18 @@ name = "s3b_db"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+base64 = "0.22.1"
 fallible-iterator = "0.2"
 futures-util = { version = "0.3.34", default-features = false }
 itoa = "1.0.19"
 libsqlite3-sys = "*"
+mongodb = { version = "3.10.1", default-features = false, features = ["compat-3-0-0", "rustls-tls"] }
 mysql_async = { version = "0.37.1", default-features = false, features = ["default-rustls-ring"] }
 postgres-protocol = "0.6.12"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
 rustls-native-certs = "0.8"
 rustls-pki-types = "1"
+ryu = "1.0.23"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["raw_value"] }
 sqlparser = "0.64.0"

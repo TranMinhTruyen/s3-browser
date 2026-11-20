@@ -95,11 +95,11 @@ mssql! {
     fn close_removes_the_session_from_the_server(s: &Server) {
         let monitor = s.conn();
         let c = s.conn();
-        let spid = c.spid();
-        assert!(session_exists(&monitor, &spid));
+        let link = c.link();
+        assert!(link_exists(&monitor, &link));
         drop(c);
         wait_for(Duration::from_secs(10), "session đóng", || {
-            !session_exists(&monitor, &spid)
+            !link_exists(&monitor, &link)
         });
     }
 
@@ -583,7 +583,6 @@ mssql! {
         let monitor = s.conn();
         let c = s.conn();
         ok(&c.exec("CREATE TABLE #gone(a int)"));
-        let old = c.spid();
         let old_link = c.link();
         let m = marker("ab_endless");
         let r = c.exec_page(&endless_rows(&m), 10, MAX_BYTES);
@@ -598,7 +597,7 @@ mssql! {
         // Server dừng câu vô tận sau khi TCP đóng.
         wait_until_gone(&monitor, &m);
         wait_for(Duration::from_secs(10), "session cũ đóng", || {
-            !session_exists(&monitor, &old)
+            !link_exists(&monitor, &old_link)
         });
     }
 
@@ -639,7 +638,6 @@ mssql! {
         let c = s.conn();
         ok(&c.exec("CREATE TABLE #temp_lost(a int)"));
         ok(&c.exec("USE tempdb"));
-        let old = c.spid();
         let old_link = c.link();
         assert_eq!(c.first("SELECT DB_NAME()"), "tempdb");
 
@@ -663,7 +661,7 @@ mssql! {
         assert!(packet_size(&c) >= 32_000, "{}", packet_size(&c));
         wait_until_gone(&monitor, &m);
         wait_for(Duration::from_secs(10), "session cũ đóng", || {
-            !session_exists(&monitor, &old)
+            !link_exists(&monitor, &old_link)
         });
     }
 
@@ -740,7 +738,7 @@ mssql! {
         let old_link = c.link();
         ok(&monitor.exec(&format!("KILL {old}")));
         wait_for(Duration::from_secs(10), "session bị kill", || {
-            !session_exists(&monitor, &old)
+            !link_exists(&monitor, &old_link)
         });
         let r = c.exec("SELECT 1");
         let failed = r["ok"] == false || !st(&r, 0)["error"].is_null();

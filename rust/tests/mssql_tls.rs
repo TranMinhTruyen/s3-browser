@@ -263,9 +263,10 @@ mssql! {
         let monitor = s.conn();
         let c = s.connect("require");
         let old = c.spid();
+        let old_link = c.link();
         ok(&monitor.exec(&format!("KILL {old}")));
         wait_for(Duration::from_secs(10), "session bị kill", || {
-            !session_exists(&monitor, &old)
+            !link_exists(&monitor, &old_link)
         });
         let r = c.exec("SELECT 1");
         assert!(r["ok"] == false || !statements(&r)[0]["error"].is_null(), "{r}");

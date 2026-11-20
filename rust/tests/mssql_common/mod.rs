@@ -299,9 +299,11 @@ pub fn marker(prefix: &str) -> String {
     format!("{prefix}_{}_{}", std::process::id(), next_id())
 }
 
-/// Còn session `spid` nào trong `sys.dm_exec_sessions` không (dùng để biết đóng TCP đã dọn phiên).
-pub fn session_exists(monitor: &Conn, spid: &str) -> bool {
+/// Còn connection có `link` (GUID `connection_id`, xem `Conn::link`) ở server không (dùng để biết
+/// đóng TCP đã dọn phiên). Không tra theo SPID: server tái dùng số SPID cho session mới (kể cả
+/// của test khác chạy song song), nên "SPID cũ còn tồn tại" không có nghĩa session cũ chưa đóng.
+pub fn link_exists(monitor: &Conn, link: &str) -> bool {
     monitor.first(&format!(
-        "SELECT CAST(COUNT(*) AS int) FROM sys.dm_exec_sessions WHERE session_id = {spid}"
+        "SELECT CAST(COUNT(*) AS int) FROM sys.dm_exec_connections WHERE connection_id = '{link}'"
     )) == "1"
 }

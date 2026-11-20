@@ -85,6 +85,20 @@ impl Case {
     }
 }
 
+/// Sắp khoá mọi object theo bảng chữ cái (đệ quy), để chuỗi JSON in ra không phụ thuộc `Value`
+/// đang giữ thứ tự chèn hay thứ tự chữ cái.
+fn sorted(v: Value) -> Value {
+    match v {
+        Value::Object(map) => {
+            let mut entries: Vec<_> = map.into_iter().collect();
+            entries.sort_by(|a, b| a.0.cmp(&b.0));
+            Value::Object(entries.into_iter().map(|(k, v)| (k, sorted(v))).collect())
+        }
+        Value::Array(items) => Value::Array(items.into_iter().map(sorted).collect()),
+        other => other,
+    }
+}
+
 struct Golden {
     update: bool,
     dir: PathBuf,
@@ -100,23 +114,27 @@ impl Golden {
         }
     }
 
-    /// Ghi (khi `S3B_UPDATE_GOLDEN=1`) hoặc so từng byte với file golden của case.
+    /// Ghi (khi `S3B_UPDATE_GOLDEN=1`) hoặc so (theo `Value`, không xét thứ tự khoá) với file golden
+    /// của case.
     fn finish(&mut self, case: Case) {
         let file = format!("{}.json", case.name);
-        let mut text = serde_json::to_string_pretty(&Value::Array(case.steps)).unwrap();
-        text.push('\n');
+        let actual = Value::Array(case.steps);
         let path = self.dir.join(&file);
         if self.update {
+            let mut text = serde_json::to_string_pretty(&sorted(actual)).unwrap();
+            text.push('\n');
             std::fs::create_dir_all(&self.dir).unwrap();
             std::fs::write(&path, text.as_bytes()).unwrap();
         } else {
             let want = std::fs::read(&path).unwrap_or_else(|_| {
                 panic!("thiếu golden {file}; sinh bằng S3B_UPDATE_GOLDEN=1 trước khi refactor")
             });
+            let want: Value = serde_json::from_slice(&want).unwrap();
             assert!(
-                want == text.as_bytes(),
-                "response lệch golden {file}\n--- golden ---\n{}\n--- thực tế ---\n{text}",
-                String::from_utf8_lossy(&want)
+                want == actual,
+                "response lệch golden {file}\n--- golden ---\n{}\n--- thực tế ---\n{}",
+                serde_json::to_string_pretty(&sorted(want.clone())).unwrap(),
+                serde_json::to_string_pretty(&sorted(actual.clone())).unwrap()
             );
         }
         assert!(self.written.insert(file), "trùng tên case {}", case.name);

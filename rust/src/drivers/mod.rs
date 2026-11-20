@@ -14,6 +14,8 @@
 pub mod common;
 /// Đổi số ngày/micro giây/ticks sang chuỗi ngày giờ ISO.
 pub mod datetime;
+/// Driver MongoDB.
+pub mod mongodb;
 /// Driver MySQL và MariaDB.
 pub mod mysql;
 /// Driver PostgreSQL.
@@ -106,7 +108,8 @@ pub async fn open(p: OpenParams) -> DbResult<OpenResult> {
         postgres::DRIVER => postgres::open(p).await,
         mysql::DRIVER | mysql::MARIADB => mysql::open(p).await,
         sqlserver::DRIVER => sqlserver::open(p).await,
-        "mongodb" | "redis" => {
+        mongodb::DRIVER => mongodb::open(p).await,
+        "redis" => {
             if p.host.as_deref().is_none_or(str::is_empty) {
                 return Err(DbError::new(INVALID_REQUEST, "missing host"));
             }
