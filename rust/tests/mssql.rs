@@ -567,18 +567,23 @@ mssql! {
 
     // ---- bỏ cursor ----
 
-    /// Plan: bỏ cursor 100.000 dòng thì lệnh kế trả kết quả trong < 1 giây.
+    /// Plan: bỏ cursor 100.000 dòng thì lệnh kế không treo (< 1 giây). Server đọc bỏ kịp thì chạy
+    /// luôn; không kịp thì connection bị thay và lệnh kế báo reset, chạy lại mới ra kết quả.
     fn abandoning_a_big_cursor_makes_the_next_command_fast(s: &Server) {
         let c = s.conn();
         let r = c.exec_page(&series_ms(100_000), 10, MAX_BYTES);
         assert_eq!(st(&r, 0)["done"], false);
         let t0 = Instant::now();
-        assert_eq!(c.first("SELECT 5"), "5");
+        let mut r = c.exec("SELECT 5");
+        if is_reset_notice(&r) {
+            r = c.exec("SELECT 5");
+        }
+        assert_eq!(first_cell(&r), "5");
         assert!(t0.elapsed() < Duration::from_secs(1), "{:?}", t0.elapsed());
     }
 
     /// Cursor vô tận (không bao giờ đọc hết): vẫn không treo, nhưng session cũ bị bỏ (đóng TCP,
-    /// nối lại) nên bảng tạm mất. Đây là hệ quả đã ghi của Q23 = A.
+    /// nối lại) nên bảng tạm mất; lệnh kế báo reset (B1), chạy lại mới ra kết quả.
     fn abandoning_an_endless_cursor_replaces_the_connection(s: &Server) {
         let monitor = s.conn();
         let c = s.conn();
@@ -589,6 +594,7 @@ mssql! {
         assert_eq!(st(&r, 0)["done"], false);
         wait_until_active(&monitor, &m);
         let t0 = Instant::now();
+        assert!(is_reset_notice(&c.exec("SELECT 5")));
         assert_eq!(c.first("SELECT 5"), "5");
         assert!(t0.elapsed() < Duration::from_secs(5), "{:?}", t0.elapsed());
         assert_ne!(c.link(), old_link, "connection phải được thay");
@@ -599,6 +605,93 @@ mssql! {
         wait_for(Duration::from_secs(10), "session cũ đóng", || {
             !link_exists(&monitor, &old_link)
         });
+    }
+
+    /// B1 (a): bỏ cursor rồi câu kế báo notice (lỗi `sqlError`), câu thứ ba chạy bình thường.
+    fn abandoning_a_cursor_reports_the_reset_once_then_runs_normally(s: &Server) {
+        let monitor = s.conn();
+        let c = s.conn();
+        let m = marker("b1_once");
+        ok(&c.exec_page(&endless_rows(&m), 10, MAX_BYTES));
+        wait_until_active(&monitor, &m);
+        let r = c.exec("SELECT 2");
+        assert!(is_reset_notice(&r), "{r}");
+        assert_eq!(code_of(st(&r, 0)), "sqlError", "{r}");
+        assert!(message_of(st(&r, 0)).contains("run again"), "{r}");
+        assert_eq!(c.first("SELECT 3"), "3");
+        assert_eq!(c.first("SELECT 4"), "4");
+    }
+
+    /// B1 (b): notice chặn các câu sau trong cùng request (không câu nào chạy), kể cả câu ghi.
+    fn the_reset_notice_stops_the_later_statements_of_the_same_request(s: &Server) {
+        let monitor = s.conn();
+        let c = s.conn();
+        let m = marker("b1_stop");
+        ok(&c.exec_page(&endless_rows(&m), 10, MAX_BYTES));
+        wait_until_active(&monitor, &m);
+        let r = c.exec("SELECT 1
+GO
+CREATE TABLE #blocked(a int)
+GO
+SELECT 3");
+        assert!(is_reset_notice(&r), "{r}");
+        assert_eq!(statements(&r).len(), 1, "{r}");
+        assert_eq!(c.first("SELECT OBJECT_ID('tempdb..#blocked')"), Value::Null);
+        // Chạy lại thì cả ba câu chạy.
+        let r = c.exec("SELECT 1
+GO
+CREATE TABLE #blocked(a int)
+GO
+SELECT 3");
+        assert_eq!(statements(&r).len(), 3, "{r}");
+        assert_eq!(st(&r, 2)["rows"][0][0], "3");
+    }
+
+    /// B1 (c): huỷ do người dùng thì KHÔNG có notice (Q23 = A): lệnh kế chạy ngay trên connection mới.
+    fn a_user_cancel_does_not_produce_the_reset_notice(s: &Server) {
+        let monitor = s.conn();
+        let c = s.conn();
+        let m = marker("b1_cancel");
+        let id = next_id();
+        let t = c.exec_in_thread(id, &format!("WAITFOR DELAY '00:00:30'; SELECT '{m}' AS m"));
+        wait_until_active(&monitor, &m);
+        cancel(id);
+        assert_eq!(err_code(&t.join().unwrap()), "cancelled");
+        let r = c.exec("SELECT 1
+GO
+SELECT 2");
+        assert!(!is_reset_notice(&r), "{r}");
+        assert_eq!(statements(&r).len(), 2, "{r}");
+        assert_eq!(st(&r, 1)["rows"][0][0], "2");
+    }
+
+    /// B1 (d): `USE tempdb` rồi `SELECT` lớn (pageSize 500), bỏ cursor: câu kế (`SELECT DB_NAME()`
+    /// hoặc `DELETE`) KHÔNG chạy trên database mặc định mà báo reset; chạy lại thì DB_NAME là database
+    /// của profile (`master`) và `DELETE` mới có hiệu lực.
+    fn after_use_tempdb_and_an_abandoned_cursor_nothing_runs_on_the_default_database(s: &Server) {
+        let monitor = s.conn();
+        let probe = s.conn();
+        let c = s.conn();
+        let table = format!("##b1_probe_{}", next_id());
+        ok(&probe.exec(&format!("CREATE TABLE {table}(a int); INSERT {table} VALUES (1)")));
+        let count = || probe.first(&format!("SELECT COUNT(*) FROM {table}"));
+        let delete = format!("DELETE FROM {table}");
+        for next in ["SELECT DB_NAME()", delete.as_str()] {
+            let m = marker("b1_use");
+            let sql = format!("USE tempdb
+GO
+{}", endless_rows(&m));
+            let r = c.exec_page(&sql, 500, MAX_BYTES);
+            assert_eq!(st(&r, 1)["done"], false, "{r}");
+            wait_until_active(&monitor, &m);
+
+            assert!(is_reset_notice(&c.exec(next)), "{next}");
+            assert_eq!(count(), "1", "{next} không được chạy");
+            let r = c.exec(next);
+            assert!(!is_reset_notice(&r), "{next}: {r}");
+            assert_eq!(c.first("SELECT DB_NAME()"), "master", "{next}");
+        }
+        assert_eq!(count(), "0");
     }
 
     /// Cursor nhỏ đã nằm hết trong buffer: đọc bỏ nhanh nên KHÔNG đổi connection (bảng tạm còn).

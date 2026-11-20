@@ -102,8 +102,8 @@ impl Cmd {
     }
 }
 
-/// Mở connection theo `p.driver`. Driver mạng chưa có (thêm ở các task sau) và driver lạ đều
-/// là `invalidRequest`; driver mạng thiếu `host` cũng vậy.
+/// Mở connection theo `p.driver`. Driver lạ là `invalidRequest`; driver mạng thiếu `host`
+/// cũng vậy.
 pub async fn open(p: OpenParams) -> DbResult<OpenResult> {
     match p.driver.as_str() {
         sqlite::DRIVER => sqlite::open(p).await,

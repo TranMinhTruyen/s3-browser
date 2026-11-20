@@ -2,7 +2,7 @@
 name: rust-tester
 description: Viết và chạy unit test Rust (có commit) cho thư viện native `rust/` của S3Browser — protocol, dispatch, driver và ranh giới FFI — để kiểm hành vi mới theo plan và hồi quy hành vi cũ. Dùng sau rust-native trong sprint, hoặc gọi thẳng sau một lần sửa nhỏ Rust. Chỉ sửa code test, không sửa code production.
 model: sonnet
-effort: high
+effort: medium
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 

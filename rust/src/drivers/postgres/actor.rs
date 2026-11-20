@@ -25,7 +25,8 @@ use super::{error_text, send_cancel};
 use crate::drivers::Cmd;
 use crate::drivers::common::{
     Cursor, Limits, Page, PageBuilder, RegistryGuard, affected_statement, cancelled,
-    cursor_not_found, first_words, hold, is_cancel_safe, rows_statement, statement_error, track_tx,
+    cursor_not_found, first_words, hold, is_cancel_safe, millis_between, rows_statement,
+    statement_error, track_tx,
 };
 use crate::drivers::split_sql::{Dialect, split};
 use crate::protocol::{
@@ -418,11 +419,6 @@ fn no_params() -> impl ExactSizeIterator<Item = &'static (dyn tokio_postgres::ty
     std::iter::empty()
 }
 
-/// Mili giây của một khoảng thời gian, tràn thì lấy giá trị lớn nhất (không panic).
-fn millis(d: Duration) -> u64 {
-    u64::try_from(d.as_millis()).unwrap_or(u64::MAX)
-}
-
 /// Chạy lần lượt các câu trong `sql`, dừng ở câu lỗi đầu tiên (lỗi từng câu nằm trong
 /// `StatementResult.error`, không làm hỏng cả request). Câu cuối có dòng còn dư thì trả cursor
 /// để actor giữ; câu có dòng nhưng không phải câu cuối chỉ lấy trang đầu (`truncated`).
@@ -545,9 +541,7 @@ async fn execute(
                     keep.then_some(cursor_id),
                     start,
                 );
-                res.first_row_ms = held
-                    .first_row_at
-                    .map(|t| millis(t.saturating_duration_since(start)));
+                res.first_row_ms = held.first_row_at.map(|t| millis_between(start, t));
                 out.push(res);
                 if keep {
                     return (Ok(out), Some(held));
@@ -622,14 +616,6 @@ mod tests {
     }
 
     // ---- hàm nhỏ ----
-
-    #[test]
-    fn millis_saturates_instead_of_overflowing() {
-        assert_eq!(millis(Duration::ZERO), 0);
-        assert_eq!(millis(Duration::from_millis(1500)), 1500);
-        assert_eq!(millis(Duration::from_micros(999)), 0);
-        assert_eq!(millis(Duration::MAX), u64::MAX);
-    }
 
     #[test]
     fn unsupported_is_an_invalid_request() {

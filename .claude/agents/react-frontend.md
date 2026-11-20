@@ -2,7 +2,7 @@
 name: react-frontend
 description: Viết và sửa code frontend React 19 + TS của S3Browser (page, component, store zustand, callIPC, i18n 7 ngôn ngữ) theo task trong plan.md. Được sửa file trực tiếp.
 model: sonnet
-effort: high
+effort: medium
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 

@@ -236,6 +236,14 @@ pub fn first_cell(r: &Value) -> Value {
     st["rows"][0][0].clone()
 }
 
+/// Câu đầu của response là thông báo "connection was reset" (xem `Session::ensure_connected`): lần
+/// nối lại sau khi bỏ cursor mà không phải do người dùng huỷ. Câu đó và các câu sau không chạy.
+pub fn is_reset_notice(r: &Value) -> bool {
+    ok(r)["statements"][0]["error"]["message"]
+        .as_str()
+        .is_some_and(|m| m.starts_with("connection was reset"))
+}
+
 /// Số dòng của câu thứ `i`.
 pub fn row_count(r: &Value, i: usize) -> usize {
     ok(r)["statements"][i]["rows"].as_array().unwrap().len()

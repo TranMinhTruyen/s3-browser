@@ -37,7 +37,8 @@ use super::{Conn, StaleFlag, error_text, reconnect};
 use crate::drivers::Cmd;
 use crate::drivers::common::{
     Cursor, Limits, Page, PageBuilder, RegistryGuard, affected_statement, cancelled,
-    cursor_not_found, hold, is_cancel_safe, rows_statement, statement_error, track_tx,
+    cursor_not_found, hold, is_cancel_safe, millis_between, rows_statement, statement_error,
+    track_tx,
 };
 use crate::drivers::split_sql::{Dialect, split};
 use crate::protocol::{
@@ -73,6 +74,11 @@ pub struct Session {
     in_tx: bool,
     /// Bật khi `client` không dùng tiếp được (xem đầu file).
     stale: StaleFlag,
+    /// Bật cùng `stale` khi cursor bị bỏ mà KHÔNG phải do người dùng huỷ (xem `Held::abandon`).
+    lost: StaleFlag,
+    /// `client` vừa bị bỏ vì `lost`: lần nối lại kế tiếp phải báo mất trạng thái phiên thay vì
+    /// lặng lẽ chạy câu tiếp trên database mặc định.
+    reset_notice: bool,
 }
 
 impl Session {
@@ -82,6 +88,8 @@ impl Session {
             config,
             in_tx: false,
             stale: StaleFlag::default(),
+            lost: StaleFlag::default(),
+            reset_notice: false,
         }
     }
 
@@ -92,11 +100,17 @@ impl Session {
         if self.stale.swap(false, Ordering::AcqRel) {
             self.client = None;
             self.in_tx = false;
+            // Huỷ do người dùng thì họ đã biết (Q23=A); bỏ cursor thì họ không biết nên phải báo.
+            if self.lost.swap(false, Ordering::AcqRel) {
+                self.reset_notice = true;
+            }
         }
     }
 
     /// Bảo đảm có connection dùng được, nối lại nếu vừa bỏ. Trạng thái phiên (`USE <db>`, `SET`,
-    /// bảng `#temp`, transaction) của connection cũ đã mất.
+    /// bảng `#temp`, transaction) của connection cũ đã mất. Nếu connection bị bỏ vì bỏ cursor
+    /// (không phải huỷ) thì nối lại xong vẫn trả `sqlError` một lần để câu của request này không
+    /// chạy nhầm trên database mặc định; chạy lại thì dùng connection mới bình thường.
     async fn ensure_connected(&mut self, cancel: &CancelSignal) -> DbResult<()> {
         self.release_if_stale();
         if self.client.is_some() {
@@ -110,6 +124,12 @@ impl Session {
             })?,
         };
         self.client = Some(conn);
+        if std::mem::take(&mut self.reset_notice) {
+            return Err(DbError::new(
+                SQL_ERROR,
+                "connection was reset (session state lost: database, #temp, SET); run again",
+            ));
+        }
         Ok(())
     }
 }
@@ -155,11 +175,6 @@ async fn drive<T>(
     }
 }
 
-/// Mili giây từ `start` tới `at`, tràn thì lấy giá trị lớn nhất (không panic).
-fn millis_between(start: Instant, at: Instant) -> u64 {
-    u64::try_from(at.saturating_duration_since(start).as_millis()).unwrap_or(u64::MAX)
-}
-
 /// Đọc hết stream (bỏ dữ liệu). Lỗi mạng làm connection `stale`; lỗi server thì stream đã hết.
 async fn drain(stream: &mut QueryStream<'_>, stale: &AtomicBool) {
     loop {
@@ -195,6 +210,8 @@ struct Held<'s> {
     /// Lúc nhận được phản hồi đầu tiên (dòng đầu hoặc kết thúc), cho `firstRowMs`.
     first_row_at: Option<Instant>,
     stale: StaleFlag,
+    /// Xem `Session::lost`.
+    lost: StaleFlag,
 }
 
 impl Held<'_> {
@@ -291,6 +308,7 @@ impl Cursor for Held<'_> {
         }
         if self.cancel_safe {
             self.stale.store(true, Ordering::Release);
+            self.lost.store(true, Ordering::Release);
             return;
         }
         if tokio::time::timeout(DRAIN_TIMEOUT, drain(&mut stream, stale))
@@ -298,6 +316,7 @@ impl Cursor for Held<'_> {
             .is_err()
         {
             self.stale.store(true, Ordering::Release);
+            self.lost.store(true, Ordering::Release);
         }
     }
 }
@@ -622,6 +641,7 @@ async fn statement<'s>(
             pending_error: None,
             first_row_at: None,
             stale: stale.clone(),
+            lost: session.lost.clone(),
         };
         match held.read_page(run.limits, cancel).await {
             Ok(mut page) => {
@@ -754,6 +774,7 @@ mod tests {
             pending_error: None,
             first_row_at: None,
             stale: stale.clone(),
+            lost: StaleFlag::default(),
         }
     }
 
@@ -867,16 +888,6 @@ mod tests {
     }
 
     // ---- helper nhỏ ----
-
-    #[test]
-    fn millis_between_is_saturating_and_never_panics() {
-        let a = Instant::now();
-        let b = a + Duration::from_millis(1500);
-        assert_eq!(millis_between(a, b), 1500);
-        assert_eq!(millis_between(a, a), 0);
-        // `at` trước `start` (đồng hồ lệch) không được panic.
-        assert_eq!(millis_between(b, a), 0);
-    }
 
     #[test]
     fn schema_methods_are_invalid_request() {

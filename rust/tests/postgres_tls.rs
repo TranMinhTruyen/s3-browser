@@ -11,7 +11,6 @@ mod pg_common;
 use common::*;
 use pg_common::*;
 use serde_json::{Value, json};
-use std::net::TcpStream;
 use std::time::{Duration, Instant};
 
 const MODES: [&str; 6] = [
@@ -136,23 +135,15 @@ fn verify_full_checks_the_host_name_but_verify_ca_does_not() {
     assert!(is_ssl(&c));
     drop(c);
 
-    // Tên máy trỏ về chính máy này nhưng không có trong SAN (chỉ localhost, tên service, 127.0.0.1
-    // và ::1): verify-full phải từ chối, các mode không kiểm hostname vẫn qua.
-    let Some(host) = std::env::var("COMPUTERNAME").ok().filter(|h| !h.is_empty()) else {
-        println!("SKIP verify_full_hostname (phần tên máy): không có COMPUTERNAME");
+    // `127.0.0.2` (proxy tới server) không có trong SAN: verify-full phải từ chối, các mode không
+    // kiểm hostname vẫn qua.
+    let Some((host, port)) = host_outside_the_certificate(pg.port) else {
+        println!(
+            "SKIP verify_full_hostname (phần host ngoài chứng chỉ): không bind được 127.0.0.2"
+        );
         return;
     };
-    let reachable = std::net::ToSocketAddrs::to_socket_addrs(&(host.as_str(), pg.port))
-        .ok()
-        .and_then(|mut addrs| {
-            addrs.find(|a| TcpStream::connect_timeout(a, Duration::from_millis(800)).is_ok())
-        })
-        .is_some();
-    if !reachable {
-        println!("SKIP verify_full_hostname (phần tên máy): không nối được tới {host}");
-        return;
-    }
-    let other = json!({"host": host});
+    let other = json!({"host": host, "port": port});
     let r = call("open", pg.params_with("verify-full", other.clone()));
     assert_eq!(err_code(&r), "openFailed", "{r}");
     assert!(!pg.password_leaks_in(&r));

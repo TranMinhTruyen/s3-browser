@@ -168,3 +168,33 @@ pub fn series(n: u64) -> String {
 
 pub const INFINITE: &str =
     "WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM c) SELECT count(*) FROM c";
+
+/// Chuyển tiếp TCP từ `127.0.0.2:<cổng tự chọn>` tới `127.0.0.1:target_port`. Chứng chỉ server test
+/// chỉ có `localhost`, `127.0.0.1`, `::1` và tên service nên `127.0.0.2` là host "không có trong
+/// SAN" (Docker chỉ publish cổng ở 127.0.0.1 nên không nối thẳng tới 127.0.0.2 được). Trả
+/// `(host, cổng)`, `None` nếu máy không bind được 127.0.0.2. Thread chuyển tiếp chạy tới hết tiến
+/// trình test.
+pub fn host_outside_the_certificate(target_port: u16) -> Option<(String, u16)> {
+    use std::net::{SocketAddr, TcpListener, TcpStream};
+    let listener = TcpListener::bind(("127.0.0.2", 0)).ok()?;
+    let port = listener.local_addr().ok()?.port();
+    let target = SocketAddr::from(([127, 0, 0, 1], target_port));
+    std::thread::spawn(move || {
+        for client in listener.incoming().flatten() {
+            let Ok(server) = TcpStream::connect(target) else {
+                continue;
+            };
+            let (Ok(mut c_read), Ok(mut s_read)) = (client.try_clone(), server.try_clone()) else {
+                continue;
+            };
+            let (mut c_write, mut s_write) = (client, server);
+            std::thread::spawn(move || {
+                let _ = std::io::copy(&mut c_read, &mut s_write);
+            });
+            std::thread::spawn(move || {
+                let _ = std::io::copy(&mut s_read, &mut c_write);
+            });
+        }
+    });
+    Some(("127.0.0.2".to_owned(), port))
+}

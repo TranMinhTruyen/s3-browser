@@ -12,7 +12,6 @@ mod my_common;
 use common::*;
 use my_common::*;
 use serde_json::{Value, json};
-use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::time::{Duration, Instant};
 
 const MODES: [&str; 6] = [
@@ -39,33 +38,6 @@ fn is_ssl(c: &Conn) -> bool {
 
 fn message(r: &Value) -> &str {
     r["error"]["message"].as_str().unwrap_or("")
-}
-
-/// Chuyển tiếp TCP từ `127.0.0.2:<cổng tự chọn>` tới server test. Chứng chỉ server chỉ có
-/// `localhost`, `127.0.0.1`, `::1` và tên service nên `127.0.0.2` là host "không có trong SAN"
-/// (Docker chỉ publish cổng ở 127.0.0.1 nên không nối thẳng tới 127.0.0.2 được). Trả `(host, cổng)`,
-/// `None` nếu máy không bind được 127.0.0.2. Thread chuyển tiếp chạy tới hết tiến trình test.
-fn host_outside_the_certificate(s: &Server) -> Option<(String, u16)> {
-    let listener = TcpListener::bind(("127.0.0.2", 0)).ok()?;
-    let port = listener.local_addr().ok()?.port();
-    let target = SocketAddr::from(([127, 0, 0, 1], s.port));
-    std::thread::spawn(move || {
-        for client in listener.incoming().flatten() {
-            let Ok(server) = TcpStream::connect(target) else {
-                continue;
-            };
-            let (mut c_read, mut s_read) =
-                (client.try_clone().unwrap(), server.try_clone().unwrap());
-            let (mut c_write, mut s_write) = (client, server);
-            std::thread::spawn(move || {
-                let _ = std::io::copy(&mut c_read, &mut s_write);
-            });
-            std::thread::spawn(move || {
-                let _ = std::io::copy(&mut s_read, &mut c_write);
-            });
-        }
-    });
-    Some(("127.0.0.2".to_owned(), port))
 }
 
 /// Nguồn dòng khổng lồ chạy ngay, có `marker` để nhận ra câu ở server.
@@ -150,7 +122,7 @@ both! {
     }
 
     fn verify_full_rejects_a_host_not_in_the_certificate_but_require_accepts_it(s: &Server) {
-        let Some((host, port)) = host_outside_the_certificate(s) else {
+        let Some((host, port)) = host_outside_the_certificate(s.port) else {
             println!("SKIP verify_full_hostname: không bind được 127.0.0.2");
             return;
         };
@@ -166,7 +138,7 @@ both! {
     /// không kiểm tên host, nhưng kết quả thật là `verify-ca` chặt như `verify-full`. Khi sửa được
     /// thì test này phải đổi sang assert `verify-ca` mở được.
     fn known_limit_verify_ca_still_rejects_a_host_not_in_the_certificate(s: &Server) {
-        let Some((host, port)) = host_outside_the_certificate(s) else {
+        let Some((host, port)) = host_outside_the_certificate(s.port) else {
             println!("SKIP known_limit_verify_ca: không bind được 127.0.0.2");
             return;
         };

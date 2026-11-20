@@ -46,7 +46,7 @@ Khi Connect một profile DB, người dùng duyệt được các đối tượ
     - Autocommit, không có nút Commit/Rollback.
     - Có nút **Huỷ** khi đang chạy (ctx Go huỷ → `s3b_cancel`, trả `Result=false` im lặng).
   - Panel kết quả dưới editor của tab SQL: mỗi câu một tab **Result 1, 2…**, và một tab **Messages** (câu đã chạy, số dòng ảnh hưởng, thời gian, lỗi).
-  - Kết quả SELECT tải **theo trang qua `cursorId`**, mỗi lần 500 row; cuộn tới cuối lưới thì tải tiếp. Không đọc cả kết quả vào RAM.
+  - Kết quả SELECT tải **theo trang qua `cursorId`**, mỗi lần 10.000 row (người dùng chốt 2026-11-18 sau khi đo hiệu năng); cuộn tới cuối lưới thì tải tiếp. Không đọc cả kết quả vào RAM.
   - Backend có thêm lệnh đọc schema (danh sách table/view/index/trigger, cột, index, constraint, FK, DDL) và đọc row của một table để R1 dùng cho SQLite.
 - **Nền tảng:** SQLite (Windows)
 - **Màn hình liên quan:** modal profile DB (`DbProfileModal`), navbar SQL (Connect/Disconnect), tab SQL (`SqlTabDetail`, panel kết quả mới), backend `rust/`, `internal/modules/db`, `internal/handlers`, migration và query DB của app.
@@ -56,13 +56,29 @@ Khi Connect một profile DB, người dùng duyệt được các đối tượ
   - [ ] Tạo, sửa, xoá profile SQLite lưu vào DB của app, còn sau khi khởi động lại app.
   - [ ] Connect vào file `.db` thật; file không tồn tại hoặc không phải SQLite thì báo lỗi bằng message `DBE<NNN>`.
   - [ ] Ctrl+E chạy SELECT hiện lưới kết quả; INSERT/UPDATE/DELETE/DDL hiện số dòng ảnh hưởng ở Messages; nhiều câu ra nhiều tab Result, dừng ở câu lỗi đầu tiên và báo lỗi ở Messages.
-  - [ ] SELECT trên table lớn (ví dụ 100.000 row) không treo UI, tải 500 row mỗi trang khi cuộn, RAM không tăng theo toàn bộ kết quả.
+  - [ ] SELECT trên table lớn (ví dụ 100.000 row) không treo UI, tải 10.000 row mỗi trang khi cuộn, RAM không tăng theo toàn bộ kết quả.
   - [ ] Huỷ khi đang chạy dừng được câu lệnh, không hiện lỗi; đóng tab hoặc Disconnect thì đóng connection và cursor của tab đó.
   - [ ] Không log secret hay dữ liệu truy vấn.
   - [ ] Test: `cargo test` có commit cho protocol, dispatch và driver SQLite (dùng file DB tạm), do `rust-tester` viết; Go test hồi quy tạm do `go-tester`; FE C1 ≥ 95% từng file.
 
+### R3: Driver Rust cho MySQL, MariaDB, PostgreSQL, SQL Server, MongoDB, Redis và bài đo hiệu năng (thêm 2026-11-18)
+- **Mô tả:**
+  - Viết driver trong `rust/src/drivers/<db>/` cho MySQL, MariaDB, PostgreSQL, SQL Server, MongoDB, Redis theo `CLAUDE.md` §8 (driver mức thấp nhất của từng DB, không dùng lớp trừu tượng như sqlx cho đường đọc dòng; tự chuyển dòng thô sang chuỗi/JSON). Oracle tạm bỏ.
+  - Cùng hợp đồng `s3b_call` với SQLite: mở/đóng connection, chạy lệnh (nhiều câu, dừng ở câu lỗi đầu tiên), kết quả theo trang qua `cursorId` (`pageSize`, `maxPageBytes`), huỷ qua `s3b_cancel`, mã lỗi ổn định. Đọc schema/cây object chưa làm (theo R1 sau).
+  - MongoDB và Redis dùng **lệnh gốc** của DB: Redis gõ như `redis-cli` (GET, HGETALL, SCAN...); MongoDB gõ lệnh dạng JSON kiểu `mongosh` rút gọn (find/aggregate...). Kết quả trả về cùng dạng cột/dòng để lưới hiển thị được (cách quy đổi do planner đề xuất).
+  - Đường đọc dòng SQLite đã chuyển sang C API (`elapsedMs` 10.000 dòng ~54 ms → ~8 ms) và Go chuyển nguyên JSON của Rust ra FE (tag `wailsgen`) — thay đổi đang chưa commit trên branch R2, bổ sung vào PR #43 (R2) trước khi merge (Q15).
+  - **Bài đo hiệu năng:** docker compose cho từng DB trong `test-env/`, bộ bench Rust bản release nạp dữ liệu mẫu giống nhau cho mọi DB rồi đo `elapsedMs` (min / trung vị / max) trang đầu với 1.000 / 10.000 / 100.000 dòng, so với mục tiêu < 40 ms (nhắm < 20 ms) cho 10.000 dòng. Chạy lại được bằng một lệnh, tự xuất **report Excel** (`.xlsx`) để người dùng tự chạy và xem.
+- **Nền tảng:** Windows; DB chạy bằng Docker trên máy local.
+- **Phạm vi:** chỉ Rust driver + bài đo. Chưa nối Go (`modules/db`) và FE (form profile, Connect) cho các DB mới.
+- **Tiêu chí chấp nhận:**
+  - [ ] `cargo fmt --check`, `cargo clippy ... -D warnings`, `cargo build --release` qua; không `unwrap`/`expect` ngoài test; DLL vẫn link `crt-static`.
+  - [ ] Mỗi DB: kết nối, chạy lệnh trả dòng và lệnh không trả dòng, phân trang qua `cursorId`, huỷ, lỗi trả mã ổn định — có `cargo test` (do `rust-tester`) chạy trên DB Docker; test cần DB được bỏ qua rõ ràng khi DB không chạy.
+  - [ ] `elapsedMs` trang đầu 10.000 dòng < 40 ms cho từng DB trên máy local (nhắm < 20 ms); DB nào không đạt thì report ghi rõ phần thời gian nằm ở đâu.
+  - [ ] Một lệnh dựng DB Docker, nạp dữ liệu, chạy bench và xuất file Excel report (bảng theo DB × số dòng, min/trung vị/max, đạt/không đạt mục tiêu, phiên bản DB và driver, cấu hình máy).
+  - [ ] Không log secret hay dữ liệu truy vấn; mật khẩu Docker test chỉ nằm trong `test-env/`.
+
 ## Ngoài phạm vi
-- Backend PostgreSQL và MongoDB; profile PostgreSQL vẫn là mock.
+- Nối Go và FE cho MySQL, MariaDB, PostgreSQL, SQL Server, MongoDB, Redis (R3 chỉ làm Rust driver + bài đo); profile PostgreSQL vẫn là mock. Oracle tạm bỏ.
 - Sửa dữ liệu trong lưới (thêm/xoá/sửa row, commit), filter, sort, export kết quả: dự định làm ở sprint sau, theo cách lấy dữ liệu của Navicat và A5:SQL Mk-2.
 - Mở cấu trúc của View, Index, Trigger (chỉ hiện trong cây, double click không làm gì).
 - Nút mở tab SQL với `SELECT * FROM <table>` từ tab `TableStructure`.
@@ -87,3 +103,4 @@ Khi Connect một profile DB, người dùng duyệt được các đối tượ
   - Profile SQLite có tuỳ chọn mở chỉ đọc (`mode=ro`), mặc định tắt; bật thì câu ghi báo lỗi.
   - Câu lệnh chạy autocommit; muốn transaction thì người dùng tự viết `BEGIN`/`COMMIT`.
   - Rust tách nhiều câu theo cơ chế của SQLite (phần còn lại sau `prepare`), đúng cả với `;` trong chuỗi, comment, thân trigger.
+- Đã chốt 2026-11-18 (R3): gộp vào sprint-19; chỉ Rust driver + bài đo; report Excel; MongoDB/Redis dùng lệnh gốc; Oracle tạm bỏ; mục tiêu hiệu năng theo `CLAUDE.md` §8.

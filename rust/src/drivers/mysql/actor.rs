@@ -29,7 +29,8 @@ use super::{Shared, error_text, kill_query};
 use crate::drivers::Cmd;
 use crate::drivers::common::{
     Cursor, Limits, Page, PageBuilder, RegistryGuard, affected_statement, cancelled,
-    cursor_not_found, hold, is_cancel_safe, rows_statement, statement_error, track_tx,
+    cursor_not_found, hold, is_cancel_safe, millis_between, rows_statement, statement_error,
+    track_tx,
 };
 use crate::drivers::split_sql::{Dialect, split};
 use crate::protocol::{
@@ -126,11 +127,6 @@ async fn drive<T>(
 /// Đổi `u64` số dòng bị ảnh hưởng sang `i64` của giao thức, tràn thì lấy giá trị lớn nhất.
 fn affected(n: u64) -> i64 {
     i64::try_from(n).unwrap_or(i64::MAX)
-}
-
-/// Mili giây từ `start` tới `at`, tràn thì lấy giá trị lớn nhất (không panic).
-fn millis_between(start: Instant, at: Instant) -> u64 {
-    u64::try_from(at.saturating_duration_since(start).as_millis()).unwrap_or(u64::MAX)
 }
 
 /// Cursor đang mở của một result set có dòng.
@@ -775,16 +771,6 @@ mod tests {
         assert_eq!(affected(5), 5);
         assert_eq!(affected(i64::MAX as u64), i64::MAX);
         assert_eq!(affected(u64::MAX), i64::MAX);
-    }
-
-    #[test]
-    fn millis_between_never_panics_or_goes_negative() {
-        let t0 = Instant::now();
-        let t1 = t0 + Duration::from_millis(250);
-        assert_eq!(millis_between(t0, t1), 250);
-        assert_eq!(millis_between(t0, t0), 0);
-        // `at` sớm hơn `start`: về 0 thay vì panic.
-        assert_eq!(millis_between(t1, t0), 0);
     }
 
     #[test]

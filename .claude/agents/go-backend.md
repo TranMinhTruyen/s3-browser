@@ -2,7 +2,7 @@
 name: go-backend
 description: Viết và sửa code Go backend của S3Browser (handler, module, submodule, model, message code, event, migration goose, query sqlc) theo task trong plan.md, rồi sinh lại bindings/sqlc khi cần. Được sửa file trực tiếp.
 model: sonnet
-effort: high
+effort: medium
 tools: Read, Grep, Glob, Edit, Write, Bash, WebFetch
 skills:
   - wails3-bindings

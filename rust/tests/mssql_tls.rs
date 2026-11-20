@@ -12,7 +12,6 @@ mod mssql_common;
 use common::*;
 use mssql_common::*;
 use serde_json::{Value, json};
-use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::time::{Duration, Instant};
 
 const MODES: [&str; 6] = [
@@ -41,31 +40,6 @@ fn packet_size(c: &Conn) -> u32 {
         .unwrap()
         .parse()
         .unwrap()
-}
-
-/// Proxy TCP ở `127.0.0.2` tới server thật: chứng chỉ không có `127.0.0.2` trong SAN nên đây là
-/// host "ngoài chứng chỉ" (Docker chỉ publish cổng ở 127.0.0.1). `None` nếu không bind được.
-fn host_outside_the_certificate(s: &Server) -> Option<(String, u16)> {
-    let listener = TcpListener::bind(("127.0.0.2", 0)).ok()?;
-    let port = listener.local_addr().ok()?.port();
-    let target = SocketAddr::from(([127, 0, 0, 1], s.port));
-    std::thread::spawn(move || {
-        for client in listener.incoming().flatten() {
-            let Ok(server) = TcpStream::connect(target) else {
-                continue;
-            };
-            let (mut c_read, mut s_read) =
-                (client.try_clone().unwrap(), server.try_clone().unwrap());
-            let (mut c_write, mut s_write) = (client, server);
-            std::thread::spawn(move || {
-                let _ = std::io::copy(&mut c_read, &mut s_write);
-            });
-            std::thread::spawn(move || {
-                let _ = std::io::copy(&mut s_read, &mut c_write);
-            });
-        }
-    });
-    Some(("127.0.0.2".to_owned(), port))
 }
 
 mssql! {
@@ -150,7 +124,7 @@ mssql! {
     }
 
     fn verify_full_rejects_a_host_not_in_the_certificate_but_require_accepts_it(s: &Server) {
-        let Some((host, port)) = host_outside_the_certificate(s) else {
+        let Some((host, port)) = host_outside_the_certificate(s.port) else {
             println!("SKIP verify_full_hostname: không bind được 127.0.0.2");
             return;
         };
@@ -167,7 +141,7 @@ mssql! {
     /// chỉ, không kiểm tên host, nhưng `tiberius` không có chế độ đó nên `verify-ca` chặt như
     /// `verify-full`. Khi sửa được thì test này phải đổi sang assert `verify-ca` mở được.
     fn known_limit_verify_ca_still_rejects_a_host_not_in_the_certificate(s: &Server) {
-        let Some((host, port)) = host_outside_the_certificate(s) else {
+        let Some((host, port)) = host_outside_the_certificate(s.port) else {
             println!("SKIP known_limit_verify_ca: không bind được 127.0.0.2");
             return;
         };
@@ -252,6 +226,7 @@ mssql! {
         assert_eq!(ok(&r)["statements"][0]["done"], false);
         wait_until_active(&monitor, &m);
         let t0 = Instant::now();
+        assert!(is_reset_notice(&c.exec("SELECT 5")));
         assert_eq!(c.first("SELECT 5"), "5");
         assert!(t0.elapsed() < Duration::from_secs(5), "{:?}", t0.elapsed());
         assert!(is_encrypted(&c));

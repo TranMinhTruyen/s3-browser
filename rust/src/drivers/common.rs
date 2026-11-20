@@ -1,7 +1,7 @@
 //! Phần dùng chung của mọi driver: giới hạn và trang kết quả, hàm dựng `StatementResult`,
 //! cursor (`Cursor` + `hold`), lỗi thường gặp và `hex`.
 //!
-//! Vị trí trong luồng: actor của từng driver (`sqlite::actor`, sau này `postgres`...) gọi các
+//! Vị trí trong luồng: actor của từng driver (actor của mọi driver) gọi các
 //! hàm ở đây để đọc một trang, dựng kết quả từng câu và giữ cursor giữa các lệnh `fetch`.
 //! Tách riêng để mọi driver có cùng quy tắc trang (≥ 1 dòng, dừng ở `pageSize`/`maxPageBytes`)
 //! và cùng cách xử lý `fetch`/huỷ.
@@ -156,6 +156,11 @@ impl Drop for RegistryGuard {
 /// Mili giây từ `start`; `try_from` đổi `u128` sang `u64`, tràn thì lấy giá trị lớn nhất thay vì panic.
 pub fn elapsed_ms(start: Instant) -> u64 {
     u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX)
+}
+
+/// Mili giây từ `start` tới `at` (`at` trước `start` thì 0), tràn thì lấy giá trị lớn nhất.
+pub fn millis_between(start: Instant, at: Instant) -> u64 {
+    u64::try_from(at.saturating_duration_since(start).as_millis()).unwrap_or(u64::MAX)
 }
 
 /// Lỗi `cancelled`: request bị huỷ qua `s3b_cancel`.
@@ -419,6 +424,16 @@ mod tests {
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use tokio::sync::oneshot;
+
+    #[test]
+    fn millis_between_is_saturating_and_never_panics() {
+        let a = Instant::now();
+        let b = a + std::time::Duration::from_millis(1500);
+        assert_eq!(millis_between(a, b), 1500);
+        assert_eq!(millis_between(a, a), 0);
+        // `at` trước `start` (đồng hồ lệch) về 0 thay vì panic hay âm.
+        assert_eq!(millis_between(b, a), 0);
+    }
 
     fn row(cells: &[Option<&str>]) -> Vec<Option<String>> {
         cells.iter().map(|c| c.map(str::to_owned)).collect()
