@@ -155,15 +155,27 @@ impl Registry {
     }
 
     /// Xoá connection khỏi registry; sau lệnh này không còn interrupt nào tới handle của nó.
-    /// Nếu `interrupt_first`, ngắt câu đang chạy để lệnh đóng không phải chờ.
+    /// Nếu `interrupt_first`, ngắt câu đang chạy và huỷ mọi request của connection để lệnh đóng
+    /// không phải chờ (driver mạng chỉ dừng khi `CancelSignal` bật, không chỉ nhờ `interrupt`).
     pub fn remove_conn(&self, id: u64, interrupt_first: bool) -> Option<mpsc::Sender<Cmd>> {
-        let mut conns = lock(&self.conns);
-        let entry = conns.remove(&id)?;
+        let tx = {
+            let mut conns = lock(&self.conns);
+            let entry = conns.remove(&id)?;
+            if interrupt_first {
+                // Còn giữ lock nên connection chưa thể bị đóng.
+                entry.interrupt.interrupt();
+            }
+            entry.tx
+        };
         if interrupt_first {
-            // Còn giữ lock nên connection chưa thể bị đóng.
-            entry.interrupt.interrupt();
+            // Đã nhả lock `conns` (không khoá lồng): bật cờ huỷ cho request đang chạy lẫn đang xếp hàng.
+            for (conn_id, sig) in lock(&self.requests).values() {
+                if *conn_id == id {
+                    sig.cancel();
+                }
+            }
         }
-        Some(entry.tx)
+        Some(tx)
     }
 
     /// Đăng ký request; guard tự gỡ khi xong, `flag` là tín hiệu huỷ của request.
@@ -436,6 +448,36 @@ mod tests {
         assert!(reg.remove_conn(2, true).is_some());
 
         assert_eq!((a.calls(), b.calls()), (0, 1));
+    }
+
+    #[test]
+    fn remove_conn_with_interrupt_cancels_the_requests_of_that_connection_only() {
+        let reg = registry();
+        let (_c1, _rx1) = add(reg, 1, "postgres");
+        let (_c2, _rx2) = add(reg, 2, "postgres");
+        let running = reg.begin_request(10, 1);
+        let queued = reg.begin_request(11, 1);
+        let other = reg.begin_request(20, 2);
+        reg.set_running(1, 10);
+
+        assert!(reg.remove_conn(1, true).is_some());
+
+        // B1: cả request đang chạy lẫn đang xếp hàng của conn 1 bị huỷ; conn 2 không bị đụng.
+        assert!(running.flag.is_cancelled());
+        assert!(queued.flag.is_cancelled());
+        assert!(!other.flag.is_cancelled());
+    }
+
+    #[test]
+    fn remove_conn_without_interrupt_cancels_nothing() {
+        let reg = registry();
+        let (_c, _rx) = add(reg, 1, "postgres");
+        let req = reg.begin_request(10, 1);
+        reg.set_running(1, 10);
+
+        assert!(reg.remove_conn(1, false).is_some());
+
+        assert!(!req.flag.is_cancelled());
     }
 
     #[test]

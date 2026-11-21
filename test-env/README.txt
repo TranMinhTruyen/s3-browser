@@ -189,6 +189,8 @@ mysql:8.4.13, mariadb:11.4.13, postgres:17.12, mssql/server:2022-CU28-ubuntu-22.
         docker compose -f docker-compose-db.yml --env-file db/db.env -p s3b-db-test stop
         docker compose -f docker-compose-db.yml --env-file db/db.env -p s3b-db-test down -v
 
+  Các cổng DB chỉ mở trên loopback (127.0.0.1), máy khác trong mạng không kết nối được.
+
   DB          Container           Cổng máy   Tài khoản (mật khẩu chung DB_PASSWORD trong db/db.env)
   ----------  ------------------  ---------  -----------------------------------------------------
   MySQL       s3b-test-mysql      10030      root, database s3b

@@ -585,6 +585,39 @@ redis! {
         // `Conn::drop` gọi lại `close` trên connection đã đóng: bỏ qua lỗi, không panic.
     }
 
+    /// B1: `close` khi đang có `BLPOP` chặn vô hạn: close xong < 2 giây, câu đó nhận `cancelled`,
+    /// `exec` sau đó là `connNotFound`, server không còn client bị chặn.
+    fn close_cancels_a_blocked_blpop_and_returns_fast(s: &Server) {
+        let monitor = s.conn();
+        let c = s.conn_with(json!({"database": "14"}));
+        let (name, k) = (client_name("s3b_test_close_blpop"), c.key("nokey"));
+        let t = c.exec_in_thread(next_id(), &format!("CLIENT SETNAME {name}
+BLPOP {k} 0"));
+        wait_until_blocked(&monitor, &name);
+        let t0 = Instant::now();
+        ok(&call("close", json!({"connId": c.id})));
+        assert!(t0.elapsed() < Duration::from_secs(2), "{:?}", t0.elapsed());
+        assert_eq!(err_code(&t.join().unwrap()), "cancelled");
+        assert_eq!(err_code(&c.exec("PING")), "connNotFound");
+        wait_until_gone(&monitor, &name);
+    }
+
+    /// Q3: `CLIENT REPLY OFF|SKIP` bị chặn thành lỗi câu (không gửi tới server) nên connection vẫn
+    /// trả lời bình thường; `CLIENT REPLY ON` được phép.
+    fn client_reply_off_and_skip_are_statement_errors_and_the_connection_keeps_replying(s: &Server) {
+        let c = s.conn();
+        for text in ["CLIENT REPLY OFF", "client reply skip"] {
+            let r = c.exec(text);
+            let x = stmt(&r, 0);
+            assert_eq!(code_of(x), "sqlError", "{text}: {r}");
+            assert!(message_of(x).contains("CLIENT REPLY"), "{text}: {r}");
+            assert_eq!(c.text("PING"), "PONG", "{text}");
+        }
+        let r = c.exec("CLIENT REPLY ON");
+        assert_eq!(stmt(&r, 0)["kind"], "rows", "{r}");
+        assert_eq!(c.text("PING"), "PONG");
+    }
+
     // ---- huỷ ----
 
     fn cancel_a_blocked_blpop_returns_cancelled_fast_and_the_server_drops_the_client(s: &Server) {

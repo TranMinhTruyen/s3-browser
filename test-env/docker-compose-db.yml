@@ -17,7 +17,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-S3bTest2026}
       MYSQL_DATABASE: ${DB_NAME:-s3b}
     ports:
-      - "${MYSQL_PORT:-10030}:3306"
+      - "127.0.0.1:${MYSQL_PORT:-10030}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
       - ./certs/db/server.crt:/certs/server.crt:ro
@@ -39,7 +39,7 @@ services:
       MARIADB_ROOT_PASSWORD: ${DB_PASSWORD:-S3bTest2026}
       MARIADB_DATABASE: ${DB_NAME:-s3b}
     ports:
-      - "${MARIADB_PORT:-10031}:3306"
+      - "127.0.0.1:${MARIADB_PORT:-10031}:3306"
     volumes:
       - mariadb-data:/var/lib/mysql
       - ./certs/db/server.crt:/certs/server.crt:ro
@@ -72,7 +72,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-S3bTest2026}
       POSTGRES_DB: ${DB_NAME:-s3b}
     ports:
-      - "${POSTGRES_PORT:-10032}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-10032}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./certs/db:/certs:ro
@@ -92,7 +92,7 @@ services:
       MSSQL_PID: Developer
       MSSQL_MEMORY_LIMIT_MB: "2048"
     ports:
-      - "${MSSQL_PORT:-10033}:1433"
+      - "127.0.0.1:${MSSQL_PORT:-10033}:1433"
     volumes:
       - mssql-data:/var/opt/mssql
       - ./db/mssql.conf:/var/opt/mssql/mssql.conf:ro
@@ -114,7 +114,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD:-S3bTest2026}
     ports:
-      - "${MONGO_PORT:-10034}:27017"
+      - "127.0.0.1:${MONGO_PORT:-10034}:27017"
     volumes:
       - mongo-data:/data/db
       - ./certs/db/server.pem:/certs/server.pem:ro
@@ -155,8 +155,8 @@ services:
     environment:
       REDISCLI_AUTH: ${DB_PASSWORD:-S3bTest2026}
     ports:
-      - "${REDIS_PORT:-10035}:6379"
-      - "${REDIS_TLS_PORT:-10036}:6380"
+      - "127.0.0.1:${REDIS_PORT:-10035}:6379"
+      - "127.0.0.1:${REDIS_TLS_PORT:-10036}:6380"
     volumes:
       - redis-data:/data
       - ./certs/db/server.crt:/certs/server.crt:ro

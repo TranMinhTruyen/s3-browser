@@ -1,7 +1,7 @@
 //! Phần dùng chung của mọi driver: giới hạn và trang kết quả, hàm dựng `StatementResult`,
 //! cursor (`Cursor` + `hold`), lỗi thường gặp và `hex`.
 //!
-//! Vị trí trong luồng: actor của từng driver (actor của mọi driver) gọi các
+//! Vị trí trong luồng: actor của mọi driver gọi các
 //! hàm ở đây để đọc một trang, dựng kết quả từng câu và giữ cursor giữa các lệnh `fetch`.
 //! Tách riêng để mọi driver có cùng quy tắc trang (≥ 1 dòng, dừng ở `pageSize`/`maxPageBytes`)
 //! và cùng cách xử lý `fetch`/huỷ.
@@ -345,6 +345,12 @@ pub async fn hold<C: Cursor>(
             Cmd::Fetch(job) => {
                 let _ = job.reply.send(Err(cursor_not_found()));
             }
+            // Đóng connection: thả cursor luôn, không `abandon` (có thể phải đọc bỏ/huỷ phía server
+            // mà cursor không huỷ được, làm lệnh đóng treo). Connection sắp bị đóng nên không cần dọn.
+            close @ Cmd::Close(_) => {
+                drop(cursor);
+                return Some(close);
+            }
             other => {
                 cursor.abandon().await;
                 return Some(other);
@@ -375,14 +381,61 @@ pub fn is_cancel_safe(sql: &str) -> bool {
     if is("select") || is("values") || is("table") || is("show") {
         return true;
     }
-    is("with")
-        && !sql
-            .split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
-            .any(|w| {
-                ["insert", "update", "delete", "merge"]
-                    .iter()
-                    .any(|kw| w.eq_ignore_ascii_case(kw))
-            })
+    is("with") && !contains_word(sql, &["insert", "update", "delete", "merge"])
+}
+
+/// Có từ nào của `sql` (tách theo ký tự không phải chữ/số/`_`, không phân biệt hoa thường) nằm
+/// trong `words` không. Quét thô, không bỏ qua chuỗi/comment: nhận nhầm chỉ làm kết luận thận
+/// trọng hơn (coi là có ghi), không bao giờ bỏ sót.
+fn contains_word(sql: &str, kws: &[&str]) -> bool {
+    words(sql).any(|w| kws.iter().any(|kw| w.eq_ignore_ascii_case(kw)))
+}
+
+/// Tách batch thành các từ (chữ/số/`_`), bỏ từ rỗng. Quét thô, không bỏ qua chuỗi hay comment:
+/// dùng chung cho các phép kiểm "có từ khoá X không" để chúng cùng một ngữ nghĩa.
+pub(crate) fn words(sql: &str) -> impl Iterator<Item = &str> + Clone {
+    sql.split(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+        .filter(|w| !w.is_empty())
+}
+
+/// Batch có thể ghi dữ liệu/đổi schema không (`INSERT`, `UPDATE`, `DELETE`, `MERGE`, `EXEC`,
+/// `CREATE`, `ALTER`, `DROP`, `TRUNCATE`, `SELECT ... INTO`, và các lệnh đổi quyền/trạng thái
+/// server như `GRANT`, `BACKUP`, `RESTORE`, `DBCC`, `KILL`, `RECONFIGURE`, `CHECKPOINT`).
+/// Batch SQL Server gồm nhiều câu
+/// (`SELECT ...; UPDATE ...`) nên `is_cancel_safe` chỉ xét từ đầu là chưa đủ.
+pub fn has_write_keyword(sql: &str) -> bool {
+    contains_word(
+        sql,
+        &[
+            "insert",
+            "update",
+            "delete",
+            "merge",
+            "exec",
+            "execute",
+            "create",
+            "alter",
+            "drop",
+            "truncate",
+            "into",
+            "grant",
+            "revoke",
+            "deny",
+            "backup",
+            "restore",
+            "dbcc",
+            "kill",
+            "enable",
+            "disable",
+            "receive",
+            "send",
+            "reconfigure",
+            "checkpoint",
+            "bulk",
+            "writetext",
+            "updatetext",
+        ],
+    )
 }
 
 /// Theo dõi người dùng có đang trong transaction tự mở không (xem `Session::in_tx`).
@@ -393,7 +446,14 @@ pub fn track_tx(in_tx: &mut bool, sql: &str) {
     let first = words.next().unwrap_or("");
     let is = |kw: &str| first.eq_ignore_ascii_case(kw);
     if is("begin") || is("start") {
-        *in_tx = true;
+        // `BEGIN TRY`/`BEGIN CATCH` (T-SQL) và `BEGIN NOT ATOMIC` (MariaDB) mở khối lệnh, không mở transaction.
+        let second = words.next().unwrap_or("");
+        let block = ["try", "catch", "not", "atomic"]
+            .iter()
+            .any(|kw| second.eq_ignore_ascii_case(kw));
+        if !block {
+            *in_tx = true;
+        }
     } else if is("commit") || is("end") || is("rollback") || is("abort") {
         // `WORK`/`TRANSACTION` là từ thừa: `ROLLBACK WORK TO SAVEPOINT s` vẫn là rollback về savepoint.
         let mut rest = words.skip_while(|w| {
@@ -1019,21 +1079,48 @@ mod tests {
         let (cursor, c) = fake(7, vec![Ok(page(vec![row(&[Some("x")])], false))], false);
         let (tx, mut rx) = mpsc::channel(4);
         let (f, r, _) = fetch_cmd(7, 10, 10);
-        let (done_tx, done_rx) = oneshot::channel();
+        let (reply, _rx) = oneshot::channel();
         tx.send(f).await.unwrap();
-        tx.send(Cmd::Close(done_tx)).await.unwrap();
+        // P2: lệnh không phải `Close` thì cursor vẫn được `abandon`.
+        tx.send(Cmd::SchemaTree(Job {
+            id: 6,
+            params: (),
+            cancel: Arc::new(CancelSignal::new()),
+            reply,
+        }))
+        .await
+        .unwrap();
         // Lệnh sau còn trong kênh phải nguyên vẹn cho vòng lặp của actor.
         let (after, _ra, _) = fetch_cmd(7, 1, 1);
         tx.send(after).await.unwrap();
         let back = hold(1, cursor, &mut rx).await;
-        assert!(matches!(back, Some(Cmd::Close(_))));
+        assert!(matches!(back, Some(Cmd::SchemaTree(j)) if j.id == 6));
         assert_eq!(c.abandoned.load(Ordering::SeqCst), 1);
         assert!(!ok_rows(r).1);
-        // Lệnh trả về đúng là lệnh `Close` gốc: người nhận kênh `done` vẫn còn sống.
-        if let Some(Cmd::Close(done)) = back {
-            done.send(()).unwrap();
-            assert!(done_rx.await.is_ok());
-        }
+        assert!(matches!(rx.try_recv(), Ok(Cmd::Fetch(_))));
+    }
+
+    #[tokio::test]
+    async fn hold_close_drops_the_cursor_without_abandon_and_returns_the_close() {
+        let (cursor, c) = fake(7, vec![Ok(page(vec![row(&[Some("x")])], false))], false);
+        let (tx, mut rx) = mpsc::channel(4);
+        let (f, r, _) = fetch_cmd(7, 10, 10);
+        let (done_tx, done_rx) = oneshot::channel();
+        tx.send(f).await.unwrap();
+        tx.send(Cmd::Close(done_tx)).await.unwrap();
+        let (after, _ra, _) = fetch_cmd(7, 1, 1);
+        tx.send(after).await.unwrap();
+        let back = hold(1, cursor, &mut rx).await;
+        // Cursor bị thả mà không `abandon` (nó có thể treo lệnh đóng).
+        assert_eq!(c.abandoned.load(Ordering::SeqCst), 0);
+        assert_eq!(c.calls.load(Ordering::SeqCst), 1);
+        assert!(!ok_rows(r).1);
+        // Lệnh trả về đúng là `Close` gốc: người nhận kênh `done` vẫn còn sống.
+        let Some(Cmd::Close(done)) = back else {
+            panic!("phải trả lại lệnh Close");
+        };
+        done.send(()).unwrap();
+        assert!(done_rx.await.is_ok());
         assert!(matches!(rx.try_recv(), Ok(Cmd::Fetch(_))));
     }
 
@@ -1263,6 +1350,119 @@ mod tests {
         assert!(!is_cancel_safe(
             "with a as (select 'delete') select * from a"
         ));
+    }
+
+    // ---- has_write_keyword (B3) ----
+
+    #[test]
+    fn has_write_keyword_flags_writes_and_ddl_in_any_statement_of_the_batch() {
+        for sql in [
+            "SELECT 1; UPDATE ##probe SET a = 2",
+            "select 1;
+insert into t values (1)",
+            "DELETE FROM t",
+            "merge t using s on 1=1 when matched then delete;",
+            "EXEC sp_who",
+            "execute dbo.p",
+            "CREATE TABLE t (a int)",
+            "ALTER TABLE t ADD b int",
+            "DROP TABLE t",
+            "TRUNCATE TABLE t",
+            "SELECT a INTO #x FROM t",
+            "SeLeCt 1; DeLeTe FROM t",
+            // B11
+            "SELECT 1; GRANT SELECT ON t TO u",
+            "select 1; dbcc checkident('t')",
+            "SELECT 1; DISABLE TRIGGER tr ON t",
+            "select 1; receive top(1) * from q",
+            "SELECT 1; BACKUP DATABASE d TO DISK='x'",
+        ] {
+            assert!(has_write_keyword(sql), "{sql}");
+        }
+    }
+
+    #[test]
+    fn has_write_keyword_is_false_for_reads_and_names_that_only_contain_a_keyword() {
+        for sql in [
+            "SELECT 1",
+            "select * from t where a = 1",
+            "with a as (select 1) select * from a",
+            "select * from update_log",
+            "select intolerance, drops, executed from created",
+            "",
+        ] {
+            assert!(!has_write_keyword(sql), "{sql:?}");
+        }
+    }
+
+    #[test]
+    fn has_write_keyword_is_conservative_inside_strings_and_comments() {
+        // Giới hạn đã biết: quét thô, từ khoá trong literal/comment vẫn tính là có ghi (sai theo
+        // hướng an toàn: chỉ đọc bỏ, không huỷ phía server).
+        assert!(has_write_keyword("select 'delete'"));
+        assert!(has_write_keyword("select 1 -- drop it"));
+    }
+
+    // ---- words (Q12) ----
+
+    #[test]
+    fn words_splits_on_non_word_chars_and_drops_empty_pieces() {
+        assert_eq!(
+            words("a;b  c_d,1x").collect::<Vec<_>>(),
+            ["a", "b", "c_d", "1x"]
+        );
+        assert_eq!(words("  ;; ,, ").count(), 0);
+        assert_eq!(words("").count(), 0);
+        // Ký tự không ASCII là ranh giới từ.
+        assert_eq!(words("héllo").collect::<Vec<_>>(), ["h", "llo"]);
+        assert_eq!(words("#tmp.x").collect::<Vec<_>>(), ["tmp", "x"]);
+    }
+
+    #[test]
+    fn words_iterator_is_cloneable_for_lookahead() {
+        let mut it = words("begin tran x");
+        it.next();
+        assert_eq!(it.clone().next(), Some("tran"));
+        assert_eq!(it.next(), Some("tran"));
+    }
+
+    #[test]
+    fn contains_word_matches_whole_words_case_insensitively() {
+        assert!(contains_word("SELECT 1; Delete x", &["delete"]));
+        assert!(!contains_word("select deleted", &["delete"]));
+        assert!(!contains_word("", &["delete"]));
+    }
+
+    #[test]
+    fn begin_blocks_that_are_not_transactions_do_not_set_in_tx() {
+        // Q2
+        for sql in [
+            "BEGIN TRY",
+            "begin try select 1 end try",
+            "BEGIN CATCH",
+            "begin catch",
+            "BEGIN NOT ATOMIC select 1; END",
+            "begin atomic",
+        ] {
+            assert!(!after(false, &[sql]), "{sql}");
+        }
+        // Đang trong transaction thì khối lệnh không tắt nó.
+        assert!(after(true, &["BEGIN TRY"]));
+    }
+
+    #[test]
+    fn begin_and_start_transaction_still_set_in_tx() {
+        for sql in [
+            "BEGIN",
+            "begin;",
+            "BEGIN TRANSACTION",
+            "begin tran",
+            "BEGIN WORK",
+            "START TRANSACTION",
+            "start transaction read only",
+        ] {
+            assert!(after(false, &[sql]), "{sql}");
+        }
     }
 
     // ---- track_tx ----

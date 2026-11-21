@@ -607,10 +607,12 @@ mssql! {
         });
     }
 
-    /// B1 (a): bỏ cursor rồi câu kế báo notice (lỗi `sqlError`), câu thứ ba chạy bình thường.
+    /// B1 (a), theo B5: phiên đã có trạng thái (`USE`) mà bị bỏ cursor thì câu kế báo notice
+    /// (lỗi `sqlError`) đúng một lần, câu thứ ba chạy bình thường.
     fn abandoning_a_cursor_reports_the_reset_once_then_runs_normally(s: &Server) {
         let monitor = s.conn();
         let c = s.conn();
+        ok(&c.exec("USE tempdb"));
         let m = marker("b1_once");
         ok(&c.exec_page(&endless_rows(&m), 10, MAX_BYTES));
         wait_until_active(&monitor, &m);
@@ -622,10 +624,61 @@ mssql! {
         assert_eq!(c.first("SELECT 4"), "4");
     }
 
+    /// B5: phiên sạch (chỉ `SELECT`) bị bỏ cursor thì connection vẫn được thay nhưng KHÔNG có
+    /// notice: câu kế chạy bình thường ngay lần đầu (trước B5 luôn có notice).
+    fn abandoning_a_cursor_in_a_clean_session_runs_the_next_command_without_notice(s: &Server) {
+        let monitor = s.conn();
+        let c = s.conn();
+        assert_eq!(c.first("SELECT 1"), "1");
+        let old_link = c.link();
+        let m = marker("b5_clean");
+        ok(&c.exec_page(&endless_rows(&m), 10, MAX_BYTES));
+        wait_until_active(&monitor, &m);
+        let r = c.exec("SELECT 2");
+        assert!(!is_reset_notice(&r), "{r}");
+        assert_eq!(first_cell(&r), "2");
+        assert_eq!(c.first("SELECT 3"), "3");
+        assert_ne!(c.link(), old_link, "connection vẫn phải được thay");
+        wait_until_gone(&monitor, &m);
+    }
+
+    /// B5: mỗi kiểu thay đổi trạng thái phiên đều làm notice xuất hiện (đúng một lần), và sau
+    /// notice phiên mới là phiên sạch nên lần bỏ cursor kế tiếp không còn notice.
+    fn each_session_state_change_makes_the_notice_appear_and_the_new_session_is_clean(s: &Server) {
+        let monitor = s.conn();
+        let dirties = [
+            "USE tempdb",
+            "SET NOCOUNT ON",
+            "CREATE TABLE #b5_t(a int)",
+            "EXEC sp_executesql N'SELECT 1'",
+            "BEGIN TRAN
+GO
+COMMIT",
+        ];
+        for dirty in dirties {
+            let c = s.conn();
+            ok(&c.exec(dirty));
+            let m = marker("b5_dirty");
+            ok(&c.exec_page(&endless_rows(&m), 10, MAX_BYTES));
+            wait_until_active(&monitor, &m);
+            assert!(is_reset_notice(&c.exec("SELECT 2")), "{dirty}");
+            assert_eq!(c.first("SELECT 3"), "3", "{dirty}");
+            // Phiên mới sạch: bỏ cursor lần nữa thì không còn notice.
+            let m2 = marker("b5_again");
+            ok(&c.exec_page(&endless_rows(&m2), 10, MAX_BYTES));
+            wait_until_active(&monitor, &m2);
+            assert!(!is_reset_notice(&c.exec("SELECT 4")), "{dirty}: lần hai");
+            wait_until_gone(&monitor, &m);
+            wait_until_gone(&monitor, &m2);
+        }
+    }
+
     /// B1 (b): notice chặn các câu sau trong cùng request (không câu nào chạy), kể cả câu ghi.
+    /// (Theo B5, phiên phải có trạng thái thì mới có notice nên chạy `USE` trước.)
     fn the_reset_notice_stops_the_later_statements_of_the_same_request(s: &Server) {
         let monitor = s.conn();
         let c = s.conn();
+        ok(&c.exec("USE tempdb"));
         let m = marker("b1_stop");
         ok(&c.exec_page(&endless_rows(&m), 10, MAX_BYTES));
         wait_until_active(&monitor, &m);
@@ -694,6 +747,28 @@ GO
         assert_eq!(count(), "0");
     }
 
+    /// B3: batch `SELECT` lớn kèm `; UPDATE` phía sau không được coi là cancel-an-toàn: bỏ cursor
+    /// thì phải đọc bỏ để `UPDATE` chạy nốt (không huỷ giữa chừng làm mất ghi), và không đổi
+    /// connection nên không có notice.
+    fn abandoning_a_select_followed_by_an_update_still_runs_the_update(s: &Server) {
+        let probe = s.conn();
+        let c = s.conn();
+        let table = format!("##b3_probe_{}", next_id());
+        ok(&probe.exec(&format!("CREATE TABLE {table}(a int); INSERT {table} VALUES (1)")));
+        let spid = c.spid();
+        let r = c.exec_page(
+            &format!("{}; UPDATE {table} SET a = 2", series_ms(100_000)),
+            10,
+            MAX_BYTES,
+        );
+        assert_eq!(st(&r, 0)["done"], false, "{r}");
+        let r = c.exec("SELECT 1");
+        assert!(!is_reset_notice(&r), "{r}");
+        assert_eq!(first_cell(&r), "1");
+        assert_eq!(probe.first(&format!("SELECT a FROM {table}")), "2");
+        assert_eq!(c.spid(), spid, "đọc bỏ, không thay connection");
+    }
+
     /// Cursor nhỏ đã nằm hết trong buffer: đọc bỏ nhanh nên KHÔNG đổi connection (bảng tạm còn).
     fn abandoning_a_small_cursor_keeps_the_session(s: &Server) {
         let c = s.conn();
@@ -720,6 +795,93 @@ GO
         assert_eq!(c.first("SELECT @@TRANCOUNT"), "1");
         ok(&c.exec("ROLLBACK"));
         assert_eq!(c.first("SELECT COUNT(*) FROM #intx"), "0");
+    }
+
+    /// B9: `BEGIN TRAN` lồng trong `BEGIN TRY` vẫn là transaction tự mở: bỏ cursor lớn chỉ đọc bỏ
+    /// (không đổi connection, không notice) nên `@@TRANCOUNT` vẫn là 1 trên cùng connection.
+    fn begin_tran_inside_try_keeps_the_transaction_when_a_cursor_is_abandoned(s: &Server) {
+        let probe = s.conn();
+        let c = s.conn();
+        let table = format!("##b9_probe_{}", next_id());
+        ok(&probe.exec(&format!("CREATE TABLE {table}(a int); INSERT {table} VALUES (1)")));
+        let spid = c.spid();
+        let link = c.link();
+        ok(&c.exec(&format!(
+            "BEGIN TRY BEGIN TRAN; UPDATE {table} SET a=2; END TRY BEGIN CATCH ROLLBACK END CATCH"
+        )));
+        let r = c.exec_page(&series_ms(200_000), 10, MAX_BYTES);
+        assert_eq!(st(&r, 0)["done"], false, "{r}");
+        // Bỏ cursor bằng câu kế: phải đọc bỏ chứ không thay connection.
+        let r = c.exec("SELECT @@TRANCOUNT");
+        assert!(!is_reset_notice(&r), "{r}");
+        assert_eq!(first_cell(&r), "1");
+        assert_eq!(c.spid(), spid);
+        assert_eq!(c.link(), link, "không được thay connection");
+        ok(&c.exec("ROLLBACK"));
+        assert_eq!(probe.first(&format!("SELECT a FROM {table}")), "1");
+    }
+
+    /// B13: batch TRY/CATCH đã `COMMIT` thì `@@TRANCOUNT` = 0 nên `in_tx` không còn kẹt `true`:
+    /// bỏ cursor vô tận phải thay connection (không đọc bỏ mãi), lệnh kế nhanh, và dữ liệu đã
+    /// commit vẫn còn. Batch chứa `BEGIN TRAN`/`##` nên phiên bị coi là có trạng thái: lệnh kế
+    /// báo notice reset một lần rồi chạy bình thường (như B5). Bảng `##` do `monitor` tạo (không
+    /// phải `c`) nên còn sau khi `c` đổi connection; `##` đã bị xoá cùng session tạo ra nó.
+    fn begin_tran_inside_try_then_commit_does_not_leave_the_session_in_a_transaction(s: &Server) {
+        let monitor = s.conn();
+        let c = s.conn();
+        let table = format!("##b13_probe_{}", next_id());
+        ok(&monitor.exec(&format!("CREATE TABLE {table}(a int); INSERT {table} VALUES (1)")));
+        ok(&c.exec(&format!(
+            "BEGIN TRY BEGIN TRAN; UPDATE {table} SET a=2; COMMIT; END TRY BEGIN CATCH ROLLBACK END CATCH"
+        )));
+        assert_eq!(c.first("SELECT @@TRANCOUNT"), "0");
+        let old_link = c.link();
+        let m = marker("b13_commit");
+        ok(&c.exec_page(&endless_rows(&m), 10, MAX_BYTES));
+        wait_until_active(&monitor, &m);
+        let t0 = Instant::now();
+        let mut r = c.exec("SELECT 1");
+        if is_reset_notice(&r) {
+            r = c.exec("SELECT 1");
+        }
+        assert_eq!(first_cell(&r), "1", "{r}");
+        assert!(t0.elapsed() < Duration::from_secs(3), "{:?}", t0.elapsed());
+        assert_ne!(c.link(), old_link, "không còn transaction nên phải thay connection");
+        assert_eq!(monitor.first(&format!("SELECT a FROM {table}")), "2");
+        wait_until_gone(&monitor, &m);
+    }
+
+    /// P2 + T2: đang trong transaction tự mở và còn cursor VÔ TẬN: `close` không được treo vì đọc
+    /// bỏ (code cũ `abandon` khi close sẽ đọc bỏ tới DRAIN_TIMEOUT 30 s), và câu ở server dừng.
+    fn close_inside_a_transaction_with_a_big_cursor_is_fast(s: &Server) {
+        let monitor = s.conn();
+        let c = s.conn();
+        ok(&c.exec("BEGIN TRAN"));
+        let m = marker("p2_close");
+        let r = c.exec_page(&endless_rows(&m), 10, MAX_BYTES);
+        assert_eq!(st(&r, 0)["done"], false);
+        wait_until_active(&monitor, &m);
+        let t0 = Instant::now();
+        ok(&call("close", json!({"connId": c.id})));
+        assert!(t0.elapsed() < Duration::from_secs(3), "{:?}", t0.elapsed());
+        assert_eq!(err_code(&c.exec("SELECT 1")), "connNotFound");
+        wait_until_gone(&monitor, &m);
+    }
+
+    /// B1: `close` khi đang có câu chạy dài: câu đó nhận `cancelled`, close xong < 2 giây, connection
+    /// biến mất khỏi registry.
+    fn close_cancels_a_running_waitfor_and_returns_fast(s: &Server) {
+        let monitor = s.conn();
+        let c = s.conn();
+        let m = marker("b1_close");
+        let t = c.exec_in_thread(next_id(), &format!("WAITFOR DELAY '00:00:30'; SELECT '{m}' AS m"));
+        wait_until_active(&monitor, &m);
+        let t0 = Instant::now();
+        ok(&call("close", json!({"connId": c.id})));
+        assert!(t0.elapsed() < Duration::from_secs(2), "{:?}", t0.elapsed());
+        assert_eq!(err_code(&t.join().unwrap()), "cancelled");
+        assert_eq!(err_code(&c.exec("SELECT 1")), "connNotFound");
+        wait_until_gone(&monitor, &m);
     }
 
     // ---- huỷ ----

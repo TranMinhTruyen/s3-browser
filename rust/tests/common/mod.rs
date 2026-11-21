@@ -13,6 +13,15 @@ static NEXT_DIR: AtomicU64 = AtomicU64::new(1);
 pub const PAGE: u64 = 500;
 pub const MAX_BYTES: u64 = 16 * 1024 * 1024;
 
+/// Không có DB/cert để chạy test DB: `S3B_REQUIRE_DB=1` (CI) thì fail, ngược lại in `SKIP` rồi bỏ qua.
+/// cargo test không có skip thật nên bên gọi tự `return`/trả `None` sau khi gọi hàm này.
+pub fn skip_or_fail(msg: &str) {
+    if std::env::var("S3B_REQUIRE_DB").is_ok_and(|v| v == "1") {
+        panic!("{msg}");
+    }
+    eprintln!("{msg}");
+}
+
 pub fn init() {
     assert_eq!(s3b_init(), 0);
 }

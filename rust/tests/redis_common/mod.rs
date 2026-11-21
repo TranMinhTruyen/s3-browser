@@ -12,7 +12,7 @@
 #![allow(dead_code)]
 
 use crate::common::{
-    MAX_BYTES, call, call_with_id, exec, exec_page, fetch, fetch_page, next_id, ok,
+    MAX_BYTES, call, call_with_id, exec, exec_page, fetch, fetch_page, next_id, ok, skip_or_fail,
 };
 use serde_json::{Map, Value, json};
 use std::cell::RefCell;
@@ -93,16 +93,16 @@ fn port_of(var: &str, key: &str, default: u16) -> u16 {
 /// Server (cổng thường) nếu dùng được, ngược lại in `SKIP` và trả `None` (test gọi `return`).
 pub fn server(test: &str) -> Option<Server> {
     let Some(password) = password() else {
-        println!(
+        skip_or_fail(&format!(
             "SKIP redis {test}: chưa có mật khẩu (S3B_REDIS_PASSWORD hoặc test-env/db/db.env)"
-        );
+        ));
         return None;
     };
     let port = port_of("S3B_REDIS_PORT", "REDIS_PORT", DEFAULT_PORT);
     if !reachable(port) {
-        println!(
+        skip_or_fail(&format!(
             "SKIP redis {test}: không nối được {HOST}:{port} (chạy test-env/docker-compose-db.yml)"
-        );
+        ));
         return None;
     }
     let tls_port = port_of("S3B_REDIS_TLS_PORT", "REDIS_TLS_PORT", DEFAULT_TLS_PORT);
@@ -117,10 +117,10 @@ pub fn server(test: &str) -> Option<Server> {
 pub fn tls_server(test: &str) -> Option<Server> {
     let s = server(test)?;
     if !reachable(s.tls_port) {
-        println!(
+        skip_or_fail(&format!(
             "SKIP redis {test}: không nối được cổng TLS {HOST}:{} (chạy test-env/docker-compose-db.yml)",
             s.tls_port
-        );
+        ));
         return None;
     }
     Some(s)

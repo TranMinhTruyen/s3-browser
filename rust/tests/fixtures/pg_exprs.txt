@@ -120,6 +120,8 @@ interval '178000000 years'
 interval '2562047788:00:54.775807'
 interval '1 mon -1 day'
 interval '00:00:00.5'
+'infinity'::interval
+'-infinity'::interval
 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::uuid
 '00000000-0000-0000-0000-000000000000'::uuid
 '192.168.1.1'::inet
@@ -170,6 +172,7 @@ ARRAY['a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::uuid]
 ARRAY['192.168.1.1/24'::inet]
 ARRAY['10.0.0.0/8'::cidr]
 ARRAY['1 day'::interval]
+ARRAY['infinity'::interval, NULL]
 ARRAY['12:00:00+01'::timetz]
 ARRAY[NULL::text]
 ARRAY[NULL,NULL]::int4[]

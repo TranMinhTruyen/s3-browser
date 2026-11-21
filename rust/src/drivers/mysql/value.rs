@@ -131,7 +131,7 @@ fn bit_string(bytes: &[u8], bits: u32) -> String {
     // Bit thứ `p` tính từ bit cao nhất của chuỗi byte; bỏ `total - width` bit cao đầu tiên.
     (total - width..total)
         .map(|p| {
-            if bytes[p / 8] & (0x80 >> (p % 8)) != 0 {
+            if bytes.get(p / 8).is_some_and(|b| b & (0x80 >> (p % 8)) != 0) {
                 '1'
             } else {
                 '0'

@@ -37,8 +37,8 @@ use super::{Conn, StaleFlag, error_text, reconnect};
 use crate::drivers::Cmd;
 use crate::drivers::common::{
     Cursor, Limits, Page, PageBuilder, RegistryGuard, affected_statement, cancelled,
-    cursor_not_found, hold, is_cancel_safe, millis_between, rows_statement, statement_error,
-    track_tx,
+    cursor_not_found, has_write_keyword, hold, is_cancel_safe, millis_between, rows_statement,
+    statement_error, track_tx, words,
 };
 use crate::drivers::split_sql::{Dialect, split};
 use crate::protocol::{
@@ -79,6 +79,9 @@ pub struct Session {
     /// `client` vừa bị bỏ vì `lost`: lần nối lại kế tiếp phải báo mất trạng thái phiên thay vì
     /// lặng lẽ chạy câu tiếp trên database mặc định.
     reset_notice: bool,
+    /// Phiên hiện tại đã chạy batch đổi trạng thái phiên (`USE`, `SET`, `#temp`, `BEGIN TRAN`,
+    /// `sp_...`). Chỉ khi đó việc bỏ connection mới làm mất gì đó đáng báo cho người dùng.
+    dirty: bool,
 }
 
 impl Session {
@@ -90,6 +93,7 @@ impl Session {
             stale: StaleFlag::default(),
             lost: StaleFlag::default(),
             reset_notice: false,
+            dirty: false,
         }
     }
 
@@ -100,17 +104,21 @@ impl Session {
         if self.stale.swap(false, Ordering::AcqRel) {
             self.client = None;
             self.in_tx = false;
-            // Huỷ do người dùng thì họ đã biết (Q23=A); bỏ cursor thì họ không biết nên phải báo.
-            if self.lost.swap(false, Ordering::AcqRel) {
+            // Huỷ do người dùng thì họ đã biết (Q23=A); bỏ cursor thì chỉ phải báo khi phiên đã
+            // có trạng thái bị mất, còn không thì nối lại im lặng.
+            if self.lost.swap(false, Ordering::AcqRel) && self.dirty {
                 self.reset_notice = true;
             }
+            // Phiên mới bắt đầu sạch.
+            self.dirty = false;
         }
     }
 
     /// Bảo đảm có connection dùng được, nối lại nếu vừa bỏ. Trạng thái phiên (`USE <db>`, `SET`,
     /// bảng `#temp`, transaction) của connection cũ đã mất. Nếu connection bị bỏ vì bỏ cursor
-    /// (không phải huỷ) thì nối lại xong vẫn trả `sqlError` một lần để câu của request này không
-    /// chạy nhầm trên database mặc định; chạy lại thì dùng connection mới bình thường.
+    /// (không phải huỷ) mà phiên đã có trạng thái (`dirty`) thì nối lại xong vẫn trả `sqlError`
+    /// một lần để câu của request này không chạy nhầm trên database mặc định; phiên không có
+    /// trạng thái thì chạy câu kế tiếp bình thường.
     async fn ensure_connected(&mut self, cancel: &CancelSignal) -> DbResult<()> {
         self.release_if_stale();
         if self.client.is_some() {
@@ -548,6 +556,58 @@ async fn execute<'s>(
     }
 }
 
+/// Batch có thể đổi trạng thái phiên không: `USE`, `SET`, bảng tạm `#`/`##`, `BEGIN TRAN[SACTION]`,
+/// thủ tục `sp_...` (như `sp_executesql`, `sp_rename`). Quét thô như `has_write_keyword`: nhận
+/// nhầm chỉ khiến báo "connection was reset" thừa, không bỏ sót.
+fn changes_session_state(sql: &str) -> bool {
+    if sql.contains('#') {
+        return true;
+    }
+    let mut words = words(sql);
+    while let Some(w) = words.next() {
+        let is = |kw: &str| w.eq_ignore_ascii_case(kw);
+        let sp = w.get(..3).is_some_and(|p| p.eq_ignore_ascii_case("sp_"));
+        if is("use") || is("set") || sp {
+            return true;
+        }
+        // `EXECUTE AS` đổi ngữ cảnh bảo mật của phiên.
+        if (is("exec") || is("execute"))
+            && words
+                .clone()
+                .next()
+                .is_some_and(|n| n.eq_ignore_ascii_case("as"))
+        {
+            return true;
+        }
+    }
+    opens_tran(sql)
+}
+
+/// Batch có chứa `BEGIN TRAN|TRANSACTION|DISTRIBUTED` ở bất kỳ vị trí nào không. `track_tx`
+/// chỉ xét từ đầu batch (`BEGIN TRY BEGIN TRAN ...` bị coi là không mở transaction), nên
+/// phải quét thêm ở đây. Quét thô: nhận nhầm chỉ làm cursor bị coi là không an toàn để bỏ.
+fn opens_tran(sql: &str) -> bool {
+    let mut words = words(sql);
+    while let Some(w) = words.next() {
+        if w.eq_ignore_ascii_case("begin")
+            && words.clone().next().is_some_and(|n| {
+                ["tran", "transaction", "distributed"]
+                    .iter()
+                    .any(|kw| n.eq_ignore_ascii_case(kw))
+            })
+        {
+            return true;
+        }
+    }
+    false
+}
+
+/// Cancel batch này có an toàn không (không ghi, không đổi trạng thái, và không đang trong
+/// transaction của người dùng).
+fn cancel_safe(in_tx: bool, text: &str) -> bool {
+    !in_tx && is_cancel_safe(text) && !has_write_keyword(text)
+}
+
 /// Tham số chung của mọi batch trong một request.
 struct Run<'a> {
     limits: Limits,
@@ -578,8 +638,10 @@ async fn statement<'s>(
         return (Step::Stop, None);
     }
     // Cancel an toàn hay không phụ thuộc trạng thái transaction TRƯỚC batch này.
-    let cancel_safe = !session.in_tx && is_cancel_safe(text);
+    let cancel_safe = cancel_safe(session.in_tx, text);
     track_tx(&mut session.in_tx, text);
+    session.in_tx |= opens_tran(text);
+    session.dirty |= changes_session_state(text);
     let stale = session.stale.clone();
     let Some(client) = session.client.as_mut() else {
         out.push(statement_error(
@@ -710,50 +772,66 @@ async fn patch_count(
     out: &mut [StatementResult],
     cancel: &CancelSignal,
 ) -> DbResult<()> {
-    let n = row_count(session, cancel).await?;
+    let (n, in_tx) = row_count(session, cancel).await?;
     if let Some(last) = out.last_mut() {
         last.rows_affected = n;
+    }
+    // `@@TRANCOUNT` từ server chính xác hơn quét chữ: batch TRY/CATCH đã COMMIT thì không kẹt
+    // `true`.
+    if let Some(in_tx) = in_tx {
+        session.in_tx = in_tx;
     }
     Ok(())
 }
 
-/// `SELECT @@ROWCOUNT` chạy như một batch riêng (không nối vào batch của người dùng vì có lệnh
-/// phải đứng một mình trong batch, ví dụ `CREATE PROCEDURE`). `@@ROWCOUNT` giữ giá trị của câu
-/// trước trong cùng phiên. Mọi lỗi (trừ huỷ) chỉ làm số dòng trống, không làm hỏng kết quả.
-async fn row_count(session: &mut Session, cancel: &CancelSignal) -> DbResult<Option<i64>> {
+/// `SELECT @@ROWCOUNT, @@TRANCOUNT` chạy như một batch riêng (không nối vào batch của người dùng vì
+/// có lệnh phải đứng một mình trong batch, ví dụ `CREATE PROCEDURE`). `@@ROWCOUNT` giữ giá trị
+/// của câu trước trong cùng phiên (hai biến cùng tính trong một câu nên không bị câu này làm đổi).
+/// Trả (số dòng, còn transaction mở không). Mọi lỗi (trừ huỷ) chỉ làm hai giá trị trống.
+async fn row_count(
+    session: &mut Session,
+    cancel: &CancelSignal,
+) -> DbResult<(Option<i64>, Option<bool>)> {
     if let Err(e) = session.ensure_connected(cancel).await {
         return if e.code == CANCELLED {
             Err(e)
         } else {
-            Ok(None)
+            Ok((None, None))
         };
     }
     let stale = session.stale.clone();
     let Some(client) = session.client.as_mut() else {
-        return Ok(None);
+        return Ok((None, None));
     };
     let read = async {
-        let mut stream = client.simple_query("SELECT @@ROWCOUNT").await?;
-        let mut count = None;
+        let mut stream = client
+            .simple_query("SELECT @@ROWCOUNT, @@TRANCOUNT")
+            .await?;
+        let mut res = (None, None);
         while let Some(item) = stream.try_next().await? {
             if let QueryItem::Row(row) = item
-                && count.is_none()
+                && res == (None, None)
             {
-                count = row.get::<i32, _>(0).map(i64::from);
+                res = split_counts(row.get::<i32, _>(0), row.get::<i32, _>(1));
             }
         }
-        Ok(count)
+        Ok(res)
     };
     match tokio::time::timeout(COUNT_TIMEOUT, drive(read, cancel, &stale)).await {
-        Ok(Ok(n)) => Ok(n),
+        Ok(Ok(r)) => Ok(r),
         Ok(Err(e)) if e.code == CANCELLED => Err(e),
-        Ok(Err(_)) => Ok(None),
+        Ok(Err(_)) => Ok((None, None)),
         Err(_) => {
             // Thả giữa chừng: connection lệch pha, bỏ.
             stale.store(true, Ordering::Release);
-            Ok(None)
+            Ok((None, None))
         }
     }
+}
+
+/// Đổi hai cột `(@@ROWCOUNT, @@TRANCOUNT)` thành (số dòng, còn trong transaction không).
+fn split_counts(rows: Option<i32>, trancount: Option<i32>) -> (Option<i64>, Option<bool>) {
+    (rows.map(i64::from), trancount.map(|t| t > 0))
 }
 
 #[cfg(test)]
@@ -1041,5 +1119,110 @@ mod tests {
         assert_eq!(out[0].index, 2);
         assert_eq!(out[0].sql, "select 1/0");
         assert_eq!(out[0].error.as_ref().unwrap().message, "Msg 8134");
+    }
+
+    // ---- split_counts (B13) ----
+
+    #[test]
+    fn split_counts_maps_rowcount_and_trancount() {
+        assert_eq!(split_counts(Some(5), Some(0)), (Some(5), Some(false)));
+        assert_eq!(split_counts(Some(1), Some(2)), (Some(1), Some(true)));
+        assert_eq!(split_counts(None, None), (None, None));
+        assert_eq!(split_counts(Some(3), None), (Some(3), None));
+        assert_eq!(split_counts(None, Some(1)), (None, Some(true)));
+        assert_eq!(split_counts(Some(0), Some(1)), (Some(0), Some(true)));
+        // Biên: `i32::MAX` giữ nguyên khi nới sang i64; trancount âm không phải "trong transaction".
+        assert_eq!(
+            split_counts(Some(i32::MAX), Some(i32::MAX)),
+            (Some(i64::from(i32::MAX)), Some(true))
+        );
+        assert_eq!(split_counts(Some(-1), Some(-1)), (Some(-1), Some(false)));
+    }
+
+    // ---- changes_session_state (B5) ----
+
+    #[test]
+    fn session_state_changing_batches_are_detected() {
+        for sql in [
+            "USE master",
+            "use [shop]",
+            "SET NOCOUNT ON",
+            "set transaction isolation level snapshot",
+            "SELECT * INTO #t FROM x",
+            "create table ##g (a int)",
+            "SELECT * FROM #temp",
+            "EXEC sp_executesql N'select 1'",
+            "exec SP_rename 'a', 'b'",
+            "BEGIN TRAN",
+            "begin transaction",
+            "BEGIN
+TRANSACTION t1",
+            "SELECT 1; USE other",
+            // B10
+            "EXECUTE AS USER = 'x'",
+            "exec as login='a'",
+            "BEGIN DISTRIBUTED TRANSACTION",
+        ] {
+            assert!(changes_session_state(sql), "{sql}");
+        }
+    }
+
+    /// Cách `statement` ghép `track_tx` với `opens_tran` (B9). Gọi `statement` cần server thật,
+    /// nên mô phỏng đúng hai dòng đó; phần có DB nằm ở `tests/mssql.rs`.
+    fn in_tx_after(start: bool, sql: &str) -> bool {
+        let mut in_tx = start;
+        track_tx(&mut in_tx, sql);
+        in_tx |= opens_tran(sql);
+        in_tx
+    }
+
+    #[test]
+    fn begin_tran_nested_in_try_block_sets_in_tx_and_commit_clears_it() {
+        let try_tran = "BEGIN TRY BEGIN TRAN UPDATE t SET a=1 END TRY BEGIN CATCH END CATCH";
+        assert!(opens_tran(try_tran));
+        // `track_tx` một mình bỏ sót (chỉ xét đầu batch): đây là lỗi B9.
+        let mut only_track = false;
+        track_tx(&mut only_track, try_tran);
+        assert!(!only_track);
+        assert!(in_tx_after(false, try_tran));
+        let try_select = "BEGIN TRY SELECT 1 END TRY BEGIN CATCH END CATCH";
+        assert!(!opens_tran(try_select));
+        assert!(!in_tx_after(false, try_select));
+        // COMMIT sau đó thì thoát transaction.
+        assert!(!in_tx_after(true, "COMMIT"));
+        assert!(!in_tx_after(true, "ROLLBACK TRAN"));
+        // Batch thường không làm mất trạng thái đang trong transaction.
+        assert!(in_tx_after(true, "SELECT 1"));
+    }
+
+    #[test]
+    fn plain_batches_do_not_change_session_state() {
+        for sql in [
+            "SELECT 1",
+            "select * from dbo.t where a = 1",
+            "INSERT INTO t VALUES (1)",
+            "SELECT used, settings, spx FROM t",
+            // `BEGIN TRY` không mở transaction.
+            "BEGIN TRY SELECT 1 END TRY BEGIN CATCH SELECT 2 END CATCH",
+            // B10: `EXEC` không kèm `AS` và không phải `sp_`.
+            "EXEC p",
+            "",
+        ] {
+            assert!(!changes_session_state(sql), "{sql:?}");
+        }
+    }
+
+    #[test]
+    fn cancel_safe_needs_a_read_start_and_no_write_keyword_anywhere_in_the_batch() {
+        // B3: cách `statement` ghép hai hàm (`!in_tx` không xét ở đây).
+        let safe = |sql: &str| cancel_safe(false, sql);
+        assert!(safe("SELECT 1"));
+        assert!(safe("select * from t"));
+        // Bắt đầu bằng SELECT nhưng batch có ghi: chỉ `is_cancel_safe` thì nhận nhầm.
+        assert!(is_cancel_safe("SELECT 1; UPDATE ##probe SET a = 2"));
+        assert!(!safe("SELECT 1; UPDATE ##probe SET a = 2"));
+        assert!(!safe("SELECT a INTO #x FROM t"));
+        assert!(!safe("SELECT 1; EXEC p"));
+        assert!(!safe("UPDATE t SET a = 1"));
     }
 }

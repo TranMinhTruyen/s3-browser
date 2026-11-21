@@ -138,8 +138,8 @@ fn verify_full_checks_the_host_name_but_verify_ca_does_not() {
     // `127.0.0.2` (proxy tới server) không có trong SAN: verify-full phải từ chối, các mode không
     // kiểm hostname vẫn qua.
     let Some((host, port)) = host_outside_the_certificate(pg.port) else {
-        println!(
-            "SKIP verify_full_hostname (phần host ngoài chứng chỉ): không bind được 127.0.0.2"
+        skip_or_fail(
+            "SKIP verify_full_hostname (phần host ngoài chứng chỉ): không bind được 127.0.0.2",
         );
         return;
     };

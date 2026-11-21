@@ -19,7 +19,9 @@
 //! - Hằng như `Type::INT4` dùng được làm mẫu trong `match` (so sánh theo giá trị).
 
 use crate::drivers::common::hex;
-use crate::drivers::datetime::{MICROS_PER_DAY, PG_EPOCH_UNIX_DAYS, write_date, write_time_micros};
+use crate::drivers::datetime::{
+    MICROS_PER_DAY, PG_EPOCH_UNIX_DAYS, write_date, write_micros_trimmed, write_time_micros,
+};
 use postgres_protocol::types as pt;
 use std::fmt::{self, Write};
 use std::net::IpAddr;
@@ -170,11 +172,17 @@ pub fn write_scalar(out: &mut String, sc: Scalar, raw: &[u8]) -> Decoded {
         Scalar::Float8 => write_f64(out, pt::float8_from_sql(raw)?)?,
         Scalar::Numeric => write_numeric(out, raw)?,
         Scalar::Text | Scalar::Json => out.push_str(pt::text_from_sql(raw)?),
-        // `"char"` 0 là chuỗi rỗng; byte >= 128 không phải UTF-8 hợp lệ một mình nên rơi về hex.
-        Scalar::Char => match u8::try_from(pt::char_from_sql(raw)?) {
-            Ok(0) => {}
-            Ok(b) if b.is_ascii() => out.push(char::from(b)),
-            _ => return Err(BadData),
+        // `"char"` 0 là chuỗi rỗng; byte >= 128 không phải UTF-8 hợp lệ một mình nên in `\ooo`
+        // (bát phân 3 chữ số) như server.
+        Scalar::Char => match pt::char_from_sql(raw)?.cast_unsigned() {
+            0 => {}
+            b if b.is_ascii() => out.push(char::from(b)),
+            b => {
+                out.push('\\');
+                for shift in [6, 3, 0] {
+                    out.push(char::from(b'0' + (b >> shift & 7)));
+                }
+            }
         },
         // Byte đầu của jsonb là số phiên bản (luôn 1), phần còn lại là JSON text.
         Scalar::Jsonb => match raw.split_first() {
@@ -333,6 +341,18 @@ fn write_interval(out: &mut String, raw: &[u8]) -> Decoded {
     ]);
     let days = i32::from_be_bytes([raw[8], raw[9], raw[10], raw[11]]);
     let months = i32::from_be_bytes([raw[12], raw[13], raw[14], raw[15]]);
+    // PostgreSQL 17 có `interval` vô cực: cả ba phần ở giá trị lớn/nhỏ nhất.
+    match (time, days, months) {
+        (i64::MAX, i32::MAX, i32::MAX) => {
+            out.push_str("infinity");
+            return Ok(());
+        }
+        (i64::MIN, i32::MIN, i32::MIN) => {
+            out.push_str("-infinity");
+            return Ok(());
+        }
+        _ => {}
+    }
 
     let mut is_zero = true;
     let mut is_before = false;
@@ -377,8 +397,7 @@ fn write_interval(out: &mut String, raw: &[u8]) -> Decoded {
         push_padded_2(out, sec.unsigned_abs());
         if frac != 0 {
             out.push('.');
-            let digits = format!("{:06}", frac.unsigned_abs());
-            out.push_str(digits.trim_end_matches('0'));
+            write_micros_trimmed(out, frac.unsigned_abs());
         }
     }
     Ok(())
@@ -1303,9 +1322,11 @@ mod tests {
         assert_eq!(sc(Scalar::Char, b"x"), "x");
         assert_eq!(sc(Scalar::Char, &[0]), "");
         assert_eq!(sc(Scalar::Char, b"~"), "~");
-        // Byte >= 128 không phải UTF-8 hợp lệ khi đứng một mình.
-        assert_hex_fallback(Scalar::Char, &[0xe9]);
-        assert_hex_fallback(Scalar::Char, &[0x80]);
+        // Q4: byte >= 128 không phải UTF-8 hợp lệ khi đứng một mình, in `\ooo` bát phân như server.
+        assert_eq!(sc(Scalar::Char, &[0x80]), r"\200");
+        assert_eq!(sc(Scalar::Char, &[0xff]), r"\377");
+        assert_eq!(sc(Scalar::Char, &[0xe9]), r"\351");
+        assert_eq!(sc(Scalar::Char, &[0x7f]), "\x7f");
         assert_hex_fallback(Scalar::Char, &[]);
         assert_hex_fallback(Scalar::Char, b"ab");
     }
@@ -1586,6 +1607,42 @@ mod tests {
         assert_eq!(iv(i64::MIN, 0, 0), "-2562047788:00:54.775808");
         assert_eq!(iv(0, 0, i32::MAX), "178956970 years 7 mons");
         assert_eq!(iv(0, 0, i32::MIN), "-178956970 years -8 mons");
+    }
+
+    #[test]
+    fn interval_infinity_is_the_all_max_or_all_min_triple() {
+        // B2: PostgreSQL 17, 16 byte dựng tay.
+        let mut inf = i64::MAX.to_be_bytes().to_vec();
+        inf.extend_from_slice(&i32::MAX.to_be_bytes());
+        inf.extend_from_slice(&i32::MAX.to_be_bytes());
+        assert_eq!(inf.len(), 16);
+        assert_eq!(sc(Scalar::Interval, &inf), "infinity");
+        let mut ninf = i64::MIN.to_be_bytes().to_vec();
+        ninf.extend_from_slice(&i32::MIN.to_be_bytes());
+        ninf.extend_from_slice(&i32::MIN.to_be_bytes());
+        assert_eq!(sc(Scalar::Interval, &ninf), "-infinity");
+        assert_eq!(iv(i64::MAX, i32::MAX, i32::MAX), "infinity");
+        assert_eq!(iv(i64::MIN, i32::MIN, i32::MIN), "-infinity");
+    }
+
+    #[test]
+    fn interval_with_only_some_parts_at_the_extreme_is_not_infinity() {
+        // Chỉ khi cả ba phần cùng cực trị mới là vô cực; hai trên ba vẫn là giá trị thường.
+        assert_ne!(iv(i64::MAX, i32::MAX, 0), "infinity");
+        assert_ne!(iv(i64::MAX, 0, i32::MAX), "infinity");
+        assert_ne!(iv(0, i32::MAX, i32::MAX), "infinity");
+        assert_ne!(iv(i64::MIN, i32::MIN, 0), "-infinity");
+        // Lệch dấu giữa các phần cũng không phải vô cực.
+        assert_ne!(iv(i64::MAX, i32::MIN, i32::MIN), "infinity");
+        assert_ne!(iv(i64::MIN, i32::MAX, i32::MAX), "-infinity");
+    }
+
+    #[test]
+    fn interval_fraction_uses_trimmed_micros() {
+        // P3: phần micro giây ghi qua `write_micros_trimmed`.
+        assert_eq!(iv(hms(0, 0, 1) + 500_000, 0, 0), "00:00:01.5");
+        assert_eq!(iv(hms(0, 0, 1) + 1, 0, 0), "00:00:01.000001");
+        assert_eq!(iv(hms(0, 0, 1) + 123_456, 0, 0), "00:00:01.123456");
     }
 
     #[test]
