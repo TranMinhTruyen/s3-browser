@@ -1,3 +1,4 @@
+import type { SQLNamespace } from '@codemirror/lang-sql';
 import type { EditorView } from '@codemirror/view';
 import { Divider, Paper, Splitter } from '@mantine/core';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
@@ -11,11 +12,16 @@ import SqlResultPanel from '@/pages/sql/components/sqlResult/SqlResultPanel';
 import { useSqlRunner } from '@/pages/sql/hooks/useSqlRunner';
 import { getMockSchema } from '@/pages/sql/mock/dbSchemaMock';
 import { type Provider, selectProfileNames, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
+import { useDbTreeStore } from '@/pages/sql/stores/dbTreeStore';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
 import { DEFAULT_FIND_OPTIONS, escapeRegExp, type FindOptions } from '@/pages/sql/utils/findReplace';
 import { formatEditorSql } from '@/pages/sql/utils/sqlFormat';
 
 const PROVIDER_DIALECT: Record<Provider, SqlDialect> = { sqlite: 'sqlite', postgres: 'postgresql' };
+
+/** Autocomplete namespace of the tables and views in the object tree (no columns); undefined until the tree is loaded. */
+const toNamespace = (names: string[] | undefined): SQLNamespace | undefined =>
+  names && Object.fromEntries(names.map(name => [name, []]));
 
 type SqlTabDetailProps = {
   tabId: string;
@@ -35,7 +41,12 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
     s => (selectedProfileId ? s.dbProfiles[selectedProfileId]?.provider : null) ?? null
   );
   const dialect = provider ? PROVIDER_DIALECT[provider] : null;
-  const schema = useMemo(() => getMockSchema(provider), [provider]);
+  // SQLite completes with the tables and views of its object tree; PostgreSQL still uses the mock schema.
+  const tableNames = useDbTreeStore(s => (selectedProfileId ? s.trees[selectedProfileId]?.tableNames : undefined));
+  const schema = useMemo(
+    () => (provider === 'sqlite' ? toNamespace(tableNames) : getMockSchema(provider)),
+    [provider, tableNames]
+  );
   const editorRef = useRef<EditorView | null>(null);
   // Find state lives here (not in the panel) so it survives closing the panel and switching tabs.
   const [findOpen, setFindOpen] = useState(false);

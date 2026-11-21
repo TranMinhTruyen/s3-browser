@@ -14,28 +14,26 @@ import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
 import { pgProfile, sqliteProfile, toProfileMap } from '@/test/_helpers/dbProfiles';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// jsdom has no layout, so render every row.
-const virtual = vi.hoisted(() => ({ measure: vi.fn(), estimate: 0, gap: 0 }));
+// jsdom has no layout, so render every row. The mock sizes each row with `estimateSize(index)` like the real one.
+const virtual = vi.hoisted(() => ({ measure: vi.fn(), sizes: [] as number[] }));
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: (options: {
     count: number;
     getItemKey: (i: number) => string;
-    estimateSize: () => number;
-    gap?: number;
+    estimateSize: (i: number) => number;
   }) => {
-    const size = options.estimateSize();
-    const gap = options.gap ?? 0;
-    virtual.estimate = size;
-    virtual.gap = gap;
+    const sizes = Array.from({ length: options.count }, (_, index) => options.estimateSize(index));
+    virtual.sizes = sizes;
     return {
       measure: () => virtual.measure(),
       getVirtualItems: () =>
-        Array.from({ length: options.count }, (_, index) => ({
+        sizes.map((size, index) => ({
           key: options.getItemKey(index),
           index,
-          start: index * (size + gap),
+          size,
+          start: sizes.slice(0, index).reduce((sum, s) => sum + s, 0),
         })),
-      getTotalSize: () => Math.max(0, options.count * size + (options.count - 1) * gap),
+      getTotalSize: () => sizes.reduce((sum, s) => sum + s, 0),
     };
   },
 }));
@@ -44,6 +42,7 @@ vi.mock('@wails/S3Browser/internal/handlers/dbhandler', () => ({
   ConnectDb: vi.fn(),
   DeleteDbProfileById: vi.fn(),
   DisconnectDb: vi.fn(),
+  GetSchemaTree: vi.fn(),
   GetAllDbProfile: vi.fn(),
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), info: vi.fn() } }));
@@ -107,21 +106,21 @@ describe('DbProfiles', () => {
     const row = (name: string) => card(name).parentElement as HTMLElement;
     const setSize = (size: UiSizeKey) => act(() => useSettingStore.setState(st => ({ draft: { ...st.draft, size } })));
 
-    it('keeps the 68px card and 8px gap at the medium size', () => {
+    it('keeps the 68px card and the 8px gap above the next card at the medium size', () => {
       renderWithProviders(<DbProfiles />);
-      expect(virtual.estimate).toBe(68);
-      expect(virtual.gap).toBe(8);
+      // The gap is part of the height of every card but the first (it was a virtualizer `gap` before).
+      expect(virtual.sizes).toEqual([68, 76]);
       expect(row('Local PostgreSQL')).toHaveStyle({ height: '68px', transform: 'translateY(0px)' });
+      expect(row('Staging PostgreSQL')).toHaveStyle({ height: '76px', transform: 'translateY(68px)' });
     });
 
     it.each([
-      ['small', 59.5, 7],
-      ['large', 76.5, 9],
-    ] as const)('scales the card height and the gap at the %s size', (size, height, gap) => {
+      ['small', 59.5, 66.5],
+      ['large', 76.5, 85.5],
+    ] as const)('scales the card height and the gap at the %s size', (size, height, second) => {
       useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size } });
       renderWithProviders(<DbProfiles />);
-      expect(virtual.estimate).toBe(height);
-      expect(virtual.gap).toBe(gap);
+      expect(virtual.sizes).toEqual([height, second]);
       expect(row('Local PostgreSQL')).toHaveStyle({ height: `${height}px` });
     });
 
@@ -248,10 +247,15 @@ describe('DbProfiles', () => {
       ]);
     });
 
-    it('offers Disconnect, Export and Delete (no Edit) for a connected profile', async () => {
+    it('offers Disconnect, Refresh, Export and Delete (no Edit) for a connected profile', async () => {
       useDbProfileStore.getState().setConnected('mock-pg-local', true);
       renderWithProviders(<DbProfiles />);
-      expect((await openMenu('Local PostgreSQL')).map(i => i.textContent)).toEqual(['Disconnect', 'Export', 'Delete']);
+      expect((await openMenu('Local PostgreSQL')).map(i => i.textContent)).toEqual([
+        'Disconnect',
+        'Refresh',
+        'Export',
+        'Delete',
+      ]);
     });
 
     it('Connect connects the right-clicked profile', async () => {

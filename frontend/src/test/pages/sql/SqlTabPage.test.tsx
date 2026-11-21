@@ -20,6 +20,9 @@ vi.mock('@/pages/sql/components/SqlTabDetail', () => ({
     return <div data-testid={`detail-${tabId}`} data-instance={instance} />;
   }),
 }));
+vi.mock('@/pages/sql/components/tableStructure/TableStructureDetail', () => ({
+  default: ({ tabId }: { tabId: string }) => <div data-testid={`table-${tabId}`} />,
+}));
 vi.mock('@/components/tabs/TabDragPreview', () => ({
   default: ({ label, closable }: any) => (
     <div data-testid="preview">
@@ -118,6 +121,30 @@ describe('SqlTabPage', () => {
     expect(screen.getByTestId(`detail-${first}`)).toHaveAttribute('data-instance', '0');
     expect(detail.created).toBe(2);
     expect(screen.getByTestId(`detail-${second}`).parentElement).toHaveStyle({ display: 'none' });
+  });
+
+  it('shows the table structure for a table tab and the editor for a SQL tab', () => {
+    renderWithProviders(<SqlTabPage />);
+    const [sql] = tabIds();
+
+    act(() => useSqlTabStore.getState().openTableTab('p1', 'main', 'users'));
+    const table = active();
+
+    expect(screen.getByTestId(`table-${table}`)).toBeInTheDocument();
+    expect(screen.queryByTestId(`detail-${table}`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`detail-${sql}`)).toBeInTheDocument();
+    expect(screen.queryByTestId(`table-${sql}`)).not.toBeInTheDocument();
+  });
+
+  it('drops the detail of a closed tab and keeps the other', async () => {
+    renderWithProviders(<SqlTabPage />);
+    await add();
+    const [first, second] = tabIds();
+
+    act(() => useSqlTabStore.getState().closeTab(second));
+
+    expect(screen.queryByTestId(`detail-${second}`)).not.toBeInTheDocument();
+    expect(screen.getByTestId(`detail-${first}`)).toBeInTheDocument();
   });
 
   it('does not mount a tab that was never active', () => {

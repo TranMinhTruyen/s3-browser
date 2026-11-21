@@ -1,0 +1,43 @@
+{
+  "tab": {
+    "data": "資料",
+    "column": "資料行",
+    "index": "索引",
+    "constraint": "限制式",
+    "fk": "外部索引鍵",
+    "source": "原始碼"
+  },
+  "column": {
+    "name": "名稱",
+    "type": "類型",
+    "nullable": "可為 Null",
+    "default": "預設值",
+    "primaryKey": "主索引鍵"
+  },
+  "index": {
+    "name": "名稱",
+    "unique": "唯一",
+    "origin": "來源",
+    "partial": "部分",
+    "columns": "資料行"
+  },
+  "constraint": {
+    "kind": "類型",
+    "name": "名稱",
+    "columns": "資料行",
+    "expression": "運算式"
+  },
+  "fk": {
+    "columns": "資料行",
+    "refTable": "參考資料表",
+    "refColumns": "參考資料行",
+    "onUpdate": "更新時",
+    "onDelete": "刪除時"
+  },
+  "nullValue": "NULL",
+  "yes": "是",
+  "no": "否",
+  "loadError": "無法載入資料表結構",
+  "noSource": "沒有可用的原始碼",
+  "loadingMore": "正在載入更多資料列…"
+}

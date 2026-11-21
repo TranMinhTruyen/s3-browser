@@ -1,8 +1,8 @@
-import { Menu, Text } from '@mantine/core';
+import { type FlattenedTreeNodeData, flattenTreeData, Menu, Text } from '@mantine/core';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { FileDown, PlugZap, SquarePen, Trash, Unplug } from 'lucide-react';
+import { FileDown, PlugZap, RefreshCw, SquarePen, Trash, Unplug } from 'lucide-react';
 import type { MouseEvent } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
@@ -10,14 +10,29 @@ import { useRemeasureOnScale, useUiScale } from '@/common/hooks/useUiScale';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import DbProfileModal from '@/pages/sql/modals/dbProfile/DbProfileModal';
 import DbProfileItem, { CARD_HEIGHT } from '@/pages/sql/navbar/DbProfileItem';
+import DbTreeRow, { DbTreeStatusRow, NODE_HEIGHT } from '@/pages/sql/navbar/DbTreeRow';
 import { useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
+import { useDbTreeStore } from '@/pages/sql/stores/dbTreeStore';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
 import { notifyNoBackend } from '@/pages/sql/utils/sqlToast';
 
-// Gap between cards only (none after the last one), so the list has the same 8px space at the top and bottom.
-const ROW_GAP = 8;
+// Space above every card except the first one, so the list has the same 8px space at the top and bottom.
+const CARD_GAP = 8;
 
-/** Virtualized list of database profiles with a shared right-click menu (same behavior as the S3 list). */
+/** A row of the flat list: a profile card, a node of its object tree, or a status line under the card. */
+type ListRow =
+  | { key: string; type: 'card'; profileKey: string }
+  | { key: string; type: 'node'; profileKey: string; flat: FlattenedTreeNodeData }
+  | { key: string; type: 'status'; profileKey: string; status: 'loading' | 'error' | 'empty' };
+
+/** Height of a row in px at the medium interface size (a card also holds the gap above it). */
+const getRowHeight = (row: ListRow, index: number) =>
+  row.type === 'card' ? CARD_HEIGHT + (index > 0 ? CARD_GAP : 0) : NODE_HEIGHT;
+
+/**
+ * Virtualized list of database profiles with a shared right-click menu (same behavior as the S3 list).
+ * The cards and the object trees of the open profiles are one flat list, so the tree rows are virtualized too.
+ */
 function DbProfiles() {
   const { t } = useTranslation('sqlNavbar');
   const [menuKey, setMenuKey] = useState<string | null>(null);
@@ -31,6 +46,22 @@ function DbProfiles() {
   const connectDbProfile = useDbProfileStore(s => s.connectDbProfile);
   const disconnectDbProfile = useDbProfileStore(s => s.disconnectDbProfile);
   const clearProfile = useSqlTabStore(s => s.clearProfile);
+  const closeProfileTables = useSqlTabStore(s => s.closeProfileTables);
+  const openTreeProfile = useDbTreeStore(s => s.openProfile);
+  const toggleTreeProfile = useDbTreeStore(s => s.toggleProfile);
+  const toggleTreeNode = useDbTreeStore(s => s.toggleNode);
+  const selectTreeNode = useDbTreeStore(s => s.selectNode);
+  const refreshTreeProfile = useDbTreeStore(s => s.refreshProfile);
+  const dropTreeProfile = useDbTreeStore(s => s.dropProfile);
+  const openedTrees = useDbTreeStore(s => s.opened);
+  const trees = useDbTreeStore(s => s.trees);
+  const expanded = useDbTreeStore(s => s.expanded);
+  const selectedNode = useDbTreeStore(s => s.selected);
+  const openTableTab = useSqlTabStore(s => s.openTableTab);
+  // The profile of the selected tab: its tree opens by itself when it is closed.
+  const activeTab = useSqlTabStore(s => s.activeTab);
+  const activeProfileId = useSqlTabStore(s => s.tabList[activeTab]?.profileId ?? null);
+  const activeConnected = useDbProfileStore(s => !!(activeProfileId && s.dbProfiles[activeProfileId]?.isConnected));
 
   // Handlers take the key and read the latest profile from the store, so they stay stable for memoized items.
   // SQLite connects for real; PostgreSQL is still fake (only the flag). The store keeps the flag when it fails.
@@ -47,9 +78,12 @@ function DbProfiles() {
     async (key: string) => {
       const profile = getDbProfileById(key);
       if (!profile?.isConnected) return;
-      if (await disconnectDbProfile(key)) toast.success(t('toast.disconnected', { name: profile.name }));
+      if (!(await disconnectDbProfile(key))) return;
+      dropTreeProfile(key);
+      closeProfileTables(key);
+      toast.success(t('toast.disconnected', { name: profile.name }));
     },
-    [getDbProfileById, disconnectDbProfile, t]
+    [getDbProfileById, disconnectDbProfile, dropTreeProfile, closeProfileTables, t]
   );
 
   const onClickEditProfile = useCallback(
@@ -74,10 +108,12 @@ function DbProfiles() {
       if (!confirmDelete) return;
 
       if (!(await removeDbProfile(key))) return;
+      dropTreeProfile(key);
+      closeProfileTables(key);
       clearProfile(key);
       toast.success(t('toast.deleted', { name: profile.name }));
     },
-    [getDbProfileById, removeDbProfile, clearProfile, t]
+    [getDbProfileById, removeDbProfile, dropTreeProfile, closeProfileTables, clearProfile, t]
   );
 
   // One shared context menu for all rows (a Menu per row is costly with hundreds of profiles).
@@ -94,10 +130,33 @@ function DbProfiles() {
 
   const onClickMenuConnect = useCallback(() => menuKey && onClickConnect(menuKey), [menuKey, onClickConnect]);
   const onClickMenuDisconnect = useCallback(() => menuKey && onClickDisconnect(menuKey), [menuKey, onClickDisconnect]);
+  const onClickMenuRefresh = useCallback(() => menuKey && refreshTreeProfile(menuKey), [menuKey, refreshTreeProfile]);
   const onClickMenuEdit = useCallback(() => menuKey && onClickEditProfile(menuKey), [menuKey, onClickEditProfile]);
   const onClickMenuDelete = useCallback(
     () => menuKey && onClickDeleteProfile(menuKey),
     [menuKey, onClickDeleteProfile]
+  );
+
+  // Selecting a tab of a connected profile opens its tree when closed; a tree opened or closed by hand stays so.
+  // activeTab: selecting another tab of the same profile must reopen a tree the user closed.
+  useEffect(() => {
+    if (activeProfileId && activeConnected) void openTreeProfile(activeProfileId);
+  }, [activeTab, activeProfileId, activeConnected, openTreeProfile]);
+
+  const rows = useMemo(
+    () =>
+      keys.flatMap((key): ListRow[] => {
+        const card: ListRow = { key, type: 'card', profileKey: key };
+        const tree = openedTrees[key] ? trees[key] : undefined;
+        if (!tree) return [card];
+        if (tree.status !== 'ready' || tree.nodes.length === 0) {
+          const status = tree.status === 'ready' ? 'empty' : tree.status;
+          return [card, { key: `status:${key}`, type: 'status', profileKey: key, status }];
+        }
+        const nodes = flattenTreeData(tree.nodes, expanded);
+        return [card, ...nodes.map((flat): ListRow => ({ key: flat.node.value, type: 'node', profileKey: key, flat }))];
+      }),
+    [keys, openedTrees, trees, expanded]
   );
 
   const scale = useUiScale();
@@ -105,12 +164,11 @@ function DbProfiles() {
   // React Compiler is disabled, so this compiler-only lint does not apply.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
-    count: keys.length,
+    count: rows.length,
     getScrollElement: () => scrollRef.current,
-    // Fixed card height: the virtualizer never measures, so the scroll size stays stable while scrolling.
-    estimateSize: () => CARD_HEIGHT * scale,
-    gap: ROW_GAP * scale,
-    getItemKey: idx => keys[idx],
+    // Fixed row heights: the virtualizer never measures, so the scroll size stays stable while scrolling.
+    estimateSize: idx => getRowHeight(rows[idx], idx) * scale,
+    getItemKey: idx => rows[idx].key,
     overscan: 10,
   });
 
@@ -138,19 +196,42 @@ function DbProfiles() {
       <Menu width="12.5rem" opened={menuOpened} onChange={onChangeMenu}>
         <Menu.ContextMenu>
           <div style={{ position: 'relative', height: virtualizer.getTotalSize() }} onContextMenu={onContextMenuRows}>
-            {virtualItems.map(row => (
-              <div
-                key={row.key}
-                style={{
-                  position: 'absolute',
-                  width: '100%',
-                  height: CARD_HEIGHT * scale,
-                  transform: `translateY(${row.start}px)`,
-                }}
-              >
-                <DbProfileItem profileKey={keys[row.index]} onConnect={onClickConnect} />
-              </div>
-            ))}
+            {virtualItems.map(item => {
+              const row = rows[item.index];
+              return (
+                <div
+                  key={item.key}
+                  style={{
+                    position: 'absolute',
+                    width: '100%',
+                    height: item.size,
+                    boxSizing: 'border-box',
+                    // The gap above a card is rem, so it follows the interface size like the card itself.
+                    paddingTop: row.type === 'card' && item.index > 0 ? `${CARD_GAP / 16}rem` : undefined,
+                    transform: `translateY(${item.start}px)`,
+                  }}
+                >
+                  {row.type === 'card' ? (
+                    <DbProfileItem
+                      profileKey={row.profileKey}
+                      onConnect={onClickConnect}
+                      onToggleTree={toggleTreeProfile}
+                    />
+                  ) : row.type === 'node' ? (
+                    <DbTreeRow
+                      profileKey={row.profileKey}
+                      flat={row.flat}
+                      selected={row.flat.node.value === selectedNode}
+                      onToggle={toggleTreeNode}
+                      onSelect={selectTreeNode}
+                      onOpenTable={openTableTab}
+                    />
+                  ) : (
+                    <DbTreeStatusRow status={row.status} />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </Menu.ContextMenu>
 
@@ -167,6 +248,11 @@ function DbProfiles() {
               onClick={onClickMenuDisconnect}
             >
               {t('contextMenu.disconnect')}
+            </Menu.Item>
+          )}
+          {menuConnected && (
+            <Menu.Item leftSection={<RefreshCw size="1rem" />} onClick={onClickMenuRefresh}>
+              {t('contextMenu.refresh')}
             </Menu.Item>
           )}
           {!menuConnected && (

@@ -1,0 +1,43 @@
+{
+  "tab": {
+    "data": "Data",
+    "column": "Column",
+    "index": "Index",
+    "constraint": "Constraint",
+    "fk": "FK",
+    "source": "Source"
+  },
+  "column": {
+    "name": "Name",
+    "type": "Type",
+    "nullable": "Nullable",
+    "default": "Default",
+    "primaryKey": "Primary key"
+  },
+  "index": {
+    "name": "Name",
+    "unique": "Unique",
+    "origin": "Origin",
+    "partial": "Partial",
+    "columns": "Columns"
+  },
+  "constraint": {
+    "kind": "Kind",
+    "name": "Name",
+    "columns": "Columns",
+    "expression": "Expression"
+  },
+  "fk": {
+    "columns": "Columns",
+    "refTable": "Referenced table",
+    "refColumns": "Referenced columns",
+    "onUpdate": "On update",
+    "onDelete": "On delete"
+  },
+  "nullValue": "NULL",
+  "yes": "Yes",
+  "no": "No",
+  "loadError": "Could not load the table structure",
+  "noSource": "No source available",
+  "loadingMore": "Loading more rows…"
+}

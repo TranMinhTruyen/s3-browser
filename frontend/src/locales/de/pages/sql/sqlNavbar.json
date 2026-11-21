@@ -2,6 +2,7 @@
   "contextMenu": {
     "connect": "Verbinden",
     "disconnect": "Trennen",
+    "refresh": "Neu laden",
     "edit": "Bearbeiten",
     "export": "Exportieren",
     "delete": "Löschen"
@@ -14,6 +15,17 @@
   },
   "profile": {
     "empty": "Noch keine Datenbankprofile. Erstellen Sie eines mit den Schaltflächen oben."
+  },
+  "tree": {
+    "tables": "Tabellen",
+    "views": "Ansichten",
+    "indexes": "Indizes",
+    "triggers": "Trigger",
+    "loading": "Objekte werden geladen…",
+    "empty": "Keine Objekte",
+    "loadError": "Objekte konnten nicht geladen werden",
+    "expand": "Objekte anzeigen",
+    "collapse": "Objekte ausblenden"
   },
   "dbType": {
     "postgresql": "PostgreSQL",

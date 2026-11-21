@@ -2,6 +2,7 @@
   "contextMenu": {
     "connect": "连接",
     "disconnect": "断开连接",
+    "refresh": "刷新",
     "edit": "编辑",
     "export": "导出",
     "delete": "删除"
@@ -14,6 +15,17 @@
   },
   "profile": {
     "empty": "暂无数据库配置文件。请使用上方的按钮创建。"
+  },
+  "tree": {
+    "tables": "表",
+    "views": "视图",
+    "indexes": "索引",
+    "triggers": "触发器",
+    "loading": "正在加载对象…",
+    "empty": "没有对象",
+    "loadError": "无法加载对象",
+    "expand": "显示对象",
+    "collapse": "隐藏对象"
   },
   "dbType": {
     "postgresql": "PostgreSQL",

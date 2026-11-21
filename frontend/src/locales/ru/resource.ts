@@ -30,6 +30,7 @@ import uploaderWindow from '@/locales/ru/pages/s3/transfer/uploaderWindow.json';
 import dbProfileModal from '@/locales/ru/pages/sql/modals/dbProfileModal.json';
 import sqlNavbar from '@/locales/ru/pages/sql/sqlNavbar.json';
 import sqlTab from '@/locales/ru/pages/sql/sqlTab.json';
+import tableStructure from '@/locales/ru/pages/sql/tableStructure.json';
 
 const russianResource: ResourceLanguage = {
   common: common,
@@ -66,6 +67,7 @@ const russianResource: ResourceLanguage = {
   tabLayout: tabLayout,
   sqlNavbar: sqlNavbar,
   sqlTab: sqlTab,
+  tableStructure: tableStructure,
   uploaderWindow: uploaderWindow,
 };
 export default russianResource;

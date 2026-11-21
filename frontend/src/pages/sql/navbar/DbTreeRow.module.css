@@ -1,0 +1,38 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 100%;
+  padding-right: 0.5rem;
+  border-radius: var(--mantine-radius-sm);
+  cursor: pointer;
+  user-select: none;
+}
+
+.row:hover {
+  background-color: light-dark(var(--mantine-color-gray-1), var(--mantine-color-dark-5));
+}
+
+.row[data-selected] {
+  background-color: var(--mantine-primary-color-light);
+}
+
+/* Same width with or without a chevron, so the icons of a level line up. */
+.chevron {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  height: 100%;
+}
