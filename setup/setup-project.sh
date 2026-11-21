@@ -230,7 +230,51 @@ install_webview() {
 }
 
 # ---------------------------------------------------------------------------
-# 5. graphify knowledge graph (graphify-out/, AST only, no LLM / API cost)
+# 5. Rust toolchain for the native DB library (rust/ -> s3b_db.dll, Windows only)
+# ---------------------------------------------------------------------------
+# The MSVC target links with link.exe, so the C++ build tools must be present.
+has_msvc_build_tools() {
+  local vswhere="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
+  [[ -x "$vswhere" ]] && [[ -n "$("$vswhere" -latest -products '*' \
+    -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath)" ]]
+}
+
+install_rust() {
+  if [[ "$(detect_os)" != "windows" ]]; then
+    echo "==> Skipping Rust: s3b_db.dll only builds on Windows (x86_64-pc-windows-msvc)."
+    return 0
+  fi
+
+  if ! has_msvc_build_tools; then
+    echo "==> Installing Visual Studio Build Tools (C++ workload, needed by the MSVC linker)..."
+    winget install --id Microsoft.VisualStudio.2022.BuildTools -e --accept-source-agreements \
+      --accept-package-agreements \
+      --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+  fi
+
+  # rustup installs into ~/.cargo/bin, which may not be on PATH yet in this shell.
+  export PATH="$HOME/.cargo/bin:$PATH"
+
+  if ! command -v rustup >/dev/null 2>&1; then
+    echo "==> rustup not found, installing..."
+    local installer="${TEMP:-/tmp}/rustup-init.exe"
+    curl -fsSL "https://win.rustup.rs/x86_64" -o "$installer"
+    # The channel and target come from rust/rust-toolchain.toml; default profile keeps rustfmt + clippy.
+    "$installer" -y --default-toolchain stable --profile default
+  fi
+
+  if ! command -v cargo >/dev/null 2>&1; then
+    echo "ERROR: cargo installed but not on PATH. Open a new shell and re-run this script."
+    exit 1
+  fi
+
+  echo "==> Fetching Rust crates (installs the toolchain from rust/rust-toolchain.toml if missing)..."
+  (cd "$PROJECT_ROOT/rust" && rustup target add x86_64-pc-windows-msvc && cargo fetch)
+  echo "==> Rust ready: $(cargo --version)"
+}
+
+# ---------------------------------------------------------------------------
+# 6. graphify knowledge graph (graphify-out/, AST only, no LLM / API cost)
 # ---------------------------------------------------------------------------
 setup_graphify() {
   if ! command -v graphify >/dev/null 2>&1; then
@@ -257,7 +301,7 @@ setup_graphify() {
 }
 
 # ---------------------------------------------------------------------------
-# 6. Docker test containers (see test-env/README.txt)
+# 7. Docker test containers (see test-env/README.txt)
 # ---------------------------------------------------------------------------
 # Wait until a one-shot init container exits; fail if it exits non-zero.
 wait_init() {
@@ -331,6 +375,7 @@ install_wails_cli
 install_sqlc
 install_bun
 install_webview
+install_rust
 
 cd "$PROJECT_ROOT"
 
