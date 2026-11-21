@@ -167,7 +167,8 @@ function DbProfiles() {
     count: rows.length,
     getScrollElement: () => scrollRef.current,
     // Fixed row heights: the virtualizer never measures, so the scroll size stays stable while scrolling.
-    estimateSize: idx => getRowHeight(rows[idx], idx) * scale,
+    // Rounded: at small/large the scale gives fractional px, which blurs icons and offsets translateY by half a pixel.
+    estimateSize: idx => Math.round(getRowHeight(rows[idx], idx) * scale),
     getItemKey: idx => rows[idx].key,
     overscan: 10,
   });

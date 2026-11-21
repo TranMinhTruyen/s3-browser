@@ -115,13 +115,14 @@ describe('DbProfiles', () => {
     });
 
     it.each([
-      ['small', 59.5, 66.5],
-      ['large', 76.5, 85.5],
-    ] as const)('scales the card height and the gap at the %s size', (size, height, second) => {
+      ['small', 60, 67],
+      ['large', 77, 86],
+    ] as const)('rounds the scaled card height and gap to whole px at the %s size', (size, height, second) => {
       useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size } });
       renderWithProviders(<DbProfiles />);
       expect(virtual.sizes).toEqual([height, second]);
       expect(row('Local PostgreSQL')).toHaveStyle({ height: `${height}px` });
+      expect(row('Staging PostgreSQL')).toHaveStyle({ height: `${second}px`, transform: `translateY(${height}px)` });
     });
 
     it('measures once after the size changes and not on mount', async () => {

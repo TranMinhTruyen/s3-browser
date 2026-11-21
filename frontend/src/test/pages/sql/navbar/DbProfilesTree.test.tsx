@@ -2,6 +2,8 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { DeleteDbProfileById, DisconnectDb, GetSchemaTree } from '@wails/S3Browser/internal/handlers/dbhandler';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_SETTINGS, type UiSizeKey } from '@/common/cnst/settingConst';
+import { useSettingStore } from '@/common/stores/settingStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import DbProfiles from '@/pages/sql/navbar/DbProfiles';
@@ -12,6 +14,7 @@ import { pgProfile, sqliteProfile, toProfileMap } from '@/test/_helpers/dbProfil
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 // jsdom has no layout, so render every row. Sizes come from `estimateSize(index)` like the real virtualizer.
+const virtual = vi.hoisted(() => ({ sizes: [] as number[] }));
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: (options: {
     count: number;
@@ -19,6 +22,7 @@ vi.mock('@tanstack/react-virtual', () => ({
     estimateSize: (i: number) => number;
   }) => {
     const sizes = Array.from({ length: options.count }, (_, index) => options.estimateSize(index));
+    virtual.sizes = sizes;
     return {
       measure: () => {},
       getVirtualItems: () =>
@@ -463,5 +467,38 @@ describe('DbProfiles object tree', () => {
         expect(tree().opened.s3).toBeUndefined();
       });
     });
+  });
+
+  describe('row heights at each interface size', () => {
+    it.each([
+      ['small', 60, 25, 67],
+      ['medium', 68, 28, 76],
+      ['large', 77, 32, 86],
+    ] as const)(
+      'rounds card, node and status rows to whole px at the %s size',
+      async (size: UiSizeKey, first, node, second) => {
+        useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS, size } });
+        setProfiles(connectedSqlite(), connectedSqlite('s2', 'Second SQLite'));
+        let finish: (v: unknown) => void = () => {};
+        callIPCMock.mockImplementation((() => new Promise(r => (finish = r))) as never);
+        renderWithProviders(<DbProfiles />);
+
+        fireEvent.click(chevron('Local SQLite'));
+        await screen.findByText('Loading objects…');
+        expect(virtual.sizes).toEqual([first, node, second]);
+
+        await act(async () => finish({ schemas: [schema] }));
+
+        // main, Tables, Views, Indexes, Triggers
+        expect(virtual.sizes).toEqual([first, node, node, node, node, node, second]);
+        expect(virtual.sizes.every(Number.isInteger)).toBe(true);
+        const second2 = screen.getByText('Second SQLite').closest<HTMLElement>('.mantine-Card-root')!.parentElement!;
+        expect(second2).toHaveStyle({ height: `${second}px`, transform: `translateY(${first + 5 * node}px)` });
+        expect(row('Tables').parentElement).toHaveStyle({
+          height: `${node}px`,
+          transform: `translateY(${first + node}px)`,
+        });
+      }
+    );
   });
 });
