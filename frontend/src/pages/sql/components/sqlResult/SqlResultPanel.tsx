@@ -84,7 +84,15 @@ function SqlResultPanel(props: SqlResultPanelProps) {
   }
 
   return (
-    <Tabs value={tab} onChange={onChangeTab} h="100%" display="flex" style={{ flexDirection: 'column' }}>
+    // display-none, not Activity: Activity tears down the effects of a hidden panel (DataGrid would re-run them)
+    <Tabs
+      value={tab}
+      onChange={onChangeTab}
+      keepMountedMode="display-none"
+      h="100%"
+      display="flex"
+      style={{ flexDirection: 'column' }}
+    >
       <Tabs.List style={{ flexShrink: 0, flexWrap: 'nowrap', overflowX: 'auto' }}>
         {results.map(({ index }, order) => (
           <Tabs.Tab key={index} value={String(index)}>
