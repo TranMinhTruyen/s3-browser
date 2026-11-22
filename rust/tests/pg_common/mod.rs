@@ -7,7 +7,7 @@
 #![allow(dead_code)]
 
 use crate::common::{
-    MAX_BYTES, call, call_with_id, exec, exec_page, fetch, fetch_page, next_id, ok,
+    MAX_BYTES, call, call_with_id, exec, exec_page, fetch, fetch_page, next_id, ok, skip_or_fail,
 };
 use serde_json::{Map, Value, json};
 use std::net::{SocketAddr, TcpStream};
@@ -57,7 +57,9 @@ pub fn server(test: &str) -> Option<Server> {
         .filter(|v| !v.is_empty())
         .or_else(|| env_file_value("DB_PASSWORD"));
     let Some(password) = password else {
-        println!("SKIP {test}: chưa có mật khẩu (S3B_PG_PASSWORD hoặc test-env/db/db.env)");
+        skip_or_fail(&format!(
+            "SKIP {test}: chưa có mật khẩu (S3B_PG_PASSWORD hoặc test-env/db/db.env)"
+        ));
         return None;
     };
     let port = std::env::var("S3B_PG_PORT")
@@ -67,7 +69,9 @@ pub fn server(test: &str) -> Option<Server> {
         .unwrap_or(DEFAULT_PORT);
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     if TcpStream::connect_timeout(&addr, Duration::from_millis(800)).is_err() {
-        println!("SKIP {test}: không nối được {HOST}:{port} (chạy test-env/docker-compose-db.yml)");
+        skip_or_fail(&format!(
+            "SKIP {test}: không nối được {HOST}:{port} (chạy test-env/docker-compose-db.yml)"
+        ));
         return None;
     }
     Some(Server { port, password })

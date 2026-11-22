@@ -49,11 +49,13 @@ fn push_2(out: &mut String, n: u32) {
 
 /// Ghi `n` với ít nhất `width` chữ số (bù số 0 bên trái).
 fn push_padded(out: &mut String, n: u64, width: usize) {
-    let digits = n.to_string();
+    // `itoa` ghi số vào buffer trên stack, không cấp phát String.
+    let mut buf = itoa::Buffer::new();
+    let digits = buf.format(n);
     for _ in digits.len()..width {
         out.push('0');
     }
-    out.push_str(&digits);
+    out.push_str(digits);
 }
 
 /// Ghi `YYYY-MM-DD` cho số ngày kể từ 1970-01-01. Năm thiên văn ≤ 0 (trước công nguyên) ghi
@@ -80,19 +82,19 @@ pub fn write_time_micros(out: &mut String, micros_of_day: i64) {
     write_hms(out, total_secs);
     if micros != 0 {
         out.push('.');
-        let mut frac = format_micros(micros);
-        while frac.ends_with('0') {
-            frac.pop();
-        }
-        out.push_str(&frac);
+        write_micros_trimmed(out, micros.unsigned_abs());
     }
 }
 
-/// 6 chữ số của phần micro giây (`micros` trong `0..1_000_000`).
-fn format_micros(micros: i64) -> String {
-    let mut s = String::with_capacity(6);
-    push_padded(&mut s, micros.unsigned_abs(), 6);
-    s
+/// Ghi 6 chữ số của phần micro giây (`micros` trong `1..1_000_000`) rồi bỏ các số 0 cuối, thẳng
+/// vào `out` (không String trung gian). Chỉ bỏ các số 0 do hàm này ghi, không đụng phần có sẵn
+/// trong `out` (ví dụ `"10"` + 0 vẫn là `"10"`).
+pub fn write_micros_trimmed(out: &mut String, micros: u64) {
+    let start = out.len();
+    push_padded(out, micros, 6);
+    while out.len() > start && out.ends_with('0') {
+        out.pop();
+    }
 }
 
 /// Ghi `HH:MM:SS` cho số giây trong ngày.
@@ -138,6 +140,38 @@ pub fn write_timestamp_micros(out: &mut String, unix_micros: i64, suffix: &str) 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn trimmed(micros: u64) -> String {
+        let mut s = String::new();
+        write_micros_trimmed(&mut s, micros);
+        s
+    }
+
+    #[test]
+    fn write_micros_trimmed_pads_to_six_digits_then_drops_trailing_zeros() {
+        assert_eq!(trimmed(100_000), "1");
+        assert_eq!(trimmed(123_456), "123456");
+        assert_eq!(trimmed(1), "000001");
+        assert_eq!(trimmed(10), "00001");
+        assert_eq!(trimmed(120_000), "12");
+        assert_eq!(trimmed(999_999), "999999");
+        // 0 không được dùng (người gọi bỏ phần lẻ), nhưng không được xoá số 0 có sẵn trong `out`.
+        assert_eq!(trimmed(0), "");
+        let mut s = String::from("10");
+        write_micros_trimmed(&mut s, 0);
+        assert_eq!(s, "10");
+    }
+
+    #[test]
+    fn write_micros_trimmed_appends_without_touching_the_existing_text() {
+        let mut s = String::from("12:00:00.");
+        write_micros_trimmed(&mut s, 500_000);
+        assert_eq!(s, "12:00:00.5");
+        // Số 0 ở đầu phần micro giây là số liệu thật, không bị bỏ.
+        let mut s = String::from("0");
+        write_micros_trimmed(&mut s, 7);
+        assert_eq!(s, "0000007");
+    }
 
     fn date(unix_days: i64) -> String {
         let mut s = String::new();

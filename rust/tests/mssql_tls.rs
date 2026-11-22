@@ -61,6 +61,17 @@ mssql! {
         }
     }
 
+    /// B6: `disable` là `EncryptionLevel::Off` + `trust_cert`: LOGIN7 đi qua TLS nhưng dữ liệu thì
+    /// không mã hoá, nên `encrypt_option` của phiên phải là `FALSE` và kết nối vẫn thành công.
+    fn disable_mode_connects_with_encrypt_option_false(s: &Server) {
+        let c = s.connect("disable");
+        assert_eq!(
+            c.first("SELECT encrypt_option FROM sys.dm_exec_connections WHERE session_id = @@SPID"),
+            "FALSE"
+        );
+        assert_eq!(c.first("SELECT 1"), "1");
+    }
+
     /// Driver luôn xin packet 32767. Server cấp 32576 khi không mã hoá nhưng chỉ 16554 khi có TLS
     /// (SQL Server giới hạn packet của connection mã hoá quanh 16 KiB): lệch so với plan 10.8 N7
     /// ("đúng giá trị yêu cầu") do server, không do driver. Test khoá hành vi: vẫn lớn hơn mặc
@@ -125,7 +136,7 @@ mssql! {
 
     fn verify_full_rejects_a_host_not_in_the_certificate_but_require_accepts_it(s: &Server) {
         let Some((host, port)) = host_outside_the_certificate(s.port) else {
-            println!("SKIP verify_full_hostname: không bind được 127.0.0.2");
+            skip_or_fail("SKIP verify_full_hostname: không bind được 127.0.0.2");
             return;
         };
         let over = json!({"host": host, "port": port});
@@ -142,7 +153,7 @@ mssql! {
     /// `verify-full`. Khi sửa được thì test này phải đổi sang assert `verify-ca` mở được.
     fn known_limit_verify_ca_still_rejects_a_host_not_in_the_certificate(s: &Server) {
         let Some((host, port)) = host_outside_the_certificate(s.port) else {
-            println!("SKIP known_limit_verify_ca: không bind được 127.0.0.2");
+            skip_or_fail("SKIP known_limit_verify_ca: không bind được 127.0.0.2");
             return;
         };
         let r = call("open", s.params_with("verify-ca", json!({"host": host, "port": port})));
@@ -221,6 +232,8 @@ mssql! {
     fn abandoning_a_cursor_over_tls_keeps_the_connection_encrypted(s: &Server) {
         let monitor = s.conn();
         let c = s.connect("verify-full");
+        // B5: chỉ phiên đã có trạng thái mới có notice nên làm bẩn phiên trước.
+        ok(&c.exec("USE tempdb"));
         let m = marker("tls_abandon");
         let r = c.exec_page(&endless_rows(&m), 10, MAX_BYTES);
         assert_eq!(ok(&r)["statements"][0]["done"], false);

@@ -150,6 +150,82 @@ fn mysql_and_mariadb_bad_open_params_never_echo_the_password() {
     }
 }
 
+/// B8: tham số sai kiểu chỉ nêu loại lỗi, không chép giá trị (serde lặp lại giá trị sai kiểu).
+#[test]
+fn wrongly_typed_params_report_invalid_params_without_echoing_the_value() {
+    const WRONG: &str = "Zq9-wrong-typed-secret";
+    for driver in [
+        "sqlite",
+        "postgres",
+        "mysql",
+        "sqlserver",
+        "mongodb",
+        "redis",
+    ] {
+        let cases = [
+            json!({"driver": driver, "host": "h", "password": 123456789}),
+            json!({"driver": driver, "host": "h", "password": [WRONG]}),
+            json!({"driver": driver, "host": "h", "port": WRONG, "password": SECRET}),
+            json!({"driver": driver, "host": {"x": WRONG}, "password": SECRET}),
+        ];
+        for params in cases {
+            let r = call("open", params.clone());
+            assert_eq!(err_code(&r), "invalidRequest", "{params}");
+            let msg = r["error"]["message"].as_str().unwrap();
+            assert!(msg.starts_with("invalid params"), "{driver}: {msg}");
+            for leak in ["123456789", WRONG, SECRET] {
+                assert!(!msg.contains(leak), "{driver}: lộ {leak}: {msg}");
+            }
+        }
+    }
+}
+
+/// Q9: thiếu field bắt buộc thì thông báo nêu tên field (chỉ có trong schema) kèm vị trí
+/// `line`/`column`, không chép giá trị người dùng gửi; mọi method parse params đều qua đường này.
+#[test]
+fn missing_required_field_names_the_field_with_line_and_column() {
+    const HOST: &str = "Zq9-host-value-do-not-echo";
+    let r = call("open", json!({"host": HOST, "password": SECRET}));
+    assert_eq!(err_code(&r), "invalidRequest", "{r}");
+    let msg = message(&r);
+    assert!(msg.starts_with("invalid params (Data: driver)"), "{msg}");
+    assert!(msg.contains(" at line 1 column "), "{msg}");
+    for leak in [HOST, SECRET] {
+        assert!(!msg.contains(leak), "lộ {leak}: {msg}");
+    }
+    // `connId` bắt buộc ở các method chỉ cần connection.
+    for method in [
+        "close",
+        "schemaTree",
+        "execute",
+        "fetch",
+        "tableInfo",
+        "tableRows",
+    ] {
+        let r = call(method, json!({}));
+        assert_eq!(err_code(&r), "invalidRequest", "{method}");
+        let msg = message(&r);
+        assert!(msg.starts_with("invalid params (Data: "), "{method}: {msg}");
+        assert!(msg.contains("line 1 column"), "{method}: {msg}");
+    }
+}
+
+/// Q9: sai kiểu thì không có tên field (serde lặp giá trị trong thông báo đó), chỉ loại lỗi và vị trí.
+#[test]
+fn wrong_type_reports_category_and_position_but_no_field_name_or_value() {
+    const WRONG: &str = "Zq9-wrong-typed-value";
+    let r = call(
+        "open",
+        json!({"driver": "postgres", "host": "h", "port": WRONG}),
+    );
+    let msg = message(&r);
+    assert!(
+        msg.starts_with("invalid params (Data) at line 1 column "),
+        "{msg}"
+    );
+    assert!(!msg.contains(WRONG) && !msg.contains("port"), "{msg}");
+}
+
 /// `caFile` đọc không được: mode verify-* báo `openFailed` TRƯỚC khi nối, nên cổng đóng cũng ra
 /// lỗi về caFile chứ không phải lỗi nối.
 #[test]

@@ -76,33 +76,62 @@ impl<'a> Splitter<'a> {
 }
 
 /// Đổi `Location` (dòng, cột đều đếm từ 1, cột đếm theo ký tự) của tokenizer sang byte offset.
-struct LineIndex<'a> {
+///
+/// Token đến theo thứ tự tăng dần nên con trỏ chỉ đi tới: nhảy dòng bằng `find('\n')` rồi đi
+/// theo ký tự tới đúng cột. Tổng chi phí O(độ dài SQL), không duyệt lại từ đầu dòng cho mỗi token
+/// (SQL một dòng dài sẽ thành O(n²) nếu làm vậy).
+struct OffsetCursor<'a> {
     sql: &'a str,
-    /// Byte offset đầu mỗi dòng.
-    starts: Vec<usize>,
+    /// Dòng (từ 1) và cột (từ 1) con trỏ đang đứng, kèm byte offset tương ứng.
+    line: u32,
+    col: u32,
+    byte: usize,
 }
 
-impl<'a> LineIndex<'a> {
+impl<'a> OffsetCursor<'a> {
     fn new(sql: &'a str) -> Self {
-        let starts = std::iter::once(0)
-            .chain(sql.match_indices('\n').map(|(i, _)| i + 1))
-            .collect();
-        Self { sql, starts }
+        Self {
+            sql,
+            line: 1,
+            col: 1,
+            byte: 0,
+        }
     }
 
     /// Byte offset của `loc`; vị trí ngoài văn bản bị kẹp về cuối.
-    fn offset(&self, loc: Location) -> usize {
-        let line = usize::try_from(loc.line).unwrap_or(0).max(1);
-        let Some(&start) = self.starts.get(line - 1) else {
-            return self.sql.len();
-        };
-        let cols = usize::try_from(loc.column).unwrap_or(1).saturating_sub(1);
-        let bytes: usize = self.sql[start..]
-            .chars()
-            .take(cols)
-            .map(char::len_utf8)
-            .sum();
-        start + bytes
+    fn offset(&mut self, loc: Location) -> usize {
+        let line = u32::try_from(loc.line).unwrap_or(1).max(1);
+        let col = u32::try_from(loc.column).unwrap_or(1).max(1);
+        // Đi lùi (không xảy ra với token hợp lệ): quay về đầu văn bản cho đúng.
+        if line < self.line || (line == self.line && col < self.col) {
+            *self = Self::new(self.sql);
+        }
+        // Nhảy tới đầu dòng đích.
+        while self.line < line {
+            match self.sql[self.byte..].find('\n') {
+                Some(i) => {
+                    self.byte += i + 1;
+                    self.line += 1;
+                    self.col = 1;
+                }
+                None => return self.sql.len(),
+            }
+        }
+        // Đi theo ký tự tới đúng cột; hết văn bản thì kẹp về cuối.
+        while self.col < col {
+            let Some(c) = self.sql[self.byte..].chars().next() else {
+                return self.sql.len();
+            };
+            self.byte += c.len_utf8();
+            self.col += 1;
+            if c == '\n' {
+                // Cột vượt quá dòng (không xảy ra với token hợp lệ): con trỏ lệch dòng, đặt lại từ đầu.
+                let at = self.byte;
+                *self = Self::new(self.sql);
+                return at;
+            }
+        }
+        self.byte
     }
 }
 
@@ -112,14 +141,16 @@ fn postgres(sql: &str) -> Vec<Range<usize>> {
     let Ok(tokens) = Tokenizer::new(&dialect, sql).tokenize_with_location() else {
         return whole(sql);
     };
-    let lines = LineIndex::new(sql);
+    let mut cursor = OffsetCursor::new(sql);
     let mut splitter = Splitter::new(sql);
     for t in &tokens {
         match t.token {
-            Token::SemiColon => splitter.end(lines.offset(t.span.start)),
+            Token::SemiColon => splitter.end(cursor.offset(t.span.start)),
             // Comment cũng là `Whitespace` trong sqlparser.
             Token::Whitespace(_) | Token::EOF => {}
-            _ => splitter.mark(lines.offset(t.span.start)),
+            // Chỉ token đầu câu cần offset; các token sau không đổi kết quả nên bỏ qua.
+            _ if splitter.first.is_none() => splitter.mark(cursor.offset(t.span.start)),
+            _ => {}
         }
     }
     splitter.end(sql.len());
@@ -295,6 +326,58 @@ mod tests {
 
     fn ms(sql: &str) -> Vec<&str> {
         stmts(Dialect::SqlServer, sql)
+    }
+
+    // ---- P1: một dòng rất dài ----
+
+    #[test]
+    fn pg_one_huge_line_with_unicode_splits_in_linear_time_and_matches_the_small_version() {
+        // Câu `SELECT 'ầbc', ...` lặp tới ~200 KB trên MỘT dòng, rồi câu thứ hai.
+        let item = "'ầbc', ";
+        let mut first = String::from("SELECT ");
+        while first.len() < 200_000 {
+            first.push_str(item);
+        }
+        first.push('1');
+        let sql = format!("{first}; SELECT 'ầ'");
+
+        let started = std::time::Instant::now();
+        let ranges = split(Dialect::Postgres, &sql);
+        let elapsed = started.elapsed();
+
+        assert_eq!(ranges.len(), 2);
+        assert_eq!(&sql[ranges[0].clone()], first);
+        assert_eq!(&sql[ranges[1].clone()], "SELECT 'ầ'");
+        // Bản O(n²) cũ mất hàng giây ở cỡ này; bản debug tuyến tính chỉ vài chục ms.
+        assert!(
+            elapsed < std::time::Duration::from_millis(500),
+            "{elapsed:?}"
+        );
+
+        // Khớp kết quả của bản nhỏ cùng cấu trúc.
+        let small = "SELECT 'ầbc', 1; SELECT 'ầ'";
+        assert_eq!(pg(small), ["SELECT 'ầbc', 1", "SELECT 'ầ'"]);
+    }
+
+    #[test]
+    fn pg_unicode_before_a_semicolon_on_the_same_line_keeps_byte_offsets_right() {
+        let sql = "SELECT 'ầ'; SELECT 'ễ'; SELECT 3";
+        assert_eq!(pg(sql), ["SELECT 'ầ'", "SELECT 'ễ'", "SELECT 3"]);
+        // Nhiều dòng xen kẽ với unicode.
+        let sql = "SELECT 'ầ';
+SELECT
+ 'ễ', 'ặ';
+
+SELECT 3";
+        assert_eq!(
+            pg(sql),
+            [
+                "SELECT 'ầ'",
+                "SELECT
+ 'ễ', 'ặ'",
+                "SELECT 3"
+            ]
+        );
     }
 
     // ---- PostgreSQL ----

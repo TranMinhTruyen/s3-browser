@@ -123,7 +123,7 @@ both! {
 
     fn verify_full_rejects_a_host_not_in_the_certificate_but_require_accepts_it(s: &Server) {
         let Some((host, port)) = host_outside_the_certificate(s.port) else {
-            println!("SKIP verify_full_hostname: không bind được 127.0.0.2");
+            skip_or_fail("SKIP verify_full_hostname: không bind được 127.0.0.2");
             return;
         };
         let over = json!({"host": host, "port": port});
@@ -139,7 +139,7 @@ both! {
     /// thì test này phải đổi sang assert `verify-ca` mở được.
     fn known_limit_verify_ca_still_rejects_a_host_not_in_the_certificate(s: &Server) {
         let Some((host, port)) = host_outside_the_certificate(s.port) else {
-            println!("SKIP known_limit_verify_ca: không bind được 127.0.0.2");
+            skip_or_fail("SKIP known_limit_verify_ca: không bind được 127.0.0.2");
             return;
         };
         let over = json!({"host": host, "port": port});

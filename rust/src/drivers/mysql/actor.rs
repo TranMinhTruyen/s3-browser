@@ -325,11 +325,10 @@ fn broken() -> DbError {
     DbError::new(CONN_NOT_FOUND, "connection is broken, reconnect")
 }
 
-/// Đóng connection: gửi `COM_QUIT` rồi đóng socket, quá hạn thì bỏ. Connection hỏng thì chỉ thả.
+/// Đóng connection: gửi `COM_QUIT` rồi đóng socket, quá hạn thì bỏ. Luôn gọi `disconnect` kể cả
+/// khi connection hỏng: nó đặt cờ `disconnected` trước khi đọc, nên `Conn` bị thả sau đó không
+/// spawn task `cleanup_for_pool` đọc bỏ không timeout (rò task và TCP).
 async fn shutdown(session: Session) {
-    if session.shared.is_broken() {
-        return;
-    }
     let _ = tokio::time::timeout(CLOSE_TIMEOUT, session.conn.disconnect()).await;
 }
 

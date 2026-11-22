@@ -171,8 +171,8 @@ pub async fn open(p: OpenParams) -> DbResult<OpenResult> {
 ///   trong chứng chỉ thì bị từ chối). Vẫn đặt cờ để khi thư viện sửa thì có đúng hành vi.
 /// - `verify-full`: kiểm cả chuỗi CA lẫn hostname.
 ///
-/// Tin cậy: có `caFile` thì chỉ các CA trong file; không thì kho chứng chỉ của Windows cộng với
-/// bộ CA Mozilla mà `mysql_async` luôn kèm (`webpki-roots`, không tắt được ở chế độ này).
+/// Tin cậy: chỉ CA trong `caFile` nếu có, không thì kho chứng chỉ Windows (`root_certs_der`
+/// đã gồm kho Windows); không tin thêm bộ CA có sẵn của `mysql_async` (`webpki-roots`).
 fn ssl_opts(tls: &TlsParams) -> DbResult<Option<SslOpts>> {
     let verify = match tls.mode {
         TlsMode::Disable => return Ok(None),
@@ -193,8 +193,8 @@ fn ssl_opts(tls: &TlsParams) -> DbResult<Option<SslOpts>> {
     Ok(Some(
         SslOpts::default()
             .with_root_certs(roots)
-            // Có `caFile` thì chỉ tin file đó, không tin thêm bộ CA có sẵn.
-            .with_disable_built_in_roots(ca.is_some())
+            // `roots` đã đủ (caFile hoặc kho Windows) nên luôn tắt bộ CA có sẵn.
+            .with_disable_built_in_roots(true)
             .with_danger_skip_domain_validation(verify == TlsMode::VerifyCa),
     ))
 }
@@ -535,12 +535,13 @@ mod tests {
     }
 
     #[test]
-    fn verify_modes_without_ca_file_use_the_windows_store_plus_built_in_roots() {
+    fn verify_modes_without_ca_file_use_only_the_windows_store_and_never_built_in_roots() {
         for ca in [None, Some("")] {
             for mode in [TlsMode::VerifyCa, TlsMode::VerifyFull] {
                 let o = ssl_opts(&tls(mode, ca)).unwrap().unwrap();
                 assert!(!o.root_certs().is_empty(), "{mode:?}: kho Windows rỗng");
-                assert!(!o.disable_built_in_roots(), "{mode:?}");
+                // C1: `roots` đã là kho Windows nên bộ CA có sẵn luôn tắt.
+                assert!(o.disable_built_in_roots(), "{mode:?}");
             }
         }
     }

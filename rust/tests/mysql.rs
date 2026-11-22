@@ -568,6 +568,63 @@ both! {
         assert_eq!(err_code(&exec(id, "select 1")), "connNotFound");
     }
 
+    /// P2 + T2: đang trong transaction (`BEGIN`) và còn cursor gần như vô tận (tích 3 lần
+    /// `information_schema.columns`, hàng chục tỷ dòng): `close` không được treo vì đọc bỏ. Khoá cận
+    /// trên < 3 giây. Lưu ý: MySQL không phân biệt được code cũ và mới ở test này, vì `disconnect`
+    /// đọc bỏ cũng bị chặn ở 2 giây (< 3 giây), nên đây chỉ là cận trên, không bắt hồi quy T2.
+    fn close_inside_a_transaction_with_a_big_cursor_is_fast(s: &Server) {
+        let monitor = s.conn();
+        let c = s.conn();
+        ok(&c.exec("begin"));
+        let m = marker("p2_close");
+        let r = c.exec_page(
+            &format!(
+                "select a.table_name, '{m}' as m from information_schema.columns a, \
+                 information_schema.columns b, information_schema.columns d"
+            ),
+            10,
+            MAX_BYTES,
+        );
+        assert_eq!(st(&r, 0)["done"], false, "{r}");
+        wait_until_active(&monitor, &m);
+        let t0 = Instant::now();
+        ok(&call("close", json!({"connId": c.id})));
+        assert!(t0.elapsed() < Duration::from_secs(3), "{:?}", t0.elapsed());
+        assert_eq!(err_code(&c.exec("select 1")), "connNotFound");
+        wait_until_gone(&monitor, &m);
+    }
+
+    /// B4: connection hỏng phía client thì `close` vẫn gọi `disconnect` (không chỉ thả): xong
+    /// < 3 giây và thread cũ biến khỏi `processlist` trong 5 giây. MariaDB: hỏng bằng
+    /// `LOAD DATA LOCAL` (thread server còn sống tới khi close). MySQL không có đường ép hỏng
+    /// như vậy (từ chối ngay, 3948) nên dùng `KILL <thread>` từ connection khác rồi chạy một câu
+    /// để driver gặp lỗi IO.
+    fn close_of_a_broken_connection_disconnects_it(s: &Server) {
+        let monitor = s.conn();
+        let c = s.conn();
+        let tid = c.thread_id();
+        if s.is_mariadb() {
+            ok(&c.exec("create temporary table t_b4(a int)"));
+            let r = c.exec("load data local infile 'C:/khong/ton/tai.csv' into table t_b4");
+            assert_eq!(code_of(st(&r, 0)), "sqlError", "{r}");
+            assert_eq!(err_code(&c.exec("select 1")), "connNotFound");
+            assert!(thread_exists(&monitor, &tid), "thread server còn sống trước close");
+        } else {
+            ok(&monitor.exec(&format!("kill {tid}")));
+            wait_for(Duration::from_secs(10), "thread bị kill", || {
+                !thread_exists(&monitor, &tid)
+            });
+            let r = c.exec("select 1");
+            assert!(r["ok"] == false || !st(&r, 0)["error"].is_null(), "{r}");
+        }
+        let t0 = Instant::now();
+        ok(&call("close", json!({"connId": c.id})));
+        assert!(t0.elapsed() < Duration::from_secs(3), "{:?}", t0.elapsed());
+        wait_for(Duration::from_secs(5), "thread cũ biến mất", || {
+            !thread_exists(&monitor, &tid)
+        });
+    }
+
     // ---- kiểu dữ liệu ----
 
     fn integer_types_keep_their_exact_extremes_and_unsigned_names(s: &Server) {

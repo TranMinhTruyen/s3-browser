@@ -376,7 +376,7 @@ redis_tls! {
     /// và `require` không kiểm nên cả hai mở được.
     fn only_verify_full_rejects_a_host_not_in_the_certificate(s: &Server) {
         let Some(p) = proxy(s.tls_port, "127.0.0.2", Refuse::Nothing) else {
-            println!("SKIP verify hostname: không bind được 127.0.0.2");
+            skip_or_fail("SKIP verify hostname: không bind được 127.0.0.2");
             return;
         };
         let over = json!({"host": "127.0.0.2", "port": p.port});

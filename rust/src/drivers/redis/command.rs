@@ -99,6 +99,19 @@ pub fn parse(text: &str) -> Parsed {
                 error: Some(fail("command is not supported (it never ends)")),
             };
         }
+        // `CLIENT REPLY OFF|SKIP` làm server ngừng trả lời nên lệnh sau treo tới khi huỷ.
+        let is_word = |i: usize, w: &str| {
+            args.get(i)
+                .is_some_and(|a| a.eq_ignore_ascii_case(w.as_bytes()))
+        };
+        if is_word(0, "CLIENT") && is_word(1, "REPLY") && args.len() > 2 && !is_word(2, "ON") {
+            return Parsed {
+                commands,
+                error: Some(fail(
+                    "CLIENT REPLY is not supported (the server stops replying)",
+                )),
+            };
+        }
         commands.push(Command {
             text: line.to_owned(),
             args,
@@ -479,6 +492,56 @@ mod tests {
     fn a_syntax_error_on_the_first_line_leaves_no_commands() {
         let p = parse("'oops\nPING");
         assert!(p.commands.is_empty());
+        assert!(p.error.is_some());
+    }
+
+    // ---- CLIENT REPLY (Q3) ----
+
+    #[test]
+    fn client_reply_off_and_skip_are_rejected_in_any_letter_case() {
+        for text in [
+            "CLIENT REPLY OFF",
+            "client reply off",
+            "Client Reply Skip",
+            "CLIENT REPLY SKIP",
+            "  client   reply   off  ",
+        ] {
+            let p = parse(text);
+            assert!(p.commands.is_empty(), "{text}");
+            let e = p.error.expect(text);
+            assert_eq!(e.text, text.trim());
+            assert!(e.message.contains("CLIENT REPLY"), "{}", e.message);
+        }
+    }
+
+    #[test]
+    fn client_reply_on_and_other_client_commands_are_allowed() {
+        assert_eq!(
+            only("CLIENT REPLY ON"),
+            bytes(&[b"CLIENT", b"REPLY", b"ON"])
+        );
+        assert_eq!(
+            only("client reply on"),
+            bytes(&[b"client", b"reply", b"on"])
+        );
+        assert_eq!(only("CLIENT ID"), bytes(&[b"CLIENT", b"ID"]));
+        assert_eq!(
+            only("CLIENT SETNAME x"),
+            bytes(&[b"CLIENT", b"SETNAME", b"x"])
+        );
+        // Thiếu đối số: để server báo lỗi arity, không chặn ở đây.
+        assert_eq!(only("CLIENT REPLY"), bytes(&[b"CLIENT", b"REPLY"]));
+    }
+
+    #[test]
+    fn a_blocked_client_reply_stops_the_commands_after_it_but_keeps_the_ones_before() {
+        let p = parse(
+            "PING
+CLIENT REPLY OFF
+GET a",
+        );
+        assert_eq!(p.commands.len(), 1);
+        assert_eq!(p.commands[0].text, "PING");
         assert!(p.error.is_some());
     }
 

@@ -203,14 +203,15 @@ fn money_text(v: f64) -> String {
 /// Ví dụ (12345, 2) -> `123.45`, (-5, 3) -> `-0.005`, (7, 0) -> `7`. Giữ đủ `scale` chữ số
 /// lẻ như SQL Server (`decimal(10,2)` giá trị 3 hiện `3.00`).
 fn numeric_text(unscaled: i128, scale: u8) -> String {
-    let digits = unscaled.unsigned_abs().to_string();
+    let mut buf = itoa::Buffer::new();
+    let digits = buf.format(unscaled.unsigned_abs());
     let scale = usize::from(scale);
     let mut s = String::with_capacity(digits.len() + scale + 3);
     if unscaled < 0 {
         s.push('-');
     }
     if scale == 0 {
-        s.push_str(&digits);
+        s.push_str(digits);
     } else if digits.len() > scale {
         let (int_part, frac) = digits.split_at(digits.len() - scale);
         s.push_str(int_part);
@@ -222,7 +223,7 @@ fn numeric_text(unscaled: i128, scale: u8) -> String {
         for _ in digits.len()..scale {
             s.push('0');
         }
-        s.push_str(&digits);
+        s.push_str(digits);
     }
     s
 }

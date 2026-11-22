@@ -88,7 +88,9 @@ pub async fn open(p: OpenParams) -> DbResult<OpenResult> {
 /// Các `Config` để thử lần lượt, theo thứ tự của libpq (giống driver PostgreSQL và MySQL):
 /// `disable` chỉ thường, `allow` thường rồi TLS, `prefer` TLS rồi thường, các mode còn lại chỉ
 /// TLS. Ánh xạ 6 mode sang `tiberius`:
-/// - `disable`: `EncryptionLevel::NotSupported` (không TLS kể cả ở bước đăng nhập).
+/// - `disable`: `EncryptionLevel::Off` + `trust_cert()`: dữ liệu không mã hoá nhưng bước đăng
+///   nhập (LOGIN7, có mật khẩu) vẫn đi qua TLS không kiểm chứng chỉ. Không dùng `NotSupported`
+///   vì nó gửi mật khẩu gần như dạng rõ (chỉ xáo bit).
 /// - `allow`/`prefer`/`require`: `Required` + `trust_cert()` (mã hoá, không kiểm chứng chỉ).
 /// - `verify-ca`/`verify-full`: `Required` + kiểm chuỗi CA và hostname. `tiberius` không có
 ///   cách bỏ riêng kiểm hostname (chỉ `hostname_in_certificate` nhưng ta không biết tên trong
@@ -112,7 +114,8 @@ fn attempts(p: &OpenParams, host: &str, user: &str) -> DbResult<Vec<Config>> {
 
     let plain = || {
         let mut c = base.clone();
-        c.encryption(EncryptionLevel::NotSupported);
+        c.encryption(EncryptionLevel::Off);
+        c.trust_cert();
         c
     };
     let encrypted_unverified = || {
@@ -209,6 +212,8 @@ mod tests {
 
     const PASSWORD: &str = "super-secret-pw";
     /// Giá trị byte ENCRYPTION của TDS PRELOGIN.
+    /// Mức mã hoá client gửi khi `plain` (`EncryptionLevel::Off`): chỉ mã hoá LOGIN7.
+    const OFF: u8 = 0;
     const NOT_SUPPORTED: u8 = 2;
     const REQUIRED: u8 = 3;
 
@@ -352,9 +357,9 @@ mod tests {
     #[tokio::test]
     async fn each_tls_mode_tries_the_encryption_levels_in_libpq_order() {
         let cases: [(&str, &[u8]); 6] = [
-            ("disable", &[NOT_SUPPORTED]),
-            ("allow", &[NOT_SUPPORTED, REQUIRED]),
-            ("prefer", &[REQUIRED, NOT_SUPPORTED]),
+            ("disable", &[OFF]),
+            ("allow", &[OFF, REQUIRED]),
+            ("prefer", &[REQUIRED, OFF]),
             ("require", &[REQUIRED]),
             ("verify-ca", &[REQUIRED]),
             ("verify-full", &[REQUIRED]),
@@ -517,8 +522,8 @@ mod tests {
     fn modes_map_to_encryption_level_and_trust() {
         let enc = |c: &Config| {
             let d = format!("{c:?}");
-            let level = if d.contains("encryption: NotSupported") {
-                "not-supported"
+            let level = if d.contains("encryption: Off") {
+                "off"
             } else if d.contains("encryption: Required") {
                 "required"
             } else {
@@ -533,12 +538,10 @@ mod tests {
                 .map(enc)
                 .collect()
         };
-        assert_eq!(run("disable"), [("not-supported", false)]);
-        assert_eq!(run("allow"), [("not-supported", false), ("required", true)]);
-        assert_eq!(
-            run("prefer"),
-            [("required", true), ("not-supported", false)]
-        );
+        // B6: `plain` là `Off` + `trust_cert` (LOGIN7 vẫn qua TLS), không còn `NotSupported`.
+        assert_eq!(run("disable"), [("off", true)]);
+        assert_eq!(run("allow"), [("off", true), ("required", true)]);
+        assert_eq!(run("prefer"), [("required", true), ("off", true)]);
         assert_eq!(run("require"), [("required", true)]);
         assert_eq!(run("verify-ca"), [("required", false)]);
         assert_eq!(run("verify-full"), [("required", false)]);

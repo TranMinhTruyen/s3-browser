@@ -137,6 +137,22 @@ mongo! {
 
     // ---- hình dạng kết quả ----
 
+    /// Q1: mốc "có dòng đầu" lấy trước khi đổi cả trang sang JSON, nên không tính thời gian đổi:
+    /// `firstRowMs <= elapsedMs - convertMs` (cho lệch làm tròn 1 ms). Chỉ có khi bật `bench-timing`.
+    #[cfg(feature = "bench-timing")]
+    fn first_row_is_measured_before_the_page_is_converted(s: &Server) {
+        let c = s.conn();
+        let db = c.scratch_db("first_row");
+        c.seed(&db, "c", 10_000, 0);
+        let r = c.exec_page(&find_sorted(&db, "c", json!({})), 10_000, MAX_BYTES);
+        let x = st(&r, 0);
+        assert_eq!(rows_len(x), 10_000);
+        let elapsed = x["elapsedMs"].as_u64().unwrap();
+        let first = x["firstRowMs"].as_u64().unwrap();
+        let convert = x["convertMs"].as_u64().unwrap();
+        assert!(first + convert <= elapsed + 1, "first {first} convert {convert} elapsed {elapsed}");
+    }
+
     fn result_json_is_camel_case_with_one_json_document_column(s: &Server) {
         let c = s.conn();
         let db = c.scratch_db("shape");
@@ -699,6 +715,31 @@ mongo! {
             cleaner.exec(&cmd("dropDatabase", json!(1), json!({}), Some(&db)));
         }
         wait_until_no_cursors(&monitor, &db, "c");
+    }
+
+    /// B1: `close` khi đang có `find` chạy dài (`$where` ngủ 30 giây): close xong < 2 giây, câu đó
+    /// nhận `cancelled`, `exec` sau đó là `connNotFound`.
+    fn close_cancels_a_running_find_and_returns_fast(s: &Server) {
+        let monitor = s.conn();
+        let c = s.conn();
+        let db = c.scratch_db("close_running");
+        c.seed(&db, "c", 2, 0);
+        let m = marker("b1_close");
+        let sql = find(
+            &db,
+            "c",
+            json!({"filter": {"$where": "sleep(30000) || true"}, "comment": m}),
+        );
+        let t = c.exec_in_thread(next_id(), &sql);
+        wait_until_active(&monitor, &m);
+        let t0 = Instant::now();
+        ok(&call("close", json!({"connId": c.id})));
+        assert!(t0.elapsed() < Duration::from_secs(2), "{:?}", t0.elapsed());
+        assert_eq!(err_code(&t.join().unwrap()), "cancelled");
+        assert_eq!(err_code(&c.exec(r#"{"ping":1}"#)), "connNotFound");
+        wait_until_gone(&monitor, &m);
+        // `Conn::drop` dọn database tạm qua connection đã đóng nên dọn bằng connection khác.
+        monitor.exec(&cmd("dropDatabase", json!(1), json!({}), Some(&db)));
     }
 
     // ---- huỷ ----

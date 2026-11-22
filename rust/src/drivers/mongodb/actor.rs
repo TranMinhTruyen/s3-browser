@@ -422,13 +422,14 @@ async fn statement(
                 Ok(cursor) => cursor,
                 Err(e) => return fail(out, index, &text, start, e),
             };
+            // Batch đầu nằm sẵn trong reply của lệnh mở cursor, nên mốc "có dòng đầu" là lúc này,
+            // trước khi đổi cả trang sang JSON (cùng mốc với các driver khác).
+            let first_row_ms = elapsed_ms(start);
             let mut held = Held::new(cursor_id, cursor);
             let page = match held.read_page(limits, cancel).await {
                 Ok(page) => page,
                 Err(e) => return fail(out, index, &text, start, e),
             };
-            // Đo sau khi đọc xong batch đầu, cùng mốc với các driver khác (có dòng đầu).
-            let first_row_ms = elapsed_ms(start);
             let keep_cursor = keep && !page.done;
             let mut res = rows_statement(
                 index,

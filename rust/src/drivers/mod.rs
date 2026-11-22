@@ -142,6 +142,11 @@ pub async fn request<P, R>(
         .conn_tx(conn_id)
         .ok_or_else(|| DbError::new(CONN_NOT_FOUND, "connection is closed"))?;
     let guard = reg.begin_request(id, conn_id);
+    // `close` có thể đã gỡ connection và huỷ request của nó giữa `conn_tx` và `begin_request`: request này
+    // đăng ký sau vòng huỷ nên không bị huỷ. Kiểm lại để không chạy tiếp (guard tự gỡ khi return).
+    if reg.conn_tx(conn_id).is_none() {
+        return Err(DbError::new(CONN_NOT_FOUND, "connection is closed"));
+    }
     let (reply, rx) = oneshot::channel();
     let cmd = wrap(Job {
         id,
