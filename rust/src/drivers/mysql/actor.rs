@@ -762,6 +762,122 @@ mod tests {
         assert!(!s.is_broken());
     }
 
+    // ---- shutdown ----
+
+    /// Giá trị `KEY=value` trong `test-env/db/db.env`.
+    fn env_value(key: &str) -> Option<String> {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../test-env/db/db.env");
+        let text = std::fs::read_to_string(path).ok()?;
+        text.lines()
+            .find_map(|l| l.strip_prefix(&format!("{key}=")))
+            .map(|v| v.trim().to_owned())
+            .filter(|v| !v.is_empty())
+    }
+
+    /// Opts tới server test (`port_key` = `MYSQL_PORT`/`MARIADB_PORT`); thiếu server thì
+    /// `S3B_REQUIRE_DB=1` fail, ngược lại in `SKIP` và trả `None`.
+    fn server_opts(port_key: &str, user_key: &str) -> Option<Opts> {
+        let port = env_value(port_key).and_then(|p| p.parse::<u16>().ok());
+        let password = std::env::var("S3B_MYSQL_PASSWORD")
+            .ok()
+            .filter(|v| !v.is_empty())
+            .or_else(|| env_value("DB_PASSWORD"));
+        let reachable = port.is_some_and(|p| {
+            std::net::TcpStream::connect_timeout(
+                &std::net::SocketAddr::from(([127, 0, 0, 1], p)),
+                Duration::from_millis(800),
+            )
+            .is_ok()
+        });
+        let (Some(port), Some(password), true) = (port, password, reachable) else {
+            let msg = format!("SKIP shutdown {port_key}: chưa có server/mật khẩu test-env");
+            assert!(
+                !std::env::var("S3B_REQUIRE_DB").is_ok_and(|v| v == "1"),
+                "{msg}"
+            );
+            eprintln!("{msg}");
+            return None;
+        };
+        Some(
+            mysql_async::OptsBuilder::default()
+                .ip_or_hostname("127.0.0.1")
+                .tcp_port(port)
+                .user(env_value(user_key).or_else(|| Some("root".into())))
+                .pass(Some(password))
+                .into(),
+        )
+    }
+
+    /// Số connection server đã đếm là "đóng không đàng hoàng" (`Aborted_clients`): `disconnect`
+    /// gửi `COM_QUIT` nên không tăng, thả `Conn` thô (đóng socket) thì tăng.
+    async fn aborted_clients(monitor: &mut Conn) -> u64 {
+        let (_, v): (String, String) = monitor
+            .query_first("show global status like 'Aborted_clients'")
+            .await
+            .unwrap()
+            .unwrap();
+        v.parse().unwrap()
+    }
+
+    /// B4: connection đã `broken` thì `shutdown` vẫn phải `disconnect` (gửi `COM_QUIT`) chứ không
+    /// thả `Conn` thô, vì `Drop` của `mysql_async` khi `disconnected=false` spawn `cleanup_for_pool`
+    /// đọc bỏ không timeout. Quan sát phía server: thread biến mất mà không bị tính là aborted.
+    async fn shutdown_of_a_broken_connection_quits_cleanly(port_key: &str, user_key: &str) {
+        let Some(opts) = server_opts(port_key, user_key) else {
+            return;
+        };
+        let mut monitor = Conn::new(opts.clone()).await.unwrap();
+        let victim = Conn::new(opts).await.unwrap();
+        let tid = victim.id();
+        let before = aborted_clients(&mut monitor).await;
+
+        let shared = Arc::new(shared());
+        shared.mark_broken();
+        assert!(shared.is_broken());
+        let started = Instant::now();
+        shutdown(Session::new(victim, shared)).await;
+        assert!(
+            started.elapsed() < CLOSE_TIMEOUT,
+            "shutdown phải xong trong hạn đóng"
+        );
+
+        // Thread phía server biến mất (thăm dò theo điều kiện, không ngủ cố định).
+        let deadline = Instant::now() + Duration::from_secs(5);
+        loop {
+            let n: u64 = monitor
+                .query_first(format!(
+                    "select count(*) from information_schema.processlist where id = {tid}"
+                ))
+                .await
+                .unwrap()
+                .unwrap();
+            if n == 0 {
+                break;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "thread {tid} vẫn còn trên server"
+            );
+            tokio::task::yield_now().await;
+        }
+        assert_eq!(
+            aborted_clients(&mut monitor).await,
+            before,
+            "shutdown phải gửi COM_QUIT (disconnect), không thả socket thô"
+        );
+        monitor.disconnect().await.unwrap();
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn shutdown_of_a_broken_mysql_connection_quits_cleanly() {
+        shutdown_of_a_broken_connection_quits_cleanly("MYSQL_PORT", "MYSQL_USER").await;
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn shutdown_of_a_broken_mariadb_connection_quits_cleanly() {
+        shutdown_of_a_broken_connection_quits_cleanly("MARIADB_PORT", "MARIADB_USER").await;
+    }
+
     // ---- hàm nhỏ ----
 
     #[test]

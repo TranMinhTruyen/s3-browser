@@ -106,7 +106,7 @@ fn builtin_expressions_print_the_same_in_binary_and_in_server_text() {
         .filter(|l| !l.trim().is_empty())
         .map(str::to_owned)
         .collect();
-    assert_eq!(exprs.len(), 197, "file fixture phải đủ 197 biểu thức");
+    assert_eq!(exprs.len(), 200, "file fixture phải đủ 200 biểu thức");
     let c = utc_conn(&pg);
     assert_no_mismatch(mismatches(&c, &exprs), exprs.len());
 }

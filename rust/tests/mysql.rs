@@ -596,7 +596,7 @@ both! {
 
     /// B4: connection hỏng phía client thì `close` vẫn gọi `disconnect` (không chỉ thả): xong
     /// < 3 giây và thread cũ biến khỏi `processlist` trong 5 giây. MariaDB: hỏng bằng
-    /// `LOAD DATA LOCAL` (thread server còn sống tới khi close). MySQL không có đường ép hỏng
+    /// `LOAD DATA LOCAL` (server có thể đã đóng thread trước close). MySQL không có đường ép hỏng
     /// như vậy (từ chối ngay, 3948) nên dùng `KILL <thread>` từ connection khác rồi chạy một câu
     /// để driver gặp lỗi IO.
     fn close_of_a_broken_connection_disconnects_it(s: &Server) {
@@ -608,7 +608,9 @@ both! {
             let r = c.exec("load data local infile 'C:/khong/ton/tai.csv' into table t_b4");
             assert_eq!(code_of(st(&r, 0)), "sqlError", "{r}");
             assert_eq!(err_code(&c.exec("select 1")), "connNotFound");
-            assert!(thread_exists(&monitor, &tid), "thread server còn sống trước close");
+            // Không assert thread server còn sống: MariaDB tự đóng connection sau lỗi này (quan sát
+            // được), nên không ép được "broken mà server còn giữ thread". Phần còn kiểm được là
+            // `close` trên connection broken trả nhanh và không để lại thread.
         } else {
             ok(&monitor.exec(&format!("kill {tid}")));
             wait_for(Duration::from_secs(10), "thread bị kill", || {
