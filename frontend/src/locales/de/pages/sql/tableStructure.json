@@ -1,0 +1,43 @@
+{
+  "tab": {
+    "data": "Daten",
+    "column": "Spalten",
+    "index": "Indizes",
+    "constraint": "Constraints",
+    "fk": "Fremdschlüssel",
+    "source": "Quelltext"
+  },
+  "column": {
+    "name": "Name",
+    "type": "Typ",
+    "nullable": "Nullable",
+    "default": "Standardwert",
+    "primaryKey": "Primärschlüssel"
+  },
+  "index": {
+    "name": "Name",
+    "unique": "Eindeutig",
+    "origin": "Herkunft",
+    "partial": "Partiell",
+    "columns": "Spalten"
+  },
+  "constraint": {
+    "kind": "Art",
+    "name": "Name",
+    "columns": "Spalten",
+    "expression": "Ausdruck"
+  },
+  "fk": {
+    "columns": "Spalten",
+    "refTable": "Referenzierte Tabelle",
+    "refColumns": "Referenzierte Spalten",
+    "onUpdate": "Bei Aktualisierung",
+    "onDelete": "Beim Löschen"
+  },
+  "nullValue": "NULL",
+  "yes": "Ja",
+  "no": "Nein",
+  "loadError": "Tabellenstruktur konnte nicht geladen werden",
+  "noSource": "Kein Quelltext verfügbar",
+  "loadingMore": "Weitere Zeilen werden geladen…"
+}

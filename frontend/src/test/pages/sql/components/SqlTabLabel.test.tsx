@@ -74,4 +74,29 @@ describe('SqlTabLabel', () => {
     act(() => useDbProfileStore.getState().deleteDbProfile('mock-pg-staging'));
     expect(screen.getByText('New query')).toBeInTheDocument();
   });
+  describe('TableStructure tab', () => {
+    const openTable = () => {
+      useSqlTabStore.getState().openTableTab('mock-pg-local', 'public', 'users');
+      return useSqlTabStore.getState().activeTab;
+    };
+
+    it('shows a table icon and the table name, without the profile name or a status dot', () => {
+      const { container } = renderWithProviders(<SqlTabLabel tabId={openTable()} />);
+
+      expect(screen.getByText('users')).toBeInTheDocument();
+      expect(screen.queryByText('Local PostgreSQL')).not.toBeInTheDocument();
+      expect(swatch(container)).not.toBeInTheDocument();
+      expect(container.querySelector('svg.lucide-table-2, svg.lucide-table2')).toBeInTheDocument();
+    });
+
+    it('keeps the SQL tab label unchanged next to it', () => {
+      const sqlTab = tabId();
+      openTable();
+      useSqlTabStore.getState().setTabProfile(sqlTab, 'mock-pg-staging');
+
+      renderWithProviders(<SqlTabLabel tabId={sqlTab} />);
+
+      expect(screen.getByText('Staging PostgreSQL')).toBeInTheDocument();
+    });
+  });
 });

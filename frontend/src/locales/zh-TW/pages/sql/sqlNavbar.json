@@ -2,6 +2,7 @@
   "contextMenu": {
     "connect": "連線",
     "disconnect": "中斷連線",
+    "refresh": "重新整理",
     "edit": "編輯",
     "export": "匯出",
     "delete": "刪除"
@@ -14,6 +15,17 @@
   },
   "profile": {
     "empty": "尚無資料庫設定檔。請使用上方的按鈕建立。"
+  },
+  "tree": {
+    "tables": "資料表",
+    "views": "檢視表",
+    "indexes": "索引",
+    "triggers": "觸發程序",
+    "loading": "正在載入物件…",
+    "empty": "沒有物件",
+    "loadError": "無法載入物件",
+    "expand": "顯示物件",
+    "collapse": "隱藏物件"
   },
   "dbType": {
     "postgresql": "PostgreSQL",

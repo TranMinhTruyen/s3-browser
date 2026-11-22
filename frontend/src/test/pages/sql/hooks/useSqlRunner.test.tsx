@@ -164,6 +164,69 @@ describe('useSqlRunner', () => {
       expect(result.current).toMatchObject({ runId: 0, statements: [], running: false });
     });
 
+    it('does not run the SQL nor set state when cancelled while connecting', async () => {
+      addSqlite(false);
+      let finishConnect: (v: unknown) => void = () => {};
+      callIPCMock.mockImplementation(((binding: unknown) =>
+        binding === ExecuteSql
+          ? Promise.resolve({ statements: [statement()] })
+          : new Promise(r => (finishConnect = r))) as never);
+      const { result } = mountRunner();
+
+      let pending!: Promise<void>;
+      act(() => {
+        pending = result.current.run('sqlite-1', 'select 1');
+      });
+      expect(result.current.running).toBe(true);
+      act(() => result.current.cancel());
+      await act(async () => {
+        finishConnect(true);
+        await pending;
+      });
+
+      expect(callsOf(ExecuteSql)).toHaveLength(0);
+      expect(result.current).toMatchObject({ runId: 0, statements: [], cancelled: false, running: false });
+    });
+
+    it('does not run the SQL when the tab is left while connecting', async () => {
+      addSqlite(false);
+      let finishConnect: (v: unknown) => void = () => {};
+      callIPCMock.mockImplementation((() => new Promise(r => (finishConnect = r))) as never);
+      const { result, unmount } = mountRunner();
+
+      let pending!: Promise<void>;
+      act(() => {
+        pending = result.current.run('sqlite-1', 'select 1');
+      });
+      unmount();
+      finishConnect(true);
+      await pending;
+
+      expect(callsOf(ExecuteSql)).toHaveLength(0);
+    });
+
+    it('still runs the SQL when not aborted while connecting', async () => {
+      addSqlite(false);
+      let finishConnect: (v: unknown) => void = () => {};
+      callIPCMock.mockImplementation(((binding: unknown) =>
+        binding === ExecuteSql
+          ? Promise.resolve({ statements: [statement()] })
+          : new Promise(r => (finishConnect = r))) as never);
+      const { result } = mountRunner();
+
+      let pending!: Promise<void>;
+      act(() => {
+        pending = result.current.run('sqlite-1', 'select 1');
+      });
+      await act(async () => {
+        finishConnect(true);
+        await pending;
+      });
+
+      expect(callsOf(ExecuteSql)).toHaveLength(1);
+      expect(result.current).toMatchObject({ runId: 1, running: false });
+    });
+
     it('is running until the call settles', async () => {
       addSqlite(true);
       let finish: (v: unknown) => void = () => {};

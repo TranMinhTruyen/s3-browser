@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { callIPC } from '@/common/utils/ipcUtils';
 import SqlTabDetail from '@/pages/sql/components/SqlTabDetail';
 import { useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
+import { useDbTreeStore } from '@/pages/sql/stores/dbTreeStore';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
 import { formatEditorSql } from '@/pages/sql/utils/sqlFormat';
 import { runSql } from '@/pages/sql/utils/sqlToast';
@@ -93,6 +94,7 @@ describe('SqlTabDetail', () => {
       ),
     });
     useSqlTabStore.getState().reset();
+    useDbTreeStore.getState().reset();
     editor.view = createView('select 1', { anchor: 0 });
     views.push(editor.view as EditorView);
     editor.mount = true;
@@ -117,6 +119,50 @@ describe('SqlTabDetail', () => {
     addSqlite();
     renderDetail(id);
     expect(screen.getByTestId('editor')).toHaveAttribute('data-dialect', dialect);
+  });
+
+  describe('autocomplete schema', () => {
+    const schemaOf = () => (editor.props as { schema: unknown }).schema;
+    const setTree = (tableNames: string[]) =>
+      act(() => useDbTreeStore.setState({ trees: { 'sqlite-1': { status: 'ready', nodes: [], tableNames } } }));
+
+    it('is empty for SQLite until its tree is loaded', () => {
+      addSqlite();
+      renderDetail('sqlite-1');
+      expect(schemaOf()).toBeUndefined();
+    });
+
+    it('lists the tables and views of the SQLite tree, and follows a refresh', () => {
+      addSqlite();
+      renderDetail('sqlite-1');
+
+      setTree(['users', 'v_users']);
+      expect(schemaOf()).toEqual({ users: [], v_users: [] });
+
+      setTree(['orders']);
+      expect(schemaOf()).toEqual({ orders: [] });
+    });
+
+    it('is empty again when the tree is dropped', () => {
+      addSqlite();
+      renderDetail('sqlite-1');
+      setTree(['users']);
+
+      act(() => useDbTreeStore.getState().dropProfile('sqlite-1'));
+
+      expect(schemaOf()).toBeUndefined();
+    });
+
+    it('keeps the mock schema for PostgreSQL, whatever the tree holds', () => {
+      useDbTreeStore.setState({ trees: { 'mock-pg-local': { status: 'ready', nodes: [], tableNames: ['x'] } } });
+      renderDetail('mock-pg-local');
+      expect(Object.keys(schemaOf() as object)).toEqual(['users', 'orders', 'products']);
+    });
+
+    it('has no schema without a profile', () => {
+      renderDetail();
+      expect(schemaOf()).toBeUndefined();
+    });
   });
 
   it('falls back to the standard dialect when the chosen profile was deleted', () => {

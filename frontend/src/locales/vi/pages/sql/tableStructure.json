@@ -1,0 +1,43 @@
+{
+  "tab": {
+    "data": "Dữ liệu",
+    "column": "Cột",
+    "index": "Chỉ mục",
+    "constraint": "Ràng buộc",
+    "fk": "Khóa ngoại",
+    "source": "Mã nguồn"
+  },
+  "column": {
+    "name": "Tên",
+    "type": "Kiểu",
+    "nullable": "Cho phép NULL",
+    "default": "Mặc định",
+    "primaryKey": "Khóa chính"
+  },
+  "index": {
+    "name": "Tên",
+    "unique": "Duy nhất",
+    "origin": "Nguồn gốc",
+    "partial": "Một phần",
+    "columns": "Cột"
+  },
+  "constraint": {
+    "kind": "Loại",
+    "name": "Tên",
+    "columns": "Cột",
+    "expression": "Biểu thức"
+  },
+  "fk": {
+    "columns": "Cột",
+    "refTable": "Bảng tham chiếu",
+    "refColumns": "Cột tham chiếu",
+    "onUpdate": "Khi cập nhật",
+    "onDelete": "Khi xóa"
+  },
+  "nullValue": "NULL",
+  "yes": "Có",
+  "no": "Không",
+  "loadError": "Không tải được cấu trúc bảng",
+  "noSource": "Không có mã nguồn",
+  "loadingMore": "Đang tải thêm dòng…"
+}

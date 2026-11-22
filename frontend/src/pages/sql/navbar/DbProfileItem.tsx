@@ -1,10 +1,12 @@
 import { Badge, Box, Card, Group, isLightColor, useComputedColorScheme } from '@mantine/core';
-import { Cable, Unplug } from 'lucide-react';
+import { Cable, ChevronDown, ChevronRight, Unplug } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import ActionIcon from '@/components/buttons/ActionIcon';
 import classes from '@/components/display/ProfileCard.module.css';
 import TruncatedText from '@/components/display/TruncatedText';
 import { type DbProfile, PROVIDER_LABEL_KEY, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
+import { useDbTreeStore } from '@/pages/sql/stores/dbTreeStore';
 
 /** Fixed card height, same as the S3 profile card, so the virtual list can use it as-is. */
 export const CARD_HEIGHT = 68;
@@ -34,16 +36,20 @@ type DbProfileItemProps = {
   profileKey: string;
   // Must be stable (owned by the parent) so memo skips unchanged items.
   onConnect: (key: string) => void;
+  /** Opens or closes the object tree under the card (Accordion). */
+  onToggleTree: (key: string) => void;
 };
 
 // Selects its own profile, so connecting one profile re-renders only this item.
 // The context menu is shared and owned by DbProfiles; rows carry `data-profile-key` for it.
-function DbProfileItem({ profileKey, onConnect }: DbProfileItemProps) {
+function DbProfileItem({ profileKey, onConnect, onToggleTree }: DbProfileItemProps) {
   const { t } = useTranslation('sqlNavbar');
   const profile = useDbProfileStore(s => s.dbProfiles[profileKey]);
+  const treeOpen = useDbTreeStore(s => !!s.opened[profileKey]);
   const dark = useComputedColorScheme('light') === 'dark';
 
   const onDoubleClickCard = useCallback(() => onConnect(profileKey), [onConnect, profileKey]);
+  const onClickToggleTree = useCallback(() => onToggleTree(profileKey), [onToggleTree, profileKey]);
 
   if (!profile) return null;
 
@@ -99,6 +105,17 @@ function DbProfileItem({ profileKey, onConnect }: DbProfileItemProps) {
             </Badge>
           </Group>
         </Box>
+        {profile.isConnected && (
+          <ActionIcon
+            variant="subtle"
+            c="inherit"
+            ml="xs"
+            tooltip={t(treeOpen ? 'tree.collapse' : 'tree.expand')}
+            onClick={onClickToggleTree}
+          >
+            {treeOpen ? <ChevronDown /> : <ChevronRight />}
+          </ActionIcon>
+        )}
       </Card.Section>
     </Card>
   );

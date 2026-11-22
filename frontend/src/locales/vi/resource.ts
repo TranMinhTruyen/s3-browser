@@ -30,6 +30,7 @@ import uploaderWindow from '@/locales/vi/pages/s3/transfer/uploaderWindow.json';
 import dbProfileModal from '@/locales/vi/pages/sql/modals/dbProfileModal.json';
 import sqlNavbar from '@/locales/vi/pages/sql/sqlNavbar.json';
 import sqlTab from '@/locales/vi/pages/sql/sqlTab.json';
+import tableStructure from '@/locales/vi/pages/sql/tableStructure.json';
 
 const vietnameseResource: ResourceLanguage = {
   common: common,
@@ -66,6 +67,7 @@ const vietnameseResource: ResourceLanguage = {
   tabLayout: tabLayout,
   sqlNavbar: sqlNavbar,
   sqlTab: sqlTab,
+  tableStructure: tableStructure,
   uploaderWindow: uploaderWindow,
 };
 export default vietnameseResource;

@@ -65,8 +65,10 @@ export function useSqlRunner(tabId: string) {
 
       try {
         if (!profile.isConnected) {
-          if (!(await connectDbProfile(profile.id))) return;
-          toast.success(t('toast.connected', { ns: 'sqlNavbar', name: profile.name }));
+          const connected = await connectDbProfile(profile.id);
+          if (connected) toast.success(t('toast.connected', { ns: 'sqlNavbar', name: profile.name }));
+          // Cancelled (or the tab left) while connecting: do not run the SQL.
+          if (!connected || controller.signal.aborted) return;
         }
         const output = await callIPC(ExecuteSql, [{ profileId: profile.id, tabId, sql }], {
           signal: controller.signal,

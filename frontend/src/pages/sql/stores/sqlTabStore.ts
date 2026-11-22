@@ -3,9 +3,13 @@ import { createAppStore } from '@/common/stores/createStore';
 import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
 import { createUUID } from '@/common/utils/stringUtils';
 
-/** Metadata of one SQL tab. The editor content lives in the editor itself, not here. */
+/** The table shown by a `TableStructure` tab. */
+type TabTable = { schema: string; name: string };
+
+/** Metadata of one tab: a SQL tab, or a `TableStructure` tab when `table` is set. The editor content lives in the editor. */
 type SqlTab = {
   profileId: string | null;
+  table?: TabTable;
 };
 
 interface SqlTabState {
@@ -20,6 +24,10 @@ interface SqlTabAction {
   closeTab: (tabId: string) => void;
   // Move a tab to the position of `overId`. Does not change the active tab.
   moveTab: (activeId: string, overId: string) => void;
+  /** Opens the `TableStructure` tab of a table, or switches to it when it is already open. */
+  openTableTab: (profileId: string, schema: string, name: string) => void;
+  /** Closes the `TableStructure` tabs of a profile; a SQL tab is added when none is left. */
+  closeProfileTables: (profileId: string) => void;
   setTabProfile: (tabId: string, profileId: string | null) => void;
   // A profile was deleted: every tab using it goes back to "no profile".
   clearProfile: (profileId: string) => void;
@@ -82,6 +90,51 @@ export const useSqlTabStore = createAppStore<SqlTabState & SqlTabAction>(
       keys.splice(to, 0, ...keys.splice(from, 1));
       // Rebuild the object: key order is the tab order.
       set({ tabList: Object.fromEntries(keys.map(k => [k, tabList[k]])) }, undefined, `${SCOPE}/moveTab`);
+    },
+
+    openTableTab: (profileId, schema, name) => {
+      const { tabList } = get();
+      const existing = Object.keys(tabList).find(key => {
+        const tab = tabList[key];
+        return tab.profileId === profileId && tab.table?.schema === schema && tab.table.name === name;
+      });
+      if (existing) {
+        set({ activeTab: existing }, undefined, `${SCOPE}/openTableTab`);
+        return;
+      }
+      const tabId = createUUID();
+      set(
+        state => ({ tabList: { ...state.tabList, [tabId]: { profileId, table: { schema, name } } }, activeTab: tabId }),
+        undefined,
+        `${SCOPE}/openTableTab`
+      );
+    },
+
+    closeProfileTables: profileId => {
+      const { tabList, activeTab } = get();
+      const keys = Object.keys(tabList);
+      const closed = new Set(keys.filter(key => tabList[key].profileId === profileId && tabList[key].table));
+      if (closed.size === 0) return;
+
+      const kept = keys.filter(key => !closed.has(key));
+      const sqlTabId = kept.some(key => !tabList[key].table) ? null : createUUID();
+      // The active tab goes to its nearest neighbour that stays; the new SQL tab only takes over when none stays.
+      const index = keys.indexOf(activeTab);
+      const nextActiveTab = closed.has(activeTab)
+        ? (keys.slice(index + 1).find(key => !closed.has(key)) ??
+          keys.slice(0, index).findLast(key => !closed.has(key)) ??
+          (sqlTabId as string))
+        : activeTab;
+      set(
+        state => {
+          for (const key of closed) delete state.tabList[key];
+          if (sqlTabId) state.tabList[sqlTabId] = newTab();
+          state.activeTab = nextActiveTab;
+        },
+        undefined,
+        `${SCOPE}/closeProfileTables`
+      );
+      for (const tabId of closed) void callIPC(CloseDbTab, [{ tabId }]);
     },
 
     setTabProfile: (tabId, profileId) => {
