@@ -1,0 +1,50 @@
+[
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "connId": 1
+      }
+    },
+    "step": "open readOnly=false"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "connId": 1
+      }
+    },
+    "step": "open readOnly=true"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "connId": 1
+      }
+    },
+    "step": "open without readOnly"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {}
+    },
+    "step": "close rw"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {}
+    },
+    "step": "close ro"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {}
+    },
+    "step": "close default"
+  }
+]

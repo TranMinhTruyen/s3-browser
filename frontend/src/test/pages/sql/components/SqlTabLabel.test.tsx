@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import SqlTabLabel from '@/pages/sql/components/SqlTabLabel';
 import { useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
+import { pgProfile, toProfileMap } from '@/test/_helpers/dbProfiles';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 const tabId = () => useSqlTabStore.getState().activeTab;
@@ -11,6 +12,12 @@ const swatch = (container: HTMLElement) => container.querySelector<HTMLElement>(
 describe('SqlTabLabel', () => {
   beforeEach(() => {
     useDbProfileStore.getState().reset();
+    useDbProfileStore.setState({
+      dbProfiles: toProfileMap(
+        pgProfile('mock-pg-local', { name: 'Local PostgreSQL' }),
+        pgProfile('mock-pg-staging', { name: 'Staging PostgreSQL' })
+      ),
+    });
     useSqlTabStore.getState().reset();
   });
 
@@ -61,10 +68,35 @@ describe('SqlTabLabel', () => {
   it('follows the store when the profile is chosen, renamed and deleted', () => {
     renderWithProviders(<SqlTabLabel tabId={tabId()} />);
 
-    act(() => useSqlTabStore.getState().setTabProfile(tabId(), 'mock-sqlite-local'));
-    expect(screen.getByText('Local SQLite')).toBeInTheDocument();
+    act(() => useSqlTabStore.getState().setTabProfile(tabId(), 'mock-pg-staging'));
+    expect(screen.getByText('Staging PostgreSQL')).toBeInTheDocument();
 
-    act(() => useDbProfileStore.getState().deleteDbProfile('mock-sqlite-local'));
+    act(() => useDbProfileStore.getState().deleteDbProfile('mock-pg-staging'));
     expect(screen.getByText('New query')).toBeInTheDocument();
+  });
+  describe('TableStructure tab', () => {
+    const openTable = () => {
+      useSqlTabStore.getState().openTableTab('mock-pg-local', 'public', 'users');
+      return useSqlTabStore.getState().activeTab;
+    };
+
+    it('shows a table icon and the table name, without the profile name or a status dot', () => {
+      const { container } = renderWithProviders(<SqlTabLabel tabId={openTable()} />);
+
+      expect(screen.getByText('users')).toBeInTheDocument();
+      expect(screen.queryByText('Local PostgreSQL')).not.toBeInTheDocument();
+      expect(swatch(container)).not.toBeInTheDocument();
+      expect(container.querySelector('svg.lucide-table-2, svg.lucide-table2')).toBeInTheDocument();
+    });
+
+    it('keeps the SQL tab label unchanged next to it', () => {
+      const sqlTab = tabId();
+      openTable();
+      useSqlTabStore.getState().setTabProfile(sqlTab, 'mock-pg-staging');
+
+      renderWithProviders(<SqlTabLabel tabId={sqlTab} />);
+
+      expect(screen.getByText('Staging PostgreSQL')).toBeInTheDocument();
+    });
   });
 });

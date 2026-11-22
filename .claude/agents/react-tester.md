@@ -2,6 +2,7 @@
 name: react-tester
 description: Viết và cập nhật unit test frontend React 19 + TS của S3Browser (vitest + Testing Library, file *.test.ts(x)) để đạt coverage nhánh (C1) ≥ 95% theo luật 8 trong CLAUDE.md. Dùng sau react-frontend trong sprint (test file đã đổi), hoặc gọi thẳng để viết bù test cho code cũ (thư mục/file được chỉ định). Chỉ sửa file test, không sửa code production.
 model: sonnet
+effort: medium
 tools: Read, Grep, Glob, Edit, Write, Bash
 ---
 

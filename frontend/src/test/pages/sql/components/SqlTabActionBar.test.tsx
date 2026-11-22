@@ -22,9 +22,21 @@ const options = [
 ];
 
 function setup(props: Partial<React.ComponentProps<typeof SqlTabActionBar>> = {}) {
-  const handlers = { onChangeSelectProfile: vi.fn(), onClickConnect: vi.fn(), onClickExecute: vi.fn() };
+  const handlers = {
+    onChangeSelectProfile: vi.fn(),
+    onClickConnect: vi.fn(),
+    onClickExecute: vi.fn(),
+    onClickCancel: vi.fn(),
+  };
   renderWithProviders(
-    <SqlTabActionBar isConnected={false} selectedProfileId="p1" profileOptions={options} {...handlers} {...props} />
+    <SqlTabActionBar
+      isConnected={false}
+      selectedProfileId="p1"
+      profileOptions={options}
+      running={false}
+      {...handlers}
+      {...props}
+    />
   );
   return handlers;
 }
@@ -64,5 +76,22 @@ describe('SqlTabActionBar', () => {
     setup({ selectedProfileId: null });
     expect(screen.getByRole('button', { name: 'Connect' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Run SQL' })).toBeDisabled();
+  });
+
+  describe('cancel', () => {
+    it('shows no Cancel button when nothing runs', () => {
+      setup();
+      expect(screen.queryByRole('button', { name: 'Cancel execution' })).not.toBeInTheDocument();
+    });
+
+    it('while running, disables Run SQL and shows Cancel that calls onClickCancel', async () => {
+      const { onClickCancel, onClickExecute } = setup({ running: true });
+
+      expect(screen.getByRole('button', { name: 'Run SQL' })).toBeDisabled();
+      await userEvent.click(screen.getByRole('button', { name: 'Cancel execution' }));
+
+      expect(onClickCancel).toHaveBeenCalledTimes(1);
+      expect(onClickExecute).not.toHaveBeenCalled();
+    });
   });
 });

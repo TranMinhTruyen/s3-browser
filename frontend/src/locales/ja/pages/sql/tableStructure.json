@@ -1,0 +1,43 @@
+{
+  "tab": {
+    "data": "データ",
+    "column": "列",
+    "index": "インデックス",
+    "constraint": "制約",
+    "fk": "外部キー",
+    "source": "ソース"
+  },
+  "column": {
+    "name": "名前",
+    "type": "型",
+    "nullable": "NULL 許可",
+    "default": "既定値",
+    "primaryKey": "主キー"
+  },
+  "index": {
+    "name": "名前",
+    "unique": "一意",
+    "origin": "作成元",
+    "partial": "部分",
+    "columns": "列"
+  },
+  "constraint": {
+    "kind": "種類",
+    "name": "名前",
+    "columns": "列",
+    "expression": "式"
+  },
+  "fk": {
+    "columns": "列",
+    "refTable": "参照テーブル",
+    "refColumns": "参照列",
+    "onUpdate": "更新時",
+    "onDelete": "削除時"
+  },
+  "nullValue": "NULL",
+  "yes": "はい",
+  "no": "いいえ",
+  "loadError": "テーブル構造を読み込めませんでした",
+  "noSource": "ソースがありません",
+  "loadingMore": "行をさらに読み込み中…"
+}

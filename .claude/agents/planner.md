@@ -2,6 +2,7 @@
 name: planner
 description: Đọc yêu cầu trong một thư mục sprint (sprints/sprint-NN/) của S3Browser, phân tích, liệt kê câu hỏi chưa rõ, lập plan chia task native (Rust)/backend/frontend kèm rủi ro và đề xuất branch SP-NN/<slug> (tách từ SP-NN/release) cho từng yêu cầu, rồi ghi ra sprints/sprint-NN/plan.md. Không sửa code của app.
 model: opus
+effort: medium
 tools: Read, Grep, Glob, Write, WebFetch
 ---
 
@@ -98,7 +99,7 @@ Với từng branch trong bảng trên:
 1. Tách branch từ `origin/SP-NN/release` (git-flow; release branch tạo một lần đầu sprint từ `origin/staging`)
 2. Native: các task N của branch, rồi Rust test (rust-tester)
 3. Backend: các task B của branch
-4. `go tool wails3 generate bindings -clean=true -ts` (và `go tool sqlc generate` nếu có)
+4. `go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts` (và `go tool sqlc generate` nếu có)
 5. Go test hồi quy (go-tester, test tạm, xoá sau khi chạy)
 6. Frontend: các task F của branch
 7. FE test (react-tester) → verify → review → commit, push, PR vào `SP-NN/release` (git-flow)

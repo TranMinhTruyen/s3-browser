@@ -1,0 +1,267 @@
+[
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "1",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ],
+            "sql": "SELECT 1;"
+          },
+          {
+            "elapsedMs": 0,
+            "error": {
+              "code": "sqlError",
+              "message": "near \"SELEC\": syntax error"
+            },
+            "index": 1,
+            "kind": "affected",
+            "sql": "SELEC 2;"
+          }
+        ]
+      }
+    },
+    "step": "syntax error in the middle"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "elapsedMs": 0,
+            "error": {
+              "code": "sqlError",
+              "message": "near \"SELEC\": syntax error"
+            },
+            "index": 0,
+            "kind": "affected",
+            "sql": "SELEC 2"
+          }
+        ]
+      }
+    },
+    "step": "syntax error alone"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "elapsedMs": 0,
+            "error": {
+              "code": "sqlError",
+              "message": "no such table: nope"
+            },
+            "index": 0,
+            "kind": "affected",
+            "sql": "SELECT * FROM nope"
+          }
+        ]
+      }
+    },
+    "step": "no such table"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "affected",
+            "rowsAffected": 0,
+            "sql": "CREATE TABLE uq(a UNIQUE);"
+          },
+          {
+            "elapsedMs": 0,
+            "index": 1,
+            "kind": "affected",
+            "rowsAffected": 1,
+            "sql": "INSERT INTO uq VALUES(1);"
+          },
+          {
+            "elapsedMs": 0,
+            "error": {
+              "code": "sqlError",
+              "message": "UNIQUE constraint failed: uq.a"
+            },
+            "index": 2,
+            "kind": "affected",
+            "sql": "INSERT INTO uq VALUES(1);"
+          }
+        ]
+      }
+    },
+    "step": "constraint violation then more"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": []
+      }
+    },
+    "step": "empty sql"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": []
+      }
+    },
+    "step": "only comment"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "elapsedMs": 0,
+            "error": {
+              "code": "sqlError",
+              "message": "integer overflow"
+            },
+            "index": 0,
+            "kind": "affected",
+            "sql": "SELECT abs(x) FROM (SELECT 1 AS x UNION ALL SELECT -9223372036854775807-1)"
+          }
+        ]
+      }
+    },
+    "step": "runtime error in first page"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "1",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ],
+            "sql": "SELECT 1;"
+          },
+          {
+            "elapsedMs": 0,
+            "error": {
+              "code": "sqlError",
+              "message": "integer overflow"
+            },
+            "index": 1,
+            "kind": "affected",
+            "sql": "SELECT abs(x) FROM (SELECT 1 AS x UNION ALL SELECT -9223372036854775807-1);"
+          }
+        ]
+      }
+    },
+    "step": "runtime error in non-last select"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "abs(x)",
+                "type": ""
+              }
+            ],
+            "cursorId": 1,
+            "done": false,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ],
+            "sql": "SELECT abs(x) FROM (SELECT 1 AS x UNION ALL SELECT -9223372036854775807-1)"
+          }
+        ]
+      }
+    },
+    "step": "runtime error after first page: execute"
+  },
+  {
+    "response": {
+      "error": {
+        "code": "sqlError",
+        "message": "integer overflow"
+      },
+      "ok": false
+    },
+    "step": "runtime error at fetch"
+  },
+  {
+    "response": {
+      "error": {
+        "code": "cursorNotFound",
+        "message": "cursor is closed"
+      },
+      "ok": false
+    },
+    "step": "cursor dropped after error"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "4",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "4"
+              ]
+            ],
+            "sql": "SELECT 4"
+          }
+        ]
+      }
+    },
+    "step": "connection still usable"
+  }
+]

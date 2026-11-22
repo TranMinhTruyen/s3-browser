@@ -1,15 +1,19 @@
 import type { EditorView } from '@codemirror/view';
-import { act, screen } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ConnectDb, ExecuteSql, FetchRows } from '@wails/S3Browser/internal/handlers/dbhandler';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { callIPC } from '@/common/utils/ipcUtils';
 import SqlTabDetail from '@/pages/sql/components/SqlTabDetail';
 import { useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
+import { useDbTreeStore } from '@/pages/sql/stores/dbTreeStore';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
 import { formatEditorSql } from '@/pages/sql/utils/sqlFormat';
 import { runSql } from '@/pages/sql/utils/sqlToast';
 import { createView } from '@/test/_helpers/codemirror';
+import { pgProfile, sqliteProfile, toProfileMap } from '@/test/_helpers/dbProfiles';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 type EditorProps = {
@@ -35,7 +39,30 @@ vi.mock('@/pages/sql/components/sqlEditor/SqlEditor', () => ({
 }));
 vi.mock('@/pages/sql/utils/sqlFormat', () => ({ formatEditorSql: vi.fn() }));
 vi.mock('@/pages/sql/utils/sqlToast', () => ({ runSql: vi.fn() }));
-vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() } }));
+vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
+vi.mock('@wails/S3Browser/internal/handlers/dbhandler', () => ({
+  ConnectDb: vi.fn(),
+  CloseDbTab: vi.fn(),
+  ExecuteSql: vi.fn(),
+  FetchRows: vi.fn(),
+  GetAllDbProfile: vi.fn(),
+}));
+const result = vi.hoisted(() => ({ props: null as unknown }));
+vi.mock('@/pages/sql/components/sqlResult/SqlResultPanel', () => ({
+  default: (props: Record<string, unknown>) => {
+    result.props = props;
+    return <div data-testid="result" />;
+  },
+}));
+
+const callIPCMock = vi.mocked(callIPC);
+
+/** Adds a SQLite profile (they come from the backend, so the store does not start with one). */
+const addSqlite = (isConnected = false) =>
+  useDbProfileStore.setState(state => ({
+    dbProfiles: { ...state.dbProfiles, 'sqlite-1': sqliteProfile('sqlite-1', { name: 'Local SQLite', isConnected }) },
+  }));
 
 const props = () => editor.props as EditorProps;
 const view = () => editor.view as EditorView;
@@ -60,7 +87,14 @@ const views: EditorView[] = [];
 describe('SqlTabDetail', () => {
   beforeEach(() => {
     useDbProfileStore.getState().reset();
+    useDbProfileStore.setState({
+      dbProfiles: toProfileMap(
+        pgProfile('mock-pg-local', { name: 'Local PostgreSQL' }),
+        pgProfile('mock-pg-staging', { name: 'Staging PostgreSQL' })
+      ),
+    });
     useSqlTabStore.getState().reset();
+    useDbTreeStore.getState().reset();
     editor.view = createView('select 1', { anchor: 0 });
     views.push(editor.view as EditorView);
     editor.mount = true;
@@ -80,10 +114,55 @@ describe('SqlTabDetail', () => {
 
   it.each([
     ['mock-pg-local', 'postgresql'],
-    ['mock-sqlite-local', 'sqlite'],
+    ['sqlite-1', 'sqlite'],
   ])('gives the editor the dialect of the chosen profile (%s)', (id, dialect) => {
+    addSqlite();
     renderDetail(id);
     expect(screen.getByTestId('editor')).toHaveAttribute('data-dialect', dialect);
+  });
+
+  describe('autocomplete schema', () => {
+    const schemaOf = () => (editor.props as { schema: unknown }).schema;
+    const setTree = (tableNames: string[]) =>
+      act(() => useDbTreeStore.setState({ trees: { 'sqlite-1': { status: 'ready', nodes: [], tableNames } } }));
+
+    it('is empty for SQLite until its tree is loaded', () => {
+      addSqlite();
+      renderDetail('sqlite-1');
+      expect(schemaOf()).toBeUndefined();
+    });
+
+    it('lists the tables and views of the SQLite tree, and follows a refresh', () => {
+      addSqlite();
+      renderDetail('sqlite-1');
+
+      setTree(['users', 'v_users']);
+      expect(schemaOf()).toEqual({ users: [], v_users: [] });
+
+      setTree(['orders']);
+      expect(schemaOf()).toEqual({ orders: [] });
+    });
+
+    it('is empty again when the tree is dropped', () => {
+      addSqlite();
+      renderDetail('sqlite-1');
+      setTree(['users']);
+
+      act(() => useDbTreeStore.getState().dropProfile('sqlite-1'));
+
+      expect(schemaOf()).toBeUndefined();
+    });
+
+    it('keeps the mock schema for PostgreSQL, whatever the tree holds', () => {
+      useDbTreeStore.setState({ trees: { 'mock-pg-local': { status: 'ready', nodes: [], tableNames: ['x'] } } });
+      renderDetail('mock-pg-local');
+      expect(Object.keys(schemaOf() as object)).toEqual(['users', 'orders', 'products']);
+    });
+
+    it('has no schema without a profile', () => {
+      renderDetail();
+      expect(schemaOf()).toBeUndefined();
+    });
   });
 
   it('falls back to the standard dialect when the chosen profile was deleted', () => {
@@ -108,6 +187,15 @@ describe('SqlTabDetail', () => {
       renderDetail();
       await user.click(picker());
       const names = (await screen.findAllByRole('option', { hidden: true })).map(o => o.textContent);
+      expect(names).toEqual(['Local PostgreSQL', 'Staging PostgreSQL']);
+    });
+
+    it('lists a SQLite profile loaded from the backend after the PostgreSQL ones', async () => {
+      addSqlite();
+      const user = userEvent.setup();
+      renderDetail();
+      await user.click(picker());
+      const names = (await screen.findAllByRole('option', { hidden: true })).map(o => o.textContent);
       expect(names).toEqual(['Local PostgreSQL', 'Staging PostgreSQL', 'Local SQLite']);
     });
   });
@@ -118,6 +206,30 @@ describe('SqlTabDetail', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Connect' }));
       expect(useDbProfileStore.getState().dbProfiles['mock-pg-local']?.isConnected).toBe(true);
       expect(toast.success).toHaveBeenCalledWith('Connected to Local PostgreSQL');
+    });
+
+    it('connects a SQLite profile through ConnectDb and toasts only on success', async () => {
+      addSqlite();
+      callIPCMock.mockResolvedValue(true as never);
+      renderDetail('sqlite-1');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Connect' }));
+
+      expect(callIPCMock).toHaveBeenCalledWith(ConnectDb, [{ profileId: 'sqlite-1' }]);
+      await waitFor(() => expect(useDbProfileStore.getState().dbProfiles['sqlite-1']?.isConnected).toBe(true));
+      expect(toast.success).toHaveBeenCalledWith('Connected to Local SQLite');
+    });
+
+    it('does not set the flag nor toast when the SQLite connect fails', async () => {
+      addSqlite();
+      callIPCMock.mockResolvedValue(null);
+      renderDetail('sqlite-1');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Connect' }));
+      await flush();
+
+      expect(useDbProfileStore.getState().dbProfiles['sqlite-1']?.isConnected).toBe(false);
+      expect(toast.success).not.toHaveBeenCalled();
     });
 
     it('disables Connect once connected', () => {
@@ -162,6 +274,124 @@ describe('SqlTabDetail', () => {
     });
   });
 
+  describe('execute on a SQLite profile', () => {
+    const statement = { index: 0, sql: 'select 1', kind: 'rows', columns: [], rows: [], cursorId: null, done: true };
+
+    beforeEach(() => {
+      addSqlite(true);
+    });
+
+    it('Run SQL sends the editor text to ExecuteSql with this tab, not to the fake runSql', async () => {
+      callIPCMock.mockResolvedValue({ statements: [statement] } as never);
+      renderDetail('sqlite-1');
+
+      await userEvent.click(screen.getByRole('button', { name: 'Run SQL' }));
+
+      await waitFor(() =>
+        expect(callIPCMock).toHaveBeenCalledWith(
+          ExecuteSql,
+          [{ profileId: 'sqlite-1', tabId: tabId(), sql: 'select 1' }],
+          expect.anything()
+        )
+      );
+      expect(runSql).not.toHaveBeenCalled();
+      await waitFor(() => expect((result.props as { statements: unknown[] }).statements).toHaveLength(1));
+    });
+
+    it('Ctrl+E runs only the selection', async () => {
+      callIPCMock.mockResolvedValue({ statements: [] } as never);
+      renderDetail('sqlite-1');
+      view().dispatch({ selection: { anchor: 7, head: 8 } });
+
+      props().onExecute();
+
+      await waitFor(() =>
+        expect(callIPCMock).toHaveBeenCalledWith(
+          ExecuteSql,
+          [{ profileId: 'sqlite-1', tabId: tabId(), sql: '1' }],
+          expect.anything()
+        )
+      );
+      await flush();
+    });
+
+    it('shows Cancel while running and aborts the call without a toast', async () => {
+      let signal: AbortSignal | undefined;
+      callIPCMock.mockImplementation(((_b: unknown, _a: unknown, options: { signal: AbortSignal }) => {
+        signal = options.signal;
+        return new Promise(() => {});
+      }) as never);
+      renderDetail('sqlite-1');
+      expect(screen.queryByRole('button', { name: 'Cancel execution' })).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Run SQL' }));
+      await userEvent.click(await screen.findByRole('button', { name: 'Cancel execution' }));
+
+      expect(signal?.aborted).toBe(true);
+      expect(toast.error).not.toHaveBeenCalled();
+    });
+
+    describe('switching profile', () => {
+      const open = {
+        index: 0,
+        sql: 'select 1',
+        kind: 'rows',
+        columns: ['a'],
+        rows: [['1']],
+        cursorId: 7,
+        done: false,
+      };
+      const onLoadMore = () => (result.props as { onLoadMore: () => void }).onLoadMore();
+      const fetchCalls = () => callIPCMock.mock.calls.filter(c => c[0] === FetchRows);
+
+      const runOpen = async () => {
+        callIPCMock.mockResolvedValue({ statements: [open] } as never);
+        renderDetail('sqlite-1');
+        await userEvent.click(screen.getByRole('button', { name: 'Run SQL' }));
+        await waitFor(() => expect((result.props as { statements: unknown[] }).statements).toHaveLength(1));
+        callIPCMock.mockClear();
+      };
+
+      it('detaches when another profile is picked: no more rows are fetched, no toast', async () => {
+        await runOpen();
+        const user = userEvent.setup();
+
+        await pickProfile(user, 'Local PostgreSQL');
+        expect(profileIdOfTab()).toBe('mock-pg-local');
+        await act(async () => onLoadMore());
+
+        expect(fetchCalls()).toHaveLength(0);
+        expect(toast.error).not.toHaveBeenCalled();
+        expect(toast.warning).not.toHaveBeenCalled();
+      });
+
+      it('keeps the result and the cursor when the same profile is picked again', async () => {
+        await runOpen();
+        callIPCMock.mockResolvedValue({ rows: [['2']], done: true } as never);
+        const user = userEvent.setup();
+
+        await pickProfile(user, 'Local SQLite');
+        await act(async () => onLoadMore());
+
+        expect(profileIdOfTab()).toBe('sqlite-1');
+        expect(fetchCalls()).toHaveLength(1);
+        expect(fetchCalls()[0][1]).toEqual([{ tabId: tabId(), cursorId: 7 }]);
+        expect((result.props as { statements: unknown[] }).statements).toHaveLength(1);
+      });
+    });
+
+    it('gives the result panel the run state', async () => {
+      callIPCMock.mockResolvedValue({ statements: [statement] } as never);
+      renderDetail('sqlite-1');
+      expect(screen.getByTestId('result')).toBeInTheDocument();
+      expect(result.props).toMatchObject({ statements: [], cancelled: false, running: false, loadingMore: false });
+
+      await userEvent.click(screen.getByRole('button', { name: 'Run SQL' }));
+
+      await waitFor(() => expect(result.props).toMatchObject({ statements: [statement], running: false }));
+    });
+  });
+
   describe('format (Ctrl+Q)', () => {
     it('does nothing without a view', async () => {
       editor.mount = false;
@@ -172,7 +402,8 @@ describe('SqlTabDetail', () => {
 
     it('formats with the dialect of the chosen profile', async () => {
       vi.mocked(formatEditorSql).mockResolvedValue({ ok: true, scope: 'all' });
-      renderDetail('mock-sqlite-local');
+      addSqlite();
+      renderDetail('sqlite-1');
       await props().onFormat();
       expect(formatEditorSql).toHaveBeenCalledWith(view(), 'sqlite');
     });

@@ -30,6 +30,7 @@ import uploaderWindow from '@/locales/zh-CN/pages/s3/transfer/uploaderWindow.jso
 import dbProfileModal from '@/locales/zh-CN/pages/sql/modals/dbProfileModal.json';
 import sqlNavbar from '@/locales/zh-CN/pages/sql/sqlNavbar.json';
 import sqlTab from '@/locales/zh-CN/pages/sql/sqlTab.json';
+import tableStructure from '@/locales/zh-CN/pages/sql/tableStructure.json';
 
 const simplifiedChineseResource: ResourceLanguage = {
   common: common,
@@ -66,6 +67,7 @@ const simplifiedChineseResource: ResourceLanguage = {
   tabLayout: tabLayout,
   sqlNavbar: sqlNavbar,
   sqlTab: sqlTab,
+  tableStructure: tableStructure,
   uploaderWindow: uploaderWindow,
 };
 export default simplifiedChineseResource;

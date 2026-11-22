@@ -93,6 +93,23 @@
     "S3W011": "Đã tạo bucket {bucket} nhưng không thể đặt quyền truy cập. Bạn có thể đổi sau bằng Quyền truy cập.",
     "S3W012": "Đã tạo bucket {bucket} nhưng Block Public Access không cho phép policy công khai nên bucket vẫn ở chế độ riêng tư."
   },
+  "db": {
+    "DBE001": "Yêu cầu gửi tới công cụ cơ sở dữ liệu không hợp lệ.",
+    "DBE002": "Không thể mở tệp cơ sở dữ liệu {path}.",
+    "DBE003": "Tệp này không phải cơ sở dữ liệu SQLite.",
+    "DBE004": "Kết nối đã bị đóng. Hãy kết nối lại.",
+    "DBE005": "Kết quả không còn khả dụng. Hãy chạy lại truy vấn.",
+    "DBE006": "Lỗi SQL.",
+    "DBE007": "Bảng [{name}] không tồn tại.",
+    "DBE008": "Lỗi công cụ cơ sở dữ liệu.",
+    "DBE009": "Không thể tải công cụ cơ sở dữ liệu (s3b_db.dll).",
+    "DBE010": "Không thể lưu hồ sơ cơ sở dữ liệu [{name}].",
+    "DBE011": "Không thể xoá hồ sơ cơ sở dữ liệu [{name}].",
+    "DBE012": "Không thể tải danh sách hồ sơ cơ sở dữ liệu.",
+    "DBE013": "Không thể mở hộp thoại chọn tệp.",
+    "DBE014": "Hồ sơ [{name}] chưa được kết nối.",
+    "DBE015": "Thao tác đã hết thời gian chờ sau {timeout}."
+  },
   "master": {
     "MTE001": "Lỗi khi tải dữ liệu master"
   },

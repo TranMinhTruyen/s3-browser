@@ -2,6 +2,7 @@
   "contextMenu": {
     "connect": "Kết nối",
     "disconnect": "Ngắt kết nối",
+    "refresh": "Làm mới",
     "edit": "Chỉnh sửa",
     "export": "Xuất",
     "delete": "Xóa"
@@ -14,6 +15,17 @@
   },
   "profile": {
     "empty": "Chưa có hồ sơ cơ sở dữ liệu. Dùng các nút phía trên để tạo mới."
+  },
+  "tree": {
+    "tables": "Bảng",
+    "views": "View",
+    "indexes": "Chỉ mục",
+    "triggers": "Trigger",
+    "loading": "Đang tải đối tượng…",
+    "empty": "Không có đối tượng",
+    "loadError": "Không tải được các đối tượng",
+    "expand": "Hiện đối tượng",
+    "collapse": "Ẩn đối tượng"
   },
   "dbType": {
     "postgresql": "PostgreSQL",

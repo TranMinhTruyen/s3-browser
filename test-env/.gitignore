@@ -1,3 +1,5 @@
 # Access keys written by floci-init
 generated/
 certs/
+# Benchmark reports (.xlsx)
+db/report/

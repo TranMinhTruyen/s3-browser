@@ -4,11 +4,25 @@
   },
   "tooltip": {
     "connect": "连接",
-    "execute": "运行 SQL"
+    "execute": "运行 SQL",
+    "cancel": "取消执行"
   },
   "search": {
     "placeholderProfile": "搜索配置文件",
     "emptyProfile": "未找到配置文件"
+  },
+  "result": {
+    "title": "结果 {{n}}",
+    "messages": "消息",
+    "firstRowsOnly": "仅显示前 {{count}} 行",
+    "loading": "正在加载更多行...",
+    "nullValue": "NULL"
+  },
+  "message": {
+    "rowsAffected": "影响了 {{n}} 行",
+    "rowsReturned": "返回了 {{n}} 行",
+    "elapsed": "{{seconds}} s",
+    "cancelled": "已取消执行。"
   },
   "toast": {
     "noProfile": "请先选择数据库配置文件。",

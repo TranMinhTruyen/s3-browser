@@ -1,0 +1,638 @@
+[
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              },
+              {
+                "name": "name",
+                "type": "TEXT"
+              }
+            ],
+            "cursorId": 1,
+            "done": false,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1",
+                "row-001"
+              ],
+              [
+                "2",
+                "row-002"
+              ],
+              [
+                "3",
+                "row-003"
+              ],
+              [
+                "4",
+                "row-004"
+              ]
+            ],
+            "sql": "SELECT id, name FROM p ORDER BY id"
+          }
+        ]
+      }
+    },
+    "step": "execute pageSize=4"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": false,
+        "rows": [
+          [
+            "5",
+            "row-005"
+          ],
+          [
+            "6",
+            "row-006"
+          ],
+          [
+            "7",
+            "row-007"
+          ],
+          [
+            "8",
+            "row-008"
+          ],
+          [
+            "9",
+            "row-009"
+          ],
+          [
+            "10",
+            "row-010"
+          ],
+          [
+            "11",
+            "row-011"
+          ]
+        ]
+      }
+    },
+    "step": "fetch #1 pageSize=7 maxPageBytes=16777216"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": false,
+        "rows": [
+          [
+            "12",
+            "row-012"
+          ],
+          [
+            "13",
+            "row-013"
+          ],
+          [
+            "14",
+            "row-014"
+          ],
+          [
+            "15",
+            "row-015"
+          ],
+          [
+            "16",
+            "row-016"
+          ],
+          [
+            "17",
+            "row-017"
+          ],
+          [
+            "18",
+            "row-018"
+          ]
+        ]
+      }
+    },
+    "step": "fetch #2 pageSize=7 maxPageBytes=16777216"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": false,
+        "rows": [
+          [
+            "19",
+            "row-019"
+          ],
+          [
+            "20",
+            "row-020"
+          ],
+          [
+            "21",
+            "row-021"
+          ],
+          [
+            "22",
+            "row-022"
+          ],
+          [
+            "23",
+            "row-023"
+          ],
+          [
+            "24",
+            "row-024"
+          ],
+          [
+            "25",
+            "row-025"
+          ]
+        ]
+      }
+    },
+    "step": "fetch #3 pageSize=7 maxPageBytes=16777216"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": true,
+        "rows": []
+      }
+    },
+    "step": "fetch #4 pageSize=7 maxPageBytes=16777216"
+  },
+  {
+    "response": {
+      "error": {
+        "code": "cursorNotFound",
+        "message": "cursor is closed"
+      },
+      "ok": false
+    },
+    "step": "fetch after done"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              },
+              {
+                "name": "name",
+                "type": "TEXT"
+              }
+            ],
+            "cursorId": 1,
+            "done": false,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1",
+                "row-001"
+              ],
+              [
+                "2",
+                "row-002"
+              ],
+              [
+                "3",
+                "row-003"
+              ],
+              [
+                "4",
+                "row-004"
+              ]
+            ],
+            "sql": "SELECT id, name FROM p ORDER BY id"
+          }
+        ]
+      }
+    },
+    "step": "execute maxPageBytes=30 (cut early, 4 rows)"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": false,
+        "rows": [
+          [
+            "5",
+            "row-005"
+          ],
+          [
+            "6",
+            "row-006"
+          ],
+          [
+            "7",
+            "row-007"
+          ],
+          [
+            "8",
+            "row-008"
+          ],
+          [
+            "9",
+            "row-009"
+          ]
+        ]
+      }
+    },
+    "step": "fetch #1 pageSize=5 maxPageBytes=16777216"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": false,
+        "rows": [
+          [
+            "10",
+            "row-010"
+          ],
+          [
+            "11",
+            "row-011"
+          ],
+          [
+            "12",
+            "row-012"
+          ]
+        ]
+      }
+    },
+    "step": "fetch #2 pageSize=100 maxPageBytes=20"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": false,
+        "rows": [
+          [
+            "13",
+            "row-013"
+          ],
+          [
+            "14",
+            "row-014"
+          ],
+          [
+            "15",
+            "row-015"
+          ]
+        ]
+      }
+    },
+    "step": "fetch #3 pageSize=3 maxPageBytes=16777216"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": false,
+        "rows": [
+          [
+            "16",
+            "row-016"
+          ]
+        ]
+      }
+    },
+    "step": "fetch #4 pageSize=100 maxPageBytes=1"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": false,
+        "rows": [
+          [
+            "17",
+            "row-017"
+          ],
+          [
+            "18",
+            "row-018"
+          ],
+          [
+            "19",
+            "row-019"
+          ],
+          [
+            "20",
+            "row-020"
+          ],
+          [
+            "21",
+            "row-021"
+          ]
+        ]
+      }
+    },
+    "step": "fetch #5 pageSize=5 maxPageBytes=16777216"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": false,
+        "rows": [
+          [
+            "22",
+            "row-022"
+          ],
+          [
+            "23",
+            "row-023"
+          ],
+          [
+            "24",
+            "row-024"
+          ]
+        ]
+      }
+    },
+    "step": "fetch #6 pageSize=100 maxPageBytes=20"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": true,
+        "rows": [
+          [
+            "25",
+            "row-025"
+          ]
+        ]
+      }
+    },
+    "step": "fetch #7 pageSize=3 maxPageBytes=16777216"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              }
+            ],
+            "cursorId": 1,
+            "done": false,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ]
+            ],
+            "sql": "SELECT id FROM p ORDER BY id LIMIT 3"
+          }
+        ]
+      }
+    },
+    "step": "execute pageSize=0 maxPageBytes=0 (at least one row)"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": false,
+        "rows": [
+          [
+            "2"
+          ]
+        ]
+      }
+    },
+    "step": "fetch #1 pageSize=0 maxPageBytes=0"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": false,
+        "rows": [
+          [
+            "3"
+          ]
+        ]
+      }
+    },
+    "step": "fetch #2 pageSize=0 maxPageBytes=0"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": true,
+        "rows": []
+      }
+    },
+    "step": "fetch #3 pageSize=0 maxPageBytes=0"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              }
+            ],
+            "cursorId": 1,
+            "done": false,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ],
+              [
+                "2"
+              ],
+              [
+                "3"
+              ],
+              [
+                "4"
+              ],
+              [
+                "5"
+              ]
+            ],
+            "sql": "SELECT id FROM p ORDER BY id LIMIT 5"
+          }
+        ]
+      }
+    },
+    "step": "exactly pageSize rows"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ],
+              [
+                "2"
+              ],
+              [
+                "3"
+              ],
+              [
+                "4"
+              ],
+              [
+                "5"
+              ]
+            ],
+            "sql": "SELECT id FROM p ORDER BY id LIMIT 5"
+          }
+        ]
+      }
+    },
+    "step": "fewer rows than pageSize"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [],
+            "sql": "SELECT id FROM p WHERE id < 0"
+          }
+        ]
+      }
+    },
+    "step": "no rows"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              }
+            ],
+            "cursorId": 1,
+            "done": false,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ],
+              [
+                "2"
+              ]
+            ],
+            "sql": "SELECT id FROM p ORDER BY id"
+          }
+        ]
+      }
+    },
+    "step": "replace cursor by next execute"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              }
+            ],
+            "cursorId": 1,
+            "done": false,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "25"
+              ],
+              [
+                "24"
+              ]
+            ],
+            "sql": "SELECT id FROM p ORDER BY id DESC"
+          }
+        ]
+      }
+    },
+    "step": "second execute"
+  },
+  {
+    "response": {
+      "error": {
+        "code": "cursorNotFound",
+        "message": "cursor is closed"
+      },
+      "ok": false
+    },
+    "step": "old cursor is gone"
+  }
+]

@@ -1,0 +1,205 @@
+[
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              }
+            ],
+            "cursorId": 1,
+            "done": false,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1"
+              ],
+              [
+                "2"
+              ]
+            ],
+            "sql": "SELECT id FROM p ORDER BY id"
+          }
+        ]
+      }
+    },
+    "step": "execute with open cursor"
+  },
+  {
+    "response": {
+      "error": {
+        "code": "cursorNotFound",
+        "message": "cursor is closed"
+      },
+      "ok": false
+    },
+    "step": "fetch unknown cursor"
+  },
+  {
+    "response": {
+      "error": {
+        "code": "cursorNotFound",
+        "message": "cursor is closed"
+      },
+      "ok": false
+    },
+    "step": "fetch cursor 0"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": true,
+        "rows": [
+          [
+            "3"
+          ],
+          [
+            "4"
+          ],
+          [
+            "5"
+          ],
+          [
+            "6"
+          ],
+          [
+            "7"
+          ],
+          [
+            "8"
+          ],
+          [
+            "9"
+          ],
+          [
+            "10"
+          ],
+          [
+            "11"
+          ],
+          [
+            "12"
+          ],
+          [
+            "13"
+          ],
+          [
+            "14"
+          ],
+          [
+            "15"
+          ],
+          [
+            "16"
+          ],
+          [
+            "17"
+          ],
+          [
+            "18"
+          ],
+          [
+            "19"
+          ],
+          [
+            "20"
+          ],
+          [
+            "21"
+          ],
+          [
+            "22"
+          ],
+          [
+            "23"
+          ],
+          [
+            "24"
+          ],
+          [
+            "25"
+          ]
+        ]
+      }
+    },
+    "step": "fetch right cursor still works"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {}
+    },
+    "step": "close"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {}
+    },
+    "step": "close again"
+  },
+  {
+    "response": {
+      "error": {
+        "code": "connNotFound",
+        "message": "connection is closed"
+      },
+      "ok": false
+    },
+    "step": "execute on closed conn"
+  },
+  {
+    "response": {
+      "error": {
+        "code": "connNotFound",
+        "message": "connection is closed"
+      },
+      "ok": false
+    },
+    "step": "fetch on closed conn"
+  },
+  {
+    "response": {
+      "error": {
+        "code": "connNotFound",
+        "message": "connection is closed"
+      },
+      "ok": false
+    },
+    "step": "schemaTree on closed conn"
+  },
+  {
+    "response": {
+      "error": {
+        "code": "connNotFound",
+        "message": "connection is closed"
+      },
+      "ok": false
+    },
+    "step": "tableInfo on closed conn"
+  },
+  {
+    "response": {
+      "error": {
+        "code": "connNotFound",
+        "message": "connection is closed"
+      },
+      "ok": false
+    },
+    "step": "tableRows on closed conn"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {}
+    },
+    "step": "close unknown conn"
+  }
+]

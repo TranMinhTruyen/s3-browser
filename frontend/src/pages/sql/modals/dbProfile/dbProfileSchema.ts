@@ -1,6 +1,7 @@
+import type { DbProfileInput } from '@wails/S3Browser/models';
 import z from 'zod';
 import { DEFAULT_PROFILE_COLOR } from '@/components/modals/modalColors';
-import type { DbProfile, DbType, SslMode } from '@/pages/sql/stores/dbProfileStore';
+import type { DbProfile, Provider, SslMode } from '@/pages/sql/stores/dbProfileStore';
 
 export const SSL_MODES: SslMode[] = ['disable', 'allow', 'prefer', 'require', 'verify-ca', 'verify-full'];
 const DEFAULT_PG_PORT = 5432;
@@ -11,7 +12,7 @@ const MAX_PORT = 65535;
 export type DbProfileForm = {
   name: string;
   color: string;
-  dbType: DbType;
+  provider: Provider;
   host: string;
   port: number | string;
   database: string;
@@ -19,6 +20,7 @@ export type DbProfileForm = {
   password: string;
   sslMode: SslMode;
   filePath: string;
+  readOnly: boolean;
 };
 
 const text = z.string().trim();
@@ -33,7 +35,7 @@ export const createDbProfileSchema = (isNameTaken: (name: string) => boolean) =>
     .object({
       name: required,
       color: text,
-      dbType: z.enum(['postgresql', 'sqlite']),
+      provider: z.enum(['postgres', 'sqlite']),
       host: text,
       port: z.union([z.number(), z.string()]),
       database: text,
@@ -41,6 +43,7 @@ export const createDbProfileSchema = (isNameTaken: (name: string) => boolean) =>
       password: z.string(),
       sslMode: z.enum(SSL_MODES),
       filePath: text,
+      readOnly: z.boolean(),
     })
     .superRefine((value, ctx) => {
       const fail = (path: keyof DbProfileForm, message: string) =>
@@ -48,7 +51,7 @@ export const createDbProfileSchema = (isNameTaken: (name: string) => boolean) =>
 
       if (isNameTaken(value.name)) fail('name', 'V000013');
 
-      if (value.dbType === 'sqlite') {
+      if (value.provider === 'sqlite') {
         if (!value.filePath) fail('filePath', 'V000001');
         return;
       }
@@ -67,7 +70,7 @@ export const createDbProfileSchema = (isNameTaken: (name: string) => boolean) =>
 export const getDefaultDbProfileForm = (name: string): DbProfileForm => ({
   name,
   color: DEFAULT_PROFILE_COLOR,
-  dbType: 'postgresql',
+  provider: 'postgres',
   host: '',
   port: DEFAULT_PG_PORT,
   database: '',
@@ -75,36 +78,41 @@ export const getDefaultDbProfileForm = (name: string): DbProfileForm => ({
   password: '',
   sslMode: 'prefer',
   filePath: '',
+  readOnly: false,
 });
 
-/** Form values of a saved profile. */
-export const toFormValues = (profile: DbProfile): DbProfileForm => ({
-  ...profile,
-  port: profile.port || DEFAULT_PG_PORT,
-});
+/** Form values of a saved profile; the password is never loaded, so the field starts empty. */
+export const toFormValues = (profile: DbProfile): DbProfileForm => {
+  const { config } = profile;
+  return {
+    name: profile.name,
+    color: profile.color,
+    provider: profile.provider,
+    host: config.host ?? '',
+    port: config.port || DEFAULT_PG_PORT,
+    database: config.database ?? '',
+    username: config.username ?? '',
+    password: '',
+    sslMode: (config.sslMode as SslMode | undefined) ?? 'prefer',
+    filePath: config.filePath ?? '',
+    readOnly: config.readOnly ?? false,
+  };
+};
 
-/** Profile to store: only the fields of the selected DB type are kept, the others are emptied. */
-export const toDbProfile = (values: DbProfileForm, id: string, isConnected: boolean): DbProfile => {
-  const base = { id, name: values.name.trim(), color: values.color, dbType: values.dbType, isConnected };
-  return values.dbType === 'sqlite'
-    ? {
-        ...base,
-        host: '',
-        port: 0,
-        database: '',
-        username: '',
-        password: '',
-        sslMode: 'prefer',
-        filePath: values.filePath.trim(),
-      }
+/** Backend input: only the config fields of the selected provider are sent. `id` is set when editing. */
+export const toDbProfileInput = (values: DbProfileForm, id?: string): DbProfileInput => {
+  const base = { id, name: values.name.trim(), color: values.color, provider: values.provider };
+  return values.provider === 'sqlite'
+    ? { ...base, config: { filePath: values.filePath.trim(), readOnly: values.readOnly } }
     : {
         ...base,
-        host: values.host.trim(),
-        port: Number(values.port),
-        database: values.database.trim(),
-        username: values.username.trim(),
-        password: values.password,
-        sslMode: values.sslMode,
-        filePath: '',
+        config: {
+          host: values.host.trim(),
+          port: Number(values.port),
+          database: values.database.trim(),
+          username: values.username.trim(),
+          sslMode: values.sslMode,
+        },
+        secret: values.password,
       };
 };

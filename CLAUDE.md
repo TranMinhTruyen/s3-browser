@@ -61,7 +61,7 @@ Hãy tự hỏi: "Liệu một kỹ sư cấp cao có cho rằng cách làm này
 | B2   | Lập plan, chia task backend/frontend, liệt kê rủi ro                                                                                                                                                                                                                                                                                                              | `planner`                                                                                            |
 | B3   | Hỏi người dùng có triển khai không; chưa được đồng ý thì dừng                                                                                                                                                                                                                                                                                                     | `orchestrator`                                                                                       |
 | B3.5 | Tạo `SP-NN/release` từ `origin/staging` (push lên remote). Mỗi yêu cầu một branch `SP-NN/<slug>` tách từ `origin/SP-NN/release` khi tới lượt (trừ khi plan gộp), không chờ PR trước merge                                                                                                                                                                         | `git-flow`                                                                                           |
-| B4   | Làm **lần lượt từng branch**. Trong mỗi branch, **tuần tự**: Go → skill `wails3-bindings` (`go tool wails3 generate bindings -clean=true -ts`) → Go test hồi quy (tạm, xoá sau khi chạy) → Frontend → FE test → verify → review. Lặp lại **tối đa 3 vòng**; quá 3 vòng thì dừng và hỏi người dùng. Đạt thì commit, push và tạo PR vào `SP-NN/release` (không hỏi) | `go-backend`, `go-tester`, `react-frontend`, `react-tester`, `verifier`, `code-reviewer`, `git-flow` |
+| B4   | Làm **lần lượt từng branch**. Trong mỗi branch, **tuần tự**: Go → skill `wails3-bindings` (`go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts`) → Go test hồi quy (tạm, xoá sau khi chạy) → Frontend → FE test → verify → review. Lặp lại **tối đa 3 vòng**; quá 3 vòng thì dừng và hỏi người dùng. Đạt thì commit, push và tạo PR vào `SP-NN/release` (không hỏi) | `go-backend`, `go-tester`, `react-frontend`, `react-tester`, `verifier`, `code-reviewer`, `git-flow` |
 | B5   | Báo cáo: số dòng thêm/xoá, file sửa, file mới, phần chưa làm được; cập nhật `memory/MEMORY.md`                                                                                                                                                                                                                                                                    | `orchestrator`                                                                                       |
 | B6   | Người dùng merge PR feature, test trên `SP-NN/release` rồi báo DONE. Khi đó: hỏi người dùng version beta và sửa `build/config.yml`, branch `SP-NN/sprint_docs` (requirement, plan, testcases và evidence nếu có, report, memory, `build/config.yml`) PR vào `SP-NN/release`, và PR `SP-NN/release` → `staging` để ra bản beta (người dùng tự merge)                                                                                                                        | `orchestrator`, `git-flow`                                                                           |
 - **Version** nằm ở `info.version` trong `build/config.yml`; workflow bỏ qua nếu tag `v<version>` đã có, nên mỗi lần ra bản phải đổi version và **luôn hỏi người dùng**, không tự đặt:
@@ -137,7 +137,7 @@ Tất cả tool Go được khai báo trong `tool (...)` của `go.mod` (wails3,
 
 - Format/lint: `go tool golangci-lint run ./...` theo `.golangci.yml` (errcheck, govet, staticcheck, lll 120, goimports, golines 120).
 - Kiểm tra: `go vet ./...`, `go build ./...` (chạy ở gốc repo).
-- Sinh bindings: `go tool wails3 generate bindings -clean=true -ts` (chạy qua skill `wails3-bindings` để có luôn bước kiểm tra frontend).
+- Sinh bindings: `go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts` (chạy qua skill `wails3-bindings` để có luôn bước kiểm tra frontend). Tag `wailsgen` bắt buộc: các model kết quả trong `models/db` có `MarshalJSON` (file `//go:build !wailsgen`) để Go chuyển nguyên JSON của Rust ra FE, mà generator render type có `MarshalJSON` thành `any`; thiếu tag thì `StatementResult`, `ExecuteSqlOutput`, `FetchRowsOutput` mất class và `tsc` báo lỗi. Build app và `go test` không dùng tag.
 - Sinh sqlc: `go tool sqlc generate`.
 - Chạy dev: `go tool wails3 task dev`.
 
@@ -148,7 +148,9 @@ Tất cả tool Go được khai báo trong `tool (...)` của `go.mod` (wails3,
 - Thư viện `s3b_db.dll` (Cargo workspace ở `rust/`, `crate-type = ["cdylib"]`), chỉ build Windows `x86_64-pc-windows-msvc`. Do agent `rust-native` viết.
 - Go load DLL **không dùng cgo** (`golang.org/x/sys/windows`, `CGO_ENABLED=0`), bằng đường dẫn tuyệt đối cạnh exe (`LOAD_LIBRARY_SEARCH_APPLICATION_DIR`). Lớp gọi DLL nằm trong `internal/modules/db`, do `go-backend` viết.
 - Luồng: React → `callIPC` → binding Go → `modules/db` → `s3b_call` (JSON) → Rust. Frontend không biết Rust tồn tại.
+- **Mọi việc với DB người dùng kết nối do Rust làm** (kết nối, chạy SQL/lệnh, tách câu, metadata/cây object, phân trang, chuyển kiểu dữ liệu, export/import, huỷ) để ưu tiên tối đa hiệu năng. `modules/db` của Go chỉ là interface: kiểm input, gửi request, map lỗi sang message, chuyển kết quả Rust trả về cho FE; không mở connection, không chạy hay phân tích SQL, không xử lý lại từng dòng dữ liệu. Thiếu khả năng nào thì thêm `method` bên Rust, không làm tạm ở Go. Ngoại lệ: DB nội bộ của app (xem mục Driver).
 - Phân lớp Rust: `ffi.rs` (chỉ hàm export) → `dispatch.rs` (theo `method`) → `drivers/<db>.rs`; kiểu JSON trong `protocol`.
+- Comment Rust viết bằng **tiếng Việt**, cho người mới học Rust: mỗi file mở đầu bằng `//!` nói file làm gì và nằm ở đâu trong luồng Go → `ffi` → `dispatch` → driver; mọi struct/enum/fn có `///`; khái niệm Rust (ownership/borrow, lifetime, `Arc`/`Mutex`, `Result`/`?`, trait, async/await, `unsafe` kèm `// SAFETY:`, `catch_unwind`) giải thích ngắn ở chỗ dùng đầu tiên trong file, so với Go khi giúp dễ hiểu. Comment nói "vì sao", không đọc lại từng dòng code. File trong `rust/tests/unit/` được miễn `//!` (file nguồn đi kèm đã có).
 
 ### Hợp đồng FFI
 
@@ -160,8 +162,21 @@ Tất cả tool Go được khai báo trong `tool (...)` của `go.mod` (wails3,
 
 ### Driver
 
-- PostgreSQL: `sqlx` (hoặc `tokio-postgres`); SQLite: `sqlx` với libsqlite3 bundled; MongoDB: `mongodb`. Runtime `tokio`.
+- **Ưu tiên hiệu năng tối đa.** Mục tiêu: `elapsedMs` của Rust cho trang 10.000 dòng (~2 MB JSON) **< 40 ms, nhắm < 20 ms**, đo bằng bản release, không chạy dưới debugger (debugger bật debug heap của Windows làm cấp phát chậm ~10 lần), với DB cài trên máy local (DB trong Docker Desktop có sàn mạng ~24 ms nên chỉ dùng để so sánh trước/sau). Thay đổi đường đọc dòng phải kèm số đo trước/sau và golden test giữ nguyên kết quả.
+- Dùng driver **mức thấp nhất** của từng DB, không dùng lớp trừu tượng (sqlx...) cho đường đọc dòng: tự đọc dòng thô và chuyển thẳng sang chuỗi/JSON, cấp sẵn capacity, không cấp phát thừa mỗi ô. Không tự viết giao thức DB.
+
+  | DB | Driver |
+  | --- | --- |
+  | SQLite | `libsqlite3-sys` (C API, bundled); `sqlx` chỉ còn cho mở connection và câu không trả dòng |
+  | PostgreSQL | `tokio-postgres` |
+  | MySQL / MariaDB | `mysql_async` |
+  | SQL Server | `tiberius` |
+  | MongoDB | `mongodb` (đọc BSON thô) |
+  | Redis | `redis` |
+
+- Runtime `tokio` multi_thread; gọi C API chặn thread thì bọc `block_in_place`. Go chuyển nguyên JSON kết quả của Rust ra FE (model `models/db` có `MarshalJSON`, xem tag `wailsgen` ở mục 7), không decode lại.
 - Mỗi tab một connection riêng; kết quả trả theo trang qua `cursorId`, không đọc cả kết quả vào RAM; export ghi thẳng ra file.
+- SQL Server: bỏ cursor lớn thì đóng TCP và nối lại; chỉ báo "connection was reset" khi phiên cũ đã đổi trạng thái (`USE`, `SET`, `#temp`, `EXECUTE AS`, `sp_*`, `BEGIN TRAN`/`DISTRIBUTED`), phiên sạch nối lại im lặng. TLS `disable` dùng `EncryptionLevel::Off` + `trust_cert()` (dữ liệu không mã hoá, bước đăng nhập vẫn mã hoá).
 - Không log secret hay dữ liệu truy vấn. SQLite của app (profile, setting) vẫn ở Go `modernc.org/sqlite`.
 
 ### Lệnh (chạy trong `rust/`)
@@ -169,6 +184,8 @@ Tất cả tool Go được khai báo trong `tool (...)` của `go.mod` (wails3,
 - Format: `cargo fmt --check`. Lint: `cargo clippy --target x86_64-pc-windows-msvc --all-targets -- -D warnings`.
 - Build: `cargo build --release --target x86_64-pc-windows-msvc` (task `common:build:dll` chạy trước build Go — `build:native` là task build Go có sẵn, copy DLL cạnh exe, vào bản portable và NSIS).
 - Test: `cargo test` cho protocol, dispatch và driver (SQLite dùng file DB tạm), do `rust-tester` viết và **có commit** (khác test Go tạm).
+  - Unit test cần hàm private đặt ở `rust/tests/unit/<cây src>.rs`, nối vào cuối file nguồn bằng `#[cfg(test)] #[path = "<tương đối thư mục chứa file src>/tests/unit/<cây src>.rs"] mod tests;` (`#[path]` tính từ thư mục chứa file nguồn). Không tạo `tests/unit/main.rs` (cargo sẽ biến nó thành target riêng). Test qua hàm export đặt ở `rust/tests/*.rs`.
+  - Test cần DB mạng chạy với `test-env/docker-compose-db.yml` (cert từ `sh test-env/scripts/gen-certs.sh`); không có server thì tự skip qua `skip_or_fail`. `S3B_REQUIRE_DB=1` biến skip thành fail: verifier luôn đặt biến này khi Docker chạy, và số test bị skip không được tính là PASS.
 
 ## 9. Frontend (React 19 + TS)
 
@@ -195,6 +212,7 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 - Hàm xử lý event đặt tên `on` + sự kiện + đối tượng (ví dụ `onClickConnect`).
 - **Mọi hàm** khai báo trong component phải bọc `useCallback`.
 - Danh sách lớn phải virtualize.
+- Mantine `Tabs` mặc định `keepMountedMode="activity"` huỷ effect của panel ẩn: panel có state tải dữ liệu hoặc cursor đặt `keepMountedMode="display-none"` như `TabStrip`.
 - Component Mantine được bọc lại trong `components/buttons|inputs|modals`.
 - Button: luôn dùng wrapper `components/buttons/Button` (không import thẳng `Button` từ `@mantine/core`). Wrapper tự co theo container, cắt chữ bằng ellipsis và hiện tooltip khi chữ bị cắt; không bọc thêm `Tooltip` chứa đúng label của nút, không ép width cố định.
 - ActionIcon: luôn dùng wrapper `components/buttons/ActionIcon` (không import thẳng `ActionIcon` từ `@mantine/core`), bắt buộc truyền prop `tooltip` (chuỗi đã dịch); wrapper tự bọc `Tooltip` và đặt `aria-label`, không bọc thêm `Tooltip` bên ngoài. Nút luôn nằm trong một span `inline-flex`: margin props (`m`, `ml`, `mr`...) và `style` áp lên span, các prop khác (kể cả `className`, `ref`) áp lên nút; tooltip tự tắt khi `aria-expanded` (ví dụ nút là `Menu.Target` đang mở).
@@ -204,7 +222,7 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 - **Kích thước viết bằng rem** để mọi thứ co giãn theo cỡ giao diện (Settings: small/medium/large = font-size `<html>` 14/16/18px). Quy đổi theo 16px (`8px` → `0.5rem`, `4px` → `0.25rem`).
   - Prop Mantine (`p`, `gap`, `w`, `h`, `miw`, `size`...): chuỗi rem như `p="0.5rem"`, không viết `"8px"` hay số. Dùng token (`xs`, `sm`, `md`...) chỉ khi đúng bằng giá trị cần (spacing: xs 10px, sm 12px, md 16px, lg 20px, xl 32px).
   - CSS module và `style={{}}`: rem.
-  - Ngoại lệ giữ px: viền/outline/`outline-offset` (1–2px, để nét không bị mờ); số px của virtualizer (`estimateSize`, gap) — hằng px nhân `useUiScale()` kèm `useRemeasureOnScale`; px đo được (`useElementSize`, ResizeObserver) — không truyền vào prop kích thước Mantine (Mantine sẽ nhân theo cỡ lần nữa), dùng `style` hoặc `calc(<rem> + <N>px)`.
+  - Ngoại lệ giữ px: viền/outline/`outline-offset` (1–2px, để nét không bị mờ); số px của virtualizer (`estimateSize`, gap) — hằng px nhân `useUiScale()` rồi `Math.round` (tránh px lẻ ở small/large) kèm `useRemeasureOnScale`; px đo được (`useElementSize`, ResizeObserver) — không truyền vào prop kích thước Mantine (Mantine sẽ nhân theo cỡ lần nữa), dùng `style` hoặc `calc(<rem> + <N>px)`.
   - Icon lucide: không truyền `size` thì theo `LucideProvider` (`1.5rem`) ở `main.tsx`; cần cỡ khác thì truyền chuỗi rem (`size="1rem"`), không truyền số.
   - Sửa hoặc tạo component phải **code ngay từ đầu cho đúng cả 3 cỡ small/medium/large**, không code cho medium rồi để lỗi ở cỡ khác mới sửa. Ở small/large rem ra px lẻ (`1.75rem` = 24.5px ở 14px), nên khi code phải xử lý sẵn:
     - Căn giữa icon/chữ trong khung cố định: làm tròn kích thước khung bằng `round(nearest, <giá trị>, 2px)` như `ActionIcon.module.css`; chữ HOA trong khung thấp (badge, tag) dùng lại class của `components/display/badge.module.css` hoặc cùng cách `text-box: trim-both cap alphabetic`.

@@ -3,6 +3,8 @@ import { Profiler } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DbProfileItem, { CARD_HEIGHT } from '@/pages/sql/navbar/DbProfileItem';
 import { type DbProfile, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
+import { useDbTreeStore } from '@/pages/sql/stores/dbTreeStore';
+import { pgProfile } from '@/test/_helpers/dbProfiles';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 const scheme = vi.hoisted(() => ({ value: 'light' as 'light' | 'dark' }));
@@ -12,25 +14,16 @@ vi.mock('@mantine/core', async importActual => {
 });
 
 const onConnect = vi.fn();
+const onToggleTree = vi.fn();
 
-const pg: DbProfile = {
-  id: 'p1',
+const pg: DbProfile = pgProfile('p1', {
   name: 'My PG',
-  color: '#d0ebff',
-  dbType: 'postgresql',
-  host: 'db.local',
-  port: 5433,
-  database: 'app',
-  username: 'u',
-  password: '',
-  sslMode: 'prefer',
-  filePath: '',
-  isConnected: false,
-};
+  config: { host: 'db.local', port: 5433, database: 'app', username: 'u', sslMode: 'prefer' },
+});
 
 function renderItem(profile: Partial<DbProfile> = {}) {
   useDbProfileStore.setState({ dbProfiles: { p1: { ...pg, ...profile } } });
-  return renderWithProviders(<DbProfileItem profileKey="p1" onConnect={onConnect} />);
+  return renderWithProviders(<DbProfileItem profileKey="p1" onConnect={onConnect} onToggleTree={onToggleTree} />);
 }
 
 const card = () => screen.getByText('My PG').closest<HTMLElement>('.mantine-Card-root')!;
@@ -41,6 +34,8 @@ describe('DbProfileItem', () => {
   beforeEach(() => {
     scheme.value = 'light';
     useDbProfileStore.setState({ dbProfiles: {} });
+    useDbTreeStore.getState().reset();
+    onToggleTree.mockClear();
   });
 
   it('exports the fixed card height', () => {
@@ -55,7 +50,7 @@ describe('DbProfileItem', () => {
   });
 
   it('shows the file path and the SQLite badge for SQLite', () => {
-    renderItem({ dbType: 'sqlite', filePath: 'C:/data/a.db', host: '', port: 0, database: '' });
+    renderItem({ provider: 'sqlite', config: { filePath: 'C:/data/a.db', readOnly: false } });
     expect(screen.getByText('C:/data/a.db')).toBeInTheDocument();
     expect(screen.getByText('SQLite')).toBeInTheDocument();
   });
@@ -66,7 +61,9 @@ describe('DbProfileItem', () => {
   });
 
   it('renders nothing when the profile does not exist', () => {
-    const { container } = renderWithProviders(<DbProfileItem profileKey="gone" onConnect={onConnect} />);
+    const { container } = renderWithProviders(
+      <DbProfileItem profileKey="gone" onConnect={onConnect} onToggleTree={onToggleTree} />
+    );
     expect(container.querySelector('.mantine-Card-root')).not.toBeInTheDocument();
   });
 
@@ -82,7 +79,7 @@ describe('DbProfileItem', () => {
       useDbProfileStore.setState({ dbProfiles: { p1: pg, p2: { ...pg, id: 'p2', name: 'Other' } } });
       renderWithProviders(
         <Profiler id="item" onRender={onRender}>
-          <DbProfileItem profileKey="p1" onConnect={onConnect} />
+          <DbProfileItem profileKey="p1" onConnect={onConnect} onToggleTree={onToggleTree} />
         </Profiler>
       );
       onRender.mockClear();
@@ -131,6 +128,34 @@ describe('DbProfileItem', () => {
       unmount();
       renderItem({ isConnected: true });
       expect(status().querySelector('svg')?.getAttribute('class')).not.toBe(disconnectedIcon);
+    });
+  });
+
+  describe('object tree toggle', () => {
+    it('has no chevron while the profile is not connected', () => {
+      renderItem({ isConnected: false });
+      expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    });
+
+    it('shows a "Show objects" chevron for a connected profile whose tree is closed', () => {
+      renderItem({ isConnected: true });
+      expect(screen.getByRole('button', { name: 'Show objects' })).toBeInTheDocument();
+    });
+
+    it('shows a "Hide objects" chevron while the tree is open, and follows the store', () => {
+      renderItem({ isConnected: true });
+      act(() => useDbTreeStore.setState({ opened: { p1: true } }));
+      expect(screen.getByRole('button', { name: 'Hide objects' })).toBeInTheDocument();
+
+      act(() => useDbTreeStore.setState({ opened: {} }));
+      expect(screen.getByRole('button', { name: 'Show objects' })).toBeInTheDocument();
+    });
+
+    it('asks the parent to toggle the tree of this profile, and does not connect', () => {
+      renderItem({ isConnected: true });
+      fireEvent.click(screen.getByRole('button', { name: 'Show objects' }));
+      expect(onToggleTree).toHaveBeenCalledWith('p1');
+      expect(onConnect).not.toHaveBeenCalled();
     });
   });
 

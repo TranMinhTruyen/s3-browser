@@ -1,0 +1,178 @@
+# Databases for the Rust native drivers (tests and benchmark): MySQL, MariaDB, PostgreSQL, SQL Server, MongoDB, Redis.
+# 1) sh scripts/gen-certs.sh   (TLS certificate in certs/db, needs openssl)
+# 2) docker compose -f docker-compose-db.yml --env-file db/db.env -p s3b-db-test up -d --wait
+#    One service only: add its name, e.g. "up -d --wait postgres". SQL Server needs >= 2 GB RAM free for Docker.
+# Remove everything:  docker compose -f docker-compose-db.yml --env-file db/db.env -p s3b-db-test down -v
+# TLS is optional on every server (plain connections still work). Ports, user and password: db/db.env.
+# Pinned patch tags so benchmark numbers stay comparable.
+
+name: s3b-db-test
+
+services:
+  mysql:
+    image: mysql:8.4.13
+    container_name: s3b-test-mysql
+    command: --ssl-ca=/certs/ca.pem --ssl-cert=/certs/server.crt --ssl-key=/certs/server.key
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-S3bTest2026}
+      MYSQL_DATABASE: ${DB_NAME:-s3b}
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-10030}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./certs/db/server.crt:/certs/server.crt:ro
+      - ./certs/db/server.key:/certs/server.key:ro
+      - ./certs/ca.pem:/certs/ca.pem:ro
+    healthcheck:
+      # -h 127.0.0.1 so the init-time server (socket only) does not count as healthy.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    restart: unless-stopped
+
+  mariadb:
+    image: mariadb:11.4.13
+    container_name: s3b-test-mariadb
+    command: --ssl-ca=/certs/ca.pem --ssl-cert=/certs/server.crt --ssl-key=/certs/server.key
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD:-S3bTest2026}
+      MARIADB_DATABASE: ${DB_NAME:-s3b}
+    ports:
+      - "127.0.0.1:${MARIADB_PORT:-10031}:3306"
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./certs/db/server.crt:/certs/server.crt:ro
+      - ./certs/db/server.key:/certs/server.key:ro
+      - ./certs/ca.pem:/certs/ca.pem:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17.12
+    container_name: s3b-test-postgres
+    # PostgreSQL refuses a key that is not 0600 and owned by postgres, and bind mounts from Windows
+    # cannot give that: copy the key into the container first, then run the normal entrypoint.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        mkdir -p /var/lib/postgresql/tls
+        cp /certs/server.crt /certs/server.key /var/lib/postgresql/tls/
+        chown postgres:postgres /var/lib/postgresql/tls/*
+        chmod 600 /var/lib/postgresql/tls/server.key
+        exec docker-entrypoint.sh postgres -c ssl=on \
+          -c ssl_cert_file=/var/lib/postgresql/tls/server.crt \
+          -c ssl_key_file=/var/lib/postgresql/tls/server.key
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-S3bTest2026}
+      POSTGRES_DB: ${DB_NAME:-s3b}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-10032}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./certs/db:/certs:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d $$POSTGRES_DB"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    restart: unless-stopped
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-CU28-ubuntu-22.04
+    container_name: s3b-test-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD:-S3bTest2026}
+      MSSQL_PID: Developer
+      MSSQL_MEMORY_LIMIT_MB: "2048"
+    ports:
+      - "127.0.0.1:${MSSQL_PORT:-10033}:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+      - ./db/mssql.conf:/var/opt/mssql/mssql.conf:ro
+      - ./certs/db:/certs:ro
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 5s
+      timeout: 10s
+      retries: 40
+      start_period: 20s
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:8.0.38
+    container_name: s3b-test-mongo
+    # allowTLS: accepts both plain and TLS connections.
+    command: ["mongod", "--tlsMode", "allowTLS", "--tlsCertificateKeyFile", "/certs/server.pem", "--tlsCAFile", "/certs/ca.pem", "--tlsAllowConnectionsWithoutCertificates"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD:-S3bTest2026}
+    ports:
+      - "127.0.0.1:${MONGO_PORT:-10034}:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./certs/db/server.pem:/certs/server.pem:ro
+      - ./certs/ca.pem:/certs/ca.pem:ro
+    healthcheck:
+      # The init-time mongod listens on localhost only, so check through the container address.
+      test: ["CMD-SHELL", "mongosh --quiet --host $$(hostname -i | cut -d' ' -f1) -u root -p $$MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin --eval 'db.adminCommand(\"ping\").ok' | grep -q 1"]
+      interval: 3s
+      timeout: 10s
+      retries: 40
+      start_period: 10s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4.12
+    container_name: s3b-test-redis
+    # Plain port 6379 and TLS port 6380 side by side; DEBUG command is on for the tests only.
+    command:
+      - redis-server
+      - --requirepass
+      - ${DB_PASSWORD:-S3bTest2026}
+      - --enable-debug-command
+      - "yes"
+      - --port
+      - "6379"
+      - --tls-port
+      - "6380"
+      - --tls-cert-file
+      - /certs/server.crt
+      - --tls-key-file
+      - /certs/server.key
+      - --tls-ca-cert-file
+      - /certs/ca.pem
+      - --tls-auth-clients
+      - "no"
+      - --save
+      - ""
+    environment:
+      REDISCLI_AUTH: ${DB_PASSWORD:-S3bTest2026}
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-10035}:6379"
+      - "127.0.0.1:${REDIS_TLS_PORT:-10036}:6380"
+    volumes:
+      - redis-data:/data
+      - ./certs/db/server.crt:/certs/server.crt:ro
+      - ./certs/db/server.key:/certs/server.key:ro
+      - ./certs/ca.pem:/certs/ca.pem:ro
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
+  mariadb-data:
+  postgres-data:
+  mssql-data:
+  mongo-data:
+  redis-data:

@@ -30,6 +30,7 @@ import uploaderWindow from '@/locales/ja/pages/s3/transfer/uploaderWindow.json';
 import dbProfileModal from '@/locales/ja/pages/sql/modals/dbProfileModal.json';
 import sqlNavbar from '@/locales/ja/pages/sql/sqlNavbar.json';
 import sqlTab from '@/locales/ja/pages/sql/sqlTab.json';
+import tableStructure from '@/locales/ja/pages/sql/tableStructure.json';
 
 const japaneseResource: ResourceLanguage = {
   common: common,
@@ -66,6 +67,7 @@ const japaneseResource: ResourceLanguage = {
   tabLayout: tabLayout,
   sqlNavbar: sqlNavbar,
   sqlTab: sqlTab,
+  tableStructure: tableStructure,
   uploaderWindow: uploaderWindow,
 };
 export default japaneseResource;

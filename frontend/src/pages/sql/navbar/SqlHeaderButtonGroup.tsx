@@ -4,15 +4,21 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/buttons/ActionIcon';
 import DbProfileModal from '@/pages/sql/modals/dbProfile/DbProfileModal';
+import { useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 import { notifyNoBackend } from '@/pages/sql/utils/sqlToast';
 
-/** Button group on top of the SQL navbar; only "create" works, the others need the DB backend. */
+/** Button group on top of the SQL navbar; create and refresh work; connect and import still need the DB backend. */
 function SqlHeaderButtonGroup() {
   const { t } = useTranslation('sqlNavbar');
+  const loadDbProfiles = useDbProfileStore(s => s.loadDbProfiles);
 
   const onClickCreateProfile = useCallback(() => {
     void DbProfileModal.show();
   }, []);
+
+  const onClickRefresh = useCallback(async () => {
+    await loadDbProfiles();
+  }, [loadDbProfiles]);
 
   return (
     <Stack p="0.25rem">
@@ -29,7 +35,7 @@ function SqlHeaderButtonGroup() {
           <FileUp />
         </ActionIcon>
 
-        <ActionIcon onClick={notifyNoBackend} tooltip={t('tooltip.refresh')} ml="auto">
+        <ActionIcon onClick={onClickRefresh} tooltip={t('tooltip.refresh')} ml="auto">
           <RefreshCw />
         </ActionIcon>
       </Group>

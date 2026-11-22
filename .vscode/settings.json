@@ -37,6 +37,10 @@
   "[json]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
+  // Rust/bun installed after VS Code started are missing from its inherited PATH; tasks use this env too
+  "terminal.integrated.env.windows": {
+    "PATH": "${env:USERPROFILE}\\.cargo\\bin;${env:USERPROFILE}\\.bun\\bin;${env:PATH}"
+  },
   "terminal.integrated.defaultProfile.windows": "Git Bash",
   "terminal.integrated.profiles.windows": {
     "Git Bash": {
@@ -88,5 +92,26 @@
     "--config=${workspaceFolder}/.golangci.yml"
   ],
   "go.vetOnSave": "off",
-  "go.toolsManagement.autoUpdate": true
+  "go.toolsManagement.autoUpdate": true,
+  // Rust (rust/, s3b_db.dll): rustfmt on save, clippy diagnostics like CLAUDE.md section 8
+  "[rust]": {
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
+    "editor.formatOnSave": true,
+    "editor.rulers": [
+      100
+    ]
+  },
+  "[toml]": {
+    "editor.defaultFormatter": "tamasfe.even-better-toml",
+    "editor.formatOnSave": true
+  },
+  // Cargo workspace is not at the repo root
+  "rust-analyzer.linkedProjects": [
+    "rust/Cargo.toml"
+  ],
+  "rust-analyzer.cargo.target": "x86_64-pc-windows-msvc",
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.check.allTargets": true
 }

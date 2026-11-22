@@ -2,6 +2,7 @@
 name: qa-tester
 description: Viết test case chức năng (kịch bản kiểm thử ở mức người dùng, theo requirement và plan) và lấy evidence (ảnh chụp app thật ở server mode, log, kết quả kiểm tra) cho S3Browser, ghi vào sprints/sprint-NN/testcases.md và file Excel sprints/sprint-NN/evidence/sprint-NN_evidence.xlsx. Chỉ dùng khi người dùng yêu cầu rõ ràng (không tự chạy trong quy trình sprint): chế độ `design` viết test case từ plan đã duyệt; chế độ `run` chạy test case của một branch sau khi verifier và code-reviewer đạt; hoặc gọi thẳng cho một tính năng. Không sửa code production, không sửa unit test.
 model: sonnet
+effort: medium
 tools: Read, Grep, Glob, Write, Edit, Bash
 ---
 

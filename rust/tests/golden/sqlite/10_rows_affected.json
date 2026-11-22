@@ -1,0 +1,123 @@
+[
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "affected",
+            "rowsAffected": 0,
+            "sql": "CREATE TABLE a(x);"
+          },
+          {
+            "elapsedMs": 0,
+            "index": 1,
+            "kind": "affected",
+            "rowsAffected": 3,
+            "sql": "INSERT INTO a VALUES(1),(2),(3);"
+          },
+          {
+            "elapsedMs": 0,
+            "index": 2,
+            "kind": "affected",
+            "rowsAffected": 2,
+            "sql": "UPDATE a SET x = x + 1 WHERE x < 3;"
+          },
+          {
+            "elapsedMs": 0,
+            "index": 3,
+            "kind": "affected",
+            "rowsAffected": 2,
+            "sql": "DELETE FROM a WHERE x = 3;"
+          },
+          {
+            "elapsedMs": 0,
+            "index": 4,
+            "kind": "affected",
+            "rowsAffected": 0,
+            "sql": "UPDATE a SET x = 0 WHERE 0;"
+          },
+          {
+            "elapsedMs": 0,
+            "index": 5,
+            "kind": "affected",
+            "rowsAffected": 0,
+            "sql": "DROP TABLE a"
+          }
+        ]
+      }
+    },
+    "step": "affected counts"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "affected",
+            "rowsAffected": 0,
+            "sql": "CREATE TABLE ret(a INTEGER PRIMARY KEY, b);"
+          },
+          {
+            "columns": [
+              {
+                "name": "a",
+                "type": "INTEGER"
+              },
+              {
+                "name": "b",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 1,
+            "kind": "rows",
+            "rows": [
+              [
+                "1",
+                "x"
+              ],
+              [
+                "2",
+                "y"
+              ]
+            ],
+            "sql": "INSERT INTO ret(b) VALUES('x'),('y') RETURNING a, b;"
+          },
+          {
+            "elapsedMs": 0,
+            "index": 2,
+            "kind": "affected",
+            "rowsAffected": 0,
+            "sql": "PRAGMA user_version = 5;"
+          },
+          {
+            "columns": [
+              {
+                "name": "user_version",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 3,
+            "kind": "rows",
+            "rows": [
+              [
+                "5"
+              ]
+            ],
+            "sql": "PRAGMA user_version"
+          }
+        ]
+      }
+    },
+    "step": "insert returning"
+  }
+]

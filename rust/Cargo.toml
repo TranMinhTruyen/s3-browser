@@ -1,0 +1,53 @@
+[package]
+name = "s3b_db"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+name = "s3b_db"
+# cdylib cho Go load; rlib để cargo test gọi được code của crate
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+base64 = "0.22.1"
+fallible-iterator = "0.2"
+futures-util = { version = "0.3.34", default-features = false }
+itoa = "1.0.19"
+libsqlite3-sys = "*"
+mongodb = { version = "3.10.1", default-features = false, features = ["compat-3-0-0", "rustls-tls"] }
+mysql_async = { version = "0.37.1", default-features = false, features = ["default-rustls-ring"] }
+postgres-protocol = "0.6.12"
+redis = { version = "1.8.2", default-features = false, features = ["tokio-comp"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-native-certs = "0.8"
+rustls-pki-types = "1"
+ryu = "1.0.23"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154", features = ["raw_value"] }
+sqlparser = "0.64.0"
+sqlx = { version = "0.9.0", default-features = false, features = ["sqlite", "runtime-tokio"] }
+tiberius = { version = "0.13.0", default-features = false, features = ["tds73", "rustls"] }
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "sync", "macros", "time", "net"] }
+tokio-postgres = { version = "0.7.18", default-features = false, features = ["runtime"] }
+tokio-postgres-rustls = { version = "0.14.0", default-features = false }
+tokio-rustls = { version = "0.26.6", default-features = false, features = ["ring", "tls12"] }
+tokio-util = { version = "0.7", features = ["compat"] }
+
+[profile.release]
+# catch_unwind ở ranh giới FFI cần unwind, không đổi sang abort
+panic = "unwind"
+
+[features]
+# Đo thêm pha đọc/đổi chuỗi cho bench; mặc định tắt nên DLL phát hành không có code đo.
+bench-timing = []
+
+[dev-dependencies]
+mysql_common = { version = "0.37.3", default-features = false }
+rust_xlsxwriter = "0.103.0"
+tokio = { version = "1.54.1", features = ["test-util"] }
+
+# Bench hiệu năng 6 DB + báo cáo Excel (chạy bằng test-env/db-bench.ps1); `test = true` để chạy test của example
+[[example]]
+name = "db_bench"
+test = true

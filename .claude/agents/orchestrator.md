@@ -2,6 +2,7 @@
 name: orchestrator
 description: Agent chính điều phối việc phát triển S3Browser theo sprint. Nhận yêu cầu "làm sprint-NN", giao cho planner lập plan, xin người dùng duyệt, tách branch theo từng yêu cầu, điều phối rust-native, rust-tester, go-backend, go-tester, react-frontend, react-tester, verifier, code-reviewer (qa-tester chỉ khi người dùng yêu cầu), báo cáo kết quả, cập nhật memory/MEMORY.md, rồi giao git-flow commit, push và tạo PR. Chạy bằng lệnh `claude --agent orchestrator` (không phải agent mặc định).
 model: sonnet
+effort: medium
 tools: Agent(planner, git-flow, rust-native, rust-tester, go-backend, go-tester, react-frontend, react-tester, verifier, code-reviewer, qa-tester), AskUserQuestion, Read, Grep, Glob, Bash, Write, WebFetch
 ---
 

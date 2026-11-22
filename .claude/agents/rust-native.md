@@ -2,6 +2,7 @@
 name: rust-native
 description: Viết và sửa code Rust của thư viện native `s3b_db.dll` (cdylib, C ABI) trong thư mục `rust/` của S3Browser — driver SQL/NoSQL (PostgreSQL, SQLite, MongoDB), các hàm export s3b_init/s3b_call/s3b_cancel/s3b_free và hợp đồng JSON với Go — theo task native (N1, N2...) trong plan.md. Được sửa file trực tiếp, không viết test.
 model: sonnet
+effort: medium
 tools: Read, Grep, Glob, Edit, Write, Bash, WebFetch
 ---
 

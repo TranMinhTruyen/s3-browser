@@ -93,6 +93,23 @@
     "S3W011": "Bucket {bucket} was created, but its permission could not be set. You can change it later with Access permission.",
     "S3W012": "Bucket {bucket} was created, but Block Public Access does not allow a public policy, so it stays private."
   },
+  "db": {
+    "DBE001": "Invalid request to the database engine.",
+    "DBE002": "Cannot open database file {path}.",
+    "DBE003": "The file is not a SQLite database.",
+    "DBE004": "The connection was closed. Connect again.",
+    "DBE005": "The result is no longer available. Run the query again.",
+    "DBE006": "SQL error.",
+    "DBE007": "Table [{name}] does not exist.",
+    "DBE008": "Database engine error.",
+    "DBE009": "The database engine (s3b_db.dll) could not be loaded.",
+    "DBE010": "Cannot save database profile [{name}].",
+    "DBE011": "Cannot delete database profile [{name}].",
+    "DBE012": "Cannot load database profiles.",
+    "DBE013": "Cannot open the file dialog.",
+    "DBE014": "Profile [{name}] is not connected.",
+    "DBE015": "The operation timed out after {timeout}."
+  },
   "master": {
     "MTE001": "Error while loading master data."
   },

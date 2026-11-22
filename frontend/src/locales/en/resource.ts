@@ -30,6 +30,7 @@ import uploaderWindow from '@/locales/en/pages/s3/transfer/uploaderWindow.json';
 import dbProfileModal from '@/locales/en/pages/sql/modals/dbProfileModal.json';
 import sqlNavbar from '@/locales/en/pages/sql/sqlNavbar.json';
 import sqlTab from '@/locales/en/pages/sql/sqlTab.json';
+import tableStructure from '@/locales/en/pages/sql/tableStructure.json';
 
 const englishResource: ResourceLanguage = {
   common: common,
@@ -66,6 +67,7 @@ const englishResource: ResourceLanguage = {
   tabLayout: tabLayout,
   sqlNavbar: sqlNavbar,
   sqlTab: sqlTab,
+  tableStructure: tableStructure,
   uploaderWindow: uploaderWindow,
 };
 export default englishResource;

@@ -1,0 +1,131 @@
+[
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "id",
+                "type": "INTEGER"
+              },
+              {
+                "name": "s",
+                "type": "TEXT"
+              },
+              {
+                "name": "length(s)",
+                "type": ""
+              },
+              {
+                "name": "length(CAST(s AS BLOB))",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1",
+                "Xin chào thế giới",
+                "17",
+                "22"
+              ],
+              [
+                "2",
+                "Tiếng Việt: ặ ữ ỳ Đ đ",
+                "21",
+                "33"
+              ],
+              [
+                "3",
+                "日本語のテキスト",
+                "8",
+                "24"
+              ],
+              [
+                "4",
+                "漢字與简体字",
+                "6",
+                "18"
+              ],
+              [
+                "5",
+                "emoji 😀🚀👨‍👩‍👧‍👦",
+                "15",
+                "39"
+              ],
+              [
+                "6",
+                "é",
+                "2",
+                "3"
+              ],
+              [
+                "7",
+                "quote \" backslash \\ slash / tab \t newline \n",
+                "43",
+                "43"
+              ],
+              [
+                "8",
+                "\u0001\u001f ",
+                "4",
+                "6"
+              ],
+              [
+                "9",
+                "",
+                "0",
+                "0"
+              ]
+            ],
+            "sql": "SELECT id, s, length(s), length(CAST(s AS BLOB)) FROM u ORDER BY id"
+          }
+        ]
+      }
+    },
+    "step": "unicode text"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "statements": [
+          {
+            "columns": [
+              {
+                "name": "tên cột",
+                "type": ""
+              },
+              {
+                "name": "日本",
+                "type": ""
+              },
+              {
+                "name": "😀",
+                "type": ""
+              }
+            ],
+            "done": true,
+            "elapsedMs": 0,
+            "index": 0,
+            "kind": "rows",
+            "rows": [
+              [
+                "1",
+                "2",
+                "3"
+              ]
+            ],
+            "sql": "SELECT 1 AS \"tên cột\", 2 AS \"日本\", 3 AS \"😀\""
+          }
+        ]
+      }
+    },
+    "step": "unicode column names"
+  }
+]

@@ -2,6 +2,7 @@
   "contextMenu": {
     "connect": "Connect",
     "disconnect": "Disconnect",
+    "refresh": "Refresh",
     "edit": "Edit",
     "export": "Export",
     "delete": "Delete"
@@ -14,6 +15,17 @@
   },
   "profile": {
     "empty": "No database profiles yet. Use the buttons above to create one."
+  },
+  "tree": {
+    "tables": "Tables",
+    "views": "Views",
+    "indexes": "Indexes",
+    "triggers": "Triggers",
+    "loading": "Loading objects…",
+    "empty": "No objects",
+    "loadError": "Could not load the objects",
+    "expand": "Show objects",
+    "collapse": "Hide objects"
   },
   "dbType": {
     "postgresql": "PostgreSQL",

@@ -1,0 +1,298 @@
+[
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "columns": [
+          {
+            "name": "id",
+            "type": "INTEGER"
+          },
+          {
+            "name": "name",
+            "type": "TEXT"
+          }
+        ],
+        "cursorId": 1,
+        "done": false,
+        "elapsedMs": 0,
+        "index": 0,
+        "kind": "rows",
+        "rows": [
+          [
+            "1",
+            "p1"
+          ],
+          [
+            "2",
+            "p2"
+          ],
+          [
+            "3",
+            "p3"
+          ],
+          [
+            "4",
+            "p4"
+          ],
+          [
+            "5",
+            "p5"
+          ],
+          [
+            "6",
+            "p6"
+          ]
+        ],
+        "sql": "SELECT * FROM \"main\".\"parent\""
+      }
+    },
+    "step": "tableRows parent pageSize=6"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": false,
+        "rows": [
+          [
+            "7",
+            "p7"
+          ],
+          [
+            "8",
+            "p8"
+          ],
+          [
+            "9",
+            "p9"
+          ],
+          [
+            "10",
+            "p10"
+          ],
+          [
+            "11",
+            "p11"
+          ],
+          [
+            "12",
+            "p12"
+          ]
+        ]
+      }
+    },
+    "step": "fetch #1 pageSize=6 maxPageBytes=16777216"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": false,
+        "rows": [
+          [
+            "13",
+            "p13"
+          ],
+          [
+            "14",
+            "p14"
+          ],
+          [
+            "15",
+            "p15"
+          ]
+        ]
+      }
+    },
+    "step": "fetch #2 pageSize=4 maxPageBytes=12"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "done": true,
+        "rows": [
+          [
+            "16",
+            "p16"
+          ],
+          [
+            "17",
+            "p17"
+          ],
+          [
+            "18",
+            "p18"
+          ],
+          [
+            "19",
+            "p19"
+          ],
+          [
+            "20",
+            "p20"
+          ]
+        ]
+      }
+    },
+    "step": "fetch #3 pageSize=6 maxPageBytes=16777216"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "columns": [
+          {
+            "name": "a b",
+            "type": "INTEGER"
+          }
+        ],
+        "done": true,
+        "elapsedMs": 0,
+        "index": 0,
+        "kind": "rows",
+        "rows": [
+          [
+            "1"
+          ],
+          [
+            "2"
+          ],
+          [
+            "3"
+          ],
+          [
+            "4"
+          ],
+          [
+            "5"
+          ],
+          [
+            "6"
+          ],
+          [
+            "7"
+          ],
+          [
+            "8"
+          ],
+          [
+            "9"
+          ],
+          [
+            "10"
+          ],
+          [
+            "11"
+          ],
+          [
+            "12"
+          ],
+          [
+            "13"
+          ],
+          [
+            "14"
+          ],
+          [
+            "15"
+          ],
+          [
+            "16"
+          ],
+          [
+            "17"
+          ],
+          [
+            "18"
+          ],
+          [
+            "19"
+          ],
+          [
+            "20"
+          ]
+        ],
+        "sql": "SELECT * FROM \"main\".\"we ird\""
+      }
+    },
+    "step": "tableRows table with spaces in name"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "columns": [
+          {
+            "name": "id",
+            "type": "INTEGER"
+          },
+          {
+            "name": "pid",
+            "type": "INTEGER"
+          },
+          {
+            "name": "code",
+            "type": "TEXT"
+          },
+          {
+            "name": "qty",
+            "type": "INT"
+          },
+          {
+            "name": "note",
+            "type": "TEXT"
+          }
+        ],
+        "done": true,
+        "elapsedMs": 0,
+        "index": 0,
+        "kind": "rows",
+        "rows": [],
+        "sql": "SELECT * FROM \"main\".\"child\""
+      }
+    },
+    "step": "tableRows child (no rows)"
+  },
+  {
+    "response": {
+      "ok": true,
+      "result": {
+        "columns": [
+          {
+            "name": "id",
+            "type": "INTEGER"
+          },
+          {
+            "name": "name",
+            "type": "TEXT"
+          }
+        ],
+        "cursorId": 1,
+        "done": false,
+        "elapsedMs": 0,
+        "index": 0,
+        "kind": "rows",
+        "rows": [
+          [
+            "1",
+            "p1"
+          ]
+        ],
+        "sql": "SELECT * FROM \"main\".\"parent\""
+      }
+    },
+    "step": "tableRows maxPageBytes=1"
+  },
+  {
+    "response": {
+      "error": {
+        "code": "tableNotFound",
+        "message": "table does not exist"
+      },
+      "ok": false
+    },
+    "step": "tableRows not found"
+  }
+]

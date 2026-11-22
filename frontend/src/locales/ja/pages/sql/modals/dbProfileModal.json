@@ -14,7 +14,13 @@
       "username": "ユーザー名",
       "password": "パスワード（任意）",
       "sslMode": "SSL モード",
-      "filePath": "データベースファイルのパス"
+      "filePath": "データベースファイルのパス",
+      "readOnly": "読み取り専用で開く"
+    },
+    "description": {
+      "readOnly": "変更は拒否されるため、ファイルは変更されません。",
+      "disconnectToEdit": "ファイルパス、読み取り専用、データベースの種類を編集するには、接続を切断してください。",
+      "keepPassword": "空のままにすると保存済みのパスワードを保持します。"
     },
     "sslMode": {
       "disable": "無効",
