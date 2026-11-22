@@ -1,15 +1,23 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import SqlResultPanel from '@/pages/sql/components/sqlResult/SqlResultPanel';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 import { statement } from '@/test/_helpers/sqlStatement';
 
-const grid = vi.hoisted(() => ({ calls: [] as Record<string, any>[] }));
+const grid = vi.hoisted(() => ({ calls: [] as Record<string, any>[], mounts: 0, unmounts: 0 }));
 
 vi.mock('@/components/display/dataGrid/DataGrid', () => ({
-  default: (props: Record<string, any>) => {
+  default: function MockDataGrid(props: Record<string, any>) {
     grid.calls.push(props);
+    // Effect of the real grid: with Activity it would be torn down and rerun on every tab switch.
+    useEffect(() => {
+      grid.mounts += 1;
+      return () => {
+        grid.unmounts += 1;
+      };
+    }, []);
     return (
       <button type="button" data-testid="grid" onClick={props.onEndReached}>
         {props.columns.join(',')}|{props.rows.length}
@@ -99,6 +107,40 @@ describe('SqlResultPanel', () => {
     expect(grid.calls.at(-1)).toMatchObject({ columns: ['id'], nullText: 'NULL', hasMore: true, loading: false });
     await userEvent.click(shown('grid'));
     expect(onLoadMore).toHaveBeenCalledTimes(1);
+  });
+
+  describe('hidden panels stay mounted (display-none, not Activity)', () => {
+    const panelOf = (el: HTMLElement) => el.closest('[role="tabpanel"]') as HTMLElement;
+
+    it('keeps Messages mounted but hidden on the Result tab, and the reverse', async () => {
+      renderWithProviders(<SqlResultPanel {...base} statements={[select(0)]} />);
+      expect(panelOf(screen.getByTestId('messages'))).toHaveStyle({ display: 'none' });
+      expect(panelOf(screen.getByTestId('grid'))).not.toHaveStyle({ display: 'none' });
+
+      await userEvent.click(tab('Messages'));
+      expect(panelOf(screen.getByTestId('grid'))).toHaveStyle({ display: 'none' });
+      expect(panelOf(screen.getByTestId('messages'))).not.toHaveStyle({ display: 'none' });
+    });
+
+    it('does not remount the grid, rerun its effects or call onLoadMore when switching tabs', async () => {
+      grid.mounts = 0;
+      grid.unmounts = 0;
+      const onLoadMore = vi.fn();
+      renderWithProviders(
+        <SqlResultPanel {...base} onLoadMore={onLoadMore} statements={[select(0, { cursorId: 9, done: false })]} />
+      );
+      const gridEl = screen.getByTestId('grid');
+      expect(grid.mounts).toBe(1);
+
+      await userEvent.click(tab('Messages'));
+      await userEvent.click(tab('Result 1'));
+      await userEvent.click(tab('Messages'));
+
+      expect(screen.getByTestId('grid')).toBe(gridEl);
+      expect(grid.mounts).toBe(1);
+      expect(grid.unmounts).toBe(0);
+      expect(onLoadMore).not.toHaveBeenCalled();
+    });
   });
 
   it('does not offer more rows once the result is done', () => {
