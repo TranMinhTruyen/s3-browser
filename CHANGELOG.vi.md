@@ -7,6 +7,26 @@ Mọi thay đổi đáng chú ý của dự án được ghi trong file này.
 
 ## [Chưa phát hành]
 
+## [1.1.0-beta.19] - 2026-11-22
+
+### Thêm mới
+
+- Chế độ SQL giờ hoạt động với tệp **SQLite**: hồ sơ cơ sở dữ liệu (SQLite và PostgreSQL) được lưu trong cơ sở dữ liệu của ứng dụng và còn nguyên sau khi khởi động lại; với SQLite, chọn tệp `.db` bằng hộp thoại chọn tệp và có thể mở ở chế độ **chỉ đọc**. **Kết nối** mở tệp thật (báo lỗi nếu tệp không tồn tại hoặc không phải cơ sở dữ liệu SQLite).
+- **Ctrl+E** và nút Chạy SQL giờ chạy SQL thật (phần đang chọn, hoặc toàn bộ): nhiều câu lệnh phân tách bằng `;` chạy lần lượt và dừng ở lỗi đầu tiên, với tự động commit. Nút **Huỷ thực thi** dừng câu lệnh đang chạy. Mỗi câu lệnh có tab **Kết quả 1, 2…** riêng và tab **Thông báo** hiện các câu lệnh, số dòng bị ảnh hưởng, thời gian và lỗi. Các dòng kết quả được tải từng trang (10.000 dòng mỗi trang) khi bạn cuộn; mỗi câu lệnh chạy tối đa 5 phút.
+- Thẻ hồ sơ đã kết nối có **cây đối tượng** (SQLite: Bảng, View, Chỉ mục, Trigger; PostgreSQL: cơ sở dữ liệu, schema, rồi các nhóm tương tự, vẫn là dữ liệu mẫu). Nhấp để chọn; nhấp đúp vào một bảng mở **tab cấu trúc bảng** với các tab con Dữ liệu, Cột, Chỉ mục, Ràng buộc, Khóa ngoại và Mã nguồn (lưới Dữ liệu tải thêm dòng khi bạn cuộn). **Làm mới** trong menu chuột phải của hồ sơ tải lại cây.
+- Tự động hoàn thành trong các tab SQL của hồ sơ SQLite giờ gợi ý tên bảng và view trong cây.
+
+### Thay đổi
+
+- Bộ cài và bản portable giờ kèm thư viện cơ sở dữ liệu gốc `s3b_db.dll` cạnh ứng dụng.
+- Bên trong, thư viện công cụ cơ sở dữ liệu còn hỗ trợ MySQL, MariaDB, PostgreSQL, SQL Server, MongoDB và Redis (chưa nối vào giao diện).
+
+### Vấn đề đã biết
+
+- Hồ sơ PostgreSQL có thể tạo và lưu, nhưng Kết nối, cây đối tượng và dữ liệu vẫn là dữ liệu mẫu.
+- Bản dịch mới của chế độ SQL (tiếng Việt, Nhật, Trung giản thể và phồn thể, Nga, Đức) chưa được người bản ngữ duyệt.
+- Chỉ hỗ trợ Windows.
+
 ## [1.1.0-beta.18] - 2026-11-16
 
 ### Thêm mới

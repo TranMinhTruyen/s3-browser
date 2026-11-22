@@ -7,6 +7,26 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unveröffentlicht]
 
+## [1.1.0-beta.19] - 2026-11-22
+
+### Hinzugefügt
+
+- Der SQL-Modus funktioniert jetzt mit **SQLite**-Dateien: Datenbankprofile (SQLite und PostgreSQL) werden in der App-Datenbank gespeichert und bleiben nach einem Neustart erhalten; bei SQLite wählen Sie die `.db`-Datei über einen Dateidialog aus und können sie auf Wunsch **schreibgeschützt** öffnen. **Verbinden** öffnet die echte Datei (fehlt die Datei oder ist sie keine SQLite-Datenbank, wird ein Fehler angezeigt).
+- **Strg+E** und die Schaltfläche SQL ausführen führen das SQL jetzt tatsächlich aus (die Auswahl oder alles): Mehrere durch `;` getrennte Anweisungen laufen nacheinander und stoppen beim ersten Fehler, mit Autocommit. Die Schaltfläche **Ausführung abbrechen** stoppt eine laufende Anweisung. Jede Anweisung erhält einen eigenen Tab **Ergebnis 1, 2…**, und ein Tab **Meldungen** zeigt die Anweisungen, betroffene Zeilen, Zeit und Fehler. Ergebniszeilen werden beim Scrollen seitenweise geladen (10.000 Zeilen pro Seite); eine Anweisung läuft höchstens 5 Minuten.
+- Die Profilkarte eines verbundenen Profils enthält einen **Objektbaum** (SQLite: Tabellen, Ansichten, Indizes, Trigger; PostgreSQL: Datenbank, Schema, dann dieselben Gruppen, weiterhin mit Beispieldaten). Ein Klick wählt aus; ein Doppelklick auf eine Tabelle öffnet einen **Tabellenstruktur-Tab** mit den Unter-Tabs Daten, Spalten, Indizes, Constraints, Fremdschlüssel und Quelltext (das Datenraster lädt beim Scrollen weitere Zeilen). **Neu laden** im Kontextmenü des Profils lädt den Baum neu.
+- Die Autovervollständigung in den SQL-Tabs eines SQLite-Profils schlägt jetzt die Tabellen- und Ansichtsnamen des Baums vor.
+
+### Geändert
+
+- Das Installationsprogramm und die portable Version enthalten jetzt die native Datenbankbibliothek `s3b_db.dll` neben der App.
+- Intern unterstützt die Datenbank-Engine-Bibliothek außerdem MySQL, MariaDB, PostgreSQL, SQL Server, MongoDB und Redis (noch nicht mit der Oberfläche verbunden).
+
+### Bekannte Probleme
+
+- PostgreSQL-Profile können erstellt und gespeichert werden, aber Verbinden, der Objektbaum und die Daten sind weiterhin Beispieldaten.
+- Die neuen Übersetzungen des SQL-Modus (Vietnamesisch, Japanisch, vereinfachtes und traditionelles Chinesisch, Russisch, Deutsch) wurden nicht von Muttersprachlern geprüft.
+- Nur Windows.
+
 ## [1.1.0-beta.18] - 2026-11-16
 
 ### Hinzugefügt
