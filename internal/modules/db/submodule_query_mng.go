@@ -60,7 +60,7 @@ func newSubmoduleQueryMng(
 var statementErrorKey = []byte(`"error":`)
 
 // tabFail ends a failed call that needed the connection of a tab: a profile that is not connected is DBE014,
-// anything else is a native failure.
+// anything else is a native failure. errTabClosed (tab closed while opening) is a silent Result=false.
 func tabFail[T any](
 	ctx context.Context,
 	m *submoduleQueryMng,
@@ -69,6 +69,9 @@ func tabFail[T any](
 	err error,
 	params map[string]any,
 ) models.Output[T] {
+	if errors.Is(err, errTabClosed) {
+		return output.ThrowError() // the tab is gone, nobody waits for the result
+	}
 	if errors.Is(err, errNotConnected) {
 		return output.ThrowError(m.conns.notConnectedMessage(profileId))
 	}
@@ -87,7 +90,9 @@ func (m *submoduleQueryMng) execute(
 
 	connId, err := m.conns.tabConnOf(ctx, input.ProfileId, input.TabId)
 	if err != nil {
-		logCallFailure(ctx, m.logger, "open tab connection failed", err, "tabId", input.TabId)
+		if !errors.Is(err, errTabClosed) { // expected when the tab closes while opening
+			logCallFailure(ctx, m.logger, "open tab connection failed", err, "tabId", input.TabId)
+		}
 		return tabFail(ctx, m, output, input.ProfileId, err, nil)
 	}
 
@@ -130,7 +135,9 @@ func (m *submoduleQueryMng) openTableRows(
 
 	connId, err := m.conns.tabConnOf(ctx, input.ProfileId, input.TabId)
 	if err != nil {
-		logCallFailure(ctx, m.logger, "open tab connection failed", err, "tabId", input.TabId)
+		if !errors.Is(err, errTabClosed) { // expected when the tab closes while opening
+			logCallFailure(ctx, m.logger, "open tab connection failed", err, "tabId", input.TabId)
+		}
 		return tabFail(ctx, m, output, input.ProfileId, err, nil)
 	}
 

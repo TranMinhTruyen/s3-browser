@@ -15,6 +15,9 @@ import (
 // errNotConnected means the profile of a request has no main connection.
 var errNotConnected = errors.New("profile is not connected")
 
+// errTabClosed means the tab was closed while its connection was opening.
+var errTabClosed = errors.New("tab was closed")
+
 // mainConn is the connection of a connected profile, used for the object tree and table info. It keeps what
 // the tab connections need to open the same file.
 type mainConn struct {
@@ -39,7 +42,13 @@ type submoduleConnMng struct {
 	mu    sync.RWMutex
 	mains map[string]mainConn
 	tabs  map[string]tabConn
+	// opening holds the tab connections being opened, per tab; only in-flight opens, so it stays small.
+	opening map[string]map[*pendingOpen]struct{}
 }
+
+// pendingOpen is one tab connection being opened; closeTab marks it so the open drops what it opened.
+// closed is only read and written under submoduleConnMng.mu.
+type pendingOpen struct{ closed bool }
 
 // newSubmoduleConnMng creates an empty connection set.
 func newSubmoduleConnMng(
@@ -55,6 +64,8 @@ func newSubmoduleConnMng(
 		q:      q,
 		mains:  make(map[string]mainConn),
 		tabs:   make(map[string]tabConn),
+
+		opening: make(map[string]map[*pendingOpen]struct{}),
 	}
 }
 
@@ -184,6 +195,9 @@ func (m *submoduleConnMng) closeTab(tabId string) models.Output[bool] {
 	m.mu.Lock()
 	tab, ok := m.tabs[tabId]
 	delete(m.tabs, tabId)
+	for p := range m.opening[tabId] {
+		p.closed = true
+	}
 	m.mu.Unlock()
 	if ok {
 		m.closeConns(tab.connId)
@@ -241,7 +255,8 @@ func (m *submoduleConnMng) tabOf(tabId string) (tabConn, bool) {
 }
 
 // tabConnOf returns the connection id of the tab, opening it on the first use. A tab that moved to another
-// profile closes its old connection. errNotConnected means the profile has no main connection.
+// profile closes its old connection. errNotConnected means the profile has no main connection; errTabClosed
+// means the tab was closed meanwhile (the caller returns Result=false silently).
 func (m *submoduleConnMng) tabConnOf(ctx context.Context, profileId, tabId string) (uint64, error) {
 	main, connected := m.mainOf(profileId)
 	if !connected {
@@ -251,19 +266,37 @@ func (m *submoduleConnMng) tabConnOf(ctx context.Context, profileId, tabId strin
 		return tab.connId, nil
 	}
 
-	connId, err := m.open(ctx, main.path, main.readOnly)
-	if err != nil {
-		return 0, err
+	p := &pendingOpen{}
+	m.mu.Lock()
+	if m.opening[tabId] == nil {
+		m.opening[tabId] = make(map[*pendingOpen]struct{})
 	}
+	m.opening[tabId][p] = struct{}{}
+	m.mu.Unlock()
+
+	connId, err := m.open(ctx, main.path, main.readOnly)
 
 	m.mu.Lock()
+	closed := p.closed // set by closeTab while this open was running
+	delete(m.opening[tabId], p)
+	if len(m.opening[tabId]) == 0 {
+		delete(m.opening, tabId)
+	}
+	if err != nil {
+		m.mu.Unlock()
+		return 0, err
+	}
 	_, stillConnected := m.mains[profileId]
 	old, hadOld := m.tabs[tabId]
-	if stillConnected {
+	if stillConnected && !closed {
 		m.tabs[tabId] = tabConn{profileId: profileId, connId: connId}
 	}
 	m.mu.Unlock()
 
+	if closed {
+		m.closeConns(connId)
+		return 0, errTabClosed
+	}
 	if !stillConnected {
 		m.closeConns(connId)
 		return 0, errNotConnected
