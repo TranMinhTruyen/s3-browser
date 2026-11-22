@@ -1,6 +1,6 @@
 # Plan sprint-19
 
-> **Trạng thái: ĐÃ DUYỆT (B3) 2026-11-18.** Mọi câu hỏi Q1–Q36 đã chốt; chạy qua orchestrator theo mục 5–6 và 10.9. Biện pháp giảm rủi ro 25, 26, 40 của R3 (golden test SQLite, spike đo N12, PG dùng decode của `postgres-protocol` + test so sánh nhị phân/text): **người dùng duyệt 2026-11-18**, xem mục 10.
+> **Trạng thái: DONE 2026-11-22.** PR #43–#50 đã merge vào `SP-19/release`; version beta `1.1.0-beta.19`. Kết quả thực tế và các lệch plan đã chấp nhận: **mục 11**. Plan đã duyệt (B3) 2026-11-18; mọi câu hỏi Q1–Q36 đã chốt; chạy qua orchestrator theo mục 5–6 và 10.9. Biện pháp giảm rủi ro 25, 26, 40 của R3 (golden test SQLite, spike đo N12, PG dùng decode của `postgres-protocol` + test so sánh nhị phân/text): **người dùng duyệt 2026-11-18**, xem mục 10.
 >
 > **Cập nhật R3:** N4–N11 đã commit trên `SP-19/native_db_drivers` (golden test, refactor N4, mỗi driver một commit, bench). Kết quả thực tế khác plan ban đầu ghi ngay tại chỗ, đánh dấu "Thực tế R3" (10.4–10.12).
 >
@@ -654,7 +654,7 @@ Test hồi quy Go / FE: R3 không sửa Go/FE. Hồi quy Go/FE của phần bổ
 9. verifier (cargo fmt/clippy/build/test, `dumpbin /dependents`, `cargo tree` một bản `rustls 0.23.46` và không có `openssl`/`native-tls` (`aws-lc-rs` do `tiberius` đã được người dùng chấp nhận, 10.6), `postgres-protocol` một bản, DLL release không bật `bench-timing`, `docker compose config`, kích thước DLL, không còn file spike) → code-reviewer → git-flow commit, push, PR vào `SP-19/release`.
 10. Không có bước Go, bindings, FE. Sau PR R3 chuyển sang branch R1 (mục 5).
 
-Trạng thái (thực tế R3): bước 1–8 đã xong, N4–N11 đã commit; còn bước 9 (verify → review → PR).
+Trạng thái (thực tế R3): bước 1–8 đã xong, N4–N11 đã commit; còn bước 9 (verify → review → PR). **Cập nhật 2026-11-22:** bước 9 đã xong theo cách khác plan (R3 vào release không qua PR, sửa review ở #44), xem mục 11.1.
 
 ### 10.10 Rủi ro (R3 và các câu trả lời 2026-11-18)
 | # | Rủi ro | Mức độ | Cách giảm thiểu |
@@ -714,3 +714,58 @@ Trạng thái (thực tế R3): bước 1–8 đã xong, N4–N11 đã commit; c
 - FE hiển thị kết quả MongoDB (Q25): mỗi document một dòng, mỗi dòng một `FieldInput` type `json` (`components/inputs/FieldInput.tsx` → Mantine `JsonInput`), chỉ đọc. **Bắt buộc virtualize** (trang 10.000 document = 10.000 `JsonInput` nếu render hết): dùng `@tanstack/react-virtual` với chiều cao dòng đo động (`measureElement`) hoặc cố định + mở rộng khi chọn, chỉ mount `JsonInput` cho dòng đang hiện (overscan nhỏ), format (thụt lề) JSON gọn của Rust khi dòng được mount (Q33 = A), đúng 3 cỡ giao diện (px × `useUiScale` + `useRemeasureOnScale`).
 - Cây object/metadata (`schemaTree`, `tableInfo`, `tableRows`) cho DB mạng.
 - Hỗ trợ `mongodb+srv://` (cần feature `dns-resolver` của `mongodb`).
+
+## 11. Kết quả thực tế và lệch plan đã chấp nhận (sprint DONE 2026-11-22)
+
+Sprint DONE 2026-11-22: PR #43–#50 đã merge vào `SP-19/release`, version beta `1.1.0-beta.19`. Mục này ghi chỗ thực tế khác mục 1–10; các mục trên giữ nguyên làm lịch sử plan.
+
+### 11.1 Branch và PR thực tế (thay bảng mục 5)
+| Branch | Yêu cầu | PR | Nội dung |
+|---|---|---|---|
+| `SP-19/sqlite_native_backend` | R2 | #43 | N1–N3, B1–B4, F1–F4 + bổ sung mục 9.7 |
+| (không qua PR) | R3 | — | N4–N11 vào thẳng `SP-19/release` (`dc5d07e` và các commit trước), khác mục 10.9 bước 9 |
+| `SP-19/r3_review_fixes` | R3 | #44 | Sửa theo review R3: 4 vòng review + 1 lần sửa test T5 — người dùng đồng ý vượt giới hạn 3 vòng |
+| `SP-19/db_object_tree` | R1 | #45 | F5, F6, F7 + B7 + C1 (làm tròn chiều cao dòng) |
+| `SP-19/sql_tab_close_race` | sửa lỗi (R1/R2) | #46 | Race `CloseDbTab`/`tabConnOf`; `SqlResultPanel` dùng `keepMountedMode="display-none"` |
+| `SP-19/db_test_fixes` | R3 (test) | #47 | 2 test sửa sau lần chạy Docker + 2 unit test B4 MySQL `shutdown` |
+| `SP-19/rust_tests_layout` | R3 (test) | #48 | Chuyển unit test Rust ra `rust/tests/unit/`, nối bằng `#[path]` |
+| `SP-19/restore_settings` | ngoài phạm vi | #49 | Khôi phục deny rules của `.claude/settings.json` (người dùng tự sửa) |
+| `SP-19/claude_md_update` | ngoài phạm vi | #50 | Người dùng tự sửa `CLAUDE.md` và `rust-tester.md` |
+
+### 11.2 Lệch plan R1 người dùng đã chấp nhận
+- Trạng thái expanded/selected của cây giữ ở `dbTreeStore` thay cho Mantine `useTree` (vẫn dùng `flattenTreeData`) — khác Q2/F6.
+- Double click node có con (nhóm/schema/database) để mở/đóng.
+- Cột Nullable/Primary key hiện Yes/No.
+- `closeProfileTables` tạo tab SQL mới nếu đóng hết tab SQL.
+- Thêm mục "Làm mới" ở menu chuột phải của profile đang Connect (key `contextMenu.refresh`, 7 ngôn ngữ) cùng `dbTreeStore.refreshProfile`.
+- File mới ngoài plan: `hooks/useTableRows.ts` (reset khi đổi table/profile) và `utils/tableInfoRows.ts`; key mới `tree.expand`/`tree.collapse`.
+- Kiểu `DbSchema` v.v. lấy từ `SchemaTreeOutput[...]`, không sửa `models/alias.go`.
+- Mock PG thêm `public.audit_log` (không có PK).
+- Chiều cao dòng/thẻ làm tròn `Math.round(getRowHeight * scale)`: node 25/28/32, thẻ đầu 60/68/77, thẻ sau 67/76/86 px ở small/medium/large.
+- Tabs của `TableStructureDetail` và `SqlResultPanel` dùng `keepMountedMode="display-none"` (mặc định `activity` của Mantine huỷ effect của panel ẩn); effect tự mở Accordion có `activeTab` trong deps.
+- Test cũ đổi có chủ ý: `DbProfiles.test.tsx` (mock `useVirtualizer`, 3 test "interface size" đổi assert), `DbProfileItem.test.tsx` (prop `onToggleTree`).
+
+### 11.3 Đổi hành vi/quyết định R3 do review (#44, #47)
+- SQL Server: chỉ báo "connection was reset" khi phiên bẩn (USE, SET, `#temp`, EXECUTE AS, `sp_*`, BEGIN TRAN/DISTRIBUTED); phiên sạch thì nối lại im lặng; `@@TRANCOUNT` đọc cùng round trip với `@@ROWCOUNT`.
+- SQL Server: lần thử không TLS dùng `EncryptionLevel::Off` + `trust_cert()` (đăng nhập vẫn mã hoá); P4 packet size đã xác minh ổn.
+- `close` bật `CancelSignal` cho mọi request của connection (SQL Server, MongoDB, Redis không còn treo).
+- Tách câu PG chạy tuyến tính (`OffsetCursor`).
+- MySQL `shutdown` luôn `disconnect()` có timeout.
+- `test-env` bind 127.0.0.1.
+- `S3B_REQUIRE_DB=1` biến skip thành fail (`skip_or_fail`) — bổ sung cho quy tắc skip ở 10.8.
+- `postgres_binary_vs_text` chạy 200 biểu thức (có interval vô cực).
+
+### 11.4 Kết quả kiểm tra cuối
+- Test DB thật trên Docker: `S3B_REQUIRE_DB=1 cargo test` → 1491 pass / 0 fail / 5 ignored, không có SKIP.
+- vitest sau R1: 177 file / 3394 test.
+- QA R1: 34 case, PASS 32 / MANUAL 2 (TC-R1-33 bản dịch + hộp thoại chọn file; TC-R1-34 WebView2/DPI); banner Wails server mode được lọc ở harness.
+- Chưa kiểm: nhánh `timeout(CLOSE_TIMEOUT)` của MySQL; Go `-race`.
+
+### 11.5 Vấn đề còn lại / việc sau
+- R2: Q6 (profile sqlite vẫn lưu `secret` nếu input gửi kèm); Q8 (`split.rs` cắt 500 byte có thể rơi giữa ký tự UTF-8).
+- R3: P5, T3, T4, C2.
+- R1: P1, B3, B4.
+- #46: B2; `closeAll` không đánh dấu lần mở đang chạy.
+- Nối Go/FE cho 6 DB mạng (mục 10.13).
+- Hiệu năng DB mạng 47–74 ms trên Docker (sàn mạng ~24 ms); chưa đo với DB cài trên host.
+- Các list S3 cũ chưa làm tròn `estimateSize`.

@@ -7,6 +7,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.1.0-beta.19] - 2026-11-22
+
+### Added
+
+- SQL mode now works with **SQLite** files: database profiles (SQLite and PostgreSQL) are saved in the app database and kept after restart; for SQLite pick the `.db` file with a file dialog and optionally open it **read-only**. **Connect** opens the real file (an error is shown if the file is missing or is not a SQLite database).
+- **Ctrl+E** and the Run SQL button now run the SQL for real (the selection, or everything): several statements separated by `;` run one after another and stop at the first error, with autocommit. A **Cancel execution** button stops a running statement. Each statement gets its own **Result 1, 2…** tab and a **Messages** tab shows the statements, rows affected, time and errors. Result rows load page by page (10,000 rows per page) while you scroll; a statement runs for at most 5 minutes.
+- The profile card of a connected profile has an **object tree** (SQLite: Tables, Views, Indexes, Triggers; PostgreSQL: database, schema, then the same groups, still with sample data). Click selects; double click on a table opens a **table structure tab** with Data, Column, Index, Constraint, FK and Source sub-tabs (the Data grid loads more rows as you scroll). **Refresh** in the profile's right-click menu reloads the tree.
+- Auto-complete in the SQL tabs of a SQLite profile now suggests the table and view names of the tree.
+
+### Changed
+
+- The installer and the portable build now include the native database library `s3b_db.dll` next to the app.
+- Internally the database engine library also supports MySQL, MariaDB, PostgreSQL, SQL Server, MongoDB and Redis (not connected to the interface yet).
+
+### Known issues
+
+- PostgreSQL profiles can be created and saved, but Connect, the object tree and the data are still sample data.
+- The new SQL mode translations (Vietnamese, Japanese, Simplified and Traditional Chinese, Russian, German) have not been reviewed by native speakers.
+- Windows only.
+
 ## [1.1.0-beta.18] - 2026-11-16
 
 ### Added

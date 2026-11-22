@@ -4,21 +4,21 @@
 
 ## 1. Trạng thái hiện tại
 
-- Cập nhật: 2026-11-17.
-- Sprint-19 (backend SQLite cho chế độ SQL: Rust `s3b_db.dll` + Go `modules/db` + FE nối): R2 đã commit ở `SP-19/sqlite_native_backend`, PR #43 vào `SP-19/release` chờ người dùng merge (review 3/3 ĐẠT, verifier PASS). R1 `SP-19/db_object_tree` (F5, F6, F7, chỉ FE) CHƯA làm: tách sau khi PR #43 merge. Chưa DONE, chưa version beta. `plan.md` (modified) và `report.md` chỉ vào `SP-19/sprint_docs`. Còn dở mức low: Q6, Q8, B7 (xem `report.md`).
-- Chế độ SQL: SQLite chạy qua backend thật; PostgreSQL profile lưu DB app nhưng Connect/cây/dữ liệu vẫn mock.
+- Cập nhật: 2026-11-22.
+- Sprint-19 (SQL: backend SQLite R2, driver Rust 6 DB R3, cây object + TableStructure R1): **DONE** 2026-11-22. R2 #43 (merge 2026-11-18); R3 vào `SP-19/release` không qua PR (dc5d07e) rồi sửa review ở #44; R1 + B7 + C1 ở #45; sửa race `CloseDbTab` + `SqlResultPanel` display-none ở #46; #47 (2 test sửa sau Docker + unit test B4 MySQL); #48 (unit test Rust chuyển sang `rust/tests/unit/` nối bằng `#[path]`); #49 (khôi phục deny rules `.claude/settings.json`); #50 (người dùng tự sửa `CLAUDE.md`, `.claude/agents/rust-tester.md`). Tất cả đã merge vào `SP-19/release` (đỉnh `6616668`). Test DB thật Docker: 1491 pass / 0 fail / 5 ignored, không SKIP; P4 và B2 đã xác minh. QA R1 (qa-tester, người dùng yêu cầu): 34 case PASS 32 / MANUAL 2, Excel đã sinh; banner Wails server mode lọc ở harness. Version `1.1.0-beta.19`; PR `SP-19/sprint_docs` (report, memory, plan, testcases, evidence, CHANGELOG 7 bản, version) vào release và PR `SP-19/release` → `staging` chờ người dùng merge (docs trước, promote sau). Chưa xác minh: Go `-race` của #46; WebView2/DPI 125–150% và bản dịch (TC-R1-33/34, người dùng test tay); NSIS/portable, hộp thoại chọn file native. Còn dở mức low: Q6, Q8 (R2); P5, T3, T4, C2 (R3); P1, B3, B4 (R1); B2 (#46).
+- Chế độ SQL: SQLite chạy qua backend thật (Connect, Execute, cây object, tab TableStructure); PostgreSQL profile lưu DB app nhưng Connect/cây/dữ liệu vẫn mock. Driver Rust cho MySQL, MariaDB, PostgreSQL, SQL Server, MongoDB, Redis đã có nhưng chưa nối Go/FE (việc sprint sau: plan 10.13).
 - Sprint-18 (chế độ SQL chỉ UI: chuyển S3/SQL, profile DB mock trong RAM, tab SQL với editor, Ctrl+Q/F/E, R8 Find/Replace, R10 cỡ giao diện): **DONE** 2026-11-16; PR #36–#40 đã merge vào `SP-18/release` (đỉnh `d90cb6c`). PR `SP-18/sprint_docs` (report, memory, CHANGELOG `[1.1.0-beta.18]` 7 bản, version `1.1.0-beta.18`) vào release và PR `SP-18/release` → `staging` chờ người dùng merge (docs trước, promote sau).
 - Sprint-17 (dọn issue low, KiB/MiB/GiB): **DONE** 2026-11-10, đã lên `staging` và `master` (`1.0.1`, #35).
 - Chế độ SQL chưa có tài liệu README/user guide.
 - Sprint-16 (export/import profile, công tắc cập nhật có hiệu lực ngay): **DONE** 2026-11-09, đã lên `staging`; bản `1.0.0` đã lên `master` (#23). Bản dịch vi/ja/zh-CN/zh-TW/ru/de của sprint-16 và 17 chưa có người bản ngữ duyệt.
 - Sprint-15 (tài liệu v0.1: README, user guide + PDF, ARCHITECTURE, CHANGELOG 0.1.0, `shots.mjs` chụp ảnh có ghi chú): **DONE** 2026-11-09, đã lên `staging` (`5570c4d`).
 - Sprint-14 (badge policy type, `CloseButton` dùng chung, auto-update từ GitHub Releases): **DONE** 2026-11-06, đã lên `staging`; #8 đưa sprint-12/13/14 R1-R3 lên `master`. Không có `report.md`.
-- Release: stable mới nhất `1.0.1`; `SP-18/sprint_docs` đổi `build/config.yml` thành `1.1.0-beta.18`. Chỉ build Windows (bỏ macOS/Linux/iOS ở `cedf08a`); có workflow `release.yml` và `pre-release.yml` (pre-release từ `staging`).
+- Release: stable mới nhất `1.0.1`; `SP-19/sprint_docs` đổi `build/config.yml` thành `1.1.0-beta.19`. Chỉ build Windows (bỏ macOS/Linux/iOS ở `cedf08a`); có workflow `release.yml` và `pre-release.yml` (pre-release từ `staging`).
 - Sprint-13 DONE 2026-11-05 (PR #6); sprint-12 DONE 2026-11-04.
 - Repo đã tách khỏi monorepo ngày 2026-11-03 (`TranMinhTruyen/s3-browser`); từ sprint-15 dùng luồng `SP-NN/release` (mục 2).
 - 2026-11-06: thêm agent `go-tester` và quy tắc test hồi quy (xem `CLAUDE.md` mục 4 và 10).
 - Chưa test tay: lưu đè file ở hộp thoại lưu native của Windows, `AddFilter`/`AttachToWindow` của `SaveFile()` (docs Wails 403), tốc độ 600.000 vòng PBKDF2 trên máy yếu; các mục test tay của sprint-13 (bucket khác region, Object Lock/versioning khi xoá, xoá file/folder sau khi sửa `batchDeleter`, tạo bucket public trên AWS) chưa ghi nhận kết quả; gặp lỗi thì mở sprint sửa. Sprint-18: nút X tab, viền focus SQL editor, hàng upload, hàng đầu `HistoryModal` ở 3 cỡ; checklist badge F14; test case R8 trong `testcases.md` lệch code, cần `qa-tester` cập nhật.
-- Việc tiếp theo: người dùng merge PR #43, rồi làm R1 (`SP-19/db_object_tree`); test tay R2 (chạy app với DLL, 3 cỡ giao diện, NSIS/portable). Sprint-18 đã DONE và lên `staging` (`1.1.0-beta.18`, #42).
+- Việc tiếp theo: người dùng merge PR `SP-19/sprint_docs` rồi PR `SP-19/release` → `staging` (bản beta `1.1.0-beta.19`), test tay TC-R1-33/34 (bản dịch, hộp thoại chọn file native, WebView2, DPI 125/150%); sprint sau: nối Go/FE cho 6 DB mạng (plan 10.13). Sprint-18 đã DONE và lên `staging` (`1.1.0-beta.18`, #42).
 
 ## 2. Quyết định
 
@@ -73,11 +73,16 @@
 - 2026-11-10 [docs] CHANGELOG: mỗi bản beta có mục `## [n.n.n-beta.N] - ngày` riêng (7 bản), mục Known issues của bản cũ giữ nguyên làm lịch sử — người dùng chọn khi đóng sprint-17.
 - 2026-11-16 [sprint-18] R8 Find/Replace chốt theo code: ô Replace luôn hiện, 3 nút match case/whole word/regex, không footer Cancel, Ctrl/Cmd+E/Q bị chặn trong ô Find (#39); Q33=A giữ toast 14px ở medium — người dùng chốt khi review bản release, `requirement.md`/`plan.md` đã sửa theo code (#40).
 - 2026-11-16 [sprint-18] Cỡ giao diện small/medium/large = font-size `<html>` 14/16/18px (Slider 3 nấc), kích thước viết bằng rem; quy tắc vào `CLAUDE.md` mục 9 (`d90cb6c`). Badge căn chữ (D41/F14) là việc phụ của R10: `text-box` + `will-change`, `.snap` chỉ ở DPR 1 và 1.5 vì ở 1.25 xấu hơn.
-- 2026-11-17 [sprint-19] Backend DB: Rust sqlx 0.9 + tokio + sqlparser, `libsqlite3-sys = "*"` (Cargo.lock ghim), trang kết quả 500 dòng / 16 MiB, BLOB hiện hex đầy đủ, timeout truy vấn 5 phút (DBE015), metadata 30 giây — người dùng chốt Q1–Q12.
+- 2026-11-17 [sprint-19] Backend DB: Rust sqlx 0.9 + tokio + sqlparser, `libsqlite3-sys = "*"` (Cargo.lock ghim), trang kết quả 10.000 dòng / 16 MiB (Q16 = B, sau khi đo), BLOB hiện hex đầy đủ, timeout truy vấn 5 phút (DBE015), metadata 30 giây — người dùng chốt Q1–Q12.
 - 2026-11-17 [sprint-19] Toolchain Rust `stable` + target msvc không ghim số, cho agent cài Rust/VS Build Tools qua winget; DLL link `crt-static` để không cần VCRUNTIME140.
 - 2026-11-17 [sprint-19] Bảng `db_profiles` lưu mọi provider (`provider`, `config` JSON, `secret` mã hoá KeyManager), FE dùng `provider` `sqlite`/`postgres` nhưng giữ key i18n `form.dbType.*`; sửa thẳng migration 000003 vì chưa phát hành; sửa profile để trống mật khẩu thì giữ secret cũ nếu cùng provider, đổi provider thì bỏ (Q13, Q14).
 - 2026-11-17 [sprint-19] Profile đang kết nối: khoá ô loại DB/filePath/readOnly kèm gợi ý "ngắt kết nối để sửa", không tự đóng connection (B2=B). Đổi profile của tab thì `CloseDbTab` và `detach` runner.
-- 2026-11-17 [quy trình] Sprint-19 chia 2 branch: R2 (backend + FE nối) trước, R1 cây object sau khi người dùng merge PR R2 (Q1=A).
+- 2026-11-21 [sprint-19] SQL Server chỉ báo "connection was reset" khi phiên bẩn (USE, SET, #temp, EXECUTE AS, sp_*, BEGIN TRAN/DISTRIBUTED), phiên sạch nối lại im lặng; lần thử không TLS dùng EncryptionLevel::Off + trust_cert() (đăng nhập mã hoá) — người dùng chốt (B5, B6, Q-B vòng 3); nếu đo thấy packet ~16 KiB ở `disable` thì giữ `Off`, sửa range test.
+- 2026-11-21 [sprint-19] Test Rust cần DB tự skip bằng `skip_or_fail`; `S3B_REQUIRE_DB=1` biến skip thành fail; chạy với Docker bật — người dùng chốt T1. test-env bind 127.0.0.1 (B7).
+- 2026-11-22 [sprint-19] Cây object: trạng thái expanded/selected ở `dbTreeStore` (không dùng `useTree`), "Làm mới" ở menu chuột phải profile đang Connect, double click node có con để mở/đóng, `closeProfileTables` tạo tab SQL mới nếu đóng hết — người dùng chấp nhận.
+- 2026-11-22 [sprint-19] R3 vào release không qua PR rồi sửa review ở PR riêng #44 (4 vòng review + 1 sửa test, người dùng đồng ý vượt ngưỡng 3) — người dùng đẩy trực tiếp, orchestrator review sau.
+- 2026-11-22 [sprint-19] Người dùng chốt sửa C1 (`estimateSize` làm tròn nguyên px ở DbProfiles) và vấn đề có sẵn race `CloseDbTab` + `SqlResultPanel` display-none ngay trong sprint, mỗi việc một branch/PR (#45, #46) — tách PR để người dùng merge độc lập.
+- 2026-11-22 [sprint-19] Unit test Rust (cần hàm private) đặt ở `rust/tests/unit/<cây src>.rs`, nối vào cuối file nguồn bằng `#[cfg(test)] #[path = "<tương đối thư mục chứa file src>/tests/unit/…"] mod tests;`; không tạo `tests/unit/main.rs`; chuyển nguyên văn, không đổi hành vi — người dùng yêu cầu tách code test khỏi file production (PR #48).
 
 ## 3. Lỗi và bẫy đã gặp
 
@@ -142,6 +147,24 @@
 - 2026-11-17 [sprint-19] sqlx 0.9 yêu cầu `AssertSqlSafe` cho SQL động — bọc khi chạy SQL người dùng.
 - 2026-11-17 [sprint-19] Máy dev đã áp migration 000003 cũ sai schema sau khi sửa migration — xoá bảng `db_profiles` hoặc `goose down` một bậc.
 - 2026-11-17 [sprint-19] `copy:dll` lỗi "file in use" khi app dev đang giữ DLL — tắt app trước khi build.
+- 2026-11-21 [sprint-19] `close` treo tới khi câu đang chạy xong với SQL Server/MongoDB/Redis (driver `NoInterrupt`) — `close` chỉ gọi `interrupt()` — `Registry::remove_conn(interrupt_first)` phải bật CancelSignal của mọi request của connection (lấy lock `requests` sau khi nhả `conns`).
+- 2026-11-21 [sprint-19] Tách câu PG chậm O(n²) trên SQL một dòng dài (780 KB mất 30 s) — `LineIndex` duyệt lại từ đầu dòng mỗi token — dùng con trỏ tăng dần, chỉ tính offset ở token đầu câu và `;`.
+- 2026-11-21 [sprint-19] `cargo test` xanh dù 400+ test DB tự SKIP (in bằng eprintln, bị cargo giấu) — không có Docker — `S3B_REQUIRE_DB=1` để fail; verifier ghi số SKIP và coi là chưa xác minh.
+- 2026-11-21 [sprint-19] SQL Server: `in_tx`/`cancel_safe` quét từ đầu batch dễ sai (BEGIN TRY BEGIN TRAN, SELECT; UPDATE, COMMIT giữa batch) — đọc `@@TRANCOUNT` cùng round trip `@@ROWCOUNT` (`row_count`), `opens_tran`, `has_write_keyword` quét nguyên cả batch.
+- 2026-11-21 [sprint-19] Bảng tạm `##` bị xoá khi session tạo ra nó kết thúc — test đọc bảng `##` sau khi connection tạo bị thay sẽ fail — tạo bảng bằng connection `monitor` sống hết test.
+- 2026-11-21 [sprint-19] Branch local `SP-19/native_db_drivers` không chứa code R3 có trong release — kiểm `git log origin/SP-19/release` trước khi verify, tách branch sửa từ origin.
+- 2026-11-22 [sprint-19] Mantine 9 `Tabs` mặc định `keepMountedMode: 'activity'` huỷ effect panel ẩn, tab Data nạp lại từ trang 1 khi quay lại — đặt `keepMountedMode="display-none"` như `TabStrip`.
+- 2026-11-22 [sprint-19] Effect tự mở Accordion chỉ phụ thuộc profile nên chọn tab khác cùng profile không mở lại cây đã đóng — thêm `activeTab` vào deps.
+- 2026-11-22 [sprint-19] Race `CloseDbTab` với `tabConnOf` đang mở connection làm rò connection/cursor tab tới Disconnect — `closeTab` không thấy tab chưa vào `m.tabs` — theo dõi từng lần mở (`pendingOpen`), `closeTab` đánh dấu các lần mở đang chạy; không gắn cờ theo tabId vì làm hỏng lần mở mới sau `closeTab`.
+- 2026-11-22 [sprint-19] Virtualizer `estimateSize = px * useUiScale()` ra px lẻ ở small/large (24,5/31,5) — làm tròn `Math.round` trong `estimateSize`; các list S3 cũ chưa làm tròn.
+- 2026-11-22 [quy trình] Orchestrator báo nhầm reviewer "người dùng đồng ý hoãn C1" và một lần gọi hai agent viết code song song — chỉ báo reviewer thoả thuận người dùng đã xác nhận rõ ràng; luôn chạy agent viết code tuần tự dù việc nhỏ.
+- 2026-11-22 [test] Test viết khi không có Docker mang giả định sai (assert số dòng fixture 197 vs 200; thread MariaDB còn sống sau LOAD DATA LOCAL lỗi) — chỉ lộ khi chạy với DB thật — lần đầu có Docker thì chạy `S3B_REQUIRE_DB=1 cargo test` ngay sau khi merge và sửa test, không coi SKIP là PASS.
+- 2026-11-22 [qa] `docs/node_modules` không có `exceljs` nên `bun run --cwd docs evidence` không chạy được — cần `bun install --cwd docs` (theo lockfile) trước khi sinh Excel.
+- 2026-11-22 [qa] Wails server mode in banner "Browser Environment Detected" (console.warn của @wailsio/runtime system.js) mỗi lần nạp trang trình duyệt, không có cờ tắt trong v3.1.0, app desktop không in — người dùng chốt lọc ở harness Playwright bằng `page.addInitScript` (chỉ nuốt đúng chuỗi banner, đếm `bannerCount`); không đổi code app.
+- 2026-11-22 [test] Unit test MySQL cho `shutdown` dựa `Aborted_clients` toàn server nên fail giả nếu hai `cargo test` chạy song song — chạy tuần tự.
+- 2026-11-22 [rust] `#[path]` của `mod tests;` tính từ thư mục chứa file nguồn (kể cả `mod.rs`), không phải cwd — file mới thêm `mod tests;` cần đúng số cấp `../` tới `rust/tests/unit/`; `tests/unit/main.rs` sẽ khiến cargo biên dịch thêm một target.
+- 2026-11-22 [quy trình] Commit "chore(temp file)" dc5d07e đẩy thẳng vào release đã comment out deny Edit `.claude/**` và `CLAUDE.md` (người dùng sửa lại ở PR #49) — kiểm diff `.claude/**` của mọi commit người dùng đẩy thẳng vào release trước khi promote.
+- 2026-11-22 [test-env] Container `s3b-db-test` mount cert từ `test-env/certs` của thư mục chạy `docker compose`; `gen-certs.sh` sinh lại cả CA (đổi cả cert MinIO) — đổi thư mục chạy thì chép cùng bộ cert rồi `up -d` lại, giữ volume.
 
 ## 4. Tóm tắt cũ
 

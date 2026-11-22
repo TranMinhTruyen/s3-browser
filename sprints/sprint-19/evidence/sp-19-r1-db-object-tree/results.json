@@ -1,0 +1,138 @@
+{
+  "TC-R1-01": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-02": {
+    "status": "PASS",
+    "note": "Tree rows right after Connect (tab has no profile): 0"
+  },
+  "TC-R1-03": {
+    "status": "PASS",
+    "note": "Icons: {\"database_or_schema\":\"lucide-layers\",\"group\":\"lucide-folder\",\"table\":\"lucide-table-2\",\"view\":\"lucide-eye\",\"index\":\"lucide-list-tree\",\"trigger\":\"lucide-zap\"}"
+  },
+  "TC-R1-04": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-05": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-06": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-07": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-08": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-09": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-10": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-11": {
+    "status": "PASS",
+    "note": "First page: scrollHeight 320032px, DOM rows 25"
+  },
+  "TC-R1-12": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-13": {
+    "status": "PASS",
+    "note": "Rows: [[\"id\",\"INTEGER\",\"Yes\",\"NULL\",\"Yes\"],[\"name\",\"TEXT\",\"No\",\"NULL\",\"No\"],[\"email\",\"TEXT\",\"Yes\",\"NULL\",\"No\"],[\"age\",\"INTEGER\",\"Yes\",\"NULL\",\"No\"],[\"bio\",\"TEXT\",\"Yes\",\"'n/a'\",\"No\"]]"
+  },
+  "TC-R1-14": {
+    "status": "PASS",
+    "note": "Rows: [[\"idx_orders_open\",\"No\",\"c\",\"Yes\",\"status\"],[\"idx_orders_user\",\"No\",\"c\",\"No\",\"user_id\"]]"
+  },
+  "TC-R1-15": {
+    "status": "PASS",
+    "note": "Rows: [[\"PRIMARY KEY\",\"NULL\",\"id\",\"NULL\"],[\"UNIQUE\",\"NULL\",\"email\",\"NULL\"],[\"CHECK\",\"NULL\",\"age\",\"age >= 0\"]]"
+  },
+  "TC-R1-16": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-17": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-18": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-19": {
+    "status": "PASS",
+    "note": "After mouse drag of users to the first slot: users,New query,orders"
+  },
+  "TC-R1-20": {
+    "status": "PASS",
+    "note": "Menu of a connected profile: Disconnect / Refresh / Export / Delete"
+  },
+  "TC-R1-21": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-22": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-23": {
+    "status": "PASS",
+    "note": "SQL tab shows as: QA SQLite"
+  },
+  "TC-R1-24": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-25": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-26": {
+    "status": "PASS",
+    "note": "Icons: database lucide-database, schema lucide-layers, table lucide-table-2"
+  },
+  "TC-R1-27": {
+    "status": "PASS",
+    "note": "wide_events column rows in DOM: 25"
+  },
+  "TC-R1-28": {
+    "status": "PASS",
+    "note": "light/small: root 14px, tree row 25px, grid row 28px | light/medium: root 16px, tree row 28px, grid row 32px | light/large: root 18px, tree row 32px, grid row 36px"
+  },
+  "TC-R1-29": {
+    "status": "PASS",
+    "note": "dark/small: root 14px, tree row 25px, grid row 28px | dark/medium: root 16px, tree row 28px, grid row 32px | dark/large: root 18px, tree row 32px, grid row 36px | Dark body background rgb(36, 36, 36)"
+  },
+  "TC-R1-30": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-31": {
+    "status": "PASS",
+    "note": ""
+  },
+  "TC-R1-33": {
+    "status": "MANUAL",
+    "note": "MANUAL: needs native speakers (vi, ja, zh-CN, zh-TW, ru, de); key parity is covered by TC-R1-31."
+  },
+  "TC-R1-34": {
+    "status": "MANUAL",
+    "note": "MANUAL: server mode runs in Chromium, not the WebView2 of the desktop app (rendering, DPI scaling 125/150%, window resize)."
+  },
+  "TC-R1-32": {
+    "status": "PASS",
+    "note": "bannerCount=68 (filtered at harness)"
+  }
+}
