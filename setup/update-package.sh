@@ -28,16 +28,25 @@ go mod tidy
 echo
 echo "==> Update complete. Please review go.mod/go.sum manually."
 
-# Rust native library (rust/). Skipped until the Cargo workspace exists.
+# Rust native library (rust/).
 # `cargo update` only moves Cargo.lock within the semver ranges of Cargo.toml,
 # so pinned crates (e.g. libsqlite3-sys matching sqlx) stay compatible.
+# Newer incompatible versions are only reported ("available: ..."): bump them
+# in Cargo.toml by hand, since they may need code changes.
 if [ -f "$PROJECT_ROOT/rust/Cargo.toml" ]; then
-  echo
-  echo "==> Updating Rust dependencies..."
+  # rustup installs cargo here, but it is not always on PATH (e.g. Git Bash).
+  export PATH="$HOME/.cargo/bin:$PATH"
   if ! command -v cargo >/dev/null 2>&1; then
     echo "ERROR: cargo not found. Install Rust first: https://rustup.rs"
     exit 1
   fi
+
+  echo
+  echo "==> Checking outdated Rust crates..."
+  (cd "$PROJECT_ROOT/rust" && cargo update --dry-run --verbose 2>&1 | grep -E 'Updating|Adding|Removing|available' || true)
+
+  echo
+  echo "==> Updating Rust dependencies..."
   (cd "$PROJECT_ROOT/rust" && cargo update)
 fi
 
@@ -62,7 +71,8 @@ cd "$PROJECT_ROOT"
 echo
 echo "==> Regenerating TypeScript IPC bindings..."
 # The Wails runtime version moves with go.mod, so bindings must be regenerated.
-wails3 generate bindings -clean=true -ts
+# -tags=wailsgen is required: without it result models in models/db become `any`.
+go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts
 
 echo
-echo "==> All packages updated. Run 'wails3 task build' to verify the build."
+echo "==> All packages updated. Run 'go tool wails3 task build' to verify the build."

@@ -41,15 +41,38 @@ version_ge() {
   [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -n1)" == "$2" ]]
 }
 
-require_go() {
-  if ! command -v go >/dev/null 2>&1; then
-    echo "ERROR: Go is not installed. Install Go $GO_MIN_VERSION+ first: https://go.dev/dl/"
+# Install a package with winget (Windows). Extra args are passed through.
+winget_install() {
+  local id="$1"; shift
+  if ! command -v winget >/dev/null 2>&1; then
+    echo "ERROR: winget not found, cannot install $id. Install 'App Installer' from the Microsoft Store."
     exit 1
+  fi
+  echo "==> Installing $id (winget)..."
+  winget install --id "$id" -e --accept-source-agreements --accept-package-agreements "$@"
+}
+
+require_go() {
+  # Default install folder of the Go MSI; not on PATH of this shell right after install.
+  [[ "$(detect_os)" == "windows" ]] && export PATH="/c/Program Files/Go/bin:$PATH"
+
+  if ! command -v go >/dev/null 2>&1; then
+    if [[ "$(detect_os)" != "windows" ]]; then
+      echo "ERROR: Go is not installed. Install Go $GO_MIN_VERSION+ first: https://go.dev/dl/"
+      exit 1
+    fi
+    winget_install GoLang.Go
   fi
 
   local current
   current="$(go env GOVERSION)"   # e.g. go1.27.0
   current="${current#go}"
+
+  if ! version_ge "$current" "$GO_MIN_VERSION" && [[ "$(detect_os)" == "windows" ]]; then
+    echo "==> Go $current is older than $GO_MIN_VERSION, upgrading..."
+    winget upgrade --id GoLang.Go -e --accept-source-agreements --accept-package-agreements || true
+    current="$(go env GOVERSION)"; current="${current#go}"
+  fi
 
   if ! version_ge "$current" "$GO_MIN_VERSION"; then
     echo "ERROR: Go $current found, but this project (go.mod) requires Go $GO_MIN_VERSION+."
@@ -230,11 +253,79 @@ install_webview() {
 }
 
 # ---------------------------------------------------------------------------
-# 5. graphify knowledge graph (graphify-out/, AST only, no LLM / API cost)
+# 5. Rust toolchain for the native DB library (rust/ -> s3b_db.dll, Windows only)
+# ---------------------------------------------------------------------------
+# The MSVC target links with link.exe from the VS Build Tools (C++ workload).
+has_msvc_build_tools() {
+  local vswhere="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
+  [[ -x "$vswhere" ]] && [[ -n "$("$vswhere" -latest -products '*' \
+    -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>/dev/null)" ]]
+}
+
+install_msvc_build_tools() {
+  if has_msvc_build_tools; then
+    echo "==> MSVC C++ build tools already installed."
+    return
+  fi
+
+  # C++ workload = MSVC compiler/linker + Windows SDK. Takes a while; UAC prompt asks for admin.
+  winget_install Microsoft.VisualStudio.BuildTools \
+    --override "--quiet --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+
+  if ! has_msvc_build_tools; then
+    echo "ERROR: MSVC C++ build tools still not found. Install 'Visual Studio Build Tools'"
+    echo "       with the 'Desktop development with C++' workload, then re-run this script."
+    exit 1
+  fi
+  echo "==> MSVC C++ build tools installed."
+}
+
+setup_rust() {
+  if [[ "$(detect_os)" != "windows" ]]; then
+    echo "==> Skipping Rust: s3b_db.dll is only built for Windows (x86_64-pc-windows-msvc)."
+    return 0
+  fi
+
+  install_msvc_build_tools
+
+  # rustup installs cargo here, but it is not always on PATH (e.g. Git Bash).
+  export PATH="$HOME/.cargo/bin:$PATH"
+  if ! command -v rustup >/dev/null 2>&1; then
+    echo "==> rustup not found, installing..."
+    if command -v winget >/dev/null 2>&1; then
+      winget_install Rustlang.Rustup
+    else
+      local installer="${TMPDIR:-/tmp}/rustup-init.exe"
+      curl -fsSL "https://win.rustup.rs/x86_64" -o "$installer"
+      "$installer" -y --default-toolchain none
+    fi
+  fi
+
+  if ! command -v rustup >/dev/null 2>&1; then
+    echo "ERROR: rustup installed but not on PATH. Open a new shell and re-run this script."
+    exit 1
+  fi
+
+  # Installs the channel + target pinned in rust/rust-toolchain.toml, then downloads crates (Cargo.lock).
+  echo "==> Installing Rust toolchain from rust/rust-toolchain.toml..."
+  (cd "$PROJECT_ROOT/rust" && rustup toolchain install && cargo --version && cargo fetch)
+}
+
+# ---------------------------------------------------------------------------
+# 6. graphify knowledge graph (graphify-out/, AST only, no LLM / API cost)
 # ---------------------------------------------------------------------------
 setup_graphify() {
   if ! command -v graphify >/dev/null 2>&1; then
     echo "==> graphify not found, installing (Python package graphifyy)..."
+    # Windows: prefer uv (installed via winget, brings its own Python). A bare "python"
+    # there may be the Microsoft Store stub, which fails instead of installing.
+    if [[ "$(detect_os)" == "windows" ]] && ! command -v uv >/dev/null 2>&1 && command -v winget >/dev/null 2>&1; then
+      winget_install astral-sh.uv
+      export PATH="$HOME/AppData/Local/Microsoft/WinGet/Links:$PATH"
+    fi
+    # uv tool / pipx put the graphify command here.
+    export PATH="$HOME/.local/bin:$PATH"
+
     if command -v uv >/dev/null 2>&1; then
       uv tool install graphifyy
     elif command -v pipx >/dev/null 2>&1; then
@@ -257,7 +348,7 @@ setup_graphify() {
 }
 
 # ---------------------------------------------------------------------------
-# 6. Docker test containers (see test-env/README.txt)
+# 7. Docker test containers (see test-env/README.txt)
 # ---------------------------------------------------------------------------
 # Wait until a one-shot init container exits; fail if it exits non-zero.
 wait_init() {
@@ -331,6 +422,7 @@ install_wails_cli
 install_sqlc
 install_bun
 install_webview
+setup_rust
 
 cd "$PROJECT_ROOT"
 
@@ -356,7 +448,8 @@ wails3 task common:install:frontend:deps PACKAGE_MANAGER="$PACKAGE_MANAGER"
 
 echo
 echo "==> Generating TypeScript IPC bindings..."
-wails3 generate bindings -clean=true -ts
+# -tags=wailsgen is required: without it result models in models/db become `any`.
+wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts
 
 echo
 echo "==> Building the application (frontend + Go binary)..."
