@@ -5,6 +5,7 @@ import (
 	"S3Browser/internal"
 	"S3Browser/internal/pkg/db"
 	"S3Browser/internal/pkg/logger"
+	"S3Browser/internal/pkg/memprobe"
 	"S3Browser/internal/pkg/portable"
 	"embed"
 	"errors"
@@ -124,6 +125,7 @@ func main() {
 		return
 	}
 	mainApp.OnShutdown(app.Shutdown)
+	memprobe.Start(mainApp.Context(), appLogger, app.NativeLoaded)
 	mainApp.RegisterService(application.NewService(app.BucketHandler))
 	mainApp.RegisterService(application.NewService(app.DbHandler))
 	mainApp.RegisterService(application.NewService(app.MasterHandler))

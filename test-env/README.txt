@@ -228,3 +228,43 @@ mysql:8.4.13, mariadb:11.4.13, postgres:17.12, mssql/server:2022-CU28-ubuntu-22.
   Thử tay trong container (ví dụ):
     docker exec -e PGPASSWORD=S3bTest2026 s3b-test-postgres psql "host=localhost user=postgres dbname=s3b sslmode=verify-full sslrootcert=/certs/ca.pem"
     docker exec s3b-test-redis redis-cli -p 6380 --tls --cacert /certs/ca.pem --sni localhost ping
+
+
+11. Đo RAM (mem-bench.ps1)
+--------------------------
+
+Đo Private Working Set của cả cây process (app Go + msedgewebview2.exe), tách Go runtime/heap (probe), DLL Rust,
+WebView2 và JS heap, theo kịch bản a-f và i1-i4 (sprints/sprint-20/plan.md). Kết quả ghi vào mem/report/<ngày>_<giờ>/
+(đã gitignore): summary.md, samples.csv, timings.csv, probe-*.jsonl. Chạy trong thư mục này:
+
+  (a) Build hai bản (ở gốc repo; tắt app đang chạy trước):
+        go tool wails3 task windows:build
+        go tool wails3 task windows:build EXTRA_TAGS=devtools OUT_DIR=build/bin/bench
+      Bản đầu (build/bin/S3Browser.exe) là bản release thuần; bản sau (build/bin/bench/S3Browser.exe) có tag devtools,
+      cần cho cổng CDP của kịch bản b-f. Cách truyền biến KEY=value qua `wails3 task` chưa kiểm chứng; không được thì
+      chạy `task` trực tiếp hoặc đặt biến môi trường EXTRA_TAGS và OUT_DIR.
+  (b) Cài thư viện cho script UI (một lần): `bun install --cwd docs` (playwright đã có trong docs/package.json).
+  (c) Dữ liệu cho b, c, e-s3: chạy MinIO (mục 1/docker-compose-minio.yml), rồi
+        $env:S3B_BENCH_ACCESS_KEY='admin'; $env:S3B_BENCH_SECRET_KEY='<mật khẩu admin của docker-compose-minio.yml>'
+        $env:S3B_BENCH_ENDPOINT='http://localhost:10010'      # mặc định
+        .\mem-bench.ps1 -PrepareData
+      tạo bucket s3b-mem-10k với 10.000 object (obj-00001.bin ... obj-10000.bin). Kịch bản d không cần MinIO (SQLite).
+      Secret của MinIO test-env không được chứa dấu cách hay ký tự glob (*, ?, [): script trong container không bọc nháy
+      (PowerShell 5.1 nuốt dấu nháy kép trong đối số lệnh native).
+  (d) Chạy đo (không mở S3Browser khác, không chạy dưới debugger, máy rảnh):
+        .\mem-bench.ps1 -Scenario a -Runs 1 -NoCdp      # chỉ a-release, không cần node/MinIO (cũng là việc CI làm)
+        .\mem-bench.ps1 -Scenario d -Runs 1             # SQLite, không cần Docker
+        .\mem-bench.ps1 -Scenario all -Runs 3           # đủ a-f, i1-i4: khoảng 4,7 giờ
+      Script tự mở app với APPDATA riêng (không đụng dữ liệu thật), thao tác UI qua docs/scripts/mem-ui.mjs, rồi đóng app.
+      Download của kịch bản c cần điền hộp thoại chọn thư mục native bằng UI Automation; lỗi thì c chỉ còn số upload
+      (ghi trong summary.md), phiên vẫn chạy tiếp.
+  (e) App so sánh (A5:SQL Mk-2, Navicat), bán tự động (a, d, e-sql, f; b, c không áp dụng):
+        .\mem-bench.ps1 -ProcessName Navicat -Scenario d    # đang chạy sẵn; hoặc thêm -CompareExe <đường dẫn> để tự mở
+      Script in hướng dẫn từng bước rồi chờ Enter; d dùng cùng file SQLite với S3Browser (-SqliteFile).
+  (f) Số đo trước/sau tối ưu luôn so cùng cách đo (bản đo + CDP). Sai số build và CDP nằm trong summary.md.
+      Công thức các cột Go (cũng ghi trong summary.md): go_runtime = probe.total - probe.heapReleased; go_private = PrivateBytes
+      của process Go; native_other = go_private - go_runtime (DLL Rust, tokio, native khác; âm = probe lớn hơn PrivateBytes).
+      Các cột còn lại là Private WS từng loại process. Nối CDP rồi ngắt trước mỗi mẫu.
+
+  Probe Go (không phải bước chuẩn bị riêng): đặt S3B_MEMPROBE=<file> khi chạy app thì mỗi 2 giây app ghi một dòng JSON
+  (total, heapObjects, heapReleased, heapStacks, gcGoal, dllLoaded); không đặt thì app không làm gì thêm.

@@ -3,3 +3,5 @@ generated/
 certs/
 # Benchmark reports (.xlsx)
 db/report/
+# RAM benchmark results (mem-bench.ps1)
+mem/report/

@@ -85,6 +85,14 @@ func (m *submoduleNativeMng) get() (nativeCaller, error) {
 	return m.caller, nil
 }
 
+// loaded reports whether the library is loaded, without loading it.
+func (m *submoduleNativeMng) loaded() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.caller != nil
+}
+
 // response is the envelope of a native response when it is not the expected success shape.
 type response struct {
 	Ok     bool            `json:"ok"`

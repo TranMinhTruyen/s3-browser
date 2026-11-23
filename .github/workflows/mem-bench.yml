@@ -1,0 +1,79 @@
+# Đo RAM kịch bản a (app vừa mở, để yên) trên bản release cho mọi PR vào SP-*/release và staging.
+# Số trên runner CI chỉ để THAM KHẢO (máy ảo dùng chung): job không đặt ngưỡng, chỉ fail khi script lỗi.
+# PR chỉ đổi tài liệu thì bỏ qua. Mỗi lượt khoảng 35-45 phút runner Windows; push mới lên cùng PR huỷ lượt cũ.
+# Đo đầy đủ a-f, i1-i4 chạy tay trên máy local: xem test-env/README.txt mục 11.
+name: mem-bench
+
+on:
+  pull_request:
+    branches: ['SP-*/release', staging]
+    paths-ignore:
+      - 'sprints/**'
+      - 'memory/**'
+      - '**/*.md'
+      - 'docs/user-guide/**'
+      - 'docs/images/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mem-bench-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mem-bench:
+    runs-on: windows-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - uses: oven-sh/setup-bun@v2
+
+      # Rust cho s3b_db.dll: build:native copy DLL cạnh exe (giống pre-release.yml)
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      # Bản release thuần -> build/bin/S3Browser.exe
+      - name: Build release
+        shell: bash
+        run: go tool wails3 task windows:build
+
+      # App cần WebView2 Runtime; thiếu thì fail rõ ràng thay vì treo ở bước mở app
+      - name: Check WebView2 Runtime
+        shell: pwsh
+        run: |
+          $key = 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+          $v = (Get-ItemProperty -Path $key -ErrorAction SilentlyContinue).pv
+          if (-not $v) { Write-Error 'Runner không có WebView2 Runtime'; exit 1 }
+          Write-Host "WebView2 Runtime $v"
+
+      - name: Measure RAM (scenario a, release)
+        shell: pwsh
+        run: ./test-env/mem-bench.ps1 -Scenario a -Runs 3 -NoCdp -OutDir mem-report
+
+      - name: Job summary
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path mem-report/summary.md) { Get-Content mem-report/summary.md -Raw | Add-Content $env:GITHUB_STEP_SUMMARY }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mem-report
+          path: mem-report/
+          if-no-files-found: warn

@@ -87,6 +87,11 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) (*App, error)
 	}, nil
 }
 
+// NativeLoaded reports whether the native database library is loaded (read by the memory probe).
+func (a *App) NativeLoaded() bool {
+	return a.dbModule.Loaded()
+}
+
 // Shutdown cancels running transfers and the update check, closes every connection and the database.
 func (a *App) Shutdown() {
 	a.updateModule.Close()

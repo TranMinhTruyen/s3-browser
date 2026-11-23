@@ -83,6 +83,7 @@ type Module struct {
 	profileMng *submoduleProfileMng
 	connMng    *submoduleConnMng
 	queryMng   *submoduleQueryMng
+	nativeMng  *submoduleNativeMng
 }
 
 // NewModule creates the database module. The native library is only loaded by the first connection.
@@ -98,7 +99,13 @@ func NewModule(app *application.App, logger *slog.Logger, db *sql.DB, km *utils.
 		profileMng: newSubmoduleProfileMng(app, logger, q, conns, km),
 		connMng:    conns,
 		queryMng:   newSubmoduleQueryMng(app, logger, native, conns),
+		nativeMng:  native,
 	}
+}
+
+// Loaded reports whether the native library is loaded. It never loads it.
+func (m *Module) Loaded() bool {
+	return m.nativeMng.loaded()
 }
 
 // GetAllDbProfile lists the saved database profiles.
