@@ -7,6 +7,16 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- Der Tab **Daten** einer Tabelle lässt sich jetzt direkt bearbeiten: Zellen ändern (oder **Auf NULL setzen**), **Zeile hinzufügen**, **Zeile löschen** / Zeile wiederherstellen und mit **Rollback** alle ausstehenden Änderungen verwerfen. Geänderte, neue und zu löschende Zeilen werden markiert, ein Zähler zeigt die Anzahl der geänderten Zeilen. Speichern in der Datenbank (**Commit**) wird noch nicht unterstützt, die Schaltfläche ist deaktiviert. Beim Schließen eines Tabellen-Tabs sowie beim Trennen oder Löschen eines Profils mit ungespeicherten Änderungen wird eine Bestätigung angefordert.
+- **Spalten an Daten anpassen**, **Kopieren** und **Mit Spaltennamen kopieren** im Datenraster und in den SQL-Ergebnisrastern.
+- **Alle Daten abrufen** im Tab Daten liest alle restlichen Zeilen auf einmal; Häkchen entfernen bricht ab. **Geladene Zeilen** zeigt die Anzahl der geladenen Zeilen, **Neu laden** lädt die erste Seite neu (und entfernt das Häkchen bei Alle Daten abrufen).
+
+### Bekannte Probleme
+
+- Tabellenänderungen können noch nicht gespeichert werden (Commit ist deaktiviert).
+
 ## [1.1.0-beta.19] - 2026-11-22
 
 ### Hinzugefügt
