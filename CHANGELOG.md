@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- The **Data** tab of a table can now be edited in place: change cells (or **Set NULL**), **Add row**, **Delete row** / **Restore row**, and **Rollback** to drop every pending change. Changed, new and deleted rows are marked, and **Changed rows** counts them. Saving to the database (**Commit**) is not supported yet, so the button stays disabled. Closing a table tab, or disconnecting or deleting a profile, asks for confirmation while changes are pending.
+- **Fit columns to data**, **Copy** and **Copy with column names** in the Data grid and the SQL result grids.
+- **Fetch all data** in the Data tab reads every remaining row in one go; untick it to stop. **Loaded rows** shows how many rows are loaded, and **Refresh** reloads the first page (unticking Fetch all data).
+
+### Known issues
+
+- Table edits cannot be saved yet (Commit is disabled).
+
 ## [1.1.0-beta.19] - 2026-11-22
 
 ### Added

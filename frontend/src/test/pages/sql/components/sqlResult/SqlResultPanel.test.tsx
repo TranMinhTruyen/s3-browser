@@ -1,16 +1,18 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useEffect } from 'react';
+import { useEffect, useImperativeHandle } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import SqlResultPanel from '@/pages/sql/components/sqlResult/SqlResultPanel';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 import { statement } from '@/test/_helpers/sqlStatement';
 
-const grid = vi.hoisted(() => ({ calls: [] as Record<string, any>[], mounts: 0, unmounts: 0 }));
+const grid = vi.hoisted(() => ({ calls: [] as Record<string, any>[], mounts: 0, unmounts: 0, fits: [] as string[] }));
 
 vi.mock('@/components/display/dataGrid/DataGrid', () => ({
   default: function MockDataGrid(props: Record<string, any>) {
     grid.calls.push(props);
+    // The handle the panel drives: records the first value of the grid that was asked to fit.
+    useImperativeHandle(props.ref, () => ({ fitColumns: () => grid.fits.push(String(props.rows[0]?.[0])) }));
     // Effect of the real grid: with Activity it would be torn down and rerun on every tab switch.
     useEffect(() => {
       grid.mounts += 1;
@@ -98,6 +100,12 @@ describe('SqlResultPanel', () => {
     expect(shown('messages')).toHaveTextContent('0:true');
   });
 
+  it('gives the grid the translated Copy labels of its context menu', () => {
+    grid.calls.length = 0;
+    renderWithProviders(<SqlResultPanel {...base} statements={[select(0)]} />);
+    expect(grid.calls.at(-1)?.copyLabels).toEqual({ copy: 'Copy', copyWithHeaders: 'Copy with column names' });
+  });
+
   it('gives the grid the column names, NULL text and loading state, and loads more at the end', async () => {
     grid.calls.length = 0;
     const onLoadMore = vi.fn();
@@ -107,6 +115,35 @@ describe('SqlResultPanel', () => {
     expect(grid.calls.at(-1)).toMatchObject({ columns: ['id'], nullText: 'NULL', hasMore: true, loading: false });
     await userEvent.click(shown('grid'));
     expect(onLoadMore).toHaveBeenCalledTimes(1);
+  });
+
+  describe('fit columns', () => {
+    const fitButton = () =>
+      within(screen.getAllByRole('tabpanel').find(p => p.style.display !== 'none') as HTMLElement).getByRole('button', {
+        name: 'Fit columns to data',
+      });
+    const two = () => [select(0, { rows: [['first']] }), select(1, { rows: [['second']] })];
+
+    it('fits the grid of the Result tab being viewed', async () => {
+      grid.fits.length = 0;
+      renderWithProviders(<SqlResultPanel {...base} statements={two()} />);
+      await userEvent.click(fitButton());
+      expect(grid.fits).toEqual(['second']);
+
+      await userEvent.click(tab('Result 1'));
+      await userEvent.click(fitButton());
+      expect(grid.fits).toEqual(['second', 'first']);
+    });
+
+    it('is disabled for a result without rows', () => {
+      renderWithProviders(<SqlResultPanel {...base} statements={[select(0, { rows: [] })]} />);
+      expect(fitButton()).toBeDisabled();
+    });
+
+    it('is disabled for a result without columns', () => {
+      renderWithProviders(<SqlResultPanel {...base} statements={[select(0, { columns: [] })]} />);
+      expect(fitButton()).toBeDisabled();
+    });
   });
 
   describe('hidden panels stay mounted (display-none, not Activity)', () => {

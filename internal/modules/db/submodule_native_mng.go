@@ -177,9 +177,15 @@ func callNativeRaw(ctx context.Context, m *submoduleNativeMng, method string, pa
 }
 
 // withCallContext derives the context of one Wails call. The call context only ends when the frontend cancels
-// the call, so it also stops on appCtx (app shutdown) and after timeout. The returned cancel must be deferred.
+// the call, so it also stops on appCtx (app shutdown) and after timeout
+// (timeout <= 0: no deadline). The returned cancel must be deferred.
 func withCallContext(ctx, appCtx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
+	var cancel context.CancelFunc
+	if timeout > 0 {
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+	} else {
+		ctx, cancel = context.WithCancel(ctx)
+	}
 	stop := context.AfterFunc(appCtx, cancel)
 
 	return ctx, func() {

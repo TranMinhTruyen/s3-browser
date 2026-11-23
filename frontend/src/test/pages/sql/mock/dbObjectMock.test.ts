@@ -66,6 +66,21 @@ describe('getMockTableInfo', () => {
 describe('getMockRows', () => {
   it('returns null for an unknown table', () => {
     expect(getMockRows('public', 'nope', 0)).toBeNull();
+    expect(getMockRows('public', 'nope', 0, true)).toBeNull();
+  });
+
+  it('returns every remaining row from the offset, done, when all is true', () => {
+    const page = getMockRows('public', 'wide_events', 10_000, true);
+    expect(page?.rows).toHaveLength(15_000);
+    expect(page?.rows[0][0]).toBe('10001');
+    expect(page?.rows[14_999][0]).toBe('25000');
+    expect(page?.done).toBe(true);
+  });
+
+  it('returns only one page when all is false', () => {
+    const page = getMockRows('public', 'wide_events', 0, false);
+    expect(page?.rows).toHaveLength(10_000);
+    expect(page?.done).toBe(false);
   });
 
   it('returns a short table in one finished page', () => {

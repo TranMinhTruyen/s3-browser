@@ -375,7 +375,7 @@ describe('SqlTabDetail', () => {
 
         expect(profileIdOfTab()).toBe('sqlite-1');
         expect(fetchCalls()).toHaveLength(1);
-        expect(fetchCalls()[0][1]).toEqual([{ tabId: tabId(), cursorId: 7 }]);
+        expect(fetchCalls()[0][1]).toEqual([{ tabId: tabId(), cursorId: 7, all: false }]);
         expect((result.props as { statements: unknown[] }).statements).toHaveLength(1);
       });
     });

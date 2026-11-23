@@ -90,6 +90,7 @@ export async function applySettings(settings: AppSettingValues): Promise<void> {
   const fontSize = `${UI_SIZE_FONT_PX[settings.size]}px`;
   if (style.fontSize !== fontSize) {
     style.fontSize = fontSize;
+    document.documentElement.dataset.uiSize = settings.size; // lets CSS target one size (small nudges xs labels)
   }
   document.documentElement.lang = settings.language;
 

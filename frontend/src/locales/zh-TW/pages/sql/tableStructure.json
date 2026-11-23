@@ -39,5 +39,24 @@
   "no": "否",
   "loadError": "無法載入資料表結構",
   "noSource": "沒有可用的原始碼",
-  "loadingMore": "正在載入更多資料列…"
+  "loadingMore": "正在載入更多資料列…",
+  "fetchAll": "取得全部資料",
+  "loadedRows": "已載入的列：{{total}}",
+  "edit": {
+    "refresh": "重新整理",
+    "addRow": "新增列",
+    "fitColumns": "欄寬符合資料",
+    "deleteRow": "刪除列",
+    "restoreRow": "取消刪除列",
+    "commit": "提交",
+    "rollback": "復原",
+    "commitUnsupported": "尚未支援提交",
+    "changedRows": "已變更的列：{{total}}",
+    "setNull": "設為 NULL",
+    "copy": "複製",
+    "copyWithHeaders": "複製（含欄位名稱）",
+    "rowNew": "新列",
+    "rowEdited": "已編輯的列",
+    "rowDeleted": "待刪除的列"
+  }
 }

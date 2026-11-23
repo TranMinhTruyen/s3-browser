@@ -13,6 +13,9 @@
     "C000008": "Có thể bạn không có quyền upload vào bucket [{bucket}]. Vẫn tiếp tục?",
     "C000009": "Ứng dụng sẽ đóng, cài bản mới rồi tự mở lại. Tiếp tục?",
     "C000010": "Đang có {count} tác vụ tải lên/tải xuống, chúng sẽ bị hủy. Ứng dụng sẽ đóng, cài bản mới rồi tự mở lại. Tiếp tục?",
-    "C000011": "Secret đã lưu của hồ sơ [{name}] sẽ KHÔNG được xuất. Sau khi nhập, bạn cần nhập lại chúng. Xuất không kèm secret?"
+    "C000011": "Secret đã lưu của hồ sơ [{name}] sẽ KHÔNG được xuất. Sau khi nhập, bạn cần nhập lại chúng. Xuất không kèm secret?",
+    "C000012": "Bảng [{table}] có thay đổi chưa commit. Bỏ các thay đổi và đóng tab?",
+    "C000013": "Hồ sơ [{name}] có bảng với thay đổi chưa commit. Bỏ các thay đổi và tiếp tục?",
+    "C000014": "Bảng [{table}] có thay đổi chưa commit. Bỏ các thay đổi đó và tải lại dữ liệu?"
   }
 }

@@ -163,10 +163,14 @@ func (m *submoduleQueryMng) fetchRows(
 		return output.ThrowError(closedMessage())
 	}
 
-	ctx, cancel := withCallContext(ctx, m.app.Context(), queryTimeout)
+	size, maxBytes, timeout := pageSize, maxPageBytes, queryTimeout
+	if input.All {
+		size, maxBytes, timeout = unlimited, unlimited, 0
+	}
+	ctx, cancel := withCallContext(ctx, m.app.Context(), timeout)
 	defer cancel()
 
-	raw, err := callNativeRaw(ctx, m.native, "fetch", fetchParams{tab.connId, input.CursorId, pageSize, maxPageBytes})
+	raw, err := callNativeRaw(ctx, m.native, "fetch", fetchParams{tab.connId, input.CursorId, size, maxBytes})
 	if err != nil {
 		logCallFailure(ctx, m.logger, "fetch rows failed", err, "tabId", input.TabId)
 		return failCall(ctx, output, err, queryTimeout, nil)

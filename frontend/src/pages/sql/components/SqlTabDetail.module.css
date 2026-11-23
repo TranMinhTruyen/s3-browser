@@ -1,0 +1,6 @@
+/* Border lines above and below the drag strip (inset shadow: no change to the strip size or the thumb position). */
+.handle {
+  box-shadow:
+    inset 0 1px 0 var(--mantine-color-default-border),
+    inset 0 -1px 0 var(--mantine-color-default-border);
+}

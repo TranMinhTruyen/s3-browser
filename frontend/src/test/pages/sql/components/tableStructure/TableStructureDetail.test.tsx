@@ -17,8 +17,18 @@ vi.mock('@/pages/sql/components/tableStructure/TableDataView', () => ({
 }));
 // jsdom has no layout, so the virtualized grid is replaced by a stub that shows what it was given.
 vi.mock('@/components/display/dataGrid/DataGrid', () => ({
-  default: (props: { columns: string[]; rows: (string | null)[][]; nullText: string }) => (
-    <div data-testid="grid" data-null={props.nullText}>
+  default: (props: {
+    columns: string[];
+    rows: (string | null)[][];
+    nullText: string;
+    copyLabels: { copy: string; copyWithHeaders: string };
+  }) => (
+    <div
+      data-testid="grid"
+      data-null={props.nullText}
+      data-copy={props.copyLabels.copy}
+      data-copy-headers={props.copyLabels.copyWithHeaders}
+    >
       <span>{props.columns.join('|')}</span>
       {props.rows.map(r => (
         <span key={r.join('|')}>{r.map(c => c ?? '<null>').join('|')}</span>
@@ -118,6 +128,14 @@ describe('TableStructureDetail', () => {
     expect(grid).toHaveTextContent('Name|Type|Nullable|Default|Primary key');
     expect(grid).toHaveTextContent('id|INTEGER|No|<null>|Yes');
     expect(panelOf('Column').querySelector('[data-testid=grid]')).toHaveAttribute('data-null', 'NULL');
+  });
+
+  it('gives the structure grids the translated Copy labels of the context menu', async () => {
+    renderDetail();
+    await waitFor(() => expect(panelOf('Column').querySelector('[data-testid=grid]')).toBeInTheDocument());
+    const grid = panelOf('Column').querySelector('[data-testid=grid]');
+    expect(grid).toHaveAttribute('data-copy', 'Copy');
+    expect(grid).toHaveAttribute('data-copy-headers', 'Copy with column names');
   });
 
   it.each([

@@ -71,6 +71,8 @@ const (
 	pageSize = 10000
 	// maxPageBytes caps the text of one page (always at least one row), so a page of big values stays small.
 	maxPageBytes = 16 << 20
+	// unlimited is the page limit of FetchRows with All; far above any real table, and still fits Rust usize.
+	unlimited = 1 << 62
 )
 
 // Module owns the database profiles and the connections of the SQL mode.
@@ -169,7 +171,8 @@ func (m *Module) OpenTableRows(
 	return m.queryMng.openTableRows(ctx, input)
 }
 
-// FetchRows loads the next page of the cursor of the tab.
+// FetchRows loads the next page of the cursor of the tab, or all remaining rows (no page limit, no timeout;
+// the frontend stops it by canceling the call) when input.All is set.
 func (m *Module) FetchRows(ctx context.Context, input models.FetchRowsInput) models.Output[models.FetchRowsOutput] {
 	return m.queryMng.fetchRows(ctx, input)
 }

@@ -13,6 +13,9 @@
     "C000008": "Möglicherweise haben Sie keine Berechtigung, in den Bucket [{bucket}] hochzuladen. Trotzdem fortfahren?",
     "C000009": "Die App wird geschlossen, installiert die neue Version und startet automatisch neu. Fortfahren?",
     "C000010": "{count} Upload-/Download-Aufgabe(n) laufen und werden abgebrochen. Die App wird geschlossen, installiert die neue Version und startet automatisch neu. Fortfahren?",
-    "C000011": "Das Profil [{name}] enthält gespeicherte Geheimnisse, die NICHT exportiert werden. Nach dem Import müssen Sie sie erneut eingeben. Ohne Geheimnisse exportieren?"
+    "C000011": "Das Profil [{name}] enthält gespeicherte Geheimnisse, die NICHT exportiert werden. Nach dem Import müssen Sie sie erneut eingeben. Ohne Geheimnisse exportieren?",
+    "C000012": "Die Tabelle [{table}] hat nicht committete Änderungen. Änderungen verwerfen und den Tab schließen?",
+    "C000013": "Tabellen des Profils [{name}] haben nicht committete Änderungen. Änderungen verwerfen und fortfahren?",
+    "C000014": "Tabelle [{table}] hat nicht festgeschriebene Änderungen. Verwerfen und Daten neu laden?"
   }
 }

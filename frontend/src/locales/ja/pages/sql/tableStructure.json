@@ -39,5 +39,24 @@
   "no": "いいえ",
   "loadError": "テーブル構造を読み込めませんでした",
   "noSource": "ソースがありません",
-  "loadingMore": "行をさらに読み込み中…"
+  "loadingMore": "行をさらに読み込み中…",
+  "fetchAll": "すべてのデータを取得",
+  "loadedRows": "読み込み済みの行: {{total}}",
+  "edit": {
+    "refresh": "再読み込み",
+    "addRow": "行を追加",
+    "fitColumns": "列幅をデータに合わせる",
+    "deleteRow": "行を削除",
+    "restoreRow": "行の削除を取り消す",
+    "commit": "コミット",
+    "rollback": "ロールバック",
+    "commitUnsupported": "コミットはまだサポートされていません",
+    "changedRows": "変更された行: {{total}}",
+    "setNull": "NULL を設定",
+    "copy": "コピー",
+    "copyWithHeaders": "列名付きでコピー",
+    "rowNew": "新しい行",
+    "rowEdited": "編集された行",
+    "rowDeleted": "削除される行"
+  }
 }

@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 import FindReplacePanel from '@/pages/sql/components/FindReplacePanel';
 import SqlTabActionBar from '@/pages/sql/components/SqlTabActionBar';
+import classes from '@/pages/sql/components/SqlTabDetail.module.css';
 import SqlEditor, { type SqlDialect } from '@/pages/sql/components/sqlEditor/SqlEditor';
 import SqlResultPanel from '@/pages/sql/components/sqlResult/SqlResultPanel';
 import { useSqlRunner } from '@/pages/sql/hooks/useSqlRunner';
@@ -134,7 +135,7 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
 
       <Divider />
 
-      <Splitter orientation="vertical" style={{ flex: 1, minHeight: 0 }}>
+      <Splitter orientation="vertical" classNames={{ handle: classes.handle }} style={{ flex: 1, minHeight: 0 }}>
         <Splitter.Pane defaultSize="60%" min="20%">
           <div style={{ height: '100%', position: 'relative' }}>
             <SqlEditor

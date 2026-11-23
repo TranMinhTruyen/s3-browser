@@ -39,5 +39,24 @@
   "no": "Nein",
   "loadError": "Tabellenstruktur konnte nicht geladen werden",
   "noSource": "Kein Quelltext verfügbar",
-  "loadingMore": "Weitere Zeilen werden geladen…"
+  "loadingMore": "Weitere Zeilen werden geladen…",
+  "fetchAll": "Alle Daten abrufen",
+  "loadedRows": "Geladene Zeilen: {{total}}",
+  "edit": {
+    "refresh": "Neu laden",
+    "addRow": "Zeile hinzufügen",
+    "fitColumns": "Spalten an Daten anpassen",
+    "deleteRow": "Zeile löschen",
+    "restoreRow": "Löschen aufheben",
+    "commit": "Commit",
+    "rollback": "Rollback",
+    "commitUnsupported": "Commit wird noch nicht unterstützt",
+    "changedRows": "Geänderte Zeilen: {{total}}",
+    "setNull": "Auf NULL setzen",
+    "copy": "Kopieren",
+    "copyWithHeaders": "Mit Spaltennamen kopieren",
+    "rowNew": "Neue Zeile",
+    "rowEdited": "Geänderte Zeile",
+    "rowDeleted": "Zu löschende Zeile"
+  }
 }

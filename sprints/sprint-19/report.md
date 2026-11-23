@@ -90,3 +90,13 @@
 - `CLAUDE.md` và `.claude/agents/rust-tester.md`: người dùng đã tự sửa ở PR #50 (đã merge) (quy ước test Rust `rust/tests/unit/`, `S3B_REQUIRE_DB=1`, `Tabs` `display-none`, virtualizer `Math.round`, ngữ nghĩa SQL Server, mục tiêu hiệu năng đo với DB local). Còn mở nếu muốn: plan 10.12 phần hợp đồng FFI `open` (field mạng, `tls`, `firstRowMs`); ngoại lệ vòng review thứ 4 thành quy tắc ở §5.
 - Lỗi quy trình của orchestrator trong sprint này: báo reviewer thoả thuận chưa được người dùng xác nhận (hoãn C1); gọi hai agent viết code song song một lần (T5 + C3).
 - Việc sau sprint này: nối Go/FE cho MySQL, MariaDB, PostgreSQL, SQL Server, MongoDB, Redis (plan 10.13: lưu `config` theo provider, `ConnectDb` mọi provider, TLS ở FE/Go, hiển thị MongoDB/Redis, cây object cho DB mạng); đo hiệu năng DB cài trực tiếp trên host; tài liệu README/user guide chế độ SQL khi PostgreSQL có backend.
+
+### Bổ sung sau khi promote (2026-11-23)
+- Sau khi #51, #52 đã merge (`1.1.0-beta.19` đã có tag), người dùng làm thêm ở session thường và cho commit thẳng `21d683a` lên `SP-19/release`, không qua PR: +5281 / -210, 68 file (FE, 4 file Go, locale 7 ngôn ngữ, `.claude/settings.json` thêm khối `env` auto-compact).
+  - Tab Data sửa tại chỗ: sửa ô/Set NULL, Add/Delete/Restore row, Rollback, đếm Changed rows, xác nhận khi đóng tab / ngắt / xoá profile còn thay đổi (`C000012`, `C000013`). **Commit chưa có** (nút khoá).
+  - Fit columns to data, Copy / Copy with column names cho DataGrid (cả lưới kết quả SQL).
+  - Fetch all data: `FetchRowsInput.All` (Go bỏ giới hạn trang và timeout, huỷ bằng bỏ tick); mock PostgreSQL tôn trọng `all` (trước đó bỏ qua nên cuộn vẫn "Loading more rows…").
+  - Nhãn Loaded rows và nút Refresh (tải lại trang đầu, bỏ tick Fetch all; còn thay đổi thì hỏi `C000014` rồi bỏ thay đổi).
+- Kiểm tra: verifier PASS toàn bộ (go build/vet, golangci-lint 0 issue, tsc, oxlint, biome, knip, vitest 185 file / 3714 test, console sạch, coverage mọi file FE đã đổi ≥ 95% C1/Lines, i18n đủ 7 ngôn ngữ). Không review bằng `code-reviewer`; chưa xem tay 3 cỡ giao diện.
+- Promote: PR `SP-19/release` → `staging` giữ version `1.1.0-beta.19` (tag đã có nên workflow bỏ qua); code này ra cùng bản beta của sprint-20. CHANGELOG ghi ở mục Unreleased (7 bản).
+- Việc chưa làm chuyển sang sprint-20 (`sprints/sprint-20/requirement.md`).

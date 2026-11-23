@@ -16,7 +16,10 @@
     "messages": "消息",
     "firstRowsOnly": "仅显示前 {{count}} 行",
     "loading": "正在加载更多行...",
-    "nullValue": "NULL"
+    "nullValue": "NULL",
+    "fitColumns": "列宽适应数据",
+    "copy": "复制",
+    "copyWithHeaders": "复制（含列名）"
   },
   "message": {
     "rowsAffected": "影响了 {{n}} 行",

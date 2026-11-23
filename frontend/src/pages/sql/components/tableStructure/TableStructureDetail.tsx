@@ -65,6 +65,7 @@ function TableStructureDetail({ tabId }: TableStructureDetailProps) {
 
   const yes = t('yes');
   const no = t('no');
+  const copyLabels = useMemo(() => ({ copy: t('edit.copy'), copyWithHeaders: t('edit.copyWithHeaders') }), [t]);
   const grids = useMemo((): Record<GridTab, Grid> | null => {
     if (!info) return null;
     return {
@@ -113,7 +114,14 @@ function TableStructureDetail({ tabId }: TableStructureDetailProps) {
         {GRID_TABS.map(key => (
           <Tabs.Panel key={key} value={key} flex={1} style={{ minHeight: 0 }}>
             <InfoPanel loading={loading} loaded={!!grids}>
-              {grids && <DataGrid columns={grids[key].headers} rows={grids[key].rows} nullText={t('nullValue')} />}
+              {grids && (
+                <DataGrid
+                  columns={grids[key].headers}
+                  rows={grids[key].rows}
+                  nullText={t('nullValue')}
+                  copyLabels={copyLabels}
+                />
+              )}
             </InfoPanel>
           </Tabs.Panel>
         ))}

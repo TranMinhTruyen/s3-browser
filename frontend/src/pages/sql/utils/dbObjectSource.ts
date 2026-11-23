@@ -128,15 +128,19 @@ export const openTableRows = async (
   return { columns: columns.map(column => column.name), rows, done, cursorId };
 };
 
-/** The next page after `loaded` rows; the mock has no cursor, so it works from the row count. */
+/**
+ * The next page after `loaded` rows; the mock has no cursor, so it works from the row count. `all` reads every
+ * remaining row in one call.
+ */
 export const fetchTableRows = async (
   provider: Provider,
   tabId: string,
   ref: TableRef,
   cursorId: number,
   loaded: number,
-  signal: AbortSignal
+  signal: AbortSignal,
+  all = false
 ): Promise<RowPage | null> => {
-  if (provider !== 'sqlite') return getMockRows(ref.schema, ref.table, loaded);
-  return (await callIPC(FetchRows, [{ tabId, cursorId }], { signal })) ?? null;
+  if (provider !== 'sqlite') return getMockRows(ref.schema, ref.table, loaded, all);
+  return (await callIPC(FetchRows, [{ tabId, cursorId, all }], { signal })) ?? null;
 };

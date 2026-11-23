@@ -1,0 +1,17 @@
+.label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: content-box;
+  min-height: 1lh;
+}
+
+.innerLabel {
+  text-box: trim-both cap alphabetic;
+}
+
+/* Small UI size (14px root): the xs label rounds up 1.5px above the frame centre; same 1px nudge as the button. */
+:global(:root[data-ui-size="small"]) :global([data-size="xs"]) .innerLabel {
+  position: relative;
+  top: 1px;
+}

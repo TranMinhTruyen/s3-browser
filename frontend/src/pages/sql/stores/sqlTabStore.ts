@@ -2,6 +2,8 @@ import { CloseDbTab } from '@wails/S3Browser/internal/handlers/dbhandler';
 import { createAppStore } from '@/common/stores/createStore';
 import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
 import { createUUID } from '@/common/utils/stringUtils';
+import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
+import { isTableDirty } from '@/pages/sql/utils/dirtyTables';
 
 /** The table shown by a `TableStructure` tab. */
 type TabTable = { schema: string; name: string };
@@ -20,7 +22,7 @@ interface SqlTabState {
 interface SqlTabAction {
   setActiveTab: (tabId: string | null) => void;
   addTab: () => void;
-  /** Closes the tab and tells the backend to close its database connection. */
+  /** Closes the tab and tells the backend to close its database connection; asks first when it has uncommitted row changes. */
   closeTab: (tabId: string) => void;
   // Move a tab to the position of `overId`. Does not change the active tab.
   moveTab: (activeId: string, overId: string) => void;
@@ -36,6 +38,10 @@ interface SqlTabAction {
 
 const SCOPE = 'sqlTab';
 
+/** The last tab never closes, and an unknown tab has nothing to close. */
+const canClose = (tabList: Record<string, SqlTab>, tabId: string) =>
+  Object.keys(tabList).length > 1 && Object.hasOwn(tabList, tabId);
+
 const newTab = (): SqlTab => ({ profileId: null });
 
 const initialState = (): SqlTabState => {
@@ -44,8 +50,27 @@ const initialState = (): SqlTabState => {
 };
 
 /** SQL tabs in display order (object key order), the active tab and the profile each tab uses. */
-export const useSqlTabStore = createAppStore<SqlTabState & SqlTabAction>(
-  (set, get) => ({
+export const useSqlTabStore = createAppStore<SqlTabState & SqlTabAction>((set, get) => {
+  /** Removes the tab, activates its neighbour and closes its backend connection. */
+  const removeTab = (tabId: string) => {
+    // The store may have changed while a question was open.
+    const { tabList, activeTab } = get();
+    if (!canClose(tabList, tabId)) return;
+    const keys = Object.keys(tabList);
+    const index = keys.indexOf(tabId);
+    const nextActiveTab = tabId === activeTab ? (keys[index + 1] ?? keys[index - 1]) : activeTab;
+    set(
+      state => {
+        delete state.tabList[tabId];
+        state.activeTab = nextActiveTab;
+      },
+      undefined,
+      `${SCOPE}/closeTab`
+    );
+    void callIPC(CloseDbTab, [{ tabId }]);
+  };
+
+  return {
     ...initialState(),
 
     setActiveTab: tabId => {
@@ -63,21 +88,16 @@ export const useSqlTabStore = createAppStore<SqlTabState & SqlTabAction>(
     },
 
     closeTab: tabId => {
-      const { tabList, activeTab } = get();
-      const keys = Object.keys(tabList);
-      if (keys.length <= 1 || !Object.hasOwn(tabList, tabId)) return;
-
-      const index = keys.indexOf(tabId);
-      const nextActiveTab = tabId === activeTab ? (keys[index + 1] ?? keys[index - 1]) : activeTab;
-      set(
-        state => {
-          delete state.tabList[tabId];
-          state.activeTab = nextActiveTab;
-        },
-        undefined,
-        `${SCOPE}/closeTab`
-      );
-      void callIPC(CloseDbTab, [{ tabId }]);
+      if (!canClose(get().tabList, tabId)) return;
+      if (!isTableDirty(tabId)) {
+        removeTab(tabId);
+        return;
+      }
+      // Uncommitted row changes: ask first. Not async itself, so a tab without changes still closes synchronously.
+      const name = get().tabList[tabId].table?.name;
+      void ConfirmModal.show({ type: 'warning', confirmCode: 'C000012', params: { table: name } }).then(confirmed => {
+        if (confirmed) removeTab(tabId);
+      });
     },
 
     moveTab: (activeId, overId) => {
@@ -167,6 +187,5 @@ export const useSqlTabStore = createAppStore<SqlTabState & SqlTabAction>(
       invalidateLoads(SCOPE);
       set(initialState(), undefined, `${SCOPE}/reset`);
     },
-  }),
-  'SqlTab'
-);
+  };
+}, 'SqlTab');

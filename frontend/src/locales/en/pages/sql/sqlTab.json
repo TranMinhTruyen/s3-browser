@@ -16,7 +16,10 @@
     "messages": "Messages",
     "firstRowsOnly": "Only the first {{count}} rows are shown",
     "loading": "Loading more rows...",
-    "nullValue": "NULL"
+    "nullValue": "NULL",
+    "fitColumns": "Fit columns to data",
+    "copy": "Copy",
+    "copyWithHeaders": "Copy with column names"
   },
   "message": {
     "rowsAffected": "{{n}} row(s) affected",

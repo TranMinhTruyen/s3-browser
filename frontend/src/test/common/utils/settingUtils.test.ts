@@ -144,6 +144,29 @@ describe('applySettings', () => {
       expect(document.documentElement.style.fontSize).toBe(px);
     });
 
+    it.each(['small', 'medium', 'large'] as const)('sets data-ui-size="%s" on <html>', async size => {
+      await applySettings({ ...DEFAULT_SETTINGS, size });
+      expect(document.documentElement.dataset.uiSize).toBe(size);
+    });
+
+    it('updates data-ui-size together with the font size when the size changes', async () => {
+      const root = document.documentElement;
+      await applySettings({ ...DEFAULT_SETTINGS, size: 'small' });
+      expect([root.dataset.uiSize, root.style.fontSize]).toEqual(['small', '14px']);
+      await applySettings({ ...DEFAULT_SETTINGS, size: 'large' });
+      expect([root.dataset.uiSize, root.style.fontSize]).toEqual(['large', '18px']);
+      await applySettings({ ...DEFAULT_SETTINGS, size: 'medium' });
+      expect([root.dataset.uiSize, root.style.fontSize]).toEqual(['medium', '16px']);
+    });
+
+    it('keeps data-ui-size when only other settings change', async () => {
+      await applySettings({ ...DEFAULT_SETTINGS, size: 'small' });
+      await applySettings({ ...DEFAULT_SETTINGS, size: 'small', theme: 'dark', language: 'en' });
+      expect(document.documentElement.dataset.uiSize).toBe('small');
+      expect(document.documentElement.getAttribute('data-mantine-color-scheme')).toBe('dark');
+      expect(document.documentElement.lang).toBe('en');
+    });
+
     it('writes the font size only when it changed', async () => {
       const style = document.documentElement.style;
       const writes = vi.fn();

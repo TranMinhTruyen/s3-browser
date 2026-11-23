@@ -7,6 +7,16 @@ Mọi thay đổi đáng chú ý của dự án được ghi trong file này.
 
 ## [Chưa phát hành]
 
+### Thêm mới
+
+- Tab **Dữ liệu** của bảng giờ sửa được ngay trên lưới: sửa ô (hoặc **Đặt NULL**), **Thêm dòng**, **Xoá dòng** / khôi phục dòng, và **Rollback** để bỏ mọi thay đổi đang chờ. Dòng đã sửa, dòng mới và dòng sẽ xoá được đánh dấu, ô đếm số dòng đã thay đổi cho biết số lượng. Chưa lưu được xuống cơ sở dữ liệu (**Commit** chưa hỗ trợ nên nút bị khoá). Đóng tab bảng, ngắt kết nối hay xoá hồ sơ khi còn thay đổi chưa lưu sẽ hỏi xác nhận.
+- **Vừa dữ liệu**, **Sao chép** và **Sao chép kèm tên cột** trong lưới Dữ liệu và lưới kết quả SQL.
+- **Lấy toàn bộ dữ liệu** ở tab Dữ liệu đọc hết các dòng còn lại trong một lần; bỏ tick để dừng. Nhãn **Số dòng đã tải** cho biết số dòng đã tải, nút **Làm mới** tải lại trang đầu (và bỏ tick Lấy toàn bộ dữ liệu).
+
+### Vấn đề đã biết
+
+- Chưa lưu được thay đổi của bảng (nút Commit bị khoá).
+
 ## [1.1.0-beta.19] - 2026-11-22
 
 ### Thêm mới

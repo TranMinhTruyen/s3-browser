@@ -1,8 +1,10 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '@/common/cnst/settingConst';
 import { useSettingStore } from '@/common/stores/settingStore';
 import DataGrid from '@/components/display/dataGrid/DataGrid';
+import { COPY } from '@/test/_helpers/dataGrid';
+import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 type Options = {
   count: number;
@@ -57,7 +59,9 @@ const rows: (string | null)[][] = [
 const NULL_TEXT = 'NULL';
 
 function renderGrid(props: Partial<React.ComponentProps<typeof DataGrid>> = {}) {
-  return render(<DataGrid columns={columns} rows={rows} nullText={NULL_TEXT} {...props} />);
+  return renderWithProviders(
+    <DataGrid columns={columns} rows={rows} nullText={NULL_TEXT} copyLabels={COPY} {...props} />
+  );
 }
 
 const manyRows = (n: number) => Array.from({ length: n }, (_, i) => [String(i), `r${i}`, null]);
@@ -138,7 +142,7 @@ describe('DataGrid', () => {
     expect(virtual.measure).not.toHaveBeenCalled();
 
     act(() => useSettingStore.setState(s => ({ draft: { ...s.draft, size: 'large' } })));
-    rerender(<DataGrid columns={columns} rows={rows} nullText={NULL_TEXT} />);
+    rerender(<DataGrid columns={columns} rows={rows} nullText={NULL_TEXT} copyLabels={COPY} />);
 
     expect(virtual.rowOptions).toMatchObject({ size: 36, paddingStart: 36 });
     expect(virtual.colOptions).toMatchObject({ size: 180, paddingStart: 63 });
@@ -347,7 +351,7 @@ describe('DataGrid', () => {
 
     it('measures no row when the header alone reaches the widest allowed width', () => {
       const long = 'n'.repeat(60);
-      render(<DataGrid columns={[long]} rows={[['a'], ['b']]} nullText={NULL_TEXT} />);
+      renderWithProviders(<DataGrid columns={[long]} rows={[['a'], ['b']]} nullText={NULL_TEXT} copyLabels={COPY} />);
       fireEvent.doubleClick(resizer(0));
       expect(measureText).toHaveBeenCalledTimes(1);
       expect(screen.getByText(long)).toHaveStyle({ width: '600px' });
@@ -365,16 +369,42 @@ describe('DataGrid', () => {
       const onEndReached = vi.fn();
       const { rerender } = renderGrid({ hasMore: true, onEndReached });
       rerender(
-        <DataGrid columns={columns} rows={rows} nullText={NULL_TEXT} hasMore loading onEndReached={onEndReached} />
+        <DataGrid
+          columns={columns}
+          rows={rows}
+          nullText={NULL_TEXT}
+          copyLabels={COPY}
+          hasMore
+          loading
+          onEndReached={onEndReached}
+        />
       );
-      rerender(<DataGrid columns={columns} rows={rows} nullText={NULL_TEXT} hasMore onEndReached={onEndReached} />);
+      rerender(
+        <DataGrid
+          columns={columns}
+          rows={rows}
+          nullText={NULL_TEXT}
+          copyLabels={COPY}
+          hasMore
+          onEndReached={onEndReached}
+        />
+      );
       expect(onEndReached).toHaveBeenCalledTimes(1);
     });
 
     it('is not called again for a re-render with the same rows', () => {
       const onEndReached = vi.fn();
       const { rerender } = renderGrid({ hasMore: true, onEndReached });
-      rerender(<DataGrid columns={columns} rows={rows} nullText={NULL_TEXT} hasMore onEndReached={onEndReached} />);
+      rerender(
+        <DataGrid
+          columns={columns}
+          rows={rows}
+          nullText={NULL_TEXT}
+          copyLabels={COPY}
+          hasMore
+          onEndReached={onEndReached}
+        />
+      );
       expect(onEndReached).toHaveBeenCalledTimes(1);
     });
 
@@ -382,7 +412,14 @@ describe('DataGrid', () => {
       const onEndReached = vi.fn();
       const { rerender } = renderGrid({ rows: manyRows(3), hasMore: true, onEndReached });
       rerender(
-        <DataGrid columns={columns} rows={manyRows(4)} nullText={NULL_TEXT} hasMore onEndReached={onEndReached} />
+        <DataGrid
+          columns={columns}
+          rows={manyRows(4)}
+          nullText={NULL_TEXT}
+          copyLabels={COPY}
+          hasMore
+          onEndReached={onEndReached}
+        />
       );
       expect(onEndReached).toHaveBeenCalledTimes(2);
     });
@@ -398,7 +435,16 @@ describe('DataGrid', () => {
       const { rerender } = renderGrid({ hasMore: true, loading: true, onEndReached });
       expect(onEndReached).not.toHaveBeenCalled();
 
-      rerender(<DataGrid columns={columns} rows={rows} nullText={NULL_TEXT} hasMore onEndReached={onEndReached} />);
+      rerender(
+        <DataGrid
+          columns={columns}
+          rows={rows}
+          nullText={NULL_TEXT}
+          copyLabels={COPY}
+          hasMore
+          onEndReached={onEndReached}
+        />
+      );
 
       expect(onEndReached).toHaveBeenCalledTimes(1);
     });
@@ -457,6 +503,7 @@ describe('DataGrid', () => {
             columns={columns}
             rows={manyRows(20_000)}
             nullText={NULL_TEXT}
+            copyLabels={COPY}
             hasMore
             onEndReached={onEndReached}
           />
