@@ -90,6 +90,13 @@ Skill nằm trong `.claude/skills/<name>/SKILL.md` (bị chặn ghi, chỉ ngư�
 
 ## 7. Backend (Go)
 
+### Chọn Go hay Rust cho chức năng mới
+
+- Trước khi làm một chức năng mới bằng Go, đánh giá chức năng đó có tốn nhiều tài nguyên không: xử lý hoặc giữ dữ liệu lớn trong RAM (hàng nghìn dòng/object trở lên, file lớn), tính toán nặng CPU (parse, chuyển đổi, nén, mã hoá, so sánh dữ liệu lớn), hoặc chạy lâu/song song nhiều.
+- Nếu có thì để **Rust làm** (thêm `method` trong `s3b_db.dll`, theo phân lớp và hợp đồng FFI ở mục 8). Go chỉ là cầu nối: nhận input từ WebView, kiểm input, gửi request sang Rust, rồi chuyển nguyên kết quả Rust đã xử lý về WebView để hiển thị (như `modules/db`), không xử lý lại dữ liệu.
+- Chức năng nhẹ (CRUD cấu hình, profile, setting, gọi API trả ít dữ liệu) vẫn viết bằng Go.
+- `planner` ghi rõ ở plan chức năng nào làm bằng Rust, chức năng nào bằng Go, kèm lý do. Không chắc thì hỏi người dùng theo luật 3 ở mục 4.
+
 ### Cấu trúc
 
 - `main.go` đăng ký các handler làm Wails service; `internal/app.go` khởi tạo module rồi truyền vào handler.
