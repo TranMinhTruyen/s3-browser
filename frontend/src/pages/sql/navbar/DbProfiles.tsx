@@ -10,10 +10,12 @@ import { useRemeasureOnScale, useUiScale } from '@/common/hooks/useUiScale';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import DbProfileModal from '@/pages/sql/modals/dbProfile/DbProfileModal';
 import DbProfileItem, { CARD_HEIGHT } from '@/pages/sql/navbar/DbProfileItem';
+import classes from '@/pages/sql/navbar/DbProfiles.module.css';
 import DbTreeRow, { DbTreeStatusRow, NODE_HEIGHT } from '@/pages/sql/navbar/DbTreeRow';
 import { useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 import { useDbTreeStore } from '@/pages/sql/stores/dbTreeStore';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
+import { isTableDirty } from '@/pages/sql/utils/dirtyTables';
 import { notifyNoBackend } from '@/pages/sql/utils/sqlToast';
 
 // Space above every card except the first one, so the list has the same 8px space at the top and bottom.
@@ -74,16 +76,24 @@ function DbProfiles() {
     [getDbProfileById, connectDbProfile, t]
   );
 
+  // Disconnecting or deleting closes the profile's table tabs: ask first when one has uncommitted row changes.
+  const confirmDiscardEdits = useCallback(async (key: string, name: string) => {
+    const { tabList } = useSqlTabStore.getState();
+    const dirty = Object.entries(tabList).some(([id, tab]) => tab.profileId === key && tab.table && isTableDirty(id));
+    return !dirty || (await ConfirmModal.show({ type: 'warning', confirmCode: 'C000013', params: { name } }));
+  }, []);
+
   const onClickDisconnect = useCallback(
     async (key: string) => {
       const profile = getDbProfileById(key);
       if (!profile?.isConnected) return;
+      if (!(await confirmDiscardEdits(key, profile.name))) return;
       if (!(await disconnectDbProfile(key))) return;
       dropTreeProfile(key);
       closeProfileTables(key);
       toast.success(t('toast.disconnected', { name: profile.name }));
     },
-    [getDbProfileById, disconnectDbProfile, dropTreeProfile, closeProfileTables, t]
+    [getDbProfileById, confirmDiscardEdits, disconnectDbProfile, dropTreeProfile, closeProfileTables, t]
   );
 
   const onClickEditProfile = useCallback(
@@ -106,6 +116,7 @@ function DbProfiles() {
 
       const confirmDelete = await ConfirmModal.show({ type: 'warning', confirmCode: 'C000002' });
       if (!confirmDelete) return;
+      if (!(await confirmDiscardEdits(key, profile.name))) return;
 
       if (!(await removeDbProfile(key))) return;
       dropTreeProfile(key);
@@ -113,7 +124,7 @@ function DbProfiles() {
       clearProfile(key);
       toast.success(t('toast.deleted', { name: profile.name }));
     },
-    [getDbProfileById, removeDbProfile, dropTreeProfile, closeProfileTables, clearProfile, t]
+    [getDbProfileById, confirmDiscardEdits, removeDbProfile, dropTreeProfile, closeProfileTables, clearProfile, t]
   );
 
   // One shared context menu for all rows (a Menu per row is costly with hundreds of profiles).
@@ -199,9 +210,18 @@ function DbProfiles() {
           <div style={{ position: 'relative', height: virtualizer.getTotalSize() }} onContextMenu={onContextMenuRows}>
             {virtualItems.map(item => {
               const row = rows[item.index];
+              // A group is a card followed by its tree rows; the row before the next card (or the end) closes it.
+              const hasTreeBelow = rows[item.index + 1] ? rows[item.index + 1].type !== 'card' : false;
+              const className =
+                row.type === 'card'
+                  ? hasTreeBelow
+                    ? classes.cardOpen
+                    : undefined
+                  : `${classes.inGroup}${hasTreeBelow ? '' : ` ${classes.groupEnd}`}`;
               return (
                 <div
                   key={item.key}
+                  className={className}
                   style={{
                     position: 'absolute',
                     width: '100%',

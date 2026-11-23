@@ -26,6 +26,8 @@ type OpenTableRowsInput struct {
 type FetchRowsInput struct {
 	TabId    string `json:"tabId"`
 	CursorId uint64 `json:"cursorId"`
+	// All reads every remaining row in one call, without the page limits, until done or canceled.
+	All bool `json:"all"`
 }
 
 // CloseDbTabInput closes the connection of tab TabId.

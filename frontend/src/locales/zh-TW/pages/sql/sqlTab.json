@@ -16,7 +16,10 @@
     "messages": "訊息",
     "firstRowsOnly": "僅顯示前 {{count}} 筆資料",
     "loading": "正在載入更多資料...",
-    "nullValue": "NULL"
+    "nullValue": "NULL",
+    "fitColumns": "欄寬符合資料",
+    "copy": "複製",
+    "copyWithHeaders": "複製（含欄位名稱）"
   },
   "message": {
     "rowsAffected": "影響 {{n}} 筆資料",

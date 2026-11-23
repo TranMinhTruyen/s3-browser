@@ -39,5 +39,24 @@
   "no": "否",
   "loadError": "无法加载表结构",
   "noSource": "没有可用的源码",
-  "loadingMore": "正在加载更多行…"
+  "loadingMore": "正在加载更多行…",
+  "fetchAll": "获取全部数据",
+  "loadedRows": "已加载的行：{{total}}",
+  "edit": {
+    "refresh": "刷新",
+    "addRow": "添加行",
+    "fitColumns": "列宽适应数据",
+    "deleteRow": "删除行",
+    "restoreRow": "取消删除行",
+    "commit": "提交",
+    "rollback": "回滚",
+    "commitUnsupported": "暂不支持提交",
+    "changedRows": "已更改的行：{{total}}",
+    "setNull": "设为 NULL",
+    "copy": "复制",
+    "copyWithHeaders": "复制（含列名）",
+    "rowNew": "新行",
+    "rowEdited": "已编辑的行",
+    "rowDeleted": "待删除的行"
+  }
 }

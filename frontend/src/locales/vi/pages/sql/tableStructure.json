@@ -39,5 +39,24 @@
   "no": "Không",
   "loadError": "Không tải được cấu trúc bảng",
   "noSource": "Không có mã nguồn",
-  "loadingMore": "Đang tải thêm dòng…"
+  "loadingMore": "Đang tải thêm dòng…",
+  "fetchAll": "Lấy toàn bộ dữ liệu",
+  "loadedRows": "Số dòng đã tải: {{total}}",
+  "edit": {
+    "refresh": "Làm mới",
+    "addRow": "Thêm dòng",
+    "fitColumns": "Vừa dữ liệu",
+    "deleteRow": "Xoá dòng",
+    "restoreRow": "Bỏ xoá dòng",
+    "commit": "Commit",
+    "rollback": "Rollback",
+    "commitUnsupported": "Chưa hỗ trợ Commit",
+    "changedRows": "Số dòng đã thay đổi: {{total}}",
+    "setNull": "Đặt NULL",
+    "copy": "Sao chép",
+    "copyWithHeaders": "Sao chép kèm tên cột",
+    "rowNew": "Dòng mới",
+    "rowEdited": "Dòng đã sửa",
+    "rowDeleted": "Dòng sẽ xoá"
+  }
 }

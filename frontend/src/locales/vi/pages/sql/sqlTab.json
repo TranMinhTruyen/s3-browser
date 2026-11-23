@@ -16,7 +16,10 @@
     "messages": "Thông báo",
     "firstRowsOnly": "Chỉ hiện {{count}} dòng đầu",
     "loading": "Đang tải thêm dòng...",
-    "nullValue": "NULL"
+    "nullValue": "NULL",
+    "fitColumns": "Vừa dữ liệu",
+    "copy": "Sao chép",
+    "copyWithHeaders": "Sao chép kèm tên cột"
   },
   "message": {
     "rowsAffected": "{{n}} dòng bị ảnh hưởng",

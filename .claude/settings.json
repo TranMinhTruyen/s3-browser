@@ -3,6 +3,10 @@
     "commit": "",
     "pr": ""
   },
+  "env": {
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "400000",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "85"
+  },
   "permissions": {
     "allow": [
       "Bash(git status *)",

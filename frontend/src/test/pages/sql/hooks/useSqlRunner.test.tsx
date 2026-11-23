@@ -387,7 +387,7 @@ describe('useSqlRunner', () => {
 
       expect(callIPCMock).toHaveBeenLastCalledWith(
         FetchRows,
-        [{ tabId: TAB, cursorId: 7 }],
+        [{ tabId: TAB, cursorId: 7, all: false }],
         expect.objectContaining({ signal: expect.any(AbortSignal) })
       );
       expect(result.current.statements[0]).toMatchObject({ rows: [['1'], ['2'], ['3']], done: false });
@@ -540,7 +540,9 @@ describe('useSqlRunner', () => {
         await act(() => result.current.loadMore());
         expect(callsOf(FetchRows)).toHaveLength(calls);
         expect(
-          callsOf(FetchRows).every(c => JSON.stringify(c[1]) === JSON.stringify([{ tabId: TAB, cursorId: 7 }]))
+          callsOf(FetchRows).every(
+            c => JSON.stringify(c[1]) === JSON.stringify([{ tabId: TAB, cursorId: 7, all: false }])
+          )
         ).toBe(true);
       });
 

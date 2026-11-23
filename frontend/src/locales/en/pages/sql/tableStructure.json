@@ -39,5 +39,24 @@
   "no": "No",
   "loadError": "Could not load the table structure",
   "noSource": "No source available",
-  "loadingMore": "Loading more rows…"
+  "loadingMore": "Loading more rows…",
+  "fetchAll": "Fetch all data",
+  "loadedRows": "Loaded rows: {{total}}",
+  "edit": {
+    "refresh": "Refresh",
+    "addRow": "Add row",
+    "fitColumns": "Fit columns to data",
+    "deleteRow": "Delete row",
+    "restoreRow": "Restore row",
+    "commit": "Commit",
+    "rollback": "Rollback",
+    "commitUnsupported": "Commit is not supported yet",
+    "changedRows": "Changed rows: {{total}}",
+    "setNull": "Set NULL",
+    "copy": "Copy",
+    "copyWithHeaders": "Copy with column names",
+    "rowNew": "New row",
+    "rowEdited": "Edited row",
+    "rowDeleted": "Row to delete"
+  }
 }

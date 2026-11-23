@@ -2,15 +2,18 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConnectDb, DeleteDbProfileById, DisconnectDb } from '@wails/S3Browser/internal/handlers/dbhandler';
 import { toast } from 'sonner';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS, type UiSizeKey } from '@/common/cnst/settingConst';
 import { useSettingStore } from '@/common/stores/settingStore';
 import { callIPC } from '@/common/utils/ipcUtils';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import DbProfileModal from '@/pages/sql/modals/dbProfile/DbProfileModal';
 import DbProfiles from '@/pages/sql/navbar/DbProfiles';
+import classes from '@/pages/sql/navbar/DbProfiles.module.css';
 import { type DbProfile, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
+import { useDbTreeStore } from '@/pages/sql/stores/dbTreeStore';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
+import { setTableDirty } from '@/pages/sql/utils/dirtyTables';
 import { pgProfile, sqliteProfile, toProfileMap } from '@/test/_helpers/dbProfiles';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
@@ -42,6 +45,7 @@ vi.mock('@wails/S3Browser/internal/handlers/dbhandler', () => ({
   ConnectDb: vi.fn(),
   DeleteDbProfileById: vi.fn(),
   DisconnectDb: vi.fn(),
+  CloseDbTab: vi.fn(),
   GetSchemaTree: vi.fn(),
   GetAllDbProfile: vi.fn(),
 }));
@@ -424,6 +428,192 @@ describe('DbProfiles', () => {
 
       await userEvent.keyboard('{Escape}');
       await waitFor(() => expect(screen.queryByRole('menuitem')).not.toBeInTheDocument());
+    });
+  });
+
+  describe('uncommitted row changes in the tables of a profile', () => {
+    const codes = () => confirmMock.mock.calls.map(c => (c[0] as { confirmCode: string }).confirmCode);
+    const dirtyTabs: string[] = [];
+
+    /** Opens a table tab of the profile and marks it dirty; `dirty` false leaves it clean. */
+    const openTable = (profileId: string, dirty = true) => {
+      useSqlTabStore.getState().openTableTab(profileId, 'main', `t${dirtyTabs.length}`);
+      const tab = useSqlTabStore.getState().activeTab as string;
+      if (dirty) setTableDirty(tab, true);
+      dirtyTabs.push(tab);
+      return tab;
+    };
+
+    beforeEach(() => {
+      addSqlite({ isConnected: true });
+      callIPCMock.mockResolvedValue(true as never);
+    });
+
+    afterEach(() => {
+      for (const tab of dirtyTabs.splice(0)) setTableDirty(tab, false);
+    });
+
+    it('Disconnect asks C000013 with the profile name, then disconnects and closes the tables when confirmed', async () => {
+      const tab = openTable('sqlite-1');
+      renderWithProviders(<DbProfiles />);
+
+      await clickMenuItem(userEvent.setup(), 'Local SQLite', 'Disconnect');
+
+      await waitFor(() => expect(profile('sqlite-1')?.isConnected).toBe(false));
+      expect(confirmMock).toHaveBeenCalledWith({
+        type: 'warning',
+        confirmCode: 'C000013',
+        params: { name: 'Local SQLite' },
+      });
+      expect(callIPCMock).toHaveBeenCalledWith(DisconnectDb, [{ profileId: 'sqlite-1' }]);
+      expect(useSqlTabStore.getState().tabList[tab]).toBeUndefined();
+      expect(toast.success).toHaveBeenCalledWith('Disconnected from Local SQLite');
+    });
+
+    it('Disconnect declined keeps the connection, the tables and stays silent', async () => {
+      const tab = openTable('sqlite-1');
+      confirmMock.mockResolvedValue(false as never);
+      renderWithProviders(<DbProfiles />);
+
+      await clickMenuItem(userEvent.setup(), 'Local SQLite', 'Disconnect');
+
+      await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1));
+      await flush();
+      expect(callIPCMock).not.toHaveBeenCalledWith(DisconnectDb, expect.anything());
+      expect(profile('sqlite-1')?.isConnected).toBe(true);
+      expect(useSqlTabStore.getState().tabList[tab]).toBeDefined();
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['a clean table tab', () => openTable('sqlite-1', false)],
+      ['a dirty table tab of another profile', () => openTable('mock-pg-local')],
+      [
+        'a plain SQL tab marked dirty',
+        () => {
+          const tab = useSqlTabStore.getState().activeTab as string;
+          useSqlTabStore.getState().setTabProfile(tab, 'sqlite-1');
+          setTableDirty(tab, true);
+          dirtyTabs.push(tab);
+        },
+      ],
+    ])('Disconnect does not ask with %s', async (_name, setup) => {
+      setup();
+      renderWithProviders(<DbProfiles />);
+
+      await clickMenuItem(userEvent.setup(), 'Local SQLite', 'Disconnect');
+
+      await waitFor(() => expect(profile('sqlite-1')?.isConnected).toBe(false));
+      expect(confirmMock).not.toHaveBeenCalled();
+    });
+
+    it('Delete asks C000002, then C000013, then deletes when both are confirmed (connected: C000003 first)', async () => {
+      openTable('sqlite-1');
+      renderWithProviders(<DbProfiles />);
+
+      await clickMenuItem(userEvent.setup(), 'Local SQLite', 'Delete');
+
+      await waitFor(() => expect(profile('sqlite-1')).toBeUndefined());
+      expect(codes()).toEqual(['C000003', 'C000002', 'C000013']);
+    });
+
+    it('Delete declined at the discard question keeps the profile and the tables', async () => {
+      const tab = openTable('sqlite-1');
+      useDbProfileStore.getState().setConnected('sqlite-1', false);
+      confirmMock.mockResolvedValueOnce(true as never).mockResolvedValueOnce(false as never);
+      renderWithProviders(<DbProfiles />);
+
+      await clickMenuItem(userEvent.setup(), 'Local SQLite', 'Delete');
+
+      await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(2));
+      await flush();
+      expect(codes()).toEqual(['C000002', 'C000013']);
+      expect(profile('sqlite-1')).toBeDefined();
+      expect(callIPCMock).not.toHaveBeenCalledWith(DeleteDbProfileById, expect.anything());
+      expect(useSqlTabStore.getState().tabList[tab]).toBeDefined();
+      expect(toast.success).not.toHaveBeenCalled();
+    });
+
+    it('Delete without dirty tables asks only the old questions', async () => {
+      openTable('sqlite-1', false);
+      useDbProfileStore.getState().setConnected('sqlite-1', false);
+      renderWithProviders(<DbProfiles />);
+
+      await clickMenuItem(userEvent.setup(), 'Local SQLite', 'Delete');
+
+      await waitFor(() => expect(profile('sqlite-1')).toBeUndefined());
+      expect(codes()).toEqual(['C000002']);
+    });
+  });
+
+  describe('group frame classes', () => {
+    const wrapper = (text: string) => screen.getByText(text).closest<HTMLElement>('[style*="translateY"]')!;
+    const meta = (kind: 'schema' | 'table', name: string) => ({ kind, schema: 'db', name });
+    const nodes = [
+      {
+        value: 'db',
+        label: 'Node db',
+        nodeProps: meta('schema', 'Node db'),
+        children: [{ value: 'db.t1', label: 'Node t1', nodeProps: meta('table', 'Node t1') }],
+      },
+    ];
+
+    const openTree = (profileId: string, tree: { status: 'loading' | 'ready' | 'error'; nodes: typeof nodes }) =>
+      useDbTreeStore.setState(state => ({
+        opened: { ...state.opened, [profileId]: true },
+        trees: { ...state.trees, [profileId]: { ...tree, tableNames: [] } },
+        expanded: { ...state.expanded, db: true },
+      }));
+
+    beforeEach(() => useDbTreeStore.getState().reset());
+
+    it('gives no class to a card whose tree is closed', () => {
+      renderWithProviders(<DbProfiles />);
+      for (const name of ['Local PostgreSQL', 'Staging PostgreSQL']) {
+        expect(wrapper(name)).not.toHaveClass(classes.cardOpen, classes.inGroup, classes.groupEnd);
+        expect(wrapper(name).className).toBe('');
+      }
+    });
+
+    it('marks the card open, the nodes inGroup and only the last node groupEnd', () => {
+      openTree('mock-pg-local', { status: 'ready', nodes });
+      renderWithProviders(<DbProfiles />);
+
+      expect(wrapper('Local PostgreSQL')).toHaveClass(classes.cardOpen);
+      expect(wrapper('Node db')).toHaveClass(classes.inGroup);
+      expect(wrapper('Node db')).not.toHaveClass(classes.groupEnd);
+      expect(wrapper('Node t1')).toHaveClass(classes.inGroup, classes.groupEnd);
+      // The next card is outside the group.
+      expect(wrapper('Staging PostgreSQL').className).toBe('');
+    });
+
+    it.each([
+      ['loading', 'Loading objects…'],
+      ['error', 'Could not load the objects'],
+    ] as const)('closes the group on the %s status row', async (status, text) => {
+      openTree('mock-pg-local', { status, nodes: [] });
+      renderWithProviders(<DbProfiles />);
+
+      expect(wrapper('Local PostgreSQL')).toHaveClass(classes.cardOpen);
+      expect(await screen.findByText(text)).toBeInTheDocument();
+      expect(wrapper(text)).toHaveClass(classes.inGroup, classes.groupEnd);
+    });
+
+    it('closes the group on the empty status row of a ready tree without nodes', () => {
+      openTree('mock-pg-local', { status: 'ready', nodes: [] });
+      renderWithProviders(<DbProfiles />);
+
+      expect(wrapper('Local PostgreSQL')).toHaveClass(classes.cardOpen);
+      expect(wrapper('No objects')).toHaveClass(classes.inGroup, classes.groupEnd);
+    });
+
+    it('closes the last group of the list at the end of the rows', () => {
+      openTree('mock-pg-staging', { status: 'ready', nodes });
+      renderWithProviders(<DbProfiles />);
+
+      expect(wrapper('Local PostgreSQL').className).toBe('');
+      expect(wrapper('Staging PostgreSQL')).toHaveClass(classes.cardOpen);
+      expect(wrapper('Node t1')).toHaveClass(classes.inGroup, classes.groupEnd);
     });
   });
 });

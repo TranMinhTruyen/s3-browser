@@ -79,13 +79,22 @@ describe('useTableRows', () => {
       { profileId: 'p1', schema: 'main', table: 'users' },
       5,
       2,
-      expect.any(AbortSignal)
+      expect.any(AbortSignal),
+      false
     );
 
     await act(() => result.current.loadMore());
     expect(result.current.rows).toEqual([['1'], ['2'], ['3'], ['4']]);
     expect(result.current.hasMore).toBe(false);
-    expect(fetchMock).toHaveBeenLastCalledWith('sqlite', 'tab-1', expect.anything(), 5, 3, expect.any(AbortSignal));
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      'sqlite',
+      'tab-1',
+      expect.anything(),
+      5,
+      3,
+      expect.any(AbortSignal),
+      false
+    );
 
     await act(() => result.current.loadMore());
     expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -211,7 +220,8 @@ describe('useTableRows', () => {
       { profileId: next.p, schema: 'main', table: next.t },
       9,
       1,
-      expect.any(AbortSignal)
+      expect.any(AbortSignal),
+      false
     );
     expect(result.current.rows).toEqual([['a'], ['b']]);
   });
@@ -251,5 +261,246 @@ describe('useTableRows', () => {
       { profileId: 'p1', schema: 'main', table: 'orders' },
       expect.any(AbortSignal)
     );
+  });
+
+  it('gives a resetKey made of the tab and table that changes with the table', async () => {
+    const { result, rerender } = mount();
+    expect(result.current.resetKey).toBe('tab-1|sqlite|p1|main|users');
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.resetKey).toBe('tab-1|sqlite|p1|main|users');
+
+    rerender({ t: 'orders' });
+    expect(result.current.resetKey).toBe('tab-1|sqlite|p1|main|orders');
+    await waitFor(() => expect(result.current.loading).toBe(false));
+  });
+  describe('fetch all rows', () => {
+    type Page = { rows: (string | null)[][]; done: boolean };
+    const ready = async () => {
+      const hook = mount();
+      await waitFor(() => expect(hook.result.current.loading).toBe(false));
+      return hook;
+    };
+
+    it('starts unticked', async () => {
+      const { result } = await ready();
+      expect(result.current.fetchAll).toBe(false);
+    });
+
+    it('ticking reads every remaining row in one call, appends them and ends the cursor', async () => {
+      fetchMock.mockResolvedValueOnce({ rows: [['3'], ['4'], ['5']], done: true });
+      const { result } = await ready();
+
+      await act(async () => result.current.setFetchAllRows(true));
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        'sqlite',
+        'tab-1',
+        { profileId: 'p1', schema: 'main', table: 'users' },
+        5,
+        2,
+        expect.any(AbortSignal),
+        true
+      );
+      expect(result.current).toMatchObject({ fetchAll: true, hasMore: false, loadingMore: false });
+      expect(result.current.rows).toEqual([['1'], ['2'], ['3'], ['4'], ['5']]);
+      await act(() => result.current.loadMore());
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports loadingMore while it runs and ignores loadMore meanwhile', async () => {
+      const page = deferred<Page>();
+      fetchMock.mockReturnValueOnce(page.promise);
+      const { result } = await ready();
+
+      act(() => result.current.setFetchAllRows(true));
+      expect(result.current).toMatchObject({ fetchAll: true, loadingMore: true });
+      await act(() => result.current.loadMore());
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      await act(async () => page.resolve({ rows: [['3']], done: true }));
+      expect(result.current.loadingMore).toBe(false);
+      expect(result.current.rows).toHaveLength(3);
+    });
+
+    it('ticking twice does not start a second fetch', async () => {
+      const page = deferred<Page>();
+      fetchMock.mockReturnValueOnce(page.promise);
+      const { result } = await ready();
+
+      act(() => result.current.setFetchAllRows(true));
+      act(() => result.current.setFetchAllRows(true));
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      await act(async () => page.resolve({ rows: [], done: true }));
+    });
+
+    it('ticking while a normal page loads does not start a second fetch', async () => {
+      const page = deferred<Page>();
+      fetchMock.mockReturnValueOnce(page.promise);
+      const { result } = await ready();
+
+      act(() => {
+        void result.current.loadMore();
+      });
+      act(() => result.current.setFetchAllRows(true));
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock.mock.calls[0][6]).toBe(false);
+
+      await act(async () => page.resolve({ rows: [['3']], done: false }));
+    });
+
+    it('ticking with no cursor left reads nothing', async () => {
+      openMock.mockResolvedValue({ ...firstPage, done: true, cursorId: null });
+      const { result } = await ready();
+
+      await act(async () => result.current.setFetchAllRows(true));
+
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(result.current.fetchAll).toBe(true);
+    });
+
+    it('unticking while it runs aborts it, keeps loaded rows and ends the cursor', async () => {
+      const page = deferred<Page>();
+      fetchMock.mockReturnValueOnce(page.promise);
+      const { result } = await ready();
+      act(() => result.current.setFetchAllRows(true));
+      const signal = fetchMock.mock.calls[0][5];
+
+      act(() => result.current.setFetchAllRows(false));
+      expect(signal.aborted).toBe(true);
+      expect(result.current).toMatchObject({ fetchAll: false, loadingMore: false, hasMore: false });
+      expect(result.current.rows).toEqual([['1'], ['2']]);
+
+      await act(async () => page.resolve({ rows: [['late']], done: true }));
+      expect(result.current.rows).toEqual([['1'], ['2']]);
+      expect(result.current.hasMore).toBe(false);
+      await act(() => result.current.loadMore());
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('a new fetch can start after an aborted one and the old one does not clear its loading flag', async () => {
+      const first = deferred<Page>();
+      fetchMock.mockReturnValueOnce(first.promise);
+      const { result } = await ready();
+      act(() => result.current.setFetchAllRows(true));
+      act(() => result.current.setFetchAllRows(false));
+      // Cursor is gone, so ticking again reads nothing and the old settle must not touch state.
+      act(() => result.current.setFetchAllRows(true));
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      await act(async () => first.resolve({ rows: [['x']], done: true }));
+      expect(result.current.rows).toHaveLength(2);
+    });
+
+    it('unticking when nothing runs only clears the checkbox', async () => {
+      const { result } = await ready();
+      act(() => result.current.setFetchAllRows(true));
+      await act(async () => result.current.setFetchAllRows(false));
+      expect(result.current).toMatchObject({ fetchAll: false });
+    });
+
+    it('unticking with nothing running keeps hasMore', async () => {
+      openMock.mockResolvedValue(firstPage);
+      const { result } = await ready();
+      act(() => result.current.setFetchAllRows(false));
+      expect(result.current.hasMore).toBe(true);
+      await act(async () => {});
+    });
+
+    it('stops asking for more when the read fails, and keeps the rows', async () => {
+      fetchMock.mockResolvedValueOnce(null);
+      const { result } = await ready();
+
+      await act(async () => result.current.setFetchAllRows(true));
+
+      expect(result.current.rows).toEqual([['1'], ['2']]);
+      expect(result.current).toMatchObject({ hasMore: false, loadingMore: false });
+    });
+
+    it('unticks when the table changes', async () => {
+      fetchMock.mockResolvedValueOnce({ rows: [['3']], done: true });
+      const { result, rerender } = await ready();
+      await act(async () => result.current.setFetchAllRows(true));
+      expect(result.current.fetchAll).toBe(true);
+
+      rerender({ t: 'orders' });
+      expect(result.current.fetchAll).toBe(false);
+      await waitFor(() => expect(result.current.loading).toBe(false));
+    });
+
+    it('refresh reloads the first page, keeps resetKey and unticks fetch all', async () => {
+      const { result } = await ready();
+      fetchMock.mockResolvedValueOnce({ rows: [['3']], done: true });
+      await act(async () => result.current.setFetchAllRows(true));
+      expect(result.current.fetchAll).toBe(true);
+      const key = result.current.resetKey;
+      const second = deferred<typeof firstPage>();
+      openMock.mockReturnValueOnce(second.promise);
+
+      act(() => result.current.refresh());
+      expect(result.current).toMatchObject({ loading: true, rows: [], fetchAll: false, loadingMore: false });
+      expect(result.current.resetKey).toBe(key);
+      expect(openMock).toHaveBeenCalledTimes(2);
+
+      second.resolve({ columns: ['id'], rows: [['9']], done: false, cursorId: 8 });
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      expect(result.current.rows).toEqual([['9']]);
+      expect(result.current.hasMore).toBe(true);
+    });
+
+    it('refresh aborts a running read and drops its late page', async () => {
+      const page = deferred<Page>();
+      fetchMock.mockReturnValueOnce(page.promise);
+      const { result } = await ready();
+      let pending!: Promise<void>;
+      act(() => {
+        pending = result.current.loadMore();
+      });
+      const signal = fetchMock.mock.calls[0][5];
+      expect(result.current.loadingMore).toBe(true);
+
+      act(() => result.current.refresh());
+      expect(signal.aborted).toBe(true);
+      expect(result.current.loadingMore).toBe(false);
+      await waitFor(() => expect(result.current.loading).toBe(false));
+
+      page.resolve({ rows: [['late']], done: true });
+      await act(() => pending);
+      expect(result.current.rows).toEqual([['1'], ['2']]);
+      expect(result.current.hasMore).toBe(true);
+    });
+
+    it('after refresh the next page loads from the new cursor', async () => {
+      const { result } = await ready();
+      openMock.mockResolvedValueOnce({ columns: ['id'], rows: [['7']], done: false, cursorId: 11 });
+      act(() => result.current.refresh());
+      await waitFor(() => expect(result.current.loading).toBe(false));
+      fetchMock.mockResolvedValueOnce({ rows: [['8']], done: true });
+
+      await act(() => result.current.loadMore());
+
+      expect(fetchMock).toHaveBeenLastCalledWith(
+        'sqlite',
+        'tab-1',
+        expect.anything(),
+        11,
+        1,
+        expect.any(AbortSignal),
+        false
+      );
+      expect(result.current.rows).toEqual([['7'], ['8']]);
+    });
+
+    it('aborts the read on unmount and drops its rows', async () => {
+      const page = deferred<Page>();
+      fetchMock.mockReturnValueOnce(page.promise);
+      const { result, unmount } = await ready();
+      act(() => result.current.setFetchAllRows(true));
+      const signal = fetchMock.mock.calls[0][5];
+
+      unmount();
+      expect(signal.aborted).toBe(true);
+      page.resolve({ rows: [['9']], done: true });
+      await act(async () => {});
+    });
   });
 });

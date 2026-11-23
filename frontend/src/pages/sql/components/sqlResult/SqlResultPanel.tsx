@@ -1,8 +1,10 @@
-import { Center, Loader, Stack, Tabs, Text } from '@mantine/core';
+import { Center, Group, Loader, Stack, Tabs, Text } from '@mantine/core';
 import type { StatementResult } from '@wails/S3Browser/models';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { ChevronsLeftRight } from 'lucide-react';
+import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import DataGrid from '@/components/display/dataGrid/DataGrid';
+import ActionIcon from '@/components/buttons/ActionIcon';
+import DataGrid, { type DataGridHandle } from '@/components/display/dataGrid/DataGrid';
 import SqlMessageList from '@/pages/sql/components/sqlResult/SqlMessageList';
 import { canLoadMore } from '@/pages/sql/hooks/useSqlRunner';
 
@@ -20,14 +22,29 @@ const ResultGrid = memo(function ResultGrid({ statement, loadingMore, onLoadMore
   const { t } = useTranslation('sqlTab');
   const columns = useMemo(() => statement.columns.map(column => column.name), [statement.columns]);
   const hasMore = canLoadMore(statement);
+  const copyLabels = useMemo(() => ({ copy: t('result.copy'), copyWithHeaders: t('result.copyWithHeaders') }), [t]);
+  const gridRef = useRef<DataGridHandle>(null);
+  const onClickFitColumns = useCallback(() => gridRef.current?.fitColumns(), []);
 
   return (
     <Stack gap={0} h="100%">
+      <Group justify="flex-end" p="0.25rem" style={{ flexShrink: 0 }}>
+        <ActionIcon
+          size="md"
+          tooltip={t('result.fitColumns')}
+          disabled={columns.length === 0 || statement.rows.length === 0}
+          onClick={onClickFitColumns}
+        >
+          <ChevronsLeftRight size="1rem" />
+        </ActionIcon>
+      </Group>
       <div style={{ flex: 1, minHeight: 0 }}>
         <DataGrid
+          ref={gridRef}
           columns={columns}
           rows={statement.rows}
           nullText={t('result.nullValue')}
+          copyLabels={copyLabels}
           hasMore={hasMore}
           loading={loadingMore}
           onEndReached={onLoadMore}

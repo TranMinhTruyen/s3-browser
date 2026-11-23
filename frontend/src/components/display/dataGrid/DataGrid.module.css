@@ -83,3 +83,74 @@
 .resizer:hover {
   background-color: light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3));
 }
+
+/* The grid takes the keyboard focus, the active cell shows the focus ring instead of the grid. */
+.selectable {
+  user-select: none;
+}
+
+.selectable:focus {
+  outline: none;
+}
+
+.focused {
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}
+
+/* Cells of the selected rectangle or columns, selected rows, selected column titles: a layer over the row tint. */
+.selected {
+  background-image: linear-gradient(var(--mantine-primary-color-light), var(--mantine-primary-color-light));
+}
+
+/* Row states: a tint on the row, a bar on its number cell. Deleted rows are struck through. */
+.rowNew {
+  background-color: color-mix(in srgb, var(--mantine-color-green-filled) 14%, transparent);
+}
+
+.rowEdited {
+  background-color: color-mix(in srgb, var(--mantine-color-yellow-filled) 14%, transparent);
+}
+
+.rowDeleted {
+  color: var(--mantine-color-red-filled);
+  text-decoration: line-through;
+  background-color: color-mix(in srgb, var(--mantine-color-red-filled) 12%, transparent);
+}
+
+.indexNew {
+  box-shadow: inset 0.25rem 0 0 var(--mantine-color-green-filled);
+}
+
+.indexEdited {
+  box-shadow: inset 0.25rem 0 0 var(--mantine-color-yellow-filled);
+}
+
+.indexDeleted {
+  box-shadow: inset 0.25rem 0 0 var(--mantine-color-red-filled);
+}
+
+.cellEdited {
+  background-color: color-mix(in srgb, var(--mantine-color-yellow-filled) 30%, transparent);
+}
+
+/* The input fills its cell: the cell clips it, so a long value scrolls inside the input instead of overflowing. */
+.editor {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.cell:has(> .editor) {
+  background-color: var(--mantine-color-body);
+  outline: 2px solid var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+}

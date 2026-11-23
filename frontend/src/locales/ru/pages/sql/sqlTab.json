@@ -16,7 +16,10 @@
     "messages": "Сообщения",
     "firstRowsOnly": "Показаны только первые строки: {{count}}",
     "loading": "Загрузка строк...",
-    "nullValue": "NULL"
+    "nullValue": "NULL",
+    "fitColumns": "По ширине данных",
+    "copy": "Копировать",
+    "copyWithHeaders": "Копировать с именами столбцов"
   },
   "message": {
     "rowsAffected": "Затронуто строк: {{n}}",

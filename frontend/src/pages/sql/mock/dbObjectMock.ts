@@ -163,12 +163,15 @@ export const getMockTableInfo = (schema: string, table: string): TableInfoOutput
   };
 };
 
-/** One page of mock rows starting at `offset`, built on demand (a table can have tens of thousands of rows). */
-export const getMockRows = (schema: string, table: string, offset: number) => {
+/**
+ * One page of mock rows starting at `offset` (every remaining row when `all`), built on demand (a table can have
+ * tens of thousands of rows).
+ */
+export const getMockRows = (schema: string, table: string, offset: number, all = false) => {
   const mock = MOCK_TABLES[`${schema}.${table}`];
   if (!mock) return null;
 
-  const end = Math.min(offset + MOCK_PAGE_SIZE, mock.rowCount);
+  const end = all ? mock.rowCount : Math.min(offset + MOCK_PAGE_SIZE, mock.rowCount);
   const rows: (string | null)[][] = [];
   for (let row = offset; row < end; row++) rows.push(mock.columns.map((c, index) => cell(c, row, index)));
   return { columns: mock.columns.map(c => c.name), rows, done: end >= mock.rowCount };

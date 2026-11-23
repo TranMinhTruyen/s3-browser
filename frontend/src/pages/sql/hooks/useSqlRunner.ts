@@ -110,7 +110,7 @@ export function useSqlRunner(tabId: string) {
     fetchRef.current = controller;
     setLoadingMore(true);
     try {
-      const page = await callIPC(FetchRows, [{ tabId, cursorId }], { signal: controller.signal });
+      const page = await callIPC(FetchRows, [{ tabId, cursorId, all: false }], { signal: controller.signal });
       if (controller.signal.aborted) return;
 
       // A failed fetch leaves the cursor unusable, so the statement stops asking for more.

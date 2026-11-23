@@ -13,6 +13,9 @@
     "C000008": "You may not have permission to upload to bucket [{bucket}]. Continue anyway?",
     "C000009": "The app will close, install the new version and reopen automatically. Continue?",
     "C000010": "{count} upload/download task(s) are running and will be canceled. The app will close, install the new version and reopen automatically. Continue?",
-    "C000011": "Profile [{name}] has saved secrets that will NOT be exported. After importing you will need to enter them again. Export without secrets?"
+    "C000011": "Profile [{name}] has saved secrets that will NOT be exported. After importing you will need to enter them again. Export without secrets?",
+    "C000012": "Table [{table}] has uncommitted changes. Discard them and close the tab?",
+    "C000013": "Profile [{name}] has tables with uncommitted changes. Discard them and continue?",
+    "C000014": "Table [{table}] has uncommitted changes. Discard them and reload the data?"
   }
 }

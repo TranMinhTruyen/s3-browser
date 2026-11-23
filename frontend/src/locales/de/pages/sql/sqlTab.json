@@ -16,7 +16,10 @@
     "messages": "Meldungen",
     "firstRowsOnly": "Nur die ersten {{count}} Zeilen werden angezeigt",
     "loading": "Weitere Zeilen werden geladen...",
-    "nullValue": "NULL"
+    "nullValue": "NULL",
+    "fitColumns": "Spalten an Daten anpassen",
+    "copy": "Kopieren",
+    "copyWithHeaders": "Mit Spaltennamen kopieren"
   },
   "message": {
     "rowsAffected": "{{n}} Zeile(n) betroffen",

@@ -197,11 +197,25 @@ describe('fetchTableRows', () => {
     expect(page?.done).toBe(false);
   });
 
+  it('reads every remaining mock row when asked for all', async () => {
+    const page = await fetchTableRows('postgres', 't1', { ...ref, table: 'wide_events' }, 0, 10_000, signal, true);
+    expect(page?.rows).toHaveLength(15_000);
+    expect(page?.done).toBe(true);
+    expect(callIPCMock).not.toHaveBeenCalled();
+  });
+
   it('calls FetchRows for SQLite with the cursor', async () => {
     const page = { rows: [['2']], done: true };
     callIPCMock.mockResolvedValue(page as never);
     expect(await fetchTableRows('sqlite', 't1', ref, 7, 1, signal)).toBe(page);
-    expect(callIPCMock).toHaveBeenCalledWith(FetchRows, [{ tabId: 't1', cursorId: 7 }], { signal });
+    expect(callIPCMock).toHaveBeenCalledWith(FetchRows, [{ tabId: 't1', cursorId: 7, all: false }], { signal });
+  });
+
+  it('sends all: true to FetchRows when asked to read every remaining row', async () => {
+    const page = { rows: [['2']], done: true };
+    callIPCMock.mockResolvedValue(page as never);
+    expect(await fetchTableRows('sqlite', 't1', ref, 7, 1, signal, true)).toBe(page);
+    expect(callIPCMock).toHaveBeenCalledWith(FetchRows, [{ tabId: 't1', cursorId: 7, all: true }], { signal });
   });
 
   it('returns null when FetchRows failed', async () => {
