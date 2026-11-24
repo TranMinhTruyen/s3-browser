@@ -110,6 +110,8 @@ func main() {
 			log.Fatalf("resolve portable paths error: %v", err)
 		}
 	}
+	browserArgs := &options.Windows.AdditionalBrowserArgs
+	*browserArgs = append(*browserArgs, benchBrowserArgs(appLogger)...)
 	mainApp := application.New(options)
 
 	app, err := internal.NewApp(mainApp, cfg, appLogger)

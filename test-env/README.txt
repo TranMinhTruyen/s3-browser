@@ -241,7 +241,11 @@ WebView2 và JS heap, theo kịch bản a-f và i1-i4 (sprints/sprint-20/plan.md
         go tool wails3 task windows:build
         go tool wails3 task windows:build EXTRA_TAGS=devtools OUT_DIR=build/bin/bench
       Bản đầu (build/bin/S3Browser.exe) là bản release thuần; bản sau (build/bin/bench/S3Browser.exe) có tag devtools,
-      cần cho cổng CDP của kịch bản b-f. Cách truyền biến KEY=value qua `wails3 task` chưa kiểm chứng; không được thì
+      cần cho cổng CDP của kịch bản b-f.
+      Cổng CDP do script mở bằng env `S3B_BENCH_CDP_PORT` (chỉ bản đo đọc, qua `Options.Windows.AdditionalBrowserArgs`,
+      file `main_devtools.go`); bản release bỏ qua env này. `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` không dùng được vì
+      Wails xoá nó trong process app.
+      Cách truyền biến KEY=value qua `wails3 task` chưa kiểm chứng; không được thì
       chạy `task` trực tiếp hoặc đặt biến môi trường EXTRA_TAGS và OUT_DIR.
   (b) Cài thư viện cho script UI (một lần): `bun install --cwd docs` (playwright đã có trong docs/package.json).
   (c) Dữ liệu cho b, c, e-s3: chạy MinIO (mục 1/docker-compose-minio.yml), rồi
