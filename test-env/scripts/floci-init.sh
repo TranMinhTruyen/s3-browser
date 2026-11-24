@@ -41,6 +41,8 @@ for b in s3b-private s3b-public-read; do
   echo "hello floci" | aws s3 cp - s3://$b/hello.txt $E >/dev/null
   echo "hello floci" | aws s3 cp - s3://$b/docs/readme.txt $E >/dev/null
 done
+# Floci >= 2.5 turns on Block Public Access for new buckets (like real AWS), which rejects the public policy.
+aws s3api delete-public-access-block --bucket s3b-public-read $E >/dev/null 2>&1 || true
 aws s3api put-bucket-policy --bucket s3b-public-read --policy "$PUBLIC" $E
 
 echo "Writing AWS CLI profiles to ./generated..."
