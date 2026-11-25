@@ -17,12 +17,16 @@ Yêu cầu: Docker Desktop (hoặc Docker Engine + compose plugin). Không cần
   scripts/test-env.sh        Script duy nhất, theo lệnh con:
                                up         chạy trên máy: sinh cert nếu chưa có, rồi bật mọi container (mục 1a)
                                certs      sinh CA, cert server và cert client vào certs/ (chạy trên máy, cần openssl)
+                               seed       chạy trên máy: nạp dữ liệu mẫu (database demo) vào các DB đang chạy (mục 10e)
                                minio      (container minio-init) bật LDAP cho MinIO, gắn policy, tạo access key, bucket
+                                          (kể cả s3b-mem-10k 10.000 object cho mem-bench)
                                minio-tls  (container minio-tls-init) tạo bucket s3b-tls cho MinIO TLS
                                floci      (container floci-init) tạo IAM user/role/policy, bucket, file profile AWS CLI
   keycloak/s3browser-realm.json   Realm s3browser: client public s3browser (PKCE), user mẫu, claim policy
   db/db.env                       Cổng, user, mật khẩu test của 6 DB (dùng chung cho compose, test, bench)
   db/mssql.conf                   Bật TLS tuỳ chọn cho SQL Server
+  db/seed/                        Dữ liệu mẫu database demo: mysql.sql (MySQL + MariaDB), postgres.sql, mssql.sql,
+                                  mongo.js, redis.txt
   certs/                          (sinh ra bởi `sh scripts/test-env.sh certs`) Đã nằm trong .gitignore, không commit.
   generated/                 (sinh ra khi chạy Floci) floci-config, floci-credentials.
                              Đã nằm trong .gitignore, không commit.
@@ -35,11 +39,13 @@ Container init chạy một lần rồi dừng; script chạy lại nhiều lầ
 
 Mở terminal trong thư mục này:
 
-  sh scripts/test-env.sh up        # MỘT lệnh (Git Bash, cần openssl): chưa có cert thì sinh, rồi bật mọi service
+  sh scripts/test-env.sh up        # MỘT lệnh (Git Bash, cần openssl): chưa có cert thì sinh, bật mọi service,
+                                   # rồi nạp dữ liệu mẫu database demo vào 6 DB (mục 10e)
 
-  Lệnh trên tương đương hai bước:
+  Lệnh trên tương đương ba bước:
   sh scripts/test-env.sh certs     # một lần: cert cho MinIO TLS, mTLS và 6 DB (mục 7, 10)
   docker compose up -d --wait      # mọi service; lần đầu kéo ~7 GB image, mất vài phút
+  sh scripts/test-env.sh seed      # dữ liệu mẫu, bỏ qua DB đã có (khoảng 10 giây)
 
   Lệnh trả về khi mọi server healthy và 3 container init đã chạy xong (service "ready" chờ chúng, log:
   "S3Browser test environment is ready."). Docker cần >= 2 GB RAM trống cho SQL Server.
@@ -71,6 +77,7 @@ Mở terminal trong thư mục này:
   ready             s3b-test-ready            (chờ 3 container init, cho `up --wait`)
 
   Dừng giữ dữ liệu:   docker compose stop
+  Xoá container, giữ dữ liệu:  docker compose down   (giải phóng RAM; `sh scripts/test-env.sh up` dựng lại)
   Xoá hết:            docker compose down -v      (xoá thêm generated/ và certs/ nếu muốn làm lại từ đầu)
 
 
@@ -266,6 +273,17 @@ mysql:8.4.13, mariadb:11.4.13, postgres:17.12, mssql/server:2022-CU28-ubuntu-22.
       Lưu ý: Docker Desktop (WSL2) có sàn mạng ~24 ms cho 2,5 MB, nên mục tiêu 40 ms chỉ công bằng cho DB cài trực
       tiếp trên máy host; số đo qua Docker dùng để so sánh các driver với nhau và theo dõi hồi quy.
 
+  (e) Dữ liệu mẫu để thử chế độ SQL bằng tay (`sh scripts/test-env.sh seed`, `up` tự chạy):
+      database demo trên MySQL, MariaDB, PostgreSQL, SQL Server, MongoDB; test Rust chỉ dùng database s3b nên
+      không bị ảnh hưởng. Cùng dữ liệu ở mọi DB, sinh tất định:
+        customers 200, products 50 (JSON, nhị phân, NULL), orders 2.000, order_items 4.001 (khoá chính kép,
+        khoá ngoại), events 10.000 (thử phân trang), view v_order_summary. MongoDB: order_items nằm trong
+        orders.items (mảng), không có view.
+      Redis: database 1, key demo:* (string, hash demo:customer:1..100, list, set, zset, stream, 1.000 key
+      demo:item:NNNN, một key có TTL 30 ngày).
+      DB đã có demo thì bỏ qua (giữ thay đổi bạn làm trong app); muốn nạp lại thì xoá database demo rồi chạy seed.
+      Redis không lưu xuống đĩa nên được nạp lại sau mỗi lần khởi động lại container.
+
   Thử tay trong container (ví dụ):
     docker exec -e PGPASSWORD=S3bTest2026 s3b-test-postgres psql "host=localhost user=postgres dbname=s3b sslmode=verify-full sslrootcert=/certs/ca.pem"
     docker exec s3b-test-redis redis-cli -p 6380 --tls --cacert /certs/ca.pem --sni localhost ping
@@ -303,7 +321,8 @@ Từng bước tay, chạy trong thư mục này:
       Cách truyền biến KEY=value qua `wails3 task` chưa kiểm chứng; không được thì
       chạy `task` trực tiếp hoặc đặt biến môi trường EXTRA_TAGS và OUT_DIR.
   (b) Cài thư viện cho script UI (một lần): `bun install --cwd docs` (playwright đã có trong docs/package.json).
-  (c) Dữ liệu cho b, c, e-s3: chạy MinIO (mục 2: docker compose up -d minio-init), rồi
+  (c) Dữ liệu cho b, c, e-s3: container minio-init (`sh scripts/test-env.sh up` hoặc docker compose up -d minio-init)
+      đã tự tạo bucket s3b-mem-10k đủ 10.000 object (bỏ qua nếu đã đủ). Tạo lại bằng tay khi cần:
         $env:S3B_BENCH_ACCESS_KEY='admin'; $env:S3B_BENCH_SECRET_KEY='<mật khẩu admin của service minio trong docker-compose.yml>'
         $env:S3B_BENCH_ENDPOINT='http://localhost:10010'      # mặc định
         .\mem-bench.ps1 -PrepareData

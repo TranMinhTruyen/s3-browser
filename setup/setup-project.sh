@@ -420,6 +420,16 @@ setup_e2e() {
     echo "==> Skipping E2E: the server-mode build needs s3b_db.dll (Windows only)."
     return 0
   fi
+  # Node runs the docs scripts that test-env/mem-bench.ps1 calls (node scripts/mem-ui.mjs).
+  export PATH="/c/Program Files/nodejs:$PATH"
+  if ! command -v node >/dev/null 2>&1; then
+    # winget_install exits the script when winget is missing, so check first: Node is optional here.
+    if command -v winget >/dev/null 2>&1; then
+      winget_install OpenJS.NodeJS.LTS || echo "WARNING: Node.js install failed (needed by mem-bench)."
+    else
+      echo "WARNING: Node.js not found and no winget: install Node.js LTS for mem-bench."
+    fi
+  fi
   # One Chromium for frontend/ and docs/ (same Playwright version): e2e, qa evidence, shots.mjs, mem-bench.
   echo "==> Installing Chromium for Playwright..."
   (cd "$PROJECT_ROOT/frontend" && node_modules/.bin/playwright install chromium)
@@ -498,4 +508,5 @@ echo "    Build    : wails3 task build"
 echo "    Package  : wails3 task package   (add INSTALL_SCOPE=user for non-admin)"
 echo "    Unit test: cd frontend && bun run test   |   cd rust && cargo test --target x86_64-pc-windows-msvc"
 echo "    E2E test : cd frontend && bun run e2e    (S3 specs need E2E_S3_ENDPOINT, E2E_S3_ACCESS_KEY, E2E_S3_SECRET_KEY)"
-echo "    Test env : cd test-env && docker compose up -d --wait   |   docker compose stop   (test-env/README.txt)"
+echo "    Test env : cd test-env && sh scripts/test-env.sh up   |   docker compose stop   (test-env/README.txt)"
+echo "    RAM bench: powershell -ExecutionPolicy Bypass -File test-env/mem-bench-all.ps1 -Runs 3   (~5 hours, idle machine)"

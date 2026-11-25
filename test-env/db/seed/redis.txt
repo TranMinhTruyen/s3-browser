@@ -1,0 +1,9 @@
+EVAL "for i = 1, 100 do redis.call('HSET', 'demo:customer:' .. i, 'name', 'Customer ' .. i, 'email', 'customer' .. i .. '@example.com', 'country', ({'VN', 'US', 'JP', 'DE', 'FR', 'GB'})[1 + i % 6]) end" 0
+EVAL "for i = 1, 50 do redis.call('RPUSH', 'demo:queue', 'job-' .. i) end" 0
+EVAL "for i = 1, 100 do redis.call('ZADD', 'demo:leaderboard', (i * 37) % 1000, 'player-' .. i) end" 0
+EVAL "for i = 1, 20 do redis.call('XADD', 'demo:stream', '*', 'kind', 'click', 'seq', i) end" 0
+EVAL "for i = 1, 1000 do redis.call('SET', string.format('demo:item:%04d', i), 'value ' .. i) end" 0
+SADD demo:tags red green blue s3 sql
+SET demo:counter 42
+SET demo:session:abc "{\"customerId\":1,\"cart\":[3,7]}" EX 2592000
+SET demo:greeting "Hello from the S3Browser test environment"

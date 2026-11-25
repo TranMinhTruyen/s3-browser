@@ -5,21 +5,65 @@
 #   sh scripts/test-env.sh up      on the host: everything in one command (certs if missing, then every container:
 #                                  S3 servers + 6 databases; returns when all are healthy and initialised)
 #   sh scripts/test-env.sh certs   on the host (Git Bash, macOS, Linux; needs openssl): TLS certificates in certs/
+#   sh scripts/test-env.sh seed    on the host: sample database "demo" in the running database containers (db/seed/)
 #   test-env.sh minio              in the minio-init container: LDAP, policies, access keys, buckets
 #   test-env.sh minio-tls          in the minio-tls-init container: bucket for the OIDC / Certificate profiles
 #   test-env.sh floci              in the floci-init container: IAM users/roles, buckets, AWS CLI profiles in /out
 # Test values only.
 set -e
+# test-env/ as an absolute path, whatever the current directory (inside a container this is /, unused there).
+ENV_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # ---------------------------------------------------------------------------------------------------- up
 up() {
-  cd "$(dirname "$0")/.."
+  cd "$ENV_DIR"
   # Subshell: certs changes directory. Certificates are kept when they exist (making new ones means recreating
   # the running containers, see certs below).
   [ -f certs/ca.pem ] && [ -f certs/db/server.pem ] || (certs)
   # First run pulls ~7 GB of images; SQL Server needs >= 2 GB RAM free for Docker.
   docker compose up -d --wait
+  seed
   echo "Test environment is up: docker compose ps (in test-env). Profiles to create in the app: test-profiles.txt"
+}
+
+# ---------------------------------------------------------------------------------------------------- seed
+# Sample data to try the SQL mode by hand: database "demo" (customers, products, orders, order_items, events with
+# 10,000 rows, view v_order_summary), Redis db 1 with keys demo:*. The Rust tests use database s3b, never demo.
+# A database that is not running or already has demo is skipped (edits made in the app are kept); a failed load
+# drops demo so the next run loads it again. Redis keeps nothing on disk (--save ""), so it is loaded again after
+# each restart of its container.
+running() { [ "$(docker inspect -f '{{.State.Running}}' "$1" 2>/dev/null)" = true ]; }
+
+# seed_db <label> <container> <seed file> <check: prints something when demo exists> <load: reads stdin> <drop>
+seed_db() {
+  if ! running "$2"; then echo "  $1: not running, skipped"; return 0; fi
+  if [ -n "$(docker exec "$2" sh -c "$4" </dev/null)" ]; then echo "  $1: demo already loaded"; return 0; fi
+  echo "  $1: loading demo..."
+  if docker exec -i "$2" sh -c "$5" <"$3" >/dev/null && [ -n "$(docker exec "$2" sh -c "$4" </dev/null)" ]; then
+    return 0
+  fi
+  echo "  $1: loading failed, demo dropped (run 'sh scripts/test-env.sh seed' again)" >&2
+  docker exec "$2" sh -c "$6" </dev/null >/dev/null 2>&1 || true
+  return 1
+}
+
+seed() {
+  cd "$ENV_DIR/db/seed"
+  export MSYS_NO_PATHCONV=1 # Git Bash would turn /opt/... in the commands into Windows paths
+  echo "Loading sample data (database demo)..."
+  # Passwords are read inside each container from its own environment, never on this host.
+  ok=0
+  my='MYSQL_PWD=$MYSQL_ROOT_PASSWORD mysql -uroot'
+  seed_db MySQL s3b-test-mysql mysql.sql "$my -N -e \"SHOW DATABASES LIKE 'demo'\"" "$my"     "$my -e 'DROP DATABASE IF EXISTS demo'" || ok=1
+  my='MYSQL_PWD=$MARIADB_ROOT_PASSWORD mariadb -uroot'
+  seed_db MariaDB s3b-test-mariadb mysql.sql "$my -N -e \"SHOW DATABASES LIKE 'demo'\"" "$my"     "$my -e 'DROP DATABASE IF EXISTS demo'" || ok=1
+  seed_db PostgreSQL s3b-test-postgres postgres.sql     "psql -U postgres -tAc \"SELECT 1 FROM pg_database WHERE datname = 'demo'\""     'createdb -U postgres demo && psql -U postgres -d demo -q -v ON_ERROR_STOP=1 -1'     'dropdb -U postgres --if-exists demo' || ok=1
+  sq='/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -b'
+  seed_db "SQL Server" s3b-test-mssql mssql.sql     "$sq -h -1 -W -Q \"SET NOCOUNT ON; SELECT name FROM sys.databases WHERE name = 'demo'\"" "$sq -I"     "$sq -Q 'DROP DATABASE IF EXISTS demo'" || ok=1
+  mg='mongosh --quiet -u root -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin'
+  seed_db MongoDB s3b-test-mongo mongo.js     "$mg --eval \"if (db.getSiblingDB('demo').getCollectionNames().length) print('yes')\"" "$mg"     "$mg --eval \"db.getSiblingDB('demo').dropDatabase()\"" || ok=1
+  seed_db Redis s3b-test-redis redis.txt 'redis-cli -n 1 GET demo:greeting' 'redis-cli -n 1'     "redis-cli -n 1 EVAL \"for _, k in ipairs(redis.call('KEYS', 'demo:*')) do redis.call('DEL', k) end\" 0" || ok=1
+  return $ok
 }
 
 # ---------------------------------------------------------------------------------------------------- certs
@@ -38,7 +82,7 @@ certs() {
   KEY_PASSWORD='ClientKey#2026'
   DAYS=825
 
-  OUT="$(cd "$(dirname "$0")/.." && pwd)/certs"
+  OUT="$ENV_DIR/certs"
   rm -rf "$OUT"
   mkdir -p "$OUT/minio/CAs" "$OUT/client" "$OUT/db"
   cd "$OUT"
@@ -140,6 +184,19 @@ minio() {
     mc cp -q /tmp/hello.txt "local/$b/docs/readme.txt" >/dev/null
   done
 
+  # Data for test-env/mem-bench-all.ps1: 10,000 small objects (same names as mem-bench.ps1 -PrepareData).
+  # Skipped when the bucket already has them, so restarting the stack stays fast.
+  echo "Creating bucket s3b-mem-10k (10,000 objects for the memory benchmark)..."
+  mc mb --ignore-existing local/s3b-mem-10k >/dev/null
+  n=$(mc ls local/s3b-mem-10k | wc -l)
+  if [ "$n" -lt 10000 ]; then
+    rm -rf /tmp/seed && mkdir -p /tmp/seed
+    i=1
+    while [ "$i" -le 10000 ]; do echo "$i" >"/tmp/seed/obj-$(printf %05d "$i").bin"; i=$((i + 1)); done
+    mc cp -q --recursive /tmp/seed/ local/s3b-mem-10k/ >/dev/null
+    rm -rf /tmp/seed
+  fi
+
   echo "MinIO test environment is ready."
 }
 
@@ -226,11 +283,12 @@ floci() {
 case "$1" in
   up) up ;;
   certs) certs ;;
+  seed) seed ;;
   minio) minio ;;
   minio-tls) minio_tls ;;
   floci) floci ;;
   *)
-    echo "Usage: sh scripts/test-env.sh up | certs | minio | minio-tls | floci" >&2
+    echo "Usage: sh scripts/test-env.sh up | certs | seed | minio | minio-tls | floci" >&2
     exit 2
     ;;
 esac
