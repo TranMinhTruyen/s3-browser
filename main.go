@@ -91,6 +91,7 @@ func main() {
 
 	appLogger, closer, err := logger.Setup(logger.Config{
 		AppName: cfg.Name,
+		Debug:   DevMode,
 	})
 	if err != nil {
 		log.Fatalf("create an instance logger error: %v", err)
