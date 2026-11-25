@@ -192,7 +192,7 @@ Tất cả tool Go được khai báo trong `tool (...)` của `go.mod` (wails3,
 - Build: `cargo build --release --target x86_64-pc-windows-msvc` (task `common:build:dll` chạy trước build Go — `build:native` là task build Go có sẵn, copy DLL cạnh exe, vào bản portable và NSIS).
 - Test: `cargo test` cho protocol, dispatch và driver (SQLite dùng file DB tạm), do `rust-tester` viết và **có commit** (khác test Go tạm).
   - Unit test cần hàm private đặt ở `rust/tests/unit/<cây src>.rs`, nối vào cuối file nguồn bằng `#[cfg(test)] #[path = "<tương đối thư mục chứa file src>/tests/unit/<cây src>.rs"] mod tests;` (`#[path]` tính từ thư mục chứa file nguồn). Không tạo `tests/unit/main.rs` (cargo sẽ biến nó thành target riêng). Test qua hàm export đặt ở `rust/tests/*.rs`.
-  - Test cần DB mạng chạy với `test-env/docker-compose-db.yml` (cert từ `sh test-env/scripts/gen-certs.sh`); không có server thì tự skip qua `skip_or_fail`. `S3B_REQUIRE_DB=1` biến skip thành fail: verifier luôn đặt biến này khi Docker chạy, và số test bị skip không được tính là PASS.
+  - Test cần DB mạng chạy với `test-env/docker-compose.yml` (một lệnh `sh test-env/scripts/test-env.sh up`: sinh cert nếu chưa có rồi bật mọi container); không có server thì tự skip qua `skip_or_fail`. `S3B_REQUIRE_DB=1` biến skip thành fail: verifier luôn đặt biến này khi Docker chạy, và số test bị skip không được tính là PASS.
 
 ## 9. Frontend (React 19 + TS)
 
@@ -267,8 +267,8 @@ Alias: `@/` → `src`, `@components/`, `@common/`, `@wails/` → bindings.
 ### Test case và evidence (QA)
 
 - `qa-tester` **chỉ chạy khi người dùng gọi rõ ràng** (viết test case, hoặc chạy test case và chụp evidence); orchestrator và agent khác không tự gọi. Test case ở mức người dùng thấy, không thay unit test của các tester khác.
-- Test case ở `sprints/sprint-NN/testcases.md`, ID `TC-<mã yêu cầu>-<NN>`, mỗi case có cách chạy `auto-ui` (Playwright trên app server mode), `auto-cli` (trích kết quả test/lệnh) hoặc `manual` (kèm lý do).
-- Evidence ở `sprints/sprint-NN/evidence/<branch-slug>/`: ảnh `<TC-ID>-NN.png`, log `<TC-ID>.console.log`, script `run.mjs` chạy lại được. File nộp là Excel `sprints/sprint-NN/evidence/sprint-NN_evidence.xlsx`, sinh bằng `bun run --cwd docs evidence ../sprints/sprint-NN` (script `docs/scripts/evidence-xlsx.mjs`, thư viện `exceljs`) từ `testcases.md` và ảnh; không sửa Excel bằng tay. Kết quả chỉ `PASS`, `FAIL`, `BLOCKED`, `MANUAL`; chưa chạy thì không ghi PASS.
+- Test case ở `sprints/sprint-NN/testcases.md`, ID `TC-<mã yêu cầu>-<NN>`, mỗi case có cách chạy `auto-ui` (Playwright Test trên app server mode, dùng fixture của `frontend/e2e`), `auto-cli` (trích kết quả test/lệnh) hoặc `manual` (kèm lý do).
+- Evidence ở `sprints/sprint-NN/evidence/<branch-slug>/`: ảnh `<TC-ID>-NN.png`, log `<TC-ID>.console.log`, spec `evidence.spec.mts` chạy lại được (trong `frontend/`: `E2E_DIR=../sprints/sprint-NN/evidence/<branch-slug> node_modules/.bin/playwright test`). File nộp là Excel `sprints/sprint-NN/evidence/sprint-NN_evidence.xlsx`, sinh bằng `bun run --cwd docs evidence ../sprints/sprint-NN` (script `docs/scripts/evidence-xlsx.mjs`, thư viện `exceljs`) từ `testcases.md` và ảnh; không sửa Excel bằng tay. Kết quả chỉ `PASS`, `FAIL`, `BLOCKED`, `MANUAL`; chưa chạy thì không ghi PASS.
 - Ảnh và log không được lộ secret, access key, token hay endpoint thật (che ô secret trước khi chụp).
 - `testcases.md` và `evidence/` chỉ commit ở `SP-NN/sprint_docs`, như các file docs khác của sprint.
 
