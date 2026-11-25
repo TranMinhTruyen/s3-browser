@@ -7,7 +7,8 @@
 // Usage (in docs/):  node scripts/mem-ui.mjs <step> --port <cdp port> [--opt value ...]
 //
 // Steps: connect-s3, scroll-s3, upload, download, sqlite, reconnect-sql, open-tab-sql, tabs-s3, tabs-sql,
-//        close-all, minimize, arm-restore, read-restore, heap, close-app
+//        close-all, minimize, arm-visibility, read-visibility, heap, fetch-all-prep, fetch-all, fetch-all-close,
+//        diag-gc, diag-pressure, diag-reload (chẩn đoán cuối phiên, mem-bench.ps1 -Diagnose), close-app
 //
 // Secrets come from the environment only (never argv): S3B_BENCH_ENDPOINT, S3B_BENCH_ACCESS_KEY,
 // S3B_BENCH_SECRET_KEY. Selectors use the English labels of frontend/src/locales/en, so the app must run in English
@@ -54,6 +55,8 @@ const L = {
   close: label('common', 'window.close'),
   disconnect: label('pages/s3/connectionProfiles', 'contextMenu.disconnect'),
   sqlDisconnect: label('pages/sql/sqlNavbar', 'contextMenu.disconnect'),
+  sqlRefresh: label('pages/sql/sqlNavbar', 'contextMenu.refresh'),
+  fetchAll: label('pages/sql/tableStructure', 'fetchAll'),
   downloadSelected: label('pages/s3/object/page', 'tooltip.downloadSelected'),
   create: label('pages/s3/modals/connectModal', 'form.button.createProfile'),
   sqlCreate: label('pages/sql/modals/dbProfileModal', 'form.button.create'),
@@ -380,8 +383,8 @@ async function download() {
   throw new Error('download did not finish');
 }
 
-async function sqlite() {
-  const file = need('file');
+/** Creates the SQLite profile when missing, connects the visible tab to it and returns the time of the first Connect. */
+async function connectSqlite(file) {
   await clickMode('SQL');
   if (!(await textOf(SQL_PROFILE).count())) {
     const form = key => label('pages/sql/modals/dbProfileModal', `form.label.${key}`);
@@ -396,15 +399,21 @@ async function sqlite() {
   const t0 = Date.now();
   await sqlTabConnect().click();
   await textOf(label('pages/sql/sqlNavbar', 'tree.tables')).first().waitFor();
-  const connectFirstMs = Date.now() - t0;
+  return Date.now() - t0;
+}
 
-  const rows = Number(opts.rows ?? 10000);
-  await runSql(
-    `CREATE TABLE IF NOT EXISTS t(id INTEGER PRIMARY KEY, name TEXT, v REAL, s TEXT);
+/** Creates the test table `name` with `rows` rows (same columns as the d scenario) unless it already has rows. */
+const createTable = (name, rows) =>
+  runSql(
+    `CREATE TABLE IF NOT EXISTS ${name}(id INTEGER PRIMARY KEY, name TEXT, v REAL, s TEXT);
 WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM c WHERE x<${rows})
-INSERT INTO t(id,name,v,s) SELECT x, 'name-'||x, x*1.5, hex(randomblob(40)) FROM c WHERE (SELECT COUNT(*) FROM t)=0;`,
+INSERT INTO ${name}(id,name,v,s) SELECT x, 'name-'||x, x*1.5, hex(randomblob(40)) FROM c WHERE (SELECT COUNT(*) FROM ${name})=0;`,
     /row\(s\) affected/
   );
+
+async function sqlite() {
+  const connectFirstMs = await connectSqlite(need('file'));
+  await createTable('t', Number(opts.rows ?? 10000));
   await runSql('SELECT * FROM t;', null);
   return { connectFirstMs };
 }
@@ -516,26 +525,116 @@ async function minimize() {
   return { visibility: await page.evaluate(() => document.visibilityState) };
 }
 
-/** Leaves a listener in the page: when it becomes visible again, the time of its second painted frame is kept. */
-async function armRestore() {
+/**
+ * Leaves a listener in the page that logs [Date.now(), visibilityState] on every change, so a minimise done without
+ * CDP (the caller minimises the window itself) can be read back later by read-visibility.
+ */
+async function armVisibility() {
   const visibility = await page.evaluate(() => {
-    window.__s3bRestore = null;
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState !== 'visible') return;
-      requestAnimationFrame(() => requestAnimationFrame(() => (window.__s3bRestore = Date.now())));
-    });
+    window.__s3bVis = [[Date.now(), document.visibilityState]];
+    document.addEventListener('visibilitychange', () => window.__s3bVis.push([Date.now(), document.visibilityState]));
     return document.visibilityState;
   });
   return { visibility };
 }
 
-const readRestore = async () => ({ restoreAt: await page.evaluate(() => window.__s3bRestore ?? null) });
+const readVisibility = async () => ({
+  states: (await page.evaluate(() => window.__s3bVis ?? [])).map(entry => entry[1]).join(','),
+});
 
+/** JS heap, plus DOM node/document and JS listener counts (Performance.getMetrics) of the renderer. */
 async function heap() {
   const cdp = await page.context().newCDPSession(page);
   const usage = await cdp.send('Runtime.getHeapUsage');
+  const result = { jsHeapUsed: usage.usedSize, jsHeapTotal: usage.totalSize };
+  try {
+    await cdp.send('Performance.enable');
+    const { metrics } = await cdp.send('Performance.getMetrics');
+    const byName = Object.fromEntries(metrics.map(m => [m.name, m.value]));
+    Object.assign(result, {
+      domNodes: byName.Nodes,
+      domDocuments: byName.Documents,
+      jsListeners: byName.JSEventListeners,
+    });
+    await cdp.send('Performance.disable');
+  } catch {
+    // counts are optional: the heap numbers above are what the older steps always returned
+  }
   await cdp.detach();
-  return { jsHeapUsed: usage.usedSize, jsHeapTotal: usage.totalSize };
+  return result;
+}
+
+/** Connects the SQLite profile, makes the big table, refreshes the tree and opens the table's Data tab (rows = n). */
+async function fetchAllPrep() {
+  const rows = Number(opts.rows ?? 100000);
+  const table = `t${rows}`;
+  const connectFirstMs = await connectSqlite(need('file'));
+  await createTable(table, rows);
+  await profileMenu(SQL_PROFILE, L.sqlRefresh);
+  await textOf(table).first().dblclick();
+  // The Data tab is the default panel of a table tab; the first page of rows is drawn when a data row exists.
+  await page.locator('[data-row]:visible').first().waitFor({ timeout: 60000 });
+  return { table, connectFirstMs };
+}
+
+/** Ticks "Fetch all data" in the open Data tab and waits until the loaded-rows counter reaches rows. */
+async function fetchAll() {
+  const rows = Number(opts.rows ?? 100000);
+  const counter = label('pages/sql/tableStructure', 'loadedRows').replace('{{total}}', rows.toLocaleString('en'));
+  const t0 = Date.now();
+  await page.getByLabel(L.fetchAll, { exact: true }).check();
+  await page
+    .getByText(counter, { exact: true })
+    .filter({ visible: true })
+    .first()
+    .waitFor({ timeout: 20 * 60 * 1000 });
+  return { rows, ms: Date.now() - t0 };
+}
+
+/** Closes the table tab and disconnects the SQLite profile. */
+async function fetchAllClose() {
+  const tabs = stripTabs();
+  const before = await tabs.count();
+  await tabs.last().getByRole('button', { name: L.closeTab, exact: true }).click();
+  await waitStripCount(before, -1);
+  await profileMenu(SQL_PROFILE, L.sqlDisconnect);
+  await pause(1000);
+  return { tabs: await tabs.count() };
+}
+
+/** Runs one CDP command on a short-lived session of the app page. */
+async function cdpSend(method, params) {
+  const cdp = await page.context().newCDPSession(page);
+  try {
+    await cdp.send(method, params);
+  } finally {
+    await cdp.detach().catch(() => {});
+  }
+}
+
+/** Diagnosis only: forces a full V8 GC, to tell JS garbage apart from memory the renderer keeps. */
+async function diagGc() {
+  await cdpSend('HeapProfiler.collectGarbage');
+  return {};
+}
+
+/** Diagnosis only: tells Chromium the system is under critical memory pressure (it then trims caches). */
+async function diagPressure() {
+  await cdpSend('Memory.simulatePressureNotification', { level: 'critical' });
+  return { level: 'critical' };
+}
+
+/** Diagnosis only (not a fix): reloads the page and waits for the app shell, to see what a fresh renderer needs. */
+async function diagReload() {
+  await page.evaluate(() => {
+    window.__s3bBeforeReload = true;
+  });
+  const t0 = Date.now();
+  await cdpSend('Page.reload');
+  // The marker lives in the old document only: it is gone once the new page runs.
+  await page.waitForFunction(() => !window.__s3bBeforeReload && document.readyState === 'complete');
+  await page.getByLabel(L.mode, { exact: true }).waitFor();
+  return { ms: Date.now() - t0 };
 }
 
 async function closeApp() {
@@ -558,9 +657,15 @@ const steps = {
   'tabs-sql': tabsSql,
   'close-all': closeAll,
   minimize,
-  'arm-restore': armRestore,
-  'read-restore': readRestore,
+  'arm-visibility': armVisibility,
+  'read-visibility': readVisibility,
   heap,
+  'fetch-all-prep': fetchAllPrep,
+  'fetch-all': fetchAll,
+  'fetch-all-close': fetchAllClose,
+  'diag-gc': diagGc,
+  'diag-pressure': diagPressure,
+  'diag-reload': diagReload,
   'close-app': closeApp,
 };
 

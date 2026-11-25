@@ -279,6 +279,29 @@ Từng bước tay, chạy trong thư mục này:
   (e) App so sánh (A5:SQL Mk-2, Navicat), bán tự động (a, d, e-sql, f; b, c không áp dụng):
         .\mem-bench.ps1 -ProcessName Navicat -Scenario d    # đang chạy sẵn; hoặc thêm -CompareExe <đường dẫn> để tự mở
       Script in hướng dẫn từng bước rồi chờ Enter; d dùng cùng file SQLite với S3Browser (-SqliteFile).
+  (g) Đo đối chứng và chẩn đoán (giai đoạn 3, plan "Thiết kế giai đoạn 3"):
+        .\mem-bench.ps1 -Scenario b,d,e,i4,f -Runs 3     # danh sách ngăn bằng dấu phẩy: phiên đối chứng không có c
+        .\mem-bench.ps1 -Scenario g -Runs 3             # Fetch all 100.000 dòng (SQLite), phiên riêng, không nằm trong all
+        .\mem-bench.ps1 -Summarize <OutDir cũ>          # tính lại bảng từ samples.csv/timings.csv, ghi summary-recalc.md
+        .\mem-bench.ps1 -Scenario a -BrowserArgs '--js-flags=--expose-gc' -DisableFeatures 'FeatureA,FeatureB'
+      g: điểm g-pre, g-peak, g-loaded, g-closed và thời gian fetch-all (timings.csv); cần node, không cần MinIO.
+      summary.md có thêm cột total_nogpu (total - gpu), mức GPU L/H từng lượt (ngưỡng 160 MiB), số process theo loại và
+      cột js_heap_total, dom_nodes, dom_documents, js_listeners. Mọi điểm đã có giữ nguyên cách lấy.
+      c ghi thêm c-peak-download-dialog / c-peak-download-transfer (trước/sau lúc UIA bấm OK) và download-series-<run>.csv.
+      restore đo bằng so ảnh màn hình (không CDP): cửa sổ phải ở trên cùng và không bị che trong lúc đo; sai số là chu kỳ
+      chụp ghi trong Ghi chú. Tắt khoá màn hình/screensaver khi đo: máy khoá thì chụp màn hình lỗi, restore ghi FAIL
+      (phiên vẫn chạy tiếp). Có i4 thì cuối phiên (sau f và -Diagnose) script tự thu nhỏ/khôi phục lần nữa và ghi
+      visibilityState không CDP vào Ghi chú; giữa i4@6m và f không còn thu nhỏ cửa sổ nào.
+      -Diagnose (cần f trong -Scenario, không dùng với -NoCdp; mem-bench-all.ps1 cũng nhận): sau mẫu f, cuối phiên, chạy
+      diag-gc (HeapProfiler.collectGarbage, chờ 30 s, điểm f+gc), diag-pressure (Memory.simulatePressureNotification
+      critical, chờ 30 s, f+pressure), diag-reload (Page.reload, chờ 60 s, f+reload), mỗi điểm kèm heap và dom_nodes. Các
+      điểm cộng dồn theo thứ tự đó; summary.md ghi hiệu số renderer, gpu, total_nogpu so với f. Chỉ để chẩn đoán (reload
+      không phải biện pháp), không đổi các mẫu trước f:
+        .\mem-bench.ps1 -Scenario b,d,e,i4,f -Runs 1 -Diagnose
+      -BrowserArgs/-DisableFeatures chỉ có tác dụng ở bản đo (env S3B_BENCH_BROWSER_ARGS, S3B_BENCH_DISABLE_FEATURES do
+      main_devtools.go đọc; bản release bỏ qua). Cờ phải bắt đầu bằng --; nhiều --js-flags= được gộp thành một; không nhận
+      --remote-debugging-*, --user-data-dir*, --disable-features (dùng -DisableFeatures). Script ghi cờ vào summary.md và kiểm
+      cờ có trong CommandLine của browser/renderer/gpu (Ghi chú). Số đo có cờ không so trực tiếp với nền không cờ.
   (f) Số đo trước/sau tối ưu luôn so cùng cách đo (bản đo + CDP). Sai số build và CDP nằm trong summary.md.
       Công thức các cột Go (cũng ghi trong summary.md): go_runtime = probe.total - probe.heapReleased; go_private = PrivateBytes
       của process Go; native_other = go_private - go_runtime (DLL Rust, tokio, native khác; âm = probe lớn hơn PrivateBytes).

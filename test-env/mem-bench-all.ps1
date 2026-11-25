@@ -17,10 +17,13 @@
   Số lần lặp mỗi kiểu lượt chạy (mặc định 3).
 
 .PARAMETER Scenario
-  a, b, c, d, e, f, i4 hoặc all (mặc định), như mem-bench.ps1.
+  a, b, c, d, e, f, g, i4, all (mặc định) hoặc danh sách ngăn bằng dấu phẩy (ví dụ b,d,e,i4,f), như mem-bench.ps1.
 
 .PARAMETER OutDir
   Thư mục kết quả (mặc định test-env/mem/report/<ngày>_<giờ>).
+
+.PARAMETER Diagnose
+  Chuyển cho mem-bench.ps1 -Diagnose (chẩn đoán renderer/GPU sau mẫu f; -Scenario phải có f).
 
 .PARAMETER SkipBuild
   Dùng bản build sẵn ở build/bin và build/bin/bench.
@@ -31,10 +34,16 @@
 [CmdletBinding()]
 param(
     [int]$Runs = 3,
-    [ValidateSet('a', 'b', 'c', 'd', 'e', 'f', 'i4', 'all')][string]$Scenario = 'all',
+    [string[]]$Scenario = @('all'),
     [string]$OutDir,
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$Diagnose
 )
+
+# Kiểm -Scenario sớm (trước khi bật MinIO/build), cùng danh sách với mem-bench.ps1.
+foreach ($sc in @($Scenario | ForEach-Object { $_ -split ',' } | ForEach-Object { $_.Trim() } | Where-Object { $_ })) {
+    if ($sc -notin @('a', 'b', 'c', 'd', 'e', 'f', 'g', 'i4', 'all')) { throw "-Scenario '$sc' không hợp lệ (a, b, c, d, e, f, g, i4, all hoặc danh sách ngăn bằng dấu phẩy)." }
+}
 
 # Continue: lệnh native ghi stderr không thành lỗi dừng ở PS 5.1; mỗi bước tự kiểm $LASTEXITCODE.
 $ErrorActionPreference = 'Continue'
@@ -149,8 +158,8 @@ try { do {
     }
 
     # 6. Đo
-    $null = Invoke-Step "mem-bench -Scenario $Scenario -Runs $Runs" {
-        & $bench -Scenario $Scenario -Runs $Runs -OutDir $OutDir
+    $null = Invoke-Step "mem-bench -Scenario $($Scenario -join ',') -Runs $Runs" {
+        & $bench -Scenario $Scenario -Runs $Runs -OutDir $OutDir -Diagnose:$Diagnose
         if (-not (Test-Path $summary)) { throw 'không có summary.md' }
     }
     $timings = Join-Path $OutDir 'timings.csv'
