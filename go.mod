@@ -6,10 +6,10 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.48.0
 	github.com/aws/aws-sdk-go-v2/config v1.33.21
 	github.com/aws/aws-sdk-go-v2/credentials v1.21.3
-	github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.5.11
+	github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager v0.5.12
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.116.0
 	github.com/aws/aws-sdk-go-v2/service/sts v1.53.0
-	github.com/aws/smithy-go v1.28.9
+	github.com/aws/smithy-go v1.28.10
 	github.com/google/uuid v1.6.0
 	github.com/minio/madmin-go/v4 v4.11.0
 	github.com/minio/minio-go/v7 v7.4.1
@@ -397,7 +397,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/tools v0.8.2 // indirect
 	howett.net/plist v1.0.2-0.20250314012144-ee69052608d9 // indirect
-	modernc.org/libc v1.82.12 // indirect
+	modernc.org/libc v1.82.13 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.13.0 // indirect
 	mvdan.cc/gofumpt v0.12.0 // indirect

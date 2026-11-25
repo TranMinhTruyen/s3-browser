@@ -10,13 +10,14 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 
 [[package]]
 name = "ahash"
-version = "0.8.12"
+version = "0.8.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a15f179cd60c4584b8a8c596927aadc462e27f2ca70c04e0071964a73ba7a75"
+checksum = "0fca89247609239eeb6915e6991111866b92d7b31025e69302bbf430cc4d2c38"
 dependencies = [
  "cfg-if",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
+ "serde",
  "version_check",
  "zerocopy",
 ]
@@ -315,29 +316,28 @@ checksum = "be95d4a884358a21a199689323c29e9256b4a1b315e22f183d155422041d3a9a"
 
 [[package]]
 name = "const-random"
-version = "0.1.18"
+version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87e00182fe74b066627d63b85fd550ac2998d4b0bd86bfed477a0ae4c7c71359"
+checksum = "d38d4bb3e79c716fd0330d8da84171b0135e59e01076e99f22b75a64c56e952c"
 dependencies = [
  "const-random-macro",
 ]
 
 [[package]]
 name = "const-random-macro"
-version = "0.1.16"
+version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f9d839f2a20b0aee515dc581a6172f2321f96cab76c1a38a4c584a194955390e"
+checksum = "d66bb491e9fc48cb3fed9d57df886880a751d540d645ebc86b6d9d35b8fa8457"
 dependencies = [
- "getrandom 0.2.17",
- "once_cell",
+ "getrandom 0.4.3",
  "tiny-keccak",
 ]
 
 [[package]]
 name = "constant_time_eq"
-version = "0.6.1"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9eb6feb175df65d0a3ccd3e73484e940d0ac664e8034f0519fd49a93db3071d9"
+checksum = "144e7f1de087984240b7816d47f698b414979faa6f40839c5b86d6bd47db57b7"
 dependencies = [
  "rustversion",
 ]
@@ -399,9 +399,9 @@ checksum = "217698eaf96b4a3f0bc4f3662aaa55bdf913cd54d7204591faa790070c6d0853"
 
 [[package]]
 name = "crc32fast"
-version = "1.5.5"
+version = "1.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b929dd2a135771f40afabd1073f85eed59c800b7c61901e5c254270497dad64"
+checksum = "fd9ae8fcb3ea71b0b26338b4ffb13006bb175de8fd07921089a906ce7e5e6945"
 dependencies = [
  "cfg-if",
 ]
@@ -1653,9 +1653,9 @@ dependencies = [
 
 [[package]]
 name = "pretty-hex"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a65843dfefbafd3c879c683306959a6de478443ffe9c9adf02f5976432402d7"
+checksum = "e4f0ef5907a6369b0ab657be63621a651e2c2c9d2eb4f0ea43b4b91bab4c9c58"
 
 [[package]]
 name = "proc-macro-crate"
@@ -2704,9 +2704,9 @@ dependencies = [
 
 [[package]]
 name = "toml_edit"
-version = "0.25.20+spec-1.1.0"
+version = "0.25.21+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e76360e201d6dbd6583e17795ba71a88f47365a9139c8450a7979c32303b8e73"
+checksum = "88497dab46de5bf343ec66b05c251e48c6213f3e9170c70a70a823f7abe886a4"
 dependencies = [
  "indexmap",
  "toml_datetime",
@@ -2716,9 +2716,9 @@ dependencies = [
 
 [[package]]
 name = "toml_parser"
-version = "1.1.6+spec-1.1.0"
+version = "1.1.7+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6769c452d71ba30696c6b37770c439a9cc9110f47f7d5cdbeda79840ef5ea31"
+checksum = "0bb28d6e049a9766c3bd91a8326e6179f5b132dec87906bb97018ef7a2f3431a"
 dependencies = [
  "winnow",
 ]
@@ -3156,18 +3156,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.64"
+version = "0.8.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ed43f3060383c64b000f3c630550aebdfa9d3b76d48de32390483dd2cc7e0865"
+checksum = "32bc8a75f879cd6fe53a6bedf3c28f0e1b914c77424fc2be9e2ec85d7d25aff5"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.64"
+version = "0.8.65"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5cbd820fe3e35fb38c83b6dc7e6b1618bc46e0cd10073ae94e8d52dc468d8b9"
+checksum = "b8bfd2644ea1681f60cf95029ff18aa8ad1cc3f7b8fe37286f8e473bb29f816b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3270,9 +3270,9 @@ dependencies = [
 
 [[package]]
 name = "zlib-rs"
-version = "0.6.8"
+version = "0.6.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b268e58e7c693d7c271f93ffc4ba3b380412554231c85bf61ca7af91042a4112"
+checksum = "aa76918995d776d9dd34d371030be228d021137449771493d56e29f77e4148ac"
 
 [[package]]
 name = "zmij"
