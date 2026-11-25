@@ -56,12 +56,17 @@ New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $OutDir = (Resolve-Path $OutDir).Path
 $script:Fails = New-Object System.Collections.Generic.List[string]
 $script:SetEnv = @()
+$script:StepNo = 0
+$StepTotal = if ($SkipBuild) { 5 } else { 7 }
 
 function Write-Log([string]$Text) { Write-Host ('[{0:HH:mm:ss}] {1}' -f (Get-Date), $Text) }
 
 # Chạy một bước; lỗi thì ghi FAIL và trả $false để bước độc lập sau đó vẫn chạy.
 function Invoke-Step([string]$Name, [scriptblock]$Body) {
     Write-Log "== $Name"
+    # Thanh bước (Id 1); bước đo có thanh % + ETA riêng (Id 2) của mem-bench.ps1.
+    $script:StepNo++
+    Write-Progress -Id 1 -Activity 'mem-bench-all' -Status "Bước $($script:StepNo)/${StepTotal}: $Name" -PercentComplete ([int](100 * ($script:StepNo - 1) / $StepTotal))
     try { $null = & $Body; return $true } catch {
         $script:Fails.Add("${Name}: $($_.Exception.Message)")
         Write-Log "FAIL ${Name}: $($_.Exception.Message)"
@@ -172,6 +177,7 @@ try { do {
         $null = Invoke-Step 'dọn bucket' { Test-BucketCount (Clear-Bucket) }
     }
     foreach ($n in $script:SetEnv) { [Environment]::SetEnvironmentVariable($n, $null, 'Process') }
+    Write-Progress -Id 1 -Activity 'mem-bench-all' -Completed
 }
 
 Write-Log "Kết quả: $summary"

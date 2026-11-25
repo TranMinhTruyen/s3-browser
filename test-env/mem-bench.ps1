@@ -198,6 +198,54 @@ $null = [Native.BenchWin2]::SetProcessDpiAwarenessContext([IntPtr]-4)
 
 function Write-Log([string]$Text) { Write-Host ('[{0:HH:mm:ss}] {1}' -f (Get-Date), $Text) }
 
+# ---------- tiến độ (Write-Progress, chỉ hiện khi chạy trong console) ----------
+# Kế hoạch chia thành phần (một lượt app); mỗi phần có thời lượng ước lượng (giây) lấy từ log lần đo all -Runs 3.
+# Phần lớn thời gian là chờ cố định nên ETA sát; phần chạy lố thì ETA tự cộng thêm vì tính theo thời gian thật đã qua.
+$script:Prog = @{ Total = 0; Done = 0; Name = ''; Est = 0; Since = $null; Started = $null }
+
+function Get-MainSessionEstimate {
+    $s = 45   # mở app, heap, đóng app
+    if (Has 'a') { $s += 370 }
+    if ($useS3) { $s += 10 }
+    if (Has 'b') { $s += 420 }
+    if (Has 'c') { $s += 60 }
+    if (Has 'd') { $s += 430 } elseif ($needSql) { $s += 15 }
+    if (Has 'e') { $s += $(if ($useS3) { 565 } else { 480 }) }
+    if (Has 'i4') { $s += 385 }
+    if (Has 'f') { $s += 1830 }
+    if ($Diagnose) { $s += 180 }
+    return $s
+}
+
+# Bắt đầu phần kế: cộng ước lượng của phần trước vào Done.
+function Start-Unit([string]$Name, [int]$Est) {
+    $p = $script:Prog
+    $p.Done += $p.Est; $p.Name = $Name; $p.Est = $Est; $p.Since = Get-Date
+    Show-Progress 'bắt đầu'
+}
+
+function Show-Progress([string]$Status) {
+    $p = $script:Prog
+    if (-not $p.Since) { return }
+    $now = Get-Date
+    $left = [math]::Max(0, $p.Total - $p.Done - $p.Est) + [math]::Max(0, $p.Est - ($now - $p.Since).TotalSeconds)
+    $spent = ($now - $p.Started).TotalSeconds
+    $pct = [int][math]::Min(99, 100 * $spent / [math]::Max(1, $spent + $left))
+    Write-Progress -Id 2 -Activity "mem-bench: $($p.Name)" -Status "$pct% | $Status" -PercentComplete $pct -SecondsRemaining ([int]$left)
+}
+
+# Ngủ $Seconds giây, mỗi giây cập nhật thanh đếm ngược (Id 3) và tiến độ tổng.
+function Wait-Progress([int]$Seconds, [string]$What) {
+    $end = (Get-Date).AddSeconds($Seconds)
+    while (($left = ($end - (Get-Date)).TotalSeconds) -gt 0) {
+        $status = 'còn {0:mm\:ss} / {1:mm\:ss}' -f [timespan]::FromSeconds($left), [timespan]::FromSeconds($Seconds)
+        Write-Progress -Id 3 -Activity $What -Status $status -PercentComplete ([int](100 * ($Seconds - $left) / $Seconds))
+        Show-Progress $What
+        Start-Sleep -Milliseconds ([int][math]::Min(1000, [math]::Max(1, $left * 1000)))
+    }
+    Write-Progress -Id 3 -Activity $What -Completed
+}
+
 # ---------- chuẩn bị dữ liệu ----------
 if ($PrepareData) {
     if (-not $S3AccessKey -or -not $S3SecretKey) { throw 'Đặt env S3B_BENCH_ACCESS_KEY và S3B_BENCH_SECRET_KEY (tài khoản admin của MinIO test-env).' }
@@ -394,6 +442,7 @@ function ConvertTo-StepResult($Lines) {
 function Invoke-MemUi([string]$Step, $App, [string[]]$StepArgs = @()) {
     # PS 5.1: với 'Stop', stderr của node qua `2>&1` thành lỗi dừng; JSON {ok:false} của mem-ui mới là kết quả cần đọc.
     $ErrorActionPreference = 'Continue'
+    Show-Progress "mem-ui $Step"
     Push-Location $docs
     try { $out = & node scripts/mem-ui.mjs $Step --port $App.Port @StepArgs 2>&1 | ForEach-Object { "$_" } } finally { Pop-Location }
     $r = ConvertTo-StepResult $out
@@ -431,6 +480,7 @@ function Wait-MemUi($Job, $App, [scriptblock]$OnTick = $null, $Phase = $null) {
         elseif (-not $before -or $snap['total'] -gt $before['total']) { $before = $snap }
         $series.Add([pscustomobject]@{ sec = [int]((Get-Date) - $t0).TotalSeconds; phase = $(if ($late) { 'transfer' } else { 'dialog' }); total = $snap['total']; go = $snap['go']; browser = $snap['browser']; renderer = $snap['renderer']; gpu = $snap['gpu'] })
         if ($OnTick) { & $OnTick }
+        Show-Progress "$([System.IO.Path]::GetFileNameWithoutExtension($Job.Out)) (đang chạy)"
         Start-Sleep -Seconds 2
     }
     $lines = if (Test-Path $Job.Out) { @(Get-Content $Job.Out) } else { @() }
@@ -631,10 +681,10 @@ function Wait-AppAge($App, [int]$Seconds) {
     # Truy vấn CIM đầu tiên chậm (có thể hàng chục giây): chạy trước để mốc đo không bị trễ.
     if ($Seconds - ((Get-Date) - $App.Started).TotalSeconds -gt 20) { $null = Get-Snapshot $App.Pid }
     $left = $Seconds - ((Get-Date) - $App.Started).TotalSeconds
-    if ($left -gt 0) { Write-Log "  chờ $([int]$left) giây"; Start-Sleep -Seconds ([int]$left) }
+    if ($left -gt 0) { Write-Log "  chờ $([int]$left) giây"; Wait-Progress ([int]$left) "chờ app đủ $Seconds giây" }
 }
 
-function Wait-Idle([int]$Seconds) { Write-Log "  chờ $Seconds giây"; Start-Sleep -Seconds $Seconds }
+function Wait-Idle([int]$Seconds) { Write-Log "  chờ $Seconds giây"; Wait-Progress $Seconds "để yên $Seconds giây" }
 
 # ---------- dữ liệu cho c ----------
 # Thư mục nhóm đặt tên theo lượt (a<run>-g01) để các lượt không ghi đè nhau trong bucket. Tiền tố 'a' để S3 (xếp theo tên)
@@ -913,7 +963,7 @@ function Invoke-ScenarioF($App) {
     $end = (Get-Date).AddMinutes(30)
     $minute = 0
     while ((Get-Date) -lt $end) {
-        Start-Sleep -Seconds 60
+        Wait-Progress 60 "f: phút $($minute + 1)/30"
         $minute++
         foreach ($kv in (Get-Snapshot $App.Pid).GetEnumerator()) { Add-Row $App "f-min$('{0:D2}' -f $minute)" $kv.Key $kv.Value }
     }
@@ -1233,20 +1283,32 @@ try {
         }
         if ($NoCdp -and (Has 'g')) { throw '-NoCdp không dùng với kịch bản g (cần cổng CDP).' }
         if ($NoCdp -and -not $runMain) { throw '-NoCdp chỉ chạy được a-release: kịch bản g cần cổng CDP.' }
-        if ((Has 'a') -or $NoCdp) {
-            for ($i = 1; $i -le $Runs; $i++) { Invoke-IdleRun $Exe 'release' $i }
+        # Ước lượng (giây): lượt idle 375, lượt nocdp chỉ lấy switch 30, lượt g 300, phiên chính theo kịch bản.
+        $estIdle = 375; $estMain = Get-MainSessionEstimate
+        $idleRelease = (Has 'a') -or $NoCdp
+        $total = 0
+        if ($idleRelease) { $total += $Runs * $estIdle }
+        if (-not $NoCdp) {
+            if (Has 'a') { $total += $Runs * $estIdle }
+            if ($runMain) { if (-not (Has 'a')) { $total += 30 }; $total += $Runs * $estMain }
+            if (Has 'g') { $total += $Runs * 300 }
+        }
+        $script:Prog.Total = $total; $script:Prog.Started = Get-Date
+        if ($idleRelease) {
+            for ($i = 1; $i -le $Runs; $i++) { Start-Unit "a-release run $i/$Runs" $estIdle; Invoke-IdleRun $Exe 'release' $i }
         }
         if (-not $NoCdp) {
-            if (Has 'a') { for ($i = 1; $i -le $Runs; $i++) { Invoke-IdleRun $BenchExe 'nocdp' $i } }
+            if (Has 'a') { for ($i = 1; $i -le $Runs; $i++) { Start-Unit "a-nocdp run $i/$Runs" $estIdle; Invoke-IdleRun $BenchExe 'nocdp' $i } }
             if ($runMain) {
                 # Q23: lượt không CDP để so switch với lượt CDP, nên luôn có, kể cả khi không chạy a.
-                if (-not $script:Switches.ContainsKey('nocdp')) { Stop-App (Start-App $BenchExe 'nocdp' 0) }
-                for ($i = 1; $i -le $Runs; $i++) { Invoke-MainSession $i }
+                if (-not $script:Switches.ContainsKey('nocdp')) { Start-Unit 'nocdp (lấy switch)' 30; Stop-App (Start-App $BenchExe 'nocdp' 0) }
+                for ($i = 1; $i -le $Runs; $i++) { Start-Unit "phiên chính cdp run $i/$Runs" $estMain; Invoke-MainSession $i }
             }
-            if (Has 'g') { for ($i = 1; $i -le $Runs; $i++) { Invoke-ScenarioG $i } }
+            if (Has 'g') { for ($i = 1; $i -le $Runs; $i++) { Start-Unit "g run $i/$Runs" 300; Invoke-ScenarioG $i } }
         }
     }
 } finally {
+    Write-Progress -Id 2 -Activity 'mem-bench' -Completed
     $script:Samples | Export-Csv -Path (Join-Path $OutDir 'samples.csv') -NoTypeInformation -Encoding UTF8
     $script:Timings | Export-Csv -Path (Join-Path $OutDir 'timings.csv') -NoTypeInformation -Encoding UTF8
     Write-Summary $started
