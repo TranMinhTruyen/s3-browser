@@ -73,7 +73,7 @@ impl Kind {
         }
     }
 
-    /// Tên container trong `docker-compose-db.yml` (để lấy phiên bản image).
+    /// Tên container trong `test-env/docker-compose.yml` (để lấy phiên bản image).
     pub fn container(self) -> Option<&'static str> {
         match self {
             Kind::Sqlite => None,

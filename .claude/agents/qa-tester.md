@@ -25,7 +25,7 @@ Chỉ `sprints/sprint-NN/testcases.md` và `sprints/sprint-NN/evidence/**` (ho�
 1. Đọc `requirement.md`, `plan.md`, mục "Quyết định" liên quan trong `memory/MEMORY.md`. Với câu hỏi về code chạy `graphify query` trước khi grep/đọc file. Đọc locale `en` để lấy đúng nhãn UI (tên nút, tiêu đề modal, nội dung message theo mã `S3E...`).
 2. Mỗi yêu cầu (R1, R1a...) có ít nhất: 1 case luồng chính, các case nhánh lỗi/cảnh báo có message code trong plan, case biên (rỗng, rất dài, ký tự đặc biệt, nhiều phần tử), case huỷ giữa chừng nếu có, case hồi quy cho hành vi cũ mà thay đổi có thể làm hỏng (theo mục rủi ro của plan). Không viết case chỉ để lặp lại unit test.
 3. Mỗi case ghi rõ **Cách chạy**:
-   - `auto-ui`: chạy được trên app server mode bằng Playwright.
+   - `auto-ui`: chạy được trên app server mode bằng Playwright Test (`frontend/e2e`).
    - `auto-cli`: chứng minh bằng lệnh/log (ví dụ `go test` của go-tester, `vitest` theo tên test, `cargo test`).
    - `manual`: không tự động được (hộp thoại native của Windows, kéo thả từ Explorer, registry `launchOnStartup`, updater bản cài đặt, OIDC qua trình duyệt ngoài, máy yếu). Ghi lý do.
 4. Môi trường lấy từ `test-env/README.txt` và `test-env/test-profiles.txt` (tên profile, stack Docker), không chép access key hay secret vào test case.
@@ -37,10 +37,19 @@ Chỉ `sprints/sprint-NN/testcases.md` và `sprints/sprint-NN/evidence/**` (ho�
 2. `auto-cli`: không chạy lại cả bộ test. Lấy kết quả từ báo cáo verifier/tester bên gọi đưa, trích đúng dòng chứng minh (tên test, PASS/FAIL, % coverage) vào `evidence/<branch-slug>/<TC-ID>.log`. Cần chạy riêng một test để chứng minh thì chạy đúng test đó bằng lệnh trong `CLAUDE.md`.
 3. `auto-ui`:
    - Môi trường: kiểm Docker và stack cần dùng (`docker ps`). Stack chưa chạy thì dựng theo `test-env/README.txt`; Docker không có hoặc lỗi thì đánh dấu các case đó `BLOCKED` kèm lý do, không bỏ qua im lặng.
-   - Build app server mode vào thư mục tạm ngoài repo, theo header của `docs/scripts/shots.mjs`: `go build -tags server,production,portable -o <tmp>/S3Browser-server.exe .`, chạy với `WAILS_SERVER_PORT=<cổng trống>` ở chế độ nền và ghi lại PID.
-   - Viết script Playwright `evidence/<branch-slug>/run.mjs` (chạy lại được, không chứa secret): nạp `playwright` qua `createRequire` trỏ tới `docs/package.json`, đọc URL và credential từ biến môi trường, lấy nhãn UI từ file locale như `shots.mjs`. Mỗi case chụp ảnh trước và sau bước kiểm (`<TC-ID>-01.png`, `-02.png`...), viewport 1280x800, `deviceScaleFactor: 1`, ngôn ngữ `en` trừ khi case kiểm ngôn ngữ khác. Thu `console` và `pageerror` của trang vào `<TC-ID>.console.log`; có error/warning React là FAIL theo luật console sạch.
-   - Hộp thoại native, updater, kéo thả: giả bằng `window._wails.dispatchWailsEvent` hoặc `page.route` theo cách `shots.mjs` đã làm, và ghi rõ trong evidence là "giả lập"; phần không giả được chuyển `manual`.
-   - **Dọn dẹp, bắt buộc kể cả khi lỗi giữa chừng**: dừng app theo PID, xoá thư mục build tạm, xoá profile/bucket test đã tạo, dừng stack Docker chỉ khi chính bạn đã bật nó.
+   - Dùng bộ Playwright Test E2E có sẵn ở `frontend/e2e/` (`frontend/playwright.config.ts`), không tự build hay chạy app bằng tay:
+     - Build một lần: `bun run --cwd frontend e2e:build` (DLL `s3b_db.dll` + `build/bin/S3Browser-server.exe`, tag `server,production,portable`). Lỗi build thì các case `auto-ui` là `BLOCKED` kèm lỗi.
+     - `webServer` của config (`e2e/server.mjs`) tự chép exe + DLL vào `frontend/e2e/.run/app` (dữ liệu trống, không đụng dữ liệu của người dùng), chạy ở cổng `E2E_PORT` (mặc định 8299) và tự dừng app khi chạy xong.
+   - Viết spec evidence `evidence/<branch-slug>/evidence.spec.mts` (chạy lại được, không chứa secret). Bắt buộc đuôi `.spec.mts` (thư mục `sprints/` không phải ESM) và chỉ import từ `../../../../frontend/e2e/fixtures.ts` và `../../../../frontend/e2e/s3.ts`, không import thẳng `@playwright/test` (ngoài `import type`) vì sẽ resolve sai bản:
+     - `test`, `expect` của `fixtures.ts`: mỗi test mở app với setting mặc định (`DEFAULT_SETTINGS`, ngôn ngữ `en`), viewport 1280x800, và **tự FAIL nếu console có warning/error hoặc pageerror** (đã lọc banner Wails server mode).
+     - `t(namespace, key, params, lang)` lấy nhãn UI từ file locale, không hard-code chuỗi; `switchMode(page, 's3'|'sql')`; `hideToasts(page)`; `callBackend(page, handler, method, ...args)` chỉ dùng cho setup/dọn dẹp, không dùng để chứng minh kết quả.
+     - S3: `seedBucket`/`dropBucket`/`s3()` của `s3.ts`, endpoint và credential chỉ đọc từ `E2E_S3_ENDPOINT`, `E2E_S3_ACCESS_KEY`, `E2E_S3_SECRET_KEY`, `E2E_S3_REGION` (bên gọi/người dùng đặt; không đọc secret từ file của `test-env/`). Thiếu biến thì `test.skip` và ghi case là `BLOCKED`.
+     - Mỗi case một `test('<TC-ID> ...')`, `test.describe.configure({ mode: 'serial' })` khi các case phụ thuộc nhau. Tham khảo cách viết ở `frontend/e2e/*.spec.ts`.
+     - Chụp ảnh trước và sau bước kiểm: `page.screenshot({ path: join(import.meta.dirname, '<TC-ID>-01.png') })`, `-02.png`...
+     - Log: gắn `page.on('console'|'pageerror')` ở đầu test, ghi toàn bộ ra `<TC-ID>.console.log` cạnh ảnh (kể cả khi rỗng, ghi "console sạch"). Lỗi console làm test FAIL theo luật console sạch.
+   - Chạy (trong `frontend/`): `E2E_DIR=../sprints/sprint-NN/evidence/<branch-slug> node_modules/.bin/playwright.exe test` (macOS/Linux bỏ `.exe`). Trace/ảnh lỗi và báo cáo HTML nằm ở `frontend/e2e/.run/` (bị gitignore), chỉ trích phần cần vào evidence. Kết quả PASS/FAIL của từng `test` là căn cứ chấm, không tự sửa assert cho qua.
+   - Hộp thoại native, updater, kéo thả: giả bằng `window._wails.dispatchWailsEvent` hoặc `page.route` theo cách `docs/scripts/shots.mjs` đã làm, và ghi rõ trong evidence là "giả lập"; phần không giả được chuyển `manual`.
+   - **Dọn dẹp, bắt buộc kể cả khi lỗi giữa chừng**: xoá profile/bucket test trong `afterAll` của spec (app tự dừng và `frontend/e2e/.run/app` được tạo mới mỗi lần chạy), dừng stack Docker chỉ khi chính bạn đã bật nó.
 4. **Bảo mật evidence**: không để access key, secret, token, mật khẩu hay endpoint thật lộ trong ảnh hoặc log. Trước khi chụp, che ô nhập secret (`locator.evaluate` đặt `filter: blur(6px)`) và grep log theo giá trị credential trong biến môi trường; trùng thì thay bằng `***`.
 5. Chấm kết quả từng case: `PASS`, `FAIL` (kèm mong đợi, thực tế, ảnh/log), `BLOCKED` (lý do), `MANUAL` (để người dùng tự test, kèm bước). Không ghi PASS cho case chưa thực sự chạy.
 6. Cập nhật cột Kết quả (và Ghi chú: mong đợi/thực tế khi FAIL, lý do khi BLOCKED, "giả lập" nếu có) trong `testcases.md`.
@@ -62,7 +71,7 @@ ID dạng `TC-<mã yêu cầu>-<NN>`. Giữ nguyên tên và thứ tự cột (s
 
 ## Tên file evidence
 
-Trong `evidence/<branch-slug>/`: ảnh `<TC-ID>-NN.png` (NN là thứ tự bước, 2 chữ số), log `<TC-ID>.console.log` hoặc `<TC-ID>.log`, script `run.mjs`. Script Excel nhặt file theo tiền tố `<TC-ID>-` / `<TC-ID>.`, nên không đặt tên khác.
+Trong `evidence/<branch-slug>/`: ảnh `<TC-ID>-NN.png` (NN là thứ tự bước, 2 chữ số), log `<TC-ID>.console.log` hoặc `<TC-ID>.log`, spec `evidence.spec.mts`. Script Excel nhặt file theo tiền tố `<TC-ID>-` / `<TC-ID>.`, nên không đặt tên khác.
 
 ## Kết quả trả về
 

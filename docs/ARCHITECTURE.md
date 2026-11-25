@@ -6,8 +6,9 @@ A short tour of the code for new developers. Conventions live in `CLAUDE.md`; th
 
 ## 1. Stack
 
-- Desktop app on **Wails v3**: Go backend + React 19 / TypeScript frontend in a WebView.
+- Desktop app on **Wails v3**: Go backend + React 19 / TypeScript frontend in a WebView. Windows only.
 - Backend: AWS SDK v2 (S3), `madmin-go` (MinIO admin), SQLite (modernc) + goose migrations + sqlc, `slog`.
+- Native DB library: **Rust** `s3b_db.dll` (tokio + one low-level driver per database), loaded by Go **without cgo**. It does all the work of the SQL mode on the user's databases (section 2.11).
 - Frontend: Mantine 9, zustand 5 + immer, NiceModal, i18next (7 languages: en / vi / ja / zh-CN / zh-TW / ru / de), sonner (toast), `@tanstack/react-virtual`, zod, dayjs. Package manager: **bun**.
 
 ```
@@ -21,14 +22,17 @@ s3-browser
 │   │   ├── profile/        connection profiles (encrypted secrets)
 │   │   ├── master/         master data (regions...)
 │   │   ├── bucket/         connect, buckets, bucket policy, objects, upload, download, search
+│   │   ├── db/             SQL mode: DB profiles, connections, queries -> calls s3b_db.dll
 │   │   ├── setting/        app settings (settings.json), remembered tabs (tabs.json), autostart
 │   │   └── update/         self-update from GitHub Releases
-│   └── pkg/                cnst, db (schemas, queries, sqlc), logger, portable, utils
+│   └── pkg/                cnst, db (schemas, queries, sqlc), logger, memprobe, portable, utils
 ├── models/                 input/output models + alias.go
+├── rust/                   Cargo workspace of s3b_db.dll: src/{ffi,dispatch,registry,runtime}.rs, protocol/, drivers/, tests/
 ├── frontend/
 │   ├── bindings/           GENERATED Wails bindings (do not edit)
 │   └── src/                common, components, pages (pages/s3, pages/sql), locales, test
-├── build/                  platform packaging (Windows NSIS, portable, ...)
+├── build/                  platform packaging (Windows NSIS, portable, ...) and Taskfiles (build:dll, copy:dll)
+├── test-env/               Docker test servers (MinIO, Keycloak, LDAP, 6 databases), bench scripts
 └── docs/                   this documentation + PDF tooling
 ```
 
@@ -45,9 +49,11 @@ flowchart LR
   S --> G[(modules/global)]
   S --> DB[(SQLite via sqlc)]
   S --> S3[(S3 / MinIO)]
+  S --> DLL[[s3b_db.dll - Rust]]
+  DLL --> UDB[(user databases)]
 ```
 
-- `main.go` creates the logger and the Wails app, registers the five handlers (bucket, master, profile, setting, update) with `application.NewService`, and creates the main window (`EnableFileDrop: true`).
+- `main.go` creates the logger and the Wails app, registers the six handlers (bucket, db, master, profile, setting, update) with `application.NewService`, and creates the main window (`EnableFileDrop: true`).
 - `internal/app.go` (`NewApp`) opens and migrates the database, creates the `KeyManager` (secret encryption), builds the modules, then the handlers on top. `Shutdown` cancels transfers, disconnects everything and closes the DB.
 - **Handlers** (`internal/handlers/*_handler.go`) are thin: they only call the module. Their public methods become the TypeScript bindings.
 - **Modules** (`internal/modules/<name>/module.go`) expose the documented public API. Work is split into unexported submodules (`submoduleXxxMng`, constructor `newSubmoduleXxxMng`) in `submodule_<x>_mng.go`.
@@ -146,6 +152,109 @@ A profile has a `provider` (`aws` or `minio`) and an `authType` (`internal/pkg/c
 - **State**: `UpdateStateOutput` (`supported`, `state`, `currentVersion`, `version`, `releaseUrl`, `written`, `total`, `errorCode`, the `UPE...` code when `state` is `error`). `state` is `idle`, `checking`, `upToDate`, `available`, `downloading`, `ready` or `error`. Every change, and every 200 ms while downloading, is sent with the event `update:state-changed`.
 - **Messages**: `UPS001` (latest version), `UPE001` (cannot check), `UPE002` (GitHub rate limit), `UPE003` (cannot download), `UPE004` (checksum), `UPE005` (cannot run the installer), `UPE006` (no installer for this machine).
 
+### 2.11 SQL mode: how Go calls Rust (`modules/db` -> `s3b_db.dll`)
+
+**All the work on a database the user connects to is done in Rust**: opening the connection, running SQL, splitting statements, the object tree, paging, converting values and cancelling. Go is only the bridge: it checks the input, sends a request, maps errors to messages and passes the result on. The frontend does not know Rust exists; it calls `DbHandler` like any other binding. The app's own SQLite (profiles, settings) stays in Go.
+
+```mermaid
+sequenceDiagram
+  participant FE as React (callIPC)
+  participant M as DbHandler + modules/db
+  participant N as submoduleNativeMng
+  participant F as ffi.rs
+  participant D as dispatch.rs
+  participant A as driver actor
+  FE->>M: ExecuteSql(input) (binding)
+  M->>N: callNativeRaw(ctx, "execute", params)
+  N->>F: s3b_call(request JSON), syscall without cgo
+  F->>D: dispatch::call (tokio, block_on)
+  D->>A: Cmd::Execute (mpsc channel)
+  A-->>D: ExecuteResult (oneshot channel)
+  D-->>F: {"ok":true,"result":{...}}
+  F-->>N: out_ptr / out_len (Rust buffer)
+  N->>F: s3b_free(ptr, len) after copying
+  N-->>M: result bytes, not decoded
+  M-->>FE: Output.Body = the same JSON
+```
+
+**Loading the DLL** (`internal/modules/db/native_windows.go`)
+
+- The app is built with `CGO_ENABLED=0`. Go loads the DLL with `golang.org/x/sys/windows`: `LoadLibraryEx(<exe folder>\s3b_db.dll, LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32)`. The path is absolute, so no folder on the search path can substitute the DLL.
+- `GetProcAddress` finds the four exports, then `s3b_init` runs once. Every call goes through `syscall.SyscallN`.
+- The DLL is loaded by the first call (usually Connect), not at app start. A failed load is retried by the next call and reported as `DBE009`. On other operating systems `native_other.go` only returns an error.
+- The DLL is linked with `+crt-static` (`rust/.cargo/config.toml`), so it does not need `VCRUNTIME140.dll`.
+
+**FFI contract** (`rust/src/ffi.rs`)
+
+| Export | Signature | Role |
+|---|---|---|
+| `s3b_init` | `() -> i32` | Creates the single tokio runtime and the TLS provider. |
+| `s3b_call` | `(req_ptr, req_len, *out_ptr, *out_len) -> i32` | One JSON request; blocks until the JSON response is ready and returns a buffer owned by Rust. |
+| `s3b_cancel` | `(id: u64)` | Asks to interrupt request `id`. |
+| `s3b_free` | `(ptr, len)` | Frees a buffer returned by `s3b_call`. |
+
+- The return value only reports a failed call: `0` ok, `1` bad argument, `2` init failed, `-1` panic. Errors of the work itself (bad SQL, closed connection...) come back inside the JSON.
+- Every export is wrapped in `catch_unwind` and the release profile keeps `panic = "unwind"`, so a Rust panic never crosses into Go. `unwrap`/`expect` are not used outside tests.
+- Memory: Rust copies the request and keeps no pointer to Go memory after it returns. Go copies the response and always calls `s3b_free`: a buffer allocated by Rust is freed only by Rust.
+
+**Protocol** (`rust/src/protocol/mod.rs`, camelCase JSON)
+
+```jsonc
+// request: id is unique per call (atomic counter in Go) and is also the key of s3b_cancel
+{"id": 7, "method": "execute", "params": {"connId": 1, "sql": "select 1", "pageSize": 10000, "maxPageBytes": 16777216}}
+// success
+{"ok": true, "result": {...}}
+// failure
+{"ok": false, "error": {"code": "sqlError", "message": "no such table: t"}}
+```
+
+- Methods: `open`, `close`, `execute`, `fetch`, `schemaTree`, `tableInfo`, `tableRows`.
+- Error codes are stable and mapped by `errorCodeMessage` (`submodule_native_mng.go`): `invalidRequest` `DBE001`, `openFailed` `DBE002`, `notADatabase` `DBE003`, `connNotFound` `DBE004`, `cursorNotFound` `DBE005`, `sqlError` `DBE006` (shown with the statement, not as a toast), `tableNotFound` `DBE007`, any other code `DBE008`. `cancelled` returns `Result=false` silently. A failed load is `DBE009`, a Go timeout `DBE015`. New codes need keys in the 7 `ipcMessage.json` files.
+
+**Inside Rust**: `ffi.rs` -> `dispatch.rs` -> `drivers/<db>/`
+
+- `dispatch::call` runs each request as a task on the single multi-thread tokio runtime (`runtime.rs`) and waits for it with `block_on`, because `s3b_call` is synchronous for Go. A panic inside the task becomes the error `internal`.
+- `dispatch` parses the request and routes it by `method`. Parse errors never repeat the bad value, so a password cannot leak into a message.
+- Each connection is an **actor**: one tokio task that alone owns the connection. It receives commands (`Cmd::Execute`, `Fetch`, `TableRows`, `SchemaTree`, `TableInfo`, `Close`) on an `mpsc` channel and answers on a `oneshot` channel, so no lock is needed around the connection (like a goroutine with a channel in Go).
+- `registry.rs` maps `connId` to the channel of its actor, and a request `id` to its connection and `CancelSignal`.
+- Each database uses its lowest-level driver, which writes the rows straight to JSON text with capacity allocated up front:
+
+| Database | Rust driver |
+|---|---|
+| SQLite | `libsqlite3-sys` (C API, bundled); `sqlx` only to open the connection |
+| PostgreSQL | `tokio-postgres` |
+| MySQL / MariaDB | `mysql_async` |
+| SQL Server | `tiberius` |
+| MongoDB | `mongodb` (raw BSON) |
+| Redis | `redis` |
+
+**Results are not decoded in Go**
+
+`callNativeRaw` checks that the response starts with `{"ok":true,"result":` and slices out the result bytes without parsing them. `StatementResult`, `ExecuteSqlOutput` and `FetchRowsOutput` (`models/db`) keep these bytes, and their `MarshalJSON` (`query_output_json.go`, build tag `!wailsgen`) writes them unchanged into the Wails response, so a page of 10,000 rows is never decoded and encoded again. The bindings generator renders a type with `MarshalJSON` as `any`, so bindings are generated with `-tags=wailsgen` (section 4). Small results (`open`, `schemaTree`, `tableInfo`) are decoded normally with `callNative[T]`.
+
+**Cancel and timeouts**
+
+- The Go context of a call ends when the frontend aborts it (`AbortController`), when the app shuts down, or at the timeout: 5 minutes for `ExecuteSql`, `OpenTableRows` and `FetchRows` (`queryTimeout`), 30 seconds to connect and read metadata (`metaTimeout`). `FetchRows` with `All` has no page limit and no timeout.
+- When the context ends, a goroutine in `callNativeRaw` calls `s3b_cancel(id)` every 100 ms until `s3b_call` returns, because the first cancel can arrive before Rust has registered the request.
+- Rust sets the `CancelSignal`, interrupts the running statement and answers `cancelled`. Go returns `Result=false` silently when the frontend canceled, and `DBE015` on timeout.
+
+**Connections and paging**
+
+- One **main connection** per profile (`ConnectDb`), used for the object tree and table info, and **one connection per SQL tab**, opened at the first run in that tab. `CloseDbTab` closes the connection of a tab, `DisconnectDb` closes every connection of the profile, and `Close` (shutdown) closes them all.
+- Results are paged: the first page and each next page hold at most 10,000 rows or 16 MiB (`pageSize`, `maxPageBytes`). The rest stays in a cursor on the Rust side (`cursorId`); the whole result is never read into memory.
+
+**Current status**
+
+- Rust has drivers for SQLite, PostgreSQL, MySQL, MariaDB, SQL Server, MongoDB and Redis, tested against real servers.
+- Go opens only **SQLite** for now (`openParams{"sqlite", path, readOnly}` in `submodule_conn_mng.go`).
+- PostgreSQL profiles can be saved (`db_profiles`), but their connect, object tree and rows in the frontend are still mocks (`frontend/src/pages/sql/mock`). The other network databases are not in the UI yet.
+
+**Adding a capability**
+
+1. Rust: params and result types in `protocol`, a branch in `dispatch::route`, a `Cmd` variant, the work in each driver, tests with `cargo test`.
+2. Go: a params struct and a call with `callNative[T]` (small result) or `callNativeRaw` (rows), new error codes mapped to `DBE...` with keys in the 7 languages, then the module method, the handler and regenerated bindings.
+3. Never do the work in Go as a shortcut: Go stays a bridge.
+
 ## 3. Frontend
 
 ### 3.1 Calling the backend: `callIPC`
@@ -191,7 +300,11 @@ Large lists (objects, buckets, uploader, history, file lists) are virtualized wi
 
 **Remembered tabs**: `useTabPersistence` (called in `App.tsx`) saves the tab order, active tab and profile of each tab to `tabs.json` through `SaveTabState` 500 ms after they stop changing and on `pagehide`. At start `restoreTabsFromDisk` (`pages/s3/utils/tabPersistence.ts`) loads them with `GetTabState`. If the load fails, saving is disabled for the session so `tabs.json` is never overwritten. A tab whose profile was deleted keeps its place but loses the profile (`normalizeTabProfiles`).
 
-### 3.8 Settings, theme and updates
+### 3.8 SQL mode
+
+`SqlWorkspace` (`pages/sql`) has the profile navbar with the object tree (`dbTreeStore`) and `SqlTabPage` with the SQL tabs (`sqlTabStore`): a CodeMirror editor, Run (Ctrl+E) and Cancel, Find/Replace, and the result panel (one tab per SELECT plus Messages, rows in the virtualized `DataGrid`). `useSqlRunner` calls `ExecuteSql`, loads the next pages with `FetchRows` while scrolling, and calls `CloseDbTab` when a tab is closed or changes profile. Opening a table shows its structure and its data (`useTableRows`, `OpenTableRows`). Profiles are in `dbProfileStore` (`sqlite` or `postgres`).
+
+### 3.9 Settings, theme and updates
 
 `main.tsx` awaits `loadStartupData()` before rendering (loads the settings and `restoreTabsFromDisk()` in parallel), so theme, font, language and saved tabs are ready first (defaults on failure). `settingStore` keeps `saved` (file), `applied` (current session, changed by Apply) and `draft` (form, previewed live); closing the modal reverts to `applied`. `applySettings` sets the Mantine color scheme (in-memory `settingColorSchemeManager`, no localStorage), the `--mantine-font-family` variable and the i18n language.
 
@@ -201,11 +314,13 @@ Colors: use `var(--mantine-color-*)` and `light-dark(<light>, <dark>)`, never ha
 
 ## 4. Bindings and commands
 
-Wails bindings are generated from the Go handlers; regenerate after any change to a handler signature or model:
+Wails bindings are generated from the Go handlers; regenerate after any change to a handler signature or model. The tag `wailsgen` is required (section 2.11):
 
 ```
-go tool wails3 generate bindings -clean=true -ts
+go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts
 ```
+
+The Windows build tasks first build the Rust library (`common:build:dll`: `cargo build --release --target x86_64-pc-windows-msvc` in `rust/`), then copy `s3b_db.dll` next to the exe (`common:copy:dll`). `dev`, `build`, `package` and `build:portable` do this by themselves, and the NSIS installer and the portable folder include the DLL. Stop the running app before building, otherwise the DLL cannot be replaced.
 
 | Task | Command (run at the repo root unless noted) |
 |---|---|
@@ -215,9 +330,12 @@ go tool wails3 generate bindings -clean=true -ts
 | Portable (Windows) | `go tool wails3 task build:portable WEBVIEW2_DIR=<WebView2 Fixed Version folder>` |
 | Go check | `go build ./...`, `go vet ./...`, `go tool golangci-lint run ./...` |
 | sqlc | `go tool sqlc generate` |
+| Rust check (`rust/`) | `cargo fmt --check`, `cargo clippy --target x86_64-pc-windows-msvc --all-targets -- -D warnings` |
+| Rust test (`rust/`) | `cargo test`; tests that need a database server use `test-env/docker-compose.yml` and are skipped without it (`S3B_REQUIRE_DB=1` turns a skip into a failure) |
 | FE type-check (`frontend/`) | `node_modules/.bin/tsc --noEmit` (`tsc.exe` on Windows) |
 | FE lint / format | `npx oxlint <paths>`, `node_modules/.bin/biome check --write <paths>` |
 | FE test | `bun run test` (vitest); tests live in `frontend/src/test/` mirroring `src/` |
+| E2E test (`frontend/`) | `bun run e2e:build`, then `bun run e2e` (Playwright, local only): the real app in server mode with the DLL, copied into `frontend/e2e/.run/`; specs in `frontend/e2e/`; S3 specs need `E2E_S3_ENDPOINT`, `E2E_S3_ACCESS_KEY`, `E2E_S3_SECRET_KEY` and are skipped without them; any console warning or error fails the test |
 | User guide PDF | `bun run --cwd docs build:pdf` (or `go tool wails3 task docs:pdf`) |
 
-Go tools (wails3, sqlc, golangci-lint) are declared in the `tool (...)` block of `go.mod`, so no separate install is needed. The backend has no committed unit tests; the frontend requires at least 95% branch and line coverage per changed file.
+Go tools (wails3, sqlc, golangci-lint) are declared in the `tool (...)` block of `go.mod`, so no separate install is needed. Rust needs the stable toolchain with the `x86_64-pc-windows-msvc` target and the Visual Studio Build Tools (C++ workload); `setup/setup-project.sh` installs them. Go has no committed unit tests, the Rust tests are committed (`rust/tests/`), and the frontend requires at least 95% branch and line coverage per changed file.

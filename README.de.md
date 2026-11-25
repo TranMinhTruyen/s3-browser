@@ -23,7 +23,8 @@ S3Browser ist eine Desktop-Anwendung auf Basis von **Wails v3** (Go-Backend, Rea
 - Dateien und Ordner über einen Dialog oder per Drag-and-drop hochladen, mit Grenzen und einem Live-Fortschrittsfenster.
 - Ein oder mehrere Objekte mit parallelen Bereichs-Downloads herunterladen, mit Fortschrittsfenster, Abbruch und einem dauerhaft gespeicherten Download-Verlauf.
 - Objekte und Ordner löschen (mit Bestätigung).
-- Einstellungsdialog: Design (hell / dunkel / Systemvorgabe), Schriftart, Sprache und Start mit Windows; gespeichert in `settings.json` und geladen, bevor die Oberfläche erscheint.
+- **SQL-Modus** (Umschalter S3 / SQL in der Titelleiste): eine SQLite-Datenbankdatei öffnen, Tabellen, Ansichten, Indizes und Trigger in einem Objektbaum durchsuchen, SQL in mehreren Tabs ausführen (Editor mit Suchen und Ersetzen, laufende Abfrage abbrechen), große Ergebnisse seitenweise ansehen sowie Struktur und Daten einer Tabelle anzeigen. Die Datenbank-Engine ist eine native Rust-Bibliothek für hohe Geschwindigkeit. Weitere Datenbanken (PostgreSQL, MySQL, MariaDB, SQL Server, MongoDB, Redis) sind in Entwicklung.
+- Einstellungsdialog: Design (hell / dunkel / Systemvorgabe), Schriftart, Oberflächengröße (klein / mittel / groß), Sprache und Start mit Windows; gespeichert in `settings.json` und geladen, bevor die Oberfläche erscheint.
 - Oberfläche auf Englisch, Vietnamesisch, Japanisch, Vereinfachtem Chinesisch, Traditionellem Chinesisch, Russisch und Deutsch.
 - Automatische Updates über GitHub Releases (installierte Windows-Version), mit optionalem Beta-Kanal.
 - Portable Version, die ohne Installation läuft.
@@ -60,6 +61,7 @@ Voraussetzungen:
 
 - [Go](https://go.dev/dl/) 1.27 oder neuer (siehe `go.mod`). Wails, sqlc und golangci-lint sind in `go.mod` als Go-Tools deklariert, dafür ist also nichts weiter zu installieren.
 - [bun](https://bun.sh/) für das Frontend.
+- [Rust](https://rustup.rs/) stable mit dem Ziel `x86_64-pc-windows-msvc` und die [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (C++-Workload), um die native Datenbankbibliothek `s3b_db.dll` zu bauen. `setup/setup-project.sh` installiert sie zusammen mit Go und bun; auf einem neuen Rechner installiert es außerdem Docker Desktop, Chromium für Playwright und die Pakete von frontend und docs, baut die App und den Server-Build für E2E und startet die Testumgebung (`test-env/docker-compose.yml`). Einzelne Schritte lassen sich mit `SETUP_E2E=0`, `SETUP_TEST_ENV=0`, `SETUP_GRAPHIFY=0` abschalten.
 - [NSIS](https://nsis.sourceforge.io/) (`makensis`), um das Installationsprogramm zu bauen.
 - Die WebView2 Fixed Version (entpacktes CAB von Microsoft), um das portable Paket zu bauen.
 - [Node.js](https://nodejs.org/) nur zum Erzeugen der Dokumentation.
@@ -70,10 +72,10 @@ Befehle, sofern nicht anders angegeben im Repo-Stammverzeichnis auszuführen:
 # Install frontend dependencies
 bun install --cwd frontend
 
-# Generate the TypeScript bindings (after changing Go handlers or models)
-go tool wails3 generate bindings -clean=true -ts
+# Generate the TypeScript bindings (after changing Go handlers or models; the wailsgen tag is required)
+go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts
 
-# Run in development mode
+# Run in development mode (also builds s3b_db.dll from rust/ and copies it next to the exe)
 go tool wails3 task dev
 
 # Build the Windows installer
@@ -100,6 +102,21 @@ go vet ./...
 go tool golangci-lint run ./...
 ```
 
+Native Bibliothek (in `rust/`):
+
+```bash
+cargo fmt --check
+cargo clippy --target x86_64-pc-windows-msvc --all-targets -- -D warnings
+cargo test
+```
+
+End-to-End-Tests (Playwright, in `frontend/`, nur lokal, nicht in der CI): Sie steuern die echte App im Servermodus (Go-Backend und `s3b_db.dll`) mit Chromium. Jeder Lauf kopiert die App nach `frontend/e2e/.run/`, eigene Profile und Einstellungen bleiben also unberührt. Die SQL- und Einstellungstests brauchen nichts weiter; die S3-Tests brauchen einen S3/MinIO-Server (zum Beispiel `test-env/docker-compose.yml`) und werden übersprungen, wenn die Variablen `E2E_S3_*` nicht gesetzt sind. Eine Warnung oder ein Fehler in der Browserkonsole lässt den Test fehlschlagen. HTML-Bericht und Traces fehlgeschlagener Tests liegen in `frontend/e2e/.run/`.
+
+```bash
+bun run e2e:build
+E2E_S3_ENDPOINT=http://localhost:10010 E2E_S3_ACCESS_KEY=<access key> E2E_S3_SECRET_KEY=<secret key> bun run e2e
+```
+
 Die PDFs des Benutzerhandbuchs erzeugen (eines pro Sprache mit einer `user-guide.md`):
 
 ```bash
@@ -112,15 +129,17 @@ bun run --cwd docs build:pdf
 
 ```
 main.go            Wails app entry, registers services
-internal/          Go backend: handlers, modules (bucket, profile, master, global, setting, update), pkg (db, logger, portable...)
+internal/          Go backend: handlers, modules (bucket, db, profile, master, global, setting, update), pkg (db, logger, portable...)
 models/            Input/output models shared with the frontend
+rust/              Native database library s3b_db.dll (Rust), called by internal/modules/db without cgo
 frontend/          React 19 + TypeScript UI (src/pages/s3 holds the S3 views (bucket and object), src/pages/sql the SQL views, bindings generated by Wails)
 build/             Wails build assets and platform Taskfiles (windows)
 docs/              Architecture notes, user guide, tools to build the PDFs and take the screenshots
+test-env/          Docker test servers (MinIO, Keycloak, LDAP, databases) and bench scripts
 sprints/           Requirements and plans per sprint
 ```
 
-- Architektur: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) (auf Englisch)
+- Architektur: [docs/ARCHITECTURE.de.md](docs/ARCHITECTURE.de.md) (Abschnitt 2.11 erklärt, wie Go die Rust-Bibliothek aufruft)
 - Benutzerhandbuch (PDF): [docs/user-guide/de/S3Browser-user-guide.de.pdf](docs/user-guide/de/S3Browser-user-guide.de.pdf), Quelle [user-guide.md](docs/user-guide/de/user-guide.md)
 - [Änderungsprotokoll](CHANGELOG.md) (auf Englisch)
 

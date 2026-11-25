@@ -70,7 +70,7 @@ pub fn server(test: &str) -> Option<Server> {
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     if TcpStream::connect_timeout(&addr, Duration::from_millis(800)).is_err() {
         skip_or_fail(&format!(
-            "SKIP {test}: không nối được {HOST}:{port} (chạy test-env/docker-compose-db.yml)"
+            "SKIP {test}: không nối được {HOST}:{port} (chạy test-env/docker-compose.yml)"
         ));
         return None;
     }

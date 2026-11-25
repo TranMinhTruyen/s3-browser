@@ -18,7 +18,7 @@
                Điểm a của phiên chính là a-cdp: sai số CDP = a-cdp - a-nocdp.
 
   Cần: Windows, PowerShell 5.1+ (hoặc pwsh), bản build; với -Scenario khác a còn cần node + `bun install --cwd docs`
-  (playwright), và MinIO (test-env/docker-compose-minio.yml) cho b, c, e-s3. Kịch bản d chỉ cần SQLite.
+  (playwright), và MinIO (service minio của test-env/docker-compose.yml) cho b, c, e-s3. Kịch bản d chỉ cần SQLite.
   Không chạy cùng lúc với S3Browser.exe khác. Không chạy dưới debugger.
 
   Build bản đo (go tool wails3 task windows:build EXTRA_TAGS=devtools OUT_DIR=build/bin/bench) và các bước chuẩn bị:

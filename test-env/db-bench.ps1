@@ -3,7 +3,7 @@
   Bench hiệu năng đường đọc dòng của driver Rust (SQLite + 6 DB trong Docker) và ghi báo cáo Excel.
 
 .DESCRIPTION
-  Một lệnh làm tất cả: dựng DB bằng docker compose (project s3b-db-test), build DLL release,
+  Một lệnh làm tất cả: dựng DB bằng docker compose (test-env/docker-compose.yml), build DLL release,
   chạy rust/examples/db_bench bản release với feature bench-timing, in đường dẫn file .xlsx
   (test-env/db/report/db_bench_<ngày>_<giờ>.xlsx, thư mục này đã gitignore).
   DB không chạy được thì bỏ qua và ghi "SKIP" trong báo cáo. Mật khẩu chỉ đọc từ db/db.env.
@@ -43,7 +43,7 @@ $rust = Join-Path (Split-Path $testEnv -Parent) 'rust'
 $target = 'x86_64-pc-windows-msvc'
 $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
 
-# Tên service trong docker-compose-db.yml theo tên DB của bench.
+# Tên service trong docker-compose.yml theo tên DB của bench.
 $services = @{ postgres = 'postgres'; mysql = 'mysql'; mariadb = 'mariadb'; sqlserver = 'mssql'; mongodb = 'mongo'; redis = 'redis' }
 
 # 1) Dựng DB (idempotent: container đã chạy và khoẻ thì giữ nguyên). Lỗi chỉ cảnh báo: DB nào
@@ -53,13 +53,13 @@ if (-not $NoDocker) {
         Write-Warning 'Không có docker: các DB mạng sẽ là SKIP.'
     }
     elseif (-not (Test-Path (Join-Path $testEnv 'certs\db\server.crt'))) {
-        Write-Warning 'Chưa có chứng chỉ TLS (certs\db). Chạy `sh scripts/gen-certs.sh` trong test-env rồi chạy lại; các DB mạng sẽ là SKIP.'
+        Write-Warning 'Chưa có chứng chỉ TLS (certs\db). Chạy `sh scripts/test-env.sh certs` trong test-env rồi chạy lại; các DB mạng sẽ là SKIP.'
     }
     else {
         $want = if ($Dbs.Count -eq 0) { @($services.Values) } else { @($Dbs | Where-Object { $services.ContainsKey($_) } | ForEach-Object { $services[$_] }) }
         if ($want.Count -gt 0) {
             Write-Host "== docker compose up -d --wait $($want -join ' ') =="
-            & docker compose -p s3b-db-test -f (Join-Path $testEnv 'docker-compose-db.yml') --env-file (Join-Path $testEnv 'db\db.env') up -d --wait @want
+            & docker compose -f (Join-Path $testEnv 'docker-compose.yml') --env-file (Join-Path $testEnv 'db\db.env') up -d --wait @want
             if ($LASTEXITCODE -ne 0) { Write-Warning 'docker compose lỗi: DB không lên sẽ là SKIP.' }
         }
     }

@@ -1,4 +1,4 @@
-import { Center, Group, Loader, Stack, Tabs, Text } from '@mantine/core';
+import { Center, Divider, Group, Loader, Stack, Tabs, Text } from '@mantine/core';
 import type { StatementResult } from '@wails/S3Browser/models';
 import { ChevronsLeftRight } from 'lucide-react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
@@ -19,16 +19,24 @@ type ResultGridProps = {
 
 /** Rows of one SELECT, with a note when only its first rows were kept or more are being loaded. */
 const ResultGrid = memo(function ResultGrid({ statement, loadingMore, onLoadMore }: ResultGridProps) {
-  const { t } = useTranslation('sqlTab');
+  const { t, i18n } = useTranslation('sqlTab');
+  const secondsFormat = useMemo(
+    () => new Intl.NumberFormat(i18n.language, { minimumFractionDigits: 3, maximumFractionDigits: 3 }),
+    [i18n.language]
+  );
   const columns = useMemo(() => statement.columns.map(column => column.name), [statement.columns]);
   const hasMore = canLoadMore(statement);
   const copyLabels = useMemo(() => ({ copy: t('result.copy'), copyWithHeaders: t('result.copyWithHeaders') }), [t]);
+  // "+" while the cursor still has rows to read, like the Messages tab.
+  const rowsText = t('message.rowsReturned', { n: `${statement.rows.length}${hasMore ? '+' : ''}` });
+  const summary = `${rowsText} · ${t('message.elapsed', { seconds: secondsFormat.format(statement.elapsedMs / 1000) })}`;
   const gridRef = useRef<DataGridHandle>(null);
   const onClickFitColumns = useCallback(() => gridRef.current?.fitColumns(), []);
 
   return (
     <Stack gap={0} h="100%">
-      <Group justify="flex-end" p="0.25rem" style={{ flexShrink: 0 }}>
+      {/* Toolbar of the result: buttons on the left, row count and time on the right (same text as Messages). */}
+      <Group gap="0.25rem" p="0.25rem" wrap="nowrap" style={{ flexShrink: 0 }}>
         <ActionIcon
           size="md"
           tooltip={t('result.fitColumns')}
@@ -37,7 +45,11 @@ const ResultGrid = memo(function ResultGrid({ statement, loadingMore, onLoadMore
         >
           <ChevronsLeftRight size="1rem" />
         </ActionIcon>
+        <Text size="xs" ml="auto" pr="0.25rem" style={{ whiteSpace: 'nowrap' }}>
+          {summary}
+        </Text>
       </Group>
+      <Divider />
       <div style={{ flex: 1, minHeight: 0 }}>
         <DataGrid
           ref={gridRef}

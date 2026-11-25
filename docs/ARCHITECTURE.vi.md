@@ -6,8 +6,9 @@ Tổng quan ngắn gọn về mã nguồn dành cho lập trình viên mới. C�
 
 ## 1. Stack
 
-- Ứng dụng desktop trên **Wails v3**: backend Go + frontend React 19 / TypeScript chạy trong WebView.
+- Ứng dụng desktop trên **Wails v3**: backend Go + frontend React 19 / TypeScript chạy trong WebView. Chỉ chạy trên Windows.
 - Backend: AWS SDK v2 (S3), `madmin-go` (MinIO admin), SQLite (modernc) + goose migration + sqlc, `slog`.
+- Thư viện DB native: **Rust** `s3b_db.dll` (tokio + mỗi database một driver mức thấp), được Go nạp **không qua cgo**. Thư viện này làm toàn bộ việc của chế độ SQL trên database của người dùng (mục 2.11).
 - Frontend: Mantine 9, zustand 5 + immer, NiceModal, i18next (7 ngôn ngữ: en / vi / ja / zh-CN / zh-TW / ru / de), sonner (toast), `@tanstack/react-virtual`, zod, dayjs. Package manager: **bun**.
 
 ```
@@ -21,14 +22,17 @@ s3-browser
 │   │   ├── profile/        profile kết nối (secret được mã hoá)
 │   │   ├── master/         dữ liệu master (region...)
 │   │   ├── bucket/         kết nối, bucket, bucket policy, object, upload, download, tìm kiếm
+│   │   ├── db/             chế độ SQL: profile DB, kết nối, truy vấn -> gọi s3b_db.dll
 │   │   ├── setting/        cài đặt app (settings.json), tab được ghi nhớ (tabs.json), autostart
 │   │   └── update/         tự cập nhật từ GitHub Releases
-│   └── pkg/                cnst, db (schemas, queries, sqlc), logger, portable, utils
+│   └── pkg/                cnst, db (schemas, queries, sqlc), logger, memprobe, portable, utils
 ├── models/                 model input/output + alias.go
+├── rust/                   Cargo workspace của s3b_db.dll: src/{ffi,dispatch,registry,runtime}.rs, protocol/, drivers/, tests/
 ├── frontend/
 │   ├── bindings/           binding Wails ĐƯỢC SINH TỰ ĐỘNG (không sửa tay)
 │   └── src/                common, components, pages (pages/s3, pages/sql), locales, test
-├── build/                  đóng gói theo nền tảng (Windows NSIS, portable, ...)
+├── build/                  đóng gói theo nền tảng (Windows NSIS, portable, ...) và Taskfile (build:dll, copy:dll)
+├── test-env/               server test bằng Docker (MinIO, Keycloak, LDAP, 6 database), script đo hiệu năng
 └── docs/                   tài liệu này + công cụ tạo PDF
 ```
 
@@ -45,9 +49,11 @@ flowchart LR
   S --> G[(modules/global)]
   S --> DB[(SQLite via sqlc)]
   S --> S3[(S3 / MinIO)]
+  S --> DLL[[s3b_db.dll - Rust]]
+  DLL --> UDB[(user databases)]
 ```
 
-- `main.go` tạo logger và Wails app, đăng ký năm handler (bucket, master, profile, setting, update) bằng `application.NewService`, rồi tạo cửa sổ chính (`EnableFileDrop: true`).
+- `main.go` tạo logger và Wails app, đăng ký sáu handler (bucket, db, master, profile, setting, update) bằng `application.NewService`, rồi tạo cửa sổ chính (`EnableFileDrop: true`).
 - `internal/app.go` (`NewApp`) mở và migrate database, tạo `KeyManager` (mã hoá secret), dựng các module, sau đó dựng handler phía trên. `Shutdown` huỷ các tiến trình truyền tải, ngắt mọi kết nối và đóng DB.
 - **Handler** (`internal/handlers/*_handler.go`) mỏng: chỉ gọi xuống module. Các method public của handler trở thành binding TypeScript.
 - **Module** (`internal/modules/<name>/module.go`) là API public có doc comment. Công việc được chia cho các submodule không export (`submoduleXxxMng`, constructor `newSubmoduleXxxMng`) trong `submodule_<x>_mng.go`.
@@ -146,6 +152,109 @@ Một profile có `provider` (`aws` hoặc `minio`) và `authType` (`internal/pk
 - **Trạng thái**: `UpdateStateOutput` (`supported`, `state`, `currentVersion`, `version`, `releaseUrl`, `written`, `total`, `errorCode`, mã `UPE...` khi `state` là `error`). `state` là `idle`, `checking`, `upToDate`, `available`, `downloading`, `ready` hoặc `error`. Mỗi thay đổi, và mỗi 200 ms trong lúc tải, được gửi bằng event `update:state-changed`.
 - **Message**: `UPS001` (đã là bản mới nhất), `UPE001` (không kiểm tra được), `UPE002` (GitHub giới hạn request), `UPE003` (không tải được), `UPE004` (checksum), `UPE005` (không chạy được bộ cài), `UPE006` (không có bộ cài cho máy này).
 
+### 2.11 Chế độ SQL: Go gọi Rust như thế nào (`modules/db` -> `s3b_db.dll`)
+
+**Mọi việc với database người dùng kết nối đều do Rust làm**: mở kết nối, chạy SQL, tách câu lệnh, cây đối tượng, phân trang, chuyển kiểu giá trị và huỷ. Go chỉ là cầu nối: kiểm input, gửi request, đổi lỗi thành message rồi chuyển kết quả đi tiếp. Frontend không biết Rust tồn tại; nó gọi `DbHandler` như mọi binding khác. SQLite riêng của app (profile, setting) vẫn do Go xử lý.
+
+```mermaid
+sequenceDiagram
+  participant FE as React (callIPC)
+  participant M as DbHandler + modules/db
+  participant N as submoduleNativeMng
+  participant F as ffi.rs
+  participant D as dispatch.rs
+  participant A as driver actor
+  FE->>M: ExecuteSql(input) (binding)
+  M->>N: callNativeRaw(ctx, "execute", params)
+  N->>F: s3b_call(request JSON), syscall without cgo
+  F->>D: dispatch::call (tokio, block_on)
+  D->>A: Cmd::Execute (mpsc channel)
+  A-->>D: ExecuteResult (oneshot channel)
+  D-->>F: {"ok":true,"result":{...}}
+  F-->>N: out_ptr / out_len (Rust buffer)
+  N->>F: s3b_free(ptr, len) after copying
+  N-->>M: result bytes, not decoded
+  M-->>FE: Output.Body = the same JSON
+```
+
+**Nạp DLL** (`internal/modules/db/native_windows.go`)
+
+- App được build với `CGO_ENABLED=0`. Go nạp DLL bằng `golang.org/x/sys/windows`: `LoadLibraryEx(<thư mục exe>\s3b_db.dll, LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32)`. Đường dẫn là tuyệt đối nên không thư mục nào trên search path thay được DLL.
+- `GetProcAddress` lấy bốn hàm export, rồi `s3b_init` chạy một lần. Mọi lời gọi đi qua `syscall.SyscallN`.
+- DLL được nạp ở lời gọi đầu tiên (thường là Connect), không nạp lúc mở app. Nạp lỗi thì lời gọi sau thử lại, và báo `DBE009`. Trên hệ điều hành khác, `native_other.go` chỉ trả lỗi.
+- DLL link với `+crt-static` (`rust/.cargo/config.toml`) nên không cần `VCRUNTIME140.dll`.
+
+**Hợp đồng FFI** (`rust/src/ffi.rs`)
+
+| Export | Chữ ký | Vai trò |
+|---|---|---|
+| `s3b_init` | `() -> i32` | Tạo tokio runtime duy nhất và TLS provider. |
+| `s3b_call` | `(req_ptr, req_len, *out_ptr, *out_len) -> i32` | Một request JSON; chặn tới khi response JSON sẵn sàng và trả về buffer do Rust sở hữu. |
+| `s3b_cancel` | `(id: u64)` | Yêu cầu ngắt request `id`. |
+| `s3b_free` | `(ptr, len)` | Giải phóng buffer do `s3b_call` trả về. |
+
+- Giá trị trả về chỉ báo lời gọi bị lỗi: `0` ok, `1` sai tham số, `2` init lỗi, `-1` panic. Lỗi của chính công việc (SQL sai, kết nối đã đóng...) nằm trong JSON.
+- Mọi hàm export được bọc `catch_unwind` và profile release giữ `panic = "unwind"`, nên panic của Rust không bao giờ tràn sang Go. Ngoài test không dùng `unwrap`/`expect`.
+- Bộ nhớ: Rust copy request và không giữ con trỏ nào tới bộ nhớ của Go sau khi trả về. Go copy response rồi luôn gọi `s3b_free`: buffer do Rust cấp chỉ được Rust giải phóng.
+
+**Giao thức** (`rust/src/protocol/mod.rs`, JSON camelCase)
+
+```jsonc
+// request: id là duy nhất cho mỗi lời gọi (bộ đếm atomic ở Go) và cũng là khoá của s3b_cancel
+{"id": 7, "method": "execute", "params": {"connId": 1, "sql": "select 1", "pageSize": 10000, "maxPageBytes": 16777216}}
+// thành công
+{"ok": true, "result": {...}}
+// thất bại
+{"ok": false, "error": {"code": "sqlError", "message": "no such table: t"}}
+```
+
+- Các method: `open`, `close`, `execute`, `fetch`, `schemaTree`, `tableInfo`, `tableRows`.
+- Mã lỗi ổn định, được `errorCodeMessage` (`submodule_native_mng.go`) đổi sang message: `invalidRequest` `DBE001`, `openFailed` `DBE002`, `notADatabase` `DBE003`, `connNotFound` `DBE004`, `cursorNotFound` `DBE005`, `sqlError` `DBE006` (hiện cùng câu lệnh, không hiện toast), `tableNotFound` `DBE007`, mã khác `DBE008`. `cancelled` trả `Result=false` im lặng. Nạp lỗi là `DBE009`, Go hết thời gian chờ là `DBE015`. Mã mới cần key trong 7 file `ipcMessage.json`.
+
+**Bên trong Rust**: `ffi.rs` -> `dispatch.rs` -> `drivers/<db>/`
+
+- `dispatch::call` chạy mỗi request thành một task trên tokio runtime đa luồng duy nhất (`runtime.rs`) và chờ bằng `block_on`, vì với Go thì `s3b_call` là hàm đồng bộ. Panic trong task thành lỗi `internal`.
+- `dispatch` parse request và chọn nhánh theo `method`. Lỗi parse không bao giờ lặp lại giá trị sai, nên mật khẩu không thể lọt vào message.
+- Mỗi kết nối là một **actor**: một tokio task duy nhất giữ kết nối. Nó nhận lệnh (`Cmd::Execute`, `Fetch`, `TableRows`, `SchemaTree`, `TableInfo`, `Close`) qua kênh `mpsc` và trả lời qua kênh `oneshot`, nên không cần khoá quanh kết nối (giống goroutine + channel trong Go).
+- `registry.rs` ánh xạ `connId` tới kênh của actor, và `id` của request tới kết nối cùng `CancelSignal` của nó.
+- Mỗi database dùng driver mức thấp nhất, ghi thẳng các dòng thành chuỗi JSON với capacity cấp sẵn:
+
+| Database | Driver Rust |
+|---|---|
+| SQLite | `libsqlite3-sys` (C API, bundled); `sqlx` chỉ để mở kết nối |
+| PostgreSQL | `tokio-postgres` |
+| MySQL / MariaDB | `mysql_async` |
+| SQL Server | `tiberius` |
+| MongoDB | `mongodb` (đọc BSON thô) |
+| Redis | `redis` |
+
+**Go không decode kết quả**
+
+`callNativeRaw` kiểm response bắt đầu bằng `{"ok":true,"result":` rồi cắt lấy phần byte kết quả mà không parse. `StatementResult`, `ExecuteSqlOutput` và `FetchRowsOutput` (`models/db`) giữ các byte này, và `MarshalJSON` của chúng (`query_output_json.go`, build tag `!wailsgen`) ghi nguyên vào response của Wails, nên một trang 10.000 dòng không bao giờ bị decode rồi encode lại. Bộ sinh binding biến type có `MarshalJSON` thành `any`, vì vậy binding được sinh với `-tags=wailsgen` (mục 4). Kết quả nhỏ (`open`, `schemaTree`, `tableInfo`) được decode bình thường bằng `callNative[T]`.
+
+**Huỷ và thời gian chờ**
+
+- Context Go của một lời gọi kết thúc khi frontend huỷ (`AbortController`), khi app tắt, hoặc khi hết thời gian chờ: 5 phút cho `ExecuteSql`, `OpenTableRows` và `FetchRows` (`queryTimeout`), 30 giây cho kết nối và đọc metadata (`metaTimeout`). `FetchRows` với `All` không giới hạn trang và không có thời gian chờ.
+- Khi context kết thúc, một goroutine trong `callNativeRaw` gọi `s3b_cancel(id)` mỗi 100 ms cho tới khi `s3b_call` trả về, vì lần huỷ đầu có thể tới trước khi Rust kịp đăng ký request.
+- Rust bật `CancelSignal`, ngắt câu lệnh đang chạy và trả `cancelled`. Go trả `Result=false` im lặng khi frontend huỷ, và `DBE015` khi hết thời gian chờ.
+
+**Kết nối và phân trang**
+
+- Mỗi profile có một **kết nối chính** (`ConnectDb`), dùng cho cây đối tượng và thông tin bảng, và **mỗi tab SQL một kết nối riêng**, mở ở lần chạy đầu tiên trong tab đó. `CloseDbTab` đóng kết nối của một tab, `DisconnectDb` đóng mọi kết nối của profile, `Close` (khi tắt app) đóng tất cả.
+- Kết quả được phân trang: trang đầu và mỗi trang sau tối đa 10.000 dòng hoặc 16 MiB (`pageSize`, `maxPageBytes`). Phần còn lại nằm trong cursor phía Rust (`cursorId`); không bao giờ đọc cả kết quả vào bộ nhớ.
+
+**Hiện trạng**
+
+- Rust đã có driver cho SQLite, PostgreSQL, MySQL, MariaDB, SQL Server, MongoDB và Redis, đã test với server thật.
+- Hiện Go chỉ mở **SQLite** (`openParams{"sqlite", path, readOnly}` trong `submodule_conn_mng.go`).
+- Profile PostgreSQL lưu được (`db_profiles`), nhưng kết nối, cây đối tượng và dữ liệu của nó ở frontend vẫn là mock (`frontend/src/pages/sql/mock`). Các database mạng khác chưa có trên giao diện.
+
+**Thêm một khả năng mới**
+
+1. Rust: kiểu params và kết quả trong `protocol`, một nhánh trong `dispatch::route`, một biến thể `Cmd`, phần xử lý trong từng driver, test bằng `cargo test`.
+2. Go: struct params và lời gọi `callNative[T]` (kết quả nhỏ) hoặc `callNativeRaw` (dữ liệu dòng), mã lỗi mới đổi sang `DBE...` có key ở 7 ngôn ngữ, rồi method của module, handler và sinh lại binding.
+3. Không bao giờ làm tạm công việc đó ở Go: Go chỉ là cầu nối.
+
 ## 3. Frontend
 
 ### 3.1 Gọi backend: `callIPC`
@@ -191,7 +300,11 @@ Các danh sách lớn (object, bucket, uploader, lịch sử, danh sách file) �
 
 **Ghi nhớ tab**: `useTabPersistence` (gọi trong `App.tsx`) lưu thứ tự tab, tab đang chọn và profile của từng tab vào `tabs.json` qua `SaveTabState` sau 500 ms kể từ lúc chúng ngừng thay đổi và khi `pagehide`. Lúc khởi động, `restoreTabsFromDisk` (`pages/s3/utils/tabPersistence.ts`) nạp chúng bằng `GetTabState`. Nếu nạp lỗi, việc lưu bị tắt trong phiên đó để `tabs.json` không bao giờ bị ghi đè. Tab có profile đã bị xoá giữ nguyên vị trí nhưng mất profile (`normalizeTabProfiles`).
 
-### 3.8 Cài đặt, theme và cập nhật
+### 3.8 Chế độ SQL
+
+`SqlWorkspace` (`pages/sql`) gồm navbar profile với cây đối tượng (`dbTreeStore`) và `SqlTabPage` với các tab SQL (`sqlTabStore`): editor CodeMirror, Run (Ctrl+E) và Cancel, Find/Replace, và khung kết quả (mỗi câu SELECT một tab cùng tab Messages, dữ liệu hiện trong `DataGrid` có virtualize). `useSqlRunner` gọi `ExecuteSql`, tải các trang sau bằng `FetchRows` khi cuộn, và gọi `CloseDbTab` khi đóng tab hoặc đổi profile của tab. Mở một bảng sẽ hiện cấu trúc và dữ liệu của nó (`useTableRows`, `OpenTableRows`). Profile nằm trong `dbProfileStore` (`sqlite` hoặc `postgres`).
+
+### 3.9 Cài đặt, theme và cập nhật
 
 `main.tsx` chờ `loadStartupData()` xong rồi mới render (tải song song settings và `restoreTabsFromDisk()`), nên theme, font, ngôn ngữ và các tab đã lưu sẵn sàng trước (dùng mặc định nếu lỗi). `settingStore` giữ `saved` (file), `applied` (phiên hiện tại, đổi bởi Apply) và `draft` (form, xem trước trực tiếp); đóng modal sẽ quay về `applied`. `applySettings` đặt color scheme của Mantine (`settingColorSchemeManager` trong bộ nhớ, không dùng localStorage), biến `--mantine-font-family` và ngôn ngữ i18n.
 
@@ -204,8 +317,10 @@ Màu: dùng `var(--mantine-color-*)` và `light-dark(<light>, <dark>)`, không h
 Binding Wails được sinh từ các handler Go; sinh lại sau mọi thay đổi chữ ký handler hoặc model:
 
 ```
-go tool wails3 generate bindings -clean=true -ts
+go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts
 ```
+
+Tag `wailsgen` là bắt buộc (mục 2.11). Các task build Windows build thư viện Rust trước (`common:build:dll`: `cargo build --release --target x86_64-pc-windows-msvc` trong `rust/`), rồi copy `s3b_db.dll` vào cạnh exe (`common:copy:dll`). `dev`, `build`, `package` và `build:portable` tự làm việc này, và bộ cài NSIS cũng như thư mục portable đều có DLL. Tắt app đang chạy trước khi build, nếu không DLL không thay được.
 
 | Việc | Lệnh (chạy ở gốc repo trừ khi ghi khác) |
 |---|---|
@@ -215,9 +330,12 @@ go tool wails3 generate bindings -clean=true -ts
 | Portable (Windows) | `go tool wails3 task build:portable WEBVIEW2_DIR=<thư mục WebView2 Fixed Version>` |
 | Kiểm tra Go | `go build ./...`, `go vet ./...`, `go tool golangci-lint run ./...` |
 | sqlc | `go tool sqlc generate` |
+| Kiểm tra Rust (`rust/`) | `cargo fmt --check`, `cargo clippy --target x86_64-pc-windows-msvc --all-targets -- -D warnings` |
+| Test Rust (`rust/`) | `cargo test`; test cần server database dùng `test-env/docker-compose.yml` và bị bỏ qua khi không có server (`S3B_REQUIRE_DB=1` biến bỏ qua thành lỗi) |
 | FE type-check (`frontend/`) | `node_modules/.bin/tsc --noEmit` (`tsc.exe` trên Windows) |
 | FE lint / format | `npx oxlint <paths>`, `node_modules/.bin/biome check --write <paths>` |
 | FE test | `bun run test` (vitest); test nằm trong `frontend/src/test/` theo cây của `src/` |
+| Test E2E (`frontend/`) | `bun run e2e:build` rồi `bun run e2e` (Playwright, chỉ chạy local): app thật ở server mode kèm DLL, được chép vào `frontend/e2e/.run/`; spec ở `frontend/e2e/`; spec S3 cần `E2E_S3_ENDPOINT`, `E2E_S3_ACCESS_KEY`, `E2E_S3_SECRET_KEY`, thiếu thì bỏ qua; console có warning hay error là test fail |
 | PDF hướng dẫn sử dụng | `bun run --cwd docs build:pdf` (hoặc `go tool wails3 task docs:pdf`) |
 
-Các tool Go (wails3, sqlc, golangci-lint) được khai báo trong khối `tool (...)` của `go.mod`, nên không cần cài riêng. Backend không có unit test được commit; frontend yêu cầu coverage branch và line tối thiểu 95% cho mỗi file đã đổi.
+Các tool Go (wails3, sqlc, golangci-lint) được khai báo trong khối `tool (...)` của `go.mod`, nên không cần cài riêng. Rust cần toolchain stable với target `x86_64-pc-windows-msvc` và Visual Studio Build Tools (workload C++); `setup/setup-project.sh` cài sẵn các thứ này. Go không có unit test được commit, test Rust được commit (`rust/tests/`), còn frontend yêu cầu coverage branch và line tối thiểu 95% cho mỗi file đã đổi.

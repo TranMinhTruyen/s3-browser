@@ -101,7 +101,7 @@ pub fn server(test: &str) -> Option<Server> {
     let port = port_of("S3B_REDIS_PORT", "REDIS_PORT", DEFAULT_PORT);
     if !reachable(port) {
         skip_or_fail(&format!(
-            "SKIP redis {test}: không nối được {HOST}:{port} (chạy test-env/docker-compose-db.yml)"
+            "SKIP redis {test}: không nối được {HOST}:{port} (chạy test-env/docker-compose.yml)"
         ));
         return None;
     }
@@ -118,7 +118,7 @@ pub fn tls_server(test: &str) -> Option<Server> {
     let s = server(test)?;
     if !reachable(s.tls_port) {
         skip_or_fail(&format!(
-            "SKIP redis {test}: không nối được cổng TLS {HOST}:{} (chạy test-env/docker-compose-db.yml)",
+            "SKIP redis {test}: không nối được cổng TLS {HOST}:{} (chạy test-env/docker-compose.yml)",
             s.tls_port
         ));
         return None;

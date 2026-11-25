@@ -21,7 +21,8 @@ S3Browser は **Wails v3**（Go バックエンド、React + TypeScript フロ�
 - ダイアログまたはドラッグ＆ドロップでのファイル・フォルダのアップロード（上限あり、リアルタイムの進捗ウィンドウ付き）。
 - 1 件または複数のオブジェクトのダウンロード（分割並列取得）、進捗ウィンドウ、キャンセル、保存されるダウンロード履歴。
 - オブジェクトとフォルダの削除（確認付き）。
-- 設定ダイアログ: テーマ（ライト / ダーク / システムに合わせる）、フォント、言語、Windows 起動時の自動起動。`settings.json` に保存され、UI 表示前に読み込まれます。
+- **SQL モード**（タイトルバーの S3 / SQL 切り替え）: SQLite データベースファイルを開き、オブジェクトツリーでテーブル、ビュー、インデックス、トリガーを表示し、複数のタブで SQL を実行し（検索と置換付きのエディター、実行中のクエリのキャンセル）、大きな結果をページごとに表示し、テーブルの構造とデータを確認できます。データベースエンジンは高速なネイティブ Rust ライブラリです。ほかのデータベース（PostgreSQL、MySQL、MariaDB、SQL Server、MongoDB、Redis）は開発中です。
+- 設定ダイアログ: テーマ（ライト / ダーク / システムに合わせる）、フォント、表示サイズ（小 / 中 / 大）、言語、Windows 起動時の自動起動。`settings.json` に保存され、UI 表示前に読み込まれます。
 - 英語、ベトナム語、日本語、簡体字中国語、繁体字中国語、ロシア語、ドイツ語の UI。
 - GitHub Releases からの自動アップデート（Windows のインストール版）。ベータ版の受け取りは任意です。
 - インストール不要のポータブル版。
@@ -58,6 +59,7 @@ S3Browser は **Wails v3**（Go バックエンド、React + TypeScript フロ�
 
 - [Go](https://go.dev/dl/) 1.27 以上（`go.mod` を参照）。Wails、sqlc、golangci-lint は `go.mod` に Go tool として宣言されているため、別途インストールは不要です。
 - フロントエンド用の [bun](https://bun.sh/)。
+- ネイティブデータベースライブラリ `s3b_db.dll` をビルドするための、`x86_64-pc-windows-msvc` ターゲット付きの [Rust](https://rustup.rs/) stable と [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)（C++ ワークロード）。`setup/setup-project.sh` が Go、bun と一緒にインストールします。新しいマシンでは Docker Desktop、Playwright 用の Chromium、frontend と docs のパッケージもインストールし、アプリと E2E 用のサーバービルドをビルドして、テスト環境 (`test-env/docker-compose.yml`) を起動します。各ステップは `SETUP_E2E=0`、`SETUP_TEST_ENV=0`、`SETUP_GRAPHIFY=0` で無効にできます。
 - インストーラー作成用の [NSIS](https://nsis.sourceforge.io/) (`makensis`)。
 - ポータブル版作成用の WebView2 Fixed Version（Microsoft の CAB を展開したもの）。
 - ドキュメント生成のみに [Node.js](https://nodejs.org/)。
@@ -68,10 +70,10 @@ S3Browser は **Wails v3**（Go バックエンド、React + TypeScript フロ�
 # フロントエンドの依存関係をインストール
 bun install --cwd frontend
 
-# TypeScript バインディングを生成（Go のハンドラーやモデルを変更した後）
-go tool wails3 generate bindings -clean=true -ts
+# TypeScript バインディングを生成（Go のハンドラーやモデルを変更した後。wailsgen タグは必須）
+go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts
 
-# 開発モードで実行
+# 開発モードで実行（rust/ から s3b_db.dll もビルドし、exe の隣にコピー）
 go tool wails3 task dev
 
 # Windows インストーラーを作成
@@ -98,6 +100,21 @@ go vet ./...
 go tool golangci-lint run ./...
 ```
 
+ネイティブライブラリ（`rust/` で実行）:
+
+```bash
+cargo fmt --check
+cargo clippy --target x86_64-pc-windows-msvc --all-targets -- -D warnings
+cargo test
+```
+
+E2E テスト (Playwright、`frontend/` で実行、ローカルのみで CI では実行しません): サーバーモードの実際のアプリ (Go バックエンドと `s3b_db.dll`) を Chromium で操作します。実行のたびにアプリを `frontend/e2e/.run/` にコピーするため、自分のプロファイルや設定には影響しません。SQL と設定のテストは追加の準備が不要です。S3 のテストには S3/MinIO サーバー (例: `test-env/docker-compose.yml`) が必要で、`E2E_S3_*` 変数が未設定の場合はスキップされます。ブラウザーのコンソールに警告やエラーが出るとテストは失敗します。HTML レポートと失敗時のトレースは `frontend/e2e/.run/` にあります。
+
+```bash
+bun run e2e:build
+E2E_S3_ENDPOINT=http://localhost:10010 E2E_S3_ACCESS_KEY=<access key> E2E_S3_SECRET_KEY=<secret key> bun run e2e
+```
+
 ユーザーガイドの PDF（`user-guide.md` がある言語ごとに 1 つ）を生成:
 
 ```bash
@@ -110,15 +127,17 @@ bun run --cwd docs build:pdf
 
 ```
 main.go            Wails アプリのエントリーポイント、サービス登録
-internal/          Go バックエンド: handlers、modules (bucket, profile, master, global, setting, update)、pkg (db, logger, portable など)
+internal/          Go バックエンド: handlers、modules (bucket, db, profile, master, global, setting, update)、pkg (db, logger, portable など)
 models/            フロントエンドと共有する入出力モデル
+rust/              ネイティブデータベースライブラリ s3b_db.dll (Rust)。internal/modules/db から cgo なしで呼び出される
 frontend/          React 19 + TypeScript の UI (src/pages/s3 に S3 のビュー (バケットとオブジェクト)、src/pages/sql に SQL のビュー、bindings は Wails が生成)
 build/             Wails のビルド資産とプラットフォーム別 Taskfile (windows)
 docs/              アーキテクチャ文書、ユーザーガイド、PDF とスクリーンショットの生成ツール
+test-env/          Docker のテスト用サーバー (MinIO、Keycloak、LDAP、データベース) とベンチマークスクリプト
 sprints/           スプリントごとの要件と計画
 ```
 
-- アーキテクチャ: [docs/ARCHITECTURE.ja.md](docs/ARCHITECTURE.ja.md)
+- アーキテクチャ: [docs/ARCHITECTURE.ja.md](docs/ARCHITECTURE.ja.md)（2.11 節で Go から Rust ライブラリを呼び出す仕組みを説明）
 - ユーザーガイド (PDF): [docs/user-guide/ja/S3Browser-user-guide.ja.pdf](docs/user-guide/ja/S3Browser-user-guide.ja.pdf)、ソース [user-guide.md](docs/user-guide/ja/user-guide.md)
 - [変更履歴](CHANGELOG.ja.md)
 

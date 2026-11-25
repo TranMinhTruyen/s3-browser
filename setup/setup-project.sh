@@ -12,9 +12,11 @@ GO_MIN_VERSION="1.27"
 WAILS3_VERSION="${WAILS3_VERSION:-latest}"
 SQLC_VERSION="${SQLC_VERSION:-latest}"
 PACKAGE_MANAGER="${PACKAGE_MANAGER:-bun}"
-# Set to 0 to skip the knowledge graph (graphify-out/) or the Docker test containers (test-env/).
+# Set to 0 to skip the knowledge graph (graphify-out/), the Docker test containers (test-env/)
+# or the Playwright E2E setup (browser + server-mode build used by `bun run e2e`).
 SETUP_GRAPHIFY="${SETUP_GRAPHIFY:-1}"
 SETUP_TEST_ENV="${SETUP_TEST_ENV:-1}"
+SETUP_E2E="${SETUP_E2E:-1}"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -350,6 +352,27 @@ setup_graphify() {
 # ---------------------------------------------------------------------------
 # 7. Docker test containers (see test-env/README.txt)
 # ---------------------------------------------------------------------------
+# Docker Desktop on Windows (winget); other OS: install Docker yourself. Starts the engine and waits for it.
+ensure_docker() {
+  if [[ "$(detect_os)" == "windows" ]]; then
+    export PATH="/c/Program Files/Docker/Docker/resources/bin:$PATH"
+    if ! command -v docker >/dev/null 2>&1; then
+      # Needs WSL2; Windows may ask for a restart before the engine can run.
+      winget_install Docker.DockerDesktop || return 1
+    fi
+    if ! docker info >/dev/null 2>&1; then
+      local desktop="/c/Program Files/Docker/Docker/Docker Desktop.exe" i
+      [[ -x "$desktop" ]] && { echo "==> Starting Docker Desktop..."; "$desktop" >/dev/null 2>&1 & }
+      echo "    waiting for the Docker engine (up to 3 minutes)..."
+      for i in $(seq 1 60); do
+        docker info >/dev/null 2>&1 && break
+        sleep 3
+      done
+    fi
+  fi
+  command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1
+}
+
 # Wait until a one-shot init container exits; fail if it exits non-zero.
 wait_init() {
   local name="$1" code
@@ -364,7 +387,7 @@ wait_init() {
 setup_test_env() {
   local env_dir="$PROJECT_ROOT/test-env"
 
-  if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
+  if ! ensure_docker; then
     echo "WARNING: Docker is not installed or not running, skipping test-env."
     echo "         Start Docker Desktop and re-run with SETUP_TEST_ENV=1, or follow test-env/README.txt."
     return 0
@@ -372,44 +395,36 @@ setup_test_env() {
 
   cd "$env_dir"
 
-  # Certificates for MinIO TLS / mTLS (needs openssl); generated once, kept out of git.
-  if [[ ! -f certs/ca.pem ]]; then
-    # gen-certs.sh writes into certs/ relative to test-env/.
-    if command -v openssl >/dev/null 2>&1; then
-      echo "==> Generating test certificates (test-env/certs)..."
-      sh scripts/gen-certs.sh
-    else
-      echo "WARNING: openssl not found, skipping certificates and the MinIO TLS stack."
-    fi
-  fi
-
-  echo "==> Starting MinIO + LDAP..."
-  docker compose -f docker-compose-minio.yml -p s3b-minio-test up -d
-  wait_init s3b-test-minio-init || true
-
-  echo "==> Starting Floci (AWS emulator)..."
-  docker compose -f docker-compose-floci.yml -p s3b-floci-test up -d
-  wait_init s3b-test-floci-init || true
-
-  echo "==> Starting Keycloak (OIDC)..."
-  docker compose -f docker-compose-keycloak.yml -p s3b-keycloak-test up -d
-
-  # MinIO TLS needs Keycloak up first, otherwise it hangs on "Unable to initialize OpenID".
-  if [[ -f certs/ca.pem ]]; then
-    local realm="http://localhost:${KEYCLOAK_PORT:-8180}/realms/s3browser" i
-    echo "    waiting for Keycloak ($realm)..."
-    for i in $(seq 1 60); do
-      curl -fs "$realm" >/dev/null 2>&1 && break
-      sleep 3
-    done
-    echo "==> Starting MinIO TLS..."
-    docker compose -f docker-compose-minio-tls.yml -p s3b-minio-tls-test up -d
-    wait_init s3b-test-minio-tls-init || true
+  # One command for every S3 server and database: certificates if missing (needs openssl), then
+  # `docker compose up -d --wait`. Without openssl only the stacks that do not mount certs/ are started.
+  if [[ -f certs/ca.pem ]] || command -v openssl >/dev/null 2>&1; then
+    echo "==> Starting the test environment (S3 servers + databases, the first pull takes a few minutes)..."
+    sh scripts/test-env.sh up || echo "WARNING: some test containers did not start, see: docker compose ps -a"
+  else
+    echo "==> Starting MinIO + LDAP and Floci (openssl not found, no certificates: skipping Keycloak/MinIO TLS and the databases)..."
+    docker compose up -d minio-init floci-init
+    wait_init s3b-test-minio-init || true
+    wait_init s3b-test-floci-init || true
   fi
 
   cd "$PROJECT_ROOT"
   echo "==> Test containers are up. Profiles to create in the app: test-env/test-profiles.txt"
   echo "    Floci keys: test-env/generated/floci-config, floci-credentials (copy to ~/.aws, see README)."
+}
+
+# ---------------------------------------------------------------------------
+# 8. Playwright E2E (frontend/e2e, see README "End-to-end tests")
+# ---------------------------------------------------------------------------
+setup_e2e() {
+  if [[ "$(detect_os)" != "windows" ]]; then
+    echo "==> Skipping E2E: the server-mode build needs s3b_db.dll (Windows only)."
+    return 0
+  fi
+  # One Chromium for frontend/ and docs/ (same Playwright version): e2e, qa evidence, shots.mjs, mem-bench.
+  echo "==> Installing Chromium for Playwright..."
+  (cd "$PROJECT_ROOT/frontend" && node_modules/.bin/playwright install chromium)
+  echo "==> Building the server-mode app for E2E (bun run e2e:build)..."
+  (cd "$PROJECT_ROOT/frontend" && bun run e2e:build)
 }
 
 # ---------------------------------------------------------------------------
@@ -447,6 +462,10 @@ echo "==> Installing frontend dependencies ($PACKAGE_MANAGER)..."
 wails3 task common:install:frontend:deps PACKAGE_MANAGER="$PACKAGE_MANAGER"
 
 echo
+echo "==> Installing docs dependencies (user guide PDF, screenshots, evidence/architecture Excel)..."
+(cd docs && bun install)
+
+echo
 echo "==> Generating TypeScript IPC bindings..."
 # -tags=wailsgen is required: without it result models in models/db become `any`.
 wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts
@@ -461,6 +480,11 @@ if [[ "$SETUP_GRAPHIFY" == "1" ]]; then
   setup_graphify
 fi
 
+if [[ "$SETUP_E2E" == "1" ]]; then
+  echo
+  setup_e2e || echo "WARNING: E2E setup did not finish. Later: cd frontend && bun run e2e:build"
+fi
+
 if [[ "$SETUP_TEST_ENV" == "1" ]]; then
   echo
   # A failing stack (e.g. port already in use) must not fail the whole setup.
@@ -472,3 +496,6 @@ echo "==> Setup complete."
 echo "    Dev mode : wails3 task dev"
 echo "    Build    : wails3 task build"
 echo "    Package  : wails3 task package   (add INSTALL_SCOPE=user for non-admin)"
+echo "    Unit test: cd frontend && bun run test   |   cd rust && cargo test --target x86_64-pc-windows-msvc"
+echo "    E2E test : cd frontend && bun run e2e    (S3 specs need E2E_S3_ENDPOINT, E2E_S3_ACCESS_KEY, E2E_S3_SECRET_KEY)"
+echo "    Test env : cd test-env && docker compose up -d --wait   |   docker compose stop   (test-env/README.txt)"

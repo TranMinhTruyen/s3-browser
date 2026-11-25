@@ -43,6 +43,9 @@ desktop.ini
 # --- Test coverage ---
 frontend/coverage/
 
+# --- E2E (Playwright): app copy, test DB, results, report ---
+frontend/e2e/.run/
+
 # graphify (knowledge graph, tạo lại bằng `graphify update .`)
 graphify-out/
 

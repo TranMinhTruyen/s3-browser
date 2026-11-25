@@ -5,7 +5,7 @@
 .DESCRIPTION
   Các bước (lỗi một bước ghi FAIL rồi chạy tiếp bước độc lập; exit code 1 nếu có FAIL):
     1. Kiểm Docker (docker info) và không có S3Browser.exe nào đang chạy; sai thì dừng.
-    2. docker compose -f docker-compose-minio.yml -p s3b-minio-test up -d (chạy trong test-env), chờ s3b-test-minio healthy.
+    2. docker compose up -d minio-init (chạy trong test-env, bật cả minio và openldap), chờ s3b-test-minio healthy.
     3. Lấy khoá admin MinIO từ container, đặt vào env S3B_BENCH_* của process này (không in, không ghi file);
        env đã đặt sẵn thì giữ nguyên.
     4. Bucket s3b-mem-10k: xoá prefix a*-g* sót, tạo đủ 10.000 object (mem-bench.ps1 -PrepareData).
@@ -117,7 +117,7 @@ try { do {
     # 2. MinIO
     $null = Invoke-Step 'bật MinIO' {
         Push-Location $PSScriptRoot
-        try { $o = & docker compose -f docker-compose-minio.yml -p s3b-minio-test up -d 2>&1 } finally { Pop-Location }
+        try { $o = & docker compose up -d minio-init 2>&1 } finally { Pop-Location }
         if ($LASTEXITCODE -ne 0) { throw "docker compose up lỗi: $(($o | Select-Object -Last 3 | Out-String).Trim() -replace '\s+', ' ')" }
         # minio-init chạy lại mỗi lần up và restart MinIO: chờ nó xong (exited) rồi mới tin trạng thái healthy.
         for ($i = 0; $i -lt 90; $i++) {

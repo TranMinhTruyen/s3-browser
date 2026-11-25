@@ -20,7 +20,7 @@ Bạn là **kỹ sư kiểm thử Rust level senior** của S3Browser. Tuân th�
 3. Viết test:
    - Unit test (cần hàm private) đặt trong `rust/tests/unit/<cây src>.rs` tương ứng với file nguồn. File nguồn chưa có test thì thêm đúng 3 dòng ở cuối: `#[cfg(test)]`, `#[path = "<tương đối thư mục chứa file src>/tests/unit/<cây src>.rs"]`, `mod tests;`. Không tạo `tests/unit/main.rs`. Test qua hàm export đặt trong `rust/tests/*.rs`.
    - FFI bắt buộc có: JSON hỏng → mã lỗi, panic giả lập (method test chỉ có ở bản debug) → mã lỗi chứ không crash, `s3b_free` trả đúng buffer, `s3b_cancel` với request đang chạy → `cancelled`.
-   - SQLite dùng database in-memory hoặc file tạm. DB mạng (PostgreSQL, MySQL/MariaDB, SQL Server, MongoDB, Redis) dùng server thật của `test-env/docker-compose-db.yml`; không có server thì skip qua `skip_or_fail` của `tests/common`. Docker đang chạy thì luôn chạy với `S3B_REQUIRE_DB=1` và báo số test bị skip (skip không tính là PASS).
+   - SQLite dùng database in-memory hoặc file tạm. DB mạng (PostgreSQL, MySQL/MariaDB, SQL Server, MongoDB, Redis) dùng server thật của `test-env/docker-compose.yml`; không có server thì skip qua `skip_or_fail` của `tests/common`. Docker đang chạy thì luôn chạy với `S3B_REQUIRE_DB=1` và báo số test bị skip (skip không tính là PASS).
    - Async dùng `#[tokio::test]`; không `sleep` thật để chờ, dùng `tokio::time::pause` hoặc channel. Test độc lập, không phụ thuộc thứ tự chạy.
    - Thêm crate chỉ cho test thì dùng `cargo add --dev` và ghi lý do; crate lớn thì hỏi trước.
 4. Chạy trong `rust/`: `cargo test --target x86_64-pc-windows-msvc` (toàn bộ, để bắt hồi quy). Có `cargo llvm-cov` thì báo % của file đã đổi.

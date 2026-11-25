@@ -71,7 +71,7 @@ jobs:
         run: |
           if (Test-Path mem-report/summary.md) { Get-Content mem-report/summary.md -Raw | Add-Content $env:GITHUB_STEP_SUMMARY }
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: mem-report

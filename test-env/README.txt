@@ -1,8 +1,9 @@
 S3Browser - môi trường test dùng chung (dựng ở sprint-11), dựng bằng Docker Compose
 =====================================================================================
 
-Thư mục này dựng sẵn MinIO + LDAP, Floci (AWS giả lập), Keycloak và MinIO bật TLS (OIDC, mTLS) để test
-các phương thức đăng nhập.
+Thư mục này dựng sẵn bằng MỘT file docker-compose.yml: MinIO + LDAP, Floci (AWS giả lập), Keycloak và MinIO bật
+TLS (OIDC, mTLS) để test các phương thức đăng nhập, cùng 6 DB cho chế độ SQL và driver Rust (MySQL, MariaDB,
+PostgreSQL, SQL Server, MongoDB, Redis). Dùng cho cả dev lẫn test.
 Danh sách profile cần tạo trong app và kết quả mong đợi: test-profiles.txt.
 
 Yêu cầu: Docker Desktop (hoặc Docker Engine + compose plugin). Không cần cài AWS CLI hay mc.
@@ -11,25 +12,66 @@ Yêu cầu: Docker Desktop (hoặc Docker Engine + compose plugin). Không cần
 1. Nội dung
 -----------
 
-  docker-compose-minio.yml   MinIO + OpenLDAP + container init (test-profiles.txt mục 1)
-  docker-compose-floci.yml   Floci có bật kiểm tra quyền + container init (test-profiles.txt mục 2)
+  docker-compose.yml         Mọi service (project s3b-test), bảng service ở mục 1a
   ldap/s3browser.ldif        User và group LDAP, nạp khi OpenLDAP khởi động lần đầu
-  scripts/minio-init.sh      Bật LDAP cho MinIO, gắn policy, tạo access key và bucket
-  scripts/floci-init.sh      Tạo IAM user/role/policy, bucket và file profile AWS CLI
-  docker-compose-keycloak.yml    Keycloak (http, localhost) cho OIDC (test-profiles.txt mục 3)
-  docker-compose-minio-tls.yml    MinIO bật TLS + identity_openid + identity_tls (test-profiles.txt mục 3)
+  scripts/test-env.sh        Script duy nhất, theo lệnh con:
+                               up         chạy trên máy: sinh cert nếu chưa có, rồi bật mọi container (mục 1a)
+                               certs      sinh CA, cert server và cert client vào certs/ (chạy trên máy, cần openssl)
+                               minio      (container minio-init) bật LDAP cho MinIO, gắn policy, tạo access key, bucket
+                               minio-tls  (container minio-tls-init) tạo bucket s3b-tls cho MinIO TLS
+                               floci      (container floci-init) tạo IAM user/role/policy, bucket, file profile AWS CLI
   keycloak/s3browser-realm.json   Realm s3browser: client public s3browser (PKCE), user mẫu, claim policy
-  scripts/gen-certs.sh            Sinh CA, cert server và cert client vào certs/ (cần openssl)
-  scripts/minio-tls-init.sh       Tạo bucket s3b-tls cho MinIO TLS
-  docker-compose-db.yml           6 DB cho driver Rust: MySQL, MariaDB, PostgreSQL, SQL Server, MongoDB, Redis (mục 10)
   db/db.env                       Cổng, user, mật khẩu test của 6 DB (dùng chung cho compose, test, bench)
   db/mssql.conf                   Bật TLS tuỳ chọn cho SQL Server
-  certs/                          (sinh ra bởi gen-certs.sh) Đã nằm trong .gitignore, không commit.
+  certs/                          (sinh ra bởi `sh scripts/test-env.sh certs`) Đã nằm trong .gitignore, không commit.
   generated/                 (sinh ra khi chạy Floci) floci-config, floci-credentials.
                              Đã nằm trong .gitignore, không commit.
 
-Các stack độc lập, chạy stack nào cũng được (riêng MinIO TLS cần Keycloak chạy trước, mục 7). Container init chạy một lần rồi dừng;
-script chạy lại nhiều lần cũng không lỗi.
+Container init chạy một lần rồi dừng; script chạy lại nhiều lần cũng không lỗi.
+
+
+1a. Dựng tất cả bằng một lệnh
+----------------------------
+
+Mở terminal trong thư mục này:
+
+  sh scripts/test-env.sh up        # MỘT lệnh (Git Bash, cần openssl): chưa có cert thì sinh, rồi bật mọi service
+
+  Lệnh trên tương đương hai bước:
+  sh scripts/test-env.sh certs     # một lần: cert cho MinIO TLS, mTLS và 6 DB (mục 7, 10)
+  docker compose up -d --wait      # mọi service; lần đầu kéo ~7 GB image, mất vài phút
+
+  Lệnh trả về khi mọi server healthy và 3 container init đã chạy xong (service "ready" chờ chúng, log:
+  "S3Browser test environment is ready."). Docker cần >= 2 GB RAM trống cho SQL Server.
+
+  Chỉ bật một phần: ghi tên service, các service nó phụ thuộc tự bật theo.
+    docker compose up -d minio-init                          MinIO + LDAP (mục 2)
+    docker compose up -d floci-init                          Floci (mục 3)
+    docker compose up -d minio-tls-init                      Keycloak + MinIO TLS (mục 7)
+    docker compose up -d --wait mysql postgres               chỉ vài DB (mục 10)
+  Không dùng --wait khi danh sách có container init mà không có "ready": compose coi container đã dừng
+  (kể cả exit 0) là lỗi. Theo dõi init bằng `docker logs -f s3b-test-<tên>-init`.
+
+  Service           Container                 Cổng trên máy
+  ----------------  ------------------------  -----------------------------------------------
+  minio             s3b-test-minio            10010 (S3 API), 10011 (console)
+  openldap          s3b-test-openldap         10389
+  minio-init        s3b-test-minio-init       (chạy một lần)
+  floci             s3b-test-floci            4566
+  floci-init        s3b-test-floci-init       (chạy một lần, ghi generated/)
+  keycloak          s3b-test-keycloak         8180
+  minio-tls         s3b-test-minio-tls        10020 (https S3 API), 10021 (console)
+  minio-tls-init    s3b-test-minio-tls-init   (chạy một lần)
+  mysql             s3b-test-mysql            127.0.0.1:10030
+  mariadb           s3b-test-mariadb          127.0.0.1:10031
+  postgres          s3b-test-postgres         127.0.0.1:10032
+  mssql             s3b-test-mssql            127.0.0.1:10033
+  mongo             s3b-test-mongo            127.0.0.1:10034
+  redis             s3b-test-redis            127.0.0.1:10035, 10036 (TLS)
+  ready             s3b-test-ready            (chờ 3 container init, cho `up --wait`)
+
+  Dừng giữ dữ liệu:   docker compose stop
+  Xoá hết:            docker compose down -v      (xoá thêm generated/ và certs/ nếu muốn làm lại từ đầu)
 
 
 2. Dựng MinIO + LDAP
@@ -37,7 +79,7 @@ script chạy lại nhiều lần cũng không lỗi.
 
 Mở terminal trong thư mục này:
 
-  docker compose -f docker-compose-minio.yml -p s3b-minio-test up -d
+  docker compose up -d minio-init
   docker logs -f s3b-test-minio-init      # chờ dòng "MinIO test environment is ready."
 
   Thành phần       Container            Cổng trên máy
@@ -52,7 +94,7 @@ Mở terminal trong thư mục này:
 3. Dựng Floci
 -------------
 
-  docker compose -f docker-compose-floci.yml -p s3b-floci-test up -d
+  docker compose up -d floci-init
   docker logs -f s3b-test-floci-init      # chờ dòng "Floci test environment is ready."
 
   Endpoint: http://localhost:4566, region ap-southeast-1. Key quản trị: test / test.
@@ -77,11 +119,12 @@ Cổng mặc định có thể đổi bằng biến môi trường khi chạy `u
   MINIO_API_PORT (10010), MINIO_CONSOLE_PORT (10011), LDAP_PORT (10389), FLOCI_PORT (4566),
   KEYCLOAK_PORT (8180), MINIO_TLS_API_PORT (10020), MINIO_TLS_CONSOLE_PORT (10021)
   DB (mục 10): MYSQL_PORT (10030), MARIADB_PORT (10031), POSTGRES_PORT (10032), MSSQL_PORT (10033),
-  MONGO_PORT (10034), REDIS_PORT (10035), REDIS_TLS_PORT (10036) - đặt trong db/db.env.
+  MONGO_PORT (10034), REDIS_PORT (10035), REDIS_TLS_PORT (10036) - đặt trong db/db.env và chạy compose với
+  `--env-file db/db.env` (mặc định trong docker-compose.yml bằng db/db.env, sửa thì sửa cả hai).
   Đổi KEYCLOAK_PORT thì Issuer URL trong app đổi theo (http://localhost:<port>/realms/s3browser).
 
-  PowerShell:  $env:FLOCI_PORT = "24566"; docker compose -f docker-compose-floci.yml -p s3b-floci-test up -d
-  Bash:        FLOCI_PORT=24566 docker compose -f docker-compose-floci.yml -p s3b-floci-test up -d
+  PowerShell:  $env:FLOCI_PORT = "24566"; docker compose up -d floci-init
+  Bash:        FLOCI_PORT=24566 docker compose up -d floci-init
 
 Đổi FLOCI_PORT thì endpoint_url trong generated/floci-config cũng đổi theo. Nhớ dùng cổng
 mới làm Endpoint trong app.
@@ -94,13 +137,12 @@ mới làm Endpoint trong app.
     docker start -a s3b-test-minio-init
     docker start -a s3b-test-floci-init
 
-  Dừng nhưng giữ dữ liệu:
-    docker compose -f docker-compose-minio.yml -p s3b-minio-test stop
-    docker compose -f docker-compose-floci.yml -p s3b-floci-test stop
+  Dừng nhưng giữ dữ liệu (một phần: thêm tên service, ví dụ `docker compose stop minio openldap floci`):
+    docker compose stop
 
-  Xoá hết (container, network, dữ liệu):
-    docker compose -f docker-compose-minio.yml -p s3b-minio-test down -v
-    docker compose -f docker-compose-floci.yml -p s3b-floci-test down -v
+  Xoá hết (container, network, dữ liệu của mọi service):
+    docker compose down -v
+  Chỉ xoá một phần: `docker compose rm -sf floci floci-init` rồi `docker volume rm s3b-test_floci-data`.
   Xoá thêm thư mục generated/ và 2 file ~/.aws/floci-* nếu đã copy. Lần dựng sau Floci sẽ
   sinh access key mới.
 
@@ -108,24 +150,21 @@ mới làm Endpoint trong app.
 7. Dựng MinIO TLS, Keycloak (OIDC) và mTLS
 ------------------------------------------
 
-Chạy trong thư mục này, theo đúng thứ tự.
+Chạy trong thư mục này. Keycloak có healthcheck, MinIO TLS chờ Keycloak healthy rồi mới khởi động.
 
   (a) Sinh chứng chỉ vào certs/ (Git Bash trên Windows, hoặc terminal macOS/Linux, cần openssl):
-        sh scripts/gen-certs.sh
+        sh scripts/test-env.sh certs
       Kết quả: certs/ca.pem (CA tự ký, chọn làm "CA certificate file"), certs/client/client.crt,
       client.key (không mật khẩu, PKCS#8), client-enc.key (PKCS#8 có mật khẩu), client-legacy.key (PEM
       mã hoá kiểu cũ, app phải từ chối). Mật khẩu của hai key mã hoá: ClientKey#2026.
       CN của cert client là "readwrite": MinIO lấy CN làm tên policy.
 
-  (b) Keycloak (chờ vài chục giây đến khi mở được http://localhost:8180/realms/s3browser):
-        docker compose -f docker-compose-keycloak.yml -p s3b-keycloak-test up -d
-
-  (c) MinIO TLS:
-        docker compose -f docker-compose-minio-tls.yml -p s3b-minio-tls-test up -d
+  (b) Keycloak + MinIO TLS (Keycloak tự bật trước, MinIO TLS chờ nó healthy):
+        docker compose up -d minio-tls-init
         docker logs -f s3b-test-minio-tls-init     # chờ "MinIO TLS test environment is ready."
 
-      Nếu MinIO khởi động khi Keycloak chưa sẵn sàng thì nó báo "Unable to initialize OpenID" và chờ:
-      chạy `docker restart s3b-test-minio-tls` sau khi Keycloak đã chạy.
+      Nếu vẫn thấy "Unable to initialize OpenID" (ví dụ Keycloak bị restart riêng): chạy
+      `docker restart s3b-test-minio-tls`.
 
   Thành phần       Container            Địa chỉ trên máy
   ---------------  -------------------  ------------------------------------------
@@ -151,8 +190,8 @@ Chạy trong thư mục này, theo đúng thứ tự.
 8. Dừng và xoá MinIO TLS, Keycloak
 ----------------------------------
 
-    docker compose -f docker-compose-minio-tls.yml -p s3b-minio-tls-test down -v
-    docker compose -f docker-compose-keycloak.yml -p s3b-keycloak-test down -v
+    docker compose rm -sf minio-tls minio-tls-init keycloak
+    docker volume rm s3b-test_minio-tls-data
     rm -rf certs        # PowerShell: Remove-Item -Recurse certs
 
 
@@ -177,17 +216,19 @@ mysql:8.4.13, mariadb:11.4.13, postgres:17.12, mssql/server:2022-CU28-ubuntu-22.
 
   (a) Sinh chứng chỉ (Git Bash, cần openssl). Cert server dùng chung nằm ở certs/db/ (SAN: localhost, 127.0.0.1,
       ::1, tên service), CA là certs/ca.pem:
-        sh scripts/gen-certs.sh
+        sh scripts/test-env.sh certs
       Chạy lại script sinh CA mới và xoá certs/: container đang chạy giữ file cũ, phải tạo lại bằng
       `up -d --wait --force-recreate` (và MinIO TLS cũng vậy nếu đang chạy).
 
   (b) Dựng (chạy trong thư mục này; lần đầu kéo ~6 GB image, mất vài phút):
-        docker compose -f docker-compose-db.yml --env-file db/db.env -p s3b-db-test up -d --wait
-      Chỉ một DB: thêm tên service ở cuối (mysql, mariadb, postgres, mssql, mongo, redis).
+        docker compose --env-file db/db.env up -d --wait mysql mariadb postgres mssql mongo redis
+      Chỉ một DB: chỉ ghi tên service đó. `docker compose up -d --wait` (mục 1a) cũng bật cả 6 DB.
 
   (c) Dừng giữ dữ liệu / xoá hết (named volume):
-        docker compose -f docker-compose-db.yml --env-file db/db.env -p s3b-db-test stop
-        docker compose -f docker-compose-db.yml --env-file db/db.env -p s3b-db-test down -v
+        docker compose stop mysql mariadb postgres mssql mongo redis
+        docker compose rm -sf mysql mariadb postgres mssql mongo redis
+        docker volume rm s3b-test_mysql-data s3b-test_mariadb-data s3b-test_postgres-data s3b-test_mssql-data \
+          s3b-test_mongo-data s3b-test_redis-data
 
   Các cổng DB chỉ mở trên loopback (127.0.0.1), máy khác trong mạng không kết nối được.
 
@@ -241,8 +282,8 @@ Một lệnh, chạy từ đầu tới cuối (ở gốc repo, cần Docker Desk
 
   powershell -ExecutionPolicy Bypass -File test-env/mem-bench-all.ps1 -Runs 3
 
-  Script làm lần lượt: kiểm Docker -> bật MinIO (docker compose -f docker-compose-minio.yml -p s3b-minio-test up -d,
-  chờ healthy) -> lấy khoá admin từ container vào env S3B_BENCH_* của process script (không in, không ghi file;
+  Script làm lần lượt: kiểm Docker -> bật MinIO (docker compose up -d minio-init, chờ init xong và MinIO
+  healthy) -> lấy khoá admin từ container vào env S3B_BENCH_* của process script (không in, không ghi file;
   đã đặt sẵn env thì giữ nguyên) -> tạo bucket s3b-mem-10k đủ 10.000 object -> build bản release và bản đo (devtools,
   kiểm tag) -> mem-bench.ps1 -> dọn prefix a*-g* trong bucket. Lỗi một bước ghi FAIL rồi chạy tiếp bước độc lập;
   exit code 1 nếu có FAIL. Tham số: -Runs (mặc định 3), -Scenario (a-f, i4, all; mặc định all), -OutDir (mặc định
@@ -262,8 +303,8 @@ Từng bước tay, chạy trong thư mục này:
       Cách truyền biến KEY=value qua `wails3 task` chưa kiểm chứng; không được thì
       chạy `task` trực tiếp hoặc đặt biến môi trường EXTRA_TAGS và OUT_DIR.
   (b) Cài thư viện cho script UI (một lần): `bun install --cwd docs` (playwright đã có trong docs/package.json).
-  (c) Dữ liệu cho b, c, e-s3: chạy MinIO (mục 1/docker-compose-minio.yml), rồi
-        $env:S3B_BENCH_ACCESS_KEY='admin'; $env:S3B_BENCH_SECRET_KEY='<mật khẩu admin của docker-compose-minio.yml>'
+  (c) Dữ liệu cho b, c, e-s3: chạy MinIO (mục 2: docker compose up -d minio-init), rồi
+        $env:S3B_BENCH_ACCESS_KEY='admin'; $env:S3B_BENCH_SECRET_KEY='<mật khẩu admin của service minio trong docker-compose.yml>'
         $env:S3B_BENCH_ENDPOINT='http://localhost:10010'      # mặc định
         .\mem-bench.ps1 -PrepareData
       tạo bucket s3b-mem-10k với 10.000 object (obj-00001.bin ... obj-10000.bin). Kịch bản d không cần MinIO (SQLite).

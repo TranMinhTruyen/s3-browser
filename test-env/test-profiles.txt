@@ -93,7 +93,7 @@ Access key/secret key do Floci sinh ngẫu nhiên: lấy trong ~/.aws/floci-cred
 -------------------------------------------------------
 
 Field chung: Provider = MinIO | Endpoint = https://localhost:10020 | Path style = bật
-File nằm trong test-env/certs/ (sinh bởi gen-certs.sh). Đăng nhập Keycloak: oidc-user / OidcUser#2026.
+File nằm trong test-env/certs/ (sinh bởi `sh scripts/test-env.sh certs`). Đăng nhập Keycloak: oidc-user / OidcUser#2026.
 
   #    Method              Field cần nhập                                     Kết quả mong đợi
   ---  ------------------  -------------------------------------------------  -----------------------------------

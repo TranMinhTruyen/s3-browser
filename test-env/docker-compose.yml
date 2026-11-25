@@ -1,0 +1,379 @@
+# Test and dev environment of S3Browser in one file: every S3 server and every database the app supports.
+#   S3:  minio + openldap + minio-init (Access key, Anonymous, STS, LDAP)      test-profiles.txt mục 1
+#        floci + floci-init (AWS emulator with IAM checks)                      test-profiles.txt mục 2
+#        keycloak + minio-tls + minio-tls-init (OIDC, Certificate/mTLS, CA)     test-profiles.txt mục 3
+#   DB:  mysql, mariadb, postgres, mssql, mongo, redis (Rust drivers: tests, benchmark, SQL mode)
+#
+# Run in this folder (README.txt):
+#   sh scripts/test-env.sh up                       everything in one command (certificates if missing + step 2)
+# or step by step:
+#   1) sh scripts/test-env.sh certs                 TLS certificates in certs/ (needs openssl), once
+#   2) docker compose up -d --wait                  everything (first pull ~7 GB; SQL Server needs >= 2 GB RAM free)
+#      docker compose up -d --wait minio-init       only some services: name them, dependencies start too
+#   Stop, keep data:     docker compose stop
+#   Remove everything:   docker compose down -v
+# Ports can be changed with environment variables (README.txt mục 4); DB values also live in db/db.env and the
+# defaults below must stay equal to it (the Rust tests and the benchmark read db/db.env).
+# Images of the databases have pinned patch tags so benchmark numbers stay comparable.
+
+name: s3b-test
+
+x-minio-image: &minio-image pgsty/minio:RELEASE.2026-08-04T00-00-00Z
+
+services:
+  # ---------------------------------------------------------------- S3: MinIO + LDAP
+  minio:
+    image: *minio-image
+    container_name: s3b-test-minio
+    command: server --address :10000 --console-address :10001 /data
+    ports:
+      - "${MINIO_API_PORT:-10010}:10000" # S3 API, the endpoint used in S3Browser
+      - "${MINIO_CONSOLE_PORT:-10011}:10001" # Web console, NOT an S3 endpoint
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: "MinioRoot#2026"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      # mc's default "local" alias points at :9000, so point it at the API port.
+      test: ["CMD-SHELL", "MC_HOST_local=http://localhost:10000 mc ready local"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: s3b-test-openldap
+    # --copy-service lets the container load the mounted LDIF on its first start.
+    command: --copy-service
+    ports:
+      - "${LDAP_PORT:-10389}:389"
+    environment:
+      LDAP_ORGANISATION: S3Browser Test
+      LDAP_DOMAIN: s3browser.local
+      LDAP_ADMIN_PASSWORD: "LdapAdmin#2026"
+    volumes:
+      - ./ldap/s3browser.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/50-s3browser.ldif:ro
+      - ldap-data:/var/lib/ldap
+      - ldap-config:/etc/ldap/slapd.d
+    restart: unless-stopped
+
+  # One-shot: enables LDAP on MinIO, attaches policies, creates access keys and anonymous buckets.
+  minio-init:
+    # The server image already ships mc, so no extra image is needed.
+    image: *minio-image
+    container_name: s3b-test-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+      openldap:
+        condition: service_started
+    entrypoint: ["/bin/sh", "/scripts/test-env.sh", "minio"]
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: "MinioRoot#2026"
+    volumes:
+      - ./scripts/test-env.sh:/scripts/test-env.sh:ro
+    restart: "no"
+
+  # ---------------------------------------------------------------- S3: Floci (AWS emulator)
+  floci:
+    image: floci/floci:latest
+    container_name: s3b-test-floci
+    ports:
+      - "${FLOCI_PORT:-4566}:4566"
+    environment:
+      FLOCI_STORAGE_MODE: hybrid
+      # Check access keys and IAM policies like real AWS. Admin key: test / test.
+      FLOCI_SERVICES_IAM_ENFORCEMENT_ENABLED: "true"
+      FLOCI_AUTH_VALIDATE_SIGNATURES: "true"
+      FLOCI_SERVICES_S3_ENFORCE_AUTH: "true"
+    volumes:
+      - floci-data:/app/data
+    restart: unless-stopped
+
+  # One-shot: creates IAM users, roles, policies, buckets and the AWS CLI profile files in ./generated.
+  floci-init:
+    image: amazon/aws-cli:2.15.41
+    container_name: s3b-test-floci-init
+    depends_on:
+      - floci
+    entrypoint: ["/bin/sh", "/scripts/test-env.sh", "floci"]
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_PAGER: ""
+      # Port written into endpoint_url of the generated profiles (as seen from the host).
+      FLOCI_PORT: "${FLOCI_PORT:-4566}"
+    volumes:
+      - ./scripts/test-env.sh:/scripts/test-env.sh:ro
+      - ./generated:/out
+    restart: "no"
+
+  # ---------------------------------------------------------------- S3: Keycloak + MinIO TLS (OIDC, mTLS)
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: s3b-test-keycloak
+    command: start-dev --import-realm
+    ports:
+      - "${KEYCLOAK_PORT:-8180}:8080"
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: "KeycloakAdmin#2026"
+      # http on localhost only. The issuer in the tokens is always this URL (the one typed in S3Browser),
+      # while MinIO reaches Keycloak inside the Docker network by its container name.
+      KC_HOSTNAME: "http://localhost:${KEYCLOAK_PORT:-8180}"
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./keycloak/s3browser-realm.json:/opt/keycloak/data/import/s3browser-realm.json:ro
+    healthcheck:
+      # The image has no curl: ask the management port (9000) with bash's /dev/tcp.
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q '"UP"' <&3
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+    restart: unless-stopped
+
+  minio-tls:
+    image: *minio-image
+    container_name: s3b-test-minio-tls
+    command: server --address :10000 --console-address :10001 --certs-dir /certs /data
+    # MinIO reads the OpenID configuration once at start, so Keycloak must be ready first.
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    ports:
+      - "${MINIO_TLS_API_PORT:-10020}:10000" # S3 API + STS over https
+      - "${MINIO_TLS_CONSOLE_PORT:-10021}:10001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: "MinioRoot#2026"
+      # OIDC (identity_openid): the JWT is checked against the keys of this Keycloak realm.
+      # The policy name comes from the "policy" claim (see keycloak/s3browser-realm.json).
+      MINIO_IDENTITY_OPENID_CONFIG_URL: "http://s3b-test-keycloak:8080/realms/s3browser/.well-known/openid-configuration"
+      MINIO_IDENTITY_OPENID_CLIENT_ID: s3browser
+      MINIO_IDENTITY_OPENID_CLAIM_NAME: policy
+      MINIO_IDENTITY_OPENID_SCOPES: openid
+      # Certificate (identity_tls): the CN of the client certificate is the policy name.
+      MINIO_IDENTITY_TLS_ENABLE: "on"
+    volumes:
+      - minio-tls-data:/data
+      - ./certs/minio:/certs:ro # public.crt, private.key and CAs/ca.pem (trusted for client certificates)
+    healthcheck:
+      test: ["CMD-SHELL", "MC_HOST_local=https://localhost:10000 mc --insecure ready local"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  # One-shot: creates the bucket the OIDC and Certificate profiles browse.
+  minio-tls-init:
+    image: *minio-image
+    container_name: s3b-test-minio-tls-init
+    depends_on:
+      minio-tls:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "/scripts/test-env.sh", "minio-tls"]
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: "MinioRoot#2026"
+    volumes:
+      - ./scripts/test-env.sh:/scripts/test-env.sh:ro
+    restart: "no"
+
+  # ---------------------------------------------------------------- Databases (TLS optional on every server)
+  mysql:
+    image: mysql:8.4.13
+    container_name: s3b-test-mysql
+    command: --ssl-ca=/certs/ca.pem --ssl-cert=/certs/server.crt --ssl-key=/certs/server.key
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-S3bTest2026}
+      MYSQL_DATABASE: ${DB_NAME:-s3b}
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-10030}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./certs/db/server.crt:/certs/server.crt:ro
+      - ./certs/db/server.key:/certs/server.key:ro
+      - ./certs/ca.pem:/certs/ca.pem:ro
+    healthcheck:
+      # -h 127.0.0.1 so the init-time server (socket only) does not count as healthy.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    restart: unless-stopped
+
+  mariadb:
+    image: mariadb:11.4.13
+    container_name: s3b-test-mariadb
+    command: --ssl-ca=/certs/ca.pem --ssl-cert=/certs/server.crt --ssl-key=/certs/server.key
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD:-S3bTest2026}
+      MARIADB_DATABASE: ${DB_NAME:-s3b}
+    ports:
+      - "127.0.0.1:${MARIADB_PORT:-10031}:3306"
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./certs/db/server.crt:/certs/server.crt:ro
+      - ./certs/db/server.key:/certs/server.key:ro
+      - ./certs/ca.pem:/certs/ca.pem:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17.12
+    container_name: s3b-test-postgres
+    # PostgreSQL refuses a key that is not 0600 and owned by postgres, and bind mounts from Windows
+    # cannot give that: copy the key into the container first, then run the normal entrypoint.
+    entrypoint:
+      - sh
+      - -c
+      - |
+        mkdir -p /var/lib/postgresql/tls
+        cp /certs/server.crt /certs/server.key /var/lib/postgresql/tls/
+        chown postgres:postgres /var/lib/postgresql/tls/*
+        chmod 600 /var/lib/postgresql/tls/server.key
+        exec docker-entrypoint.sh postgres -c ssl=on \
+          -c ssl_cert_file=/var/lib/postgresql/tls/server.crt \
+          -c ssl_key_file=/var/lib/postgresql/tls/server.key
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-S3bTest2026}
+      POSTGRES_DB: ${DB_NAME:-s3b}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-10032}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./certs/db:/certs:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d $$POSTGRES_DB"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    restart: unless-stopped
+
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-CU28-ubuntu-22.04
+    container_name: s3b-test-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${DB_PASSWORD:-S3bTest2026}
+      MSSQL_PID: Developer
+      MSSQL_MEMORY_LIMIT_MB: "2048"
+    ports:
+      - "127.0.0.1:${MSSQL_PORT:-10033}:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+      - ./db/mssql.conf:/var/opt/mssql/mssql.conf:ro
+      - ./certs/db:/certs:ro
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -b -o /dev/null"]
+      interval: 5s
+      timeout: 10s
+      retries: 40
+      start_period: 20s
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:8.0.38
+    container_name: s3b-test-mongo
+    # allowTLS: accepts both plain and TLS connections.
+    command: ["mongod", "--tlsMode", "allowTLS", "--tlsCertificateKeyFile", "/certs/server.pem", "--tlsCAFile", "/certs/ca.pem", "--tlsAllowConnectionsWithoutCertificates"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD:-S3bTest2026}
+    ports:
+      - "127.0.0.1:${MONGO_PORT:-10034}:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./certs/db/server.pem:/certs/server.pem:ro
+      - ./certs/ca.pem:/certs/ca.pem:ro
+    healthcheck:
+      # The init-time mongod listens on localhost only, so check through the container address.
+      test: ["CMD-SHELL", "mongosh --quiet --host $$(hostname -i | cut -d' ' -f1) -u root -p $$MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin --eval 'db.adminCommand(\"ping\").ok' | grep -q 1"]
+      interval: 3s
+      timeout: 10s
+      retries: 40
+      start_period: 10s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4.12
+    container_name: s3b-test-redis
+    # Plain port 6379 and TLS port 6380 side by side; DEBUG command is on for the tests only.
+    command:
+      - redis-server
+      - --requirepass
+      - ${DB_PASSWORD:-S3bTest2026}
+      - --enable-debug-command
+      - "yes"
+      - --port
+      - "6379"
+      - --tls-port
+      - "6380"
+      - --tls-cert-file
+      - /certs/server.crt
+      - --tls-key-file
+      - /certs/server.key
+      - --tls-ca-cert-file
+      - /certs/ca.pem
+      - --tls-auth-clients
+      - "no"
+      - --save
+      - ""
+    environment:
+      REDISCLI_AUTH: ${DB_PASSWORD:-S3bTest2026}
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-10035}:6379"
+      - "127.0.0.1:${REDIS_TLS_PORT:-10036}:6380"
+    volumes:
+      - redis-data:/data
+      - ./certs/db/server.crt:/certs/server.crt:ro
+      - ./certs/db/server.key:/certs/server.key:ro
+      - ./certs/ca.pem:/certs/ca.pem:ro
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    restart: unless-stopped
+
+  # Waits for the one-shot init containers: `up --wait` alone fails on a container that has exited, even with code 0.
+  ready:
+    image: redis:7.4.12
+    container_name: s3b-test-ready
+    entrypoint: ["sh", "-c", "echo 'S3Browser test environment is ready.' && exec sleep infinity"]
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+      floci-init:
+        condition: service_completed_successfully
+      minio-tls-init:
+        condition: service_completed_successfully
+    restart: "no"
+
+volumes:
+  minio-data:
+  ldap-data:
+  ldap-config:
+  floci-data:
+  minio-tls-data:
+  mysql-data:
+  mariadb-data:
+  postgres-data:
+  mssql-data:
+  mongo-data:
+  redis-data:

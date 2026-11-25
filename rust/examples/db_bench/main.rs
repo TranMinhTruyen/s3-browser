@@ -481,7 +481,7 @@ fn lock_versions(lock: &str, name: &str) -> String {
     found.join(", ")
 }
 
-/// Cặp (tên container, image) trong `docker-compose-db.yml` (dòng `image:` đứng trước `container_name:`).
+/// Cặp (tên container, image) trong `test-env/docker-compose.yml` (dòng `image:` đứng trước `container_name:`).
 fn compose_images(text: &str) -> Vec<(String, String)> {
     let mut image = None;
     let mut out = Vec::new();
@@ -591,7 +591,7 @@ fn env_info(
     ] {
         add(&format!("Crate {name}"), lock_versions(&lock, name));
     }
-    let compose = fs::read_to_string(repo_root().join("test-env").join("docker-compose-db.yml"))
+    let compose = fs::read_to_string(repo_root().join("test-env").join("docker-compose.yml"))
         .unwrap_or_default();
     let images = compose_images(&compose);
     for kind in Kind::ALL {

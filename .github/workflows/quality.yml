@@ -1,0 +1,115 @@
+# Kiểm tra chất lượng code cho mọi PR vào SP-*/release và staging: lint, format, type-check, build, unit test FE.
+# Go và FE chạy Ubuntu (rẻ, nhanh) với GOOS=windows để kiểm đúng code build thật; Rust chạy Windows vì chỉ build target msvc.
+# Không chạy cargo test: test DB cần Docker, thiếu DB thì tự SKIP nên cho kết quả xanh giả (xem CLAUDE.md mục 8).
+# PR chỉ đổi tài liệu thì bỏ qua; push mới lên cùng PR huỷ lượt cũ.
+name: quality
+
+on:
+  pull_request:
+    branches: ['SP-*/release', staging]
+    paths-ignore:
+      - 'sprints/**'
+      - 'memory/**'
+      - '**/*.md'
+      - 'docs/user-guide/**'
+      - 'docs/images/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GOOS: windows
+      GOARCH: amd64
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      # main.go embed frontend/dist (bị gitignore): tạo thư mục giả để build/vet không lỗi pattern
+      - name: Stub frontend/dist
+        run: mkdir -p frontend/dist && touch frontend/dist/.keep
+
+      - name: golangci-lint
+        run: go tool golangci-lint run ./...
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go build
+        run: go build ./...
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - uses: oven-sh/setup-bun@v2
+
+      # bun.lock bị gitignore nên không dùng --frozen-lockfile
+      - name: Install deps
+        run: bun install
+
+      # Bindings bị gitignore: sinh lại (tag wailsgen bắt buộc, xem CLAUDE.md mục 7) để tsc có type
+      - name: Generate bindings
+        working-directory: .
+        env:
+          GOOS: windows
+          GOARCH: amd64
+        run: |
+          mkdir -p frontend/dist && touch frontend/dist/.keep
+          go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts
+
+      - name: biome
+        run: node_modules/.bin/biome ci src
+
+      - name: oxlint
+        run: node_modules/.bin/oxlint -c ../.oxlintrc.json src
+
+      - name: tsc
+        run: node_modules/.bin/tsc --noEmit
+
+      - name: vitest
+        run: node_modules/.bin/vitest run
+
+  rust:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: cargo fmt
+        run: cargo fmt --check
+
+      - name: cargo clippy
+        run: cargo clippy --target x86_64-pc-windows-msvc --all-targets -- -D warnings

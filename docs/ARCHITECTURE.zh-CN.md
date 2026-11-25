@@ -6,8 +6,9 @@
 
 ## 1. 技术栈
 
-- 基于 **Wails v3** 的桌面应用：Go 后端 + 运行在 WebView 中的 React 19 / TypeScript 前端。
+- 基于 **Wails v3** 的桌面应用：Go 后端 + 运行在 WebView 中的 React 19 / TypeScript 前端。 仅支持 Windows。
 - 后端：AWS SDK v2 (S3)、`madmin-go` (MinIO 管理)、SQLite (modernc) + goose 迁移 + sqlc、`slog`。
+- 原生 DB 库：**Rust** 编写的 `s3b_db.dll` (tokio + 每种数据库一个底层驱动)，由 Go **不经 cgo** 加载。它负责 SQL 模式下对用户数据库的全部工作 (第 2.11 节)。
 - 前端：Mantine 9、zustand 5 + immer、NiceModal、i18next (7 种语言：en / vi / ja / zh-CN / zh-TW / ru / de)、sonner (toast)、`@tanstack/react-virtual`、zod、dayjs。包管理器：**bun**。
 
 ```
@@ -21,14 +22,17 @@ s3-browser
 │   │   ├── profile/        连接配置文件 (密钥加密存储)
 │   │   ├── master/         主数据 (区域等)
 │   │   ├── bucket/         连接、存储桶、存储桶策略、对象、上传、下载、搜索
+│   │   ├── db/             SQL 模式：DB 配置文件、连接、查询 -> 调用 s3b_db.dll
 │   │   ├── setting/        应用设置 (settings.json)、记住的标签页 (tabs.json)、开机自启
 │   │   └── update/         从 GitHub Releases 自动更新
-│   └── pkg/                cnst、db (schemas、queries、sqlc)、logger、portable、utils
+│   └── pkg/                cnst、db (schemas、queries、sqlc)、logger、memprobe、portable、utils
 ├── models/                 输入/输出模型 + alias.go
+├── rust/                   s3b_db.dll 的 Cargo 工作区：src/{ffi,dispatch,registry,runtime}.rs、protocol/、drivers/、tests/
 ├── frontend/
 │   ├── bindings/           自动生成的 Wails 绑定 (请勿编辑)
 │   └── src/                common、components、pages (pages/s3, pages/sql)、locales、test
-├── build/                  各平台打包 (Windows NSIS、portable 等)
+├── build/                  各平台打包 (Windows NSIS、portable 等) 以及 Taskfile (build:dll、copy:dll)
+├── test-env/               Docker 测试服务器 (MinIO、Keycloak、LDAP、6 种数据库)、基准测试脚本
 └── docs/                   本文档 + PDF 工具
 ```
 
@@ -45,9 +49,11 @@ flowchart LR
   S --> G[(modules/global)]
   S --> DB[(SQLite via sqlc)]
   S --> S3[(S3 / MinIO)]
+  S --> DLL[[s3b_db.dll - Rust]]
+  DLL --> UDB[(user databases)]
 ```
 
-- `main.go` 创建 logger 和 Wails app，用 `application.NewService` 注册五个 handler (bucket、master、profile、setting、update)，并创建主窗口 (`EnableFileDrop: true`)。
+- `main.go` 创建 logger 和 Wails app，用 `application.NewService` 注册六个 handler (bucket、db、master、profile、setting、update)，并创建主窗口 (`EnableFileDrop: true`)。
 - `internal/app.go` 的 `NewApp` 打开数据库并执行迁移，创建 `KeyManager` (密钥加密)，构建各模块，再在其上构建 handler。`Shutdown` 会取消传输、断开所有连接并关闭数据库。
 - **Handler** (`internal/handlers/*_handler.go`) 很轻：只调用模块。其公开方法会成为 TypeScript 绑定。
 - **模块** (`internal/modules/<name>/module.go`) 暴露带文档注释的公开 API。具体工作拆分到 `submodule_<x>_mng.go` 中未导出的子模块 (`submoduleXxxMng`，构造函数 `newSubmoduleXxxMng`)。
@@ -146,6 +152,109 @@ SQLite 文件 `data.db` 位于应用数据目录 (见 `internal/pkg/portable`；
 - **状态**：`UpdateStateOutput` (`supported`、`state`、`currentVersion`、`version`、`releaseUrl`、`written`、`total`、`errorCode`，`state` 为 `error` 时的 `UPE...` 代码)。`state` 为 `idle`、`checking`、`upToDate`、`available`、`downloading`、`ready` 或 `error`。每次变化，以及下载期间每 200 ms，都会通过事件 `update:state-changed` 发送。
 - **消息**：`UPS001` (已是最新版本)、`UPE001` (无法检查)、`UPE002` (GitHub 限流)、`UPE003` (无法下载)、`UPE004` (校验和)、`UPE005` (无法运行安装程序)、`UPE006` (没有适用于本机的安装程序)。
 
+### 2.11 SQL 模式：Go 如何调用 Rust (`modules/db` -> `s3b_db.dll`)
+
+**对用户所连接数据库的所有工作都由 Rust 完成**：打开连接、执行 SQL、拆分语句、对象树、分页、值转换和取消。Go 只是桥梁：检查输入、发送请求、把错误转换为消息并原样传递结果。前端并不知道 Rust 的存在，它像调用其他绑定一样调用 `DbHandler`。应用自身的 SQLite (配置文件、设置) 仍由 Go 处理。
+
+```mermaid
+sequenceDiagram
+  participant FE as React (callIPC)
+  participant M as DbHandler + modules/db
+  participant N as submoduleNativeMng
+  participant F as ffi.rs
+  participant D as dispatch.rs
+  participant A as driver actor
+  FE->>M: ExecuteSql(input) (binding)
+  M->>N: callNativeRaw(ctx, "execute", params)
+  N->>F: s3b_call(request JSON), syscall without cgo
+  F->>D: dispatch::call (tokio, block_on)
+  D->>A: Cmd::Execute (mpsc channel)
+  A-->>D: ExecuteResult (oneshot channel)
+  D-->>F: {"ok":true,"result":{...}}
+  F-->>N: out_ptr / out_len (Rust buffer)
+  N->>F: s3b_free(ptr, len) after copying
+  N-->>M: result bytes, not decoded
+  M-->>FE: Output.Body = the same JSON
+```
+
+**加载 DLL** (`internal/modules/db/native_windows.go`)
+
+- 应用以 `CGO_ENABLED=0` 构建。Go 通过 `golang.org/x/sys/windows` 加载 DLL：`LoadLibraryEx(<exe 所在目录>\s3b_db.dll, LOAD_LIBRARY_SEARCH_APPLICATION_DIR | LOAD_LIBRARY_SEARCH_SYSTEM32)`。路径是绝对路径，因此搜索路径上的其他目录无法替换该 DLL。
+- `GetProcAddress` 获取四个导出函数，然后只运行一次 `s3b_init`。所有调用都经由 `syscall.SyscallN`。
+- DLL 在第一次调用时 (通常是 Connect) 加载，而不是在应用启动时。加载失败会在下一次调用时重试，并报告 `DBE009`。在其他操作系统上，`native_other.go` 只返回错误。
+- DLL 以 `+crt-static` 链接 (`rust/.cargo/config.toml`)，因此不需要 `VCRUNTIME140.dll`。
+
+**FFI 约定** (`rust/src/ffi.rs`)
+
+| 导出函数 | 签名 | 作用 |
+|---|---|---|
+| `s3b_init` | `() -> i32` | 创建唯一的 tokio 运行时和 TLS provider。 |
+| `s3b_call` | `(req_ptr, req_len, *out_ptr, *out_len) -> i32` | 一个 JSON 请求；阻塞直到 JSON 响应就绪，并返回由 Rust 持有的缓冲区。 |
+| `s3b_cancel` | `(id: u64)` | 请求中断请求 `id`。 |
+| `s3b_free` | `(ptr, len)` | 释放 `s3b_call` 返回的缓冲区。 |
+
+- 返回值只表示调用本身失败：`0` 成功，`1` 参数错误，`2` 初始化失败，`-1` panic。工作本身的错误 (SQL 错误、连接已关闭等) 在 JSON 中返回。
+- 每个导出函数都包在 `catch_unwind` 中，release profile 保持 `panic = "unwind"`，因此 Rust 的 panic 永远不会传到 Go。测试以外不使用 `unwrap`/`expect`。
+- 内存：Rust 复制请求，返回后不保留任何指向 Go 内存的指针。Go 复制响应后总是调用 `s3b_free`：Rust 分配的缓冲区只由 Rust 释放。
+
+**协议** (`rust/src/protocol/mod.rs`，camelCase JSON)
+
+```jsonc
+// 请求：id 在每次调用中唯一 (Go 中的原子计数器)，也是 s3b_cancel 的键
+{"id": 7, "method": "execute", "params": {"connId": 1, "sql": "select 1", "pageSize": 10000, "maxPageBytes": 16777216}}
+// 成功
+{"ok": true, "result": {...}}
+// 失败
+{"ok": false, "error": {"code": "sqlError", "message": "no such table: t"}}
+```
+
+- 方法：`open`、`close`、`execute`、`fetch`、`schemaTree`、`tableInfo`、`tableRows`。
+- 错误码是固定的，由 `errorCodeMessage` (`submodule_native_mng.go`) 转换为消息：`invalidRequest` `DBE001`、`openFailed` `DBE002`、`notADatabase` `DBE003`、`connNotFound` `DBE004`、`cursorNotFound` `DBE005`、`sqlError` `DBE006` (与语句一起显示，不弹出提示)、`tableNotFound` `DBE007`，其他代码为 `DBE008`。`cancelled` 静默返回 `Result=false`。加载失败为 `DBE009`，Go 侧超时为 `DBE015`。新代码需要在 7 个 `ipcMessage.json` 中添加键。
+
+**Rust 内部**：`ffi.rs` -> `dispatch.rs` -> `drivers/<db>/`
+
+- `dispatch::call` 把每个请求作为任务运行在唯一的多线程 tokio 运行时 (`runtime.rs`) 上，并用 `block_on` 等待，因为对 Go 来说 `s3b_call` 是同步函数。任务中的 panic 会变成错误 `internal`。
+- `dispatch` 解析请求并按 `method` 分发。解析错误从不重复错误的值，因此密码不会泄露到消息中。
+- 每个连接都是一个 **actor**：只有一个 tokio 任务持有该连接。它通过 `mpsc` 通道接收命令 (`Cmd::Execute`、`Fetch`、`TableRows`、`SchemaTree`、`TableInfo`、`Close`)，并通过 `oneshot` 通道回复，因此连接周围不需要锁 (类似 Go 中的 goroutine + channel)。
+- `registry.rs` 把 `connId` 映射到 actor 的通道，把请求 `id` 映射到它的连接和 `CancelSignal`。
+- 每种数据库使用最底层的驱动，预先分配容量，把行直接写成 JSON 文本：
+
+| 数据库 | Rust 驱动 |
+|---|---|
+| SQLite | `libsqlite3-sys` (C API，bundled)；`sqlx` 只用于打开连接 |
+| PostgreSQL | `tokio-postgres` |
+| MySQL / MariaDB | `mysql_async` |
+| SQL Server | `tiberius` |
+| MongoDB | `mongodb` (原始 BSON) |
+| Redis | `redis` |
+
+**Go 不解码结果**
+
+`callNativeRaw` 检查响应是否以 `{"ok":true,"result":` 开头，然后不经解析直接截取结果部分的字节。`StatementResult`、`ExecuteSqlOutput` 和 `FetchRowsOutput` (`models/db`) 保存这些字节，它们的 `MarshalJSON` (`query_output_json.go`，构建标签 `!wailsgen`) 原样写入 Wails 响应，因此 10,000 行的一页数据永远不会被解码再编码。绑定生成器会把带有 `MarshalJSON` 的类型输出为 `any`，所以生成绑定时要加 `-tags=wailsgen` (第 4 节)。小结果 (`open`、`schemaTree`、`tableInfo`) 用 `callNative[T]` 正常解码。
+
+**取消与超时**
+
+- 一次调用的 Go context 在前端中止 (`AbortController`)、应用关闭或超时时结束：`ExecuteSql`、`OpenTableRows` 和 `FetchRows` 为 5 分钟 (`queryTimeout`)，连接和读取元数据为 30 秒 (`metaTimeout`)。带 `All` 的 `FetchRows` 没有页数上限，也没有超时。
+- context 结束后，`callNativeRaw` 中的一个 goroutine 每 100 ms 调用一次 `s3b_cancel(id)`，直到 `s3b_call` 返回，因为第一次取消可能在 Rust 登记该请求之前到达。
+- Rust 设置 `CancelSignal`，中断正在执行的语句并返回 `cancelled`。前端取消时 Go 静默返回 `Result=false`，超时时返回 `DBE015`。
+
+**连接与分页**
+
+- 每个配置文件有一个 **主连接** (`ConnectDb`)，用于对象树和表信息；**每个 SQL 标签页另有一个连接**，在该标签页第一次执行时打开。`CloseDbTab` 关闭某个标签页的连接，`DisconnectDb` 关闭该配置文件的所有连接，`Close` (关闭应用时) 关闭全部连接。
+- 结果分页返回：第一页和之后的每一页最多 10,000 行或 16 MiB (`pageSize`、`maxPageBytes`)。其余部分留在 Rust 侧的游标中 (`cursorId`)；从不把整个结果读入内存。
+
+**当前状态**
+
+- Rust 已有 SQLite、PostgreSQL、MySQL、MariaDB、SQL Server、MongoDB 和 Redis 的驱动，并已用真实服务器测试。
+- 目前 Go 只打开 **SQLite** (`submodule_conn_mng.go` 中的 `openParams{"sqlite", path, readOnly}`)。
+- PostgreSQL 配置文件可以保存 (`db_profiles`)，但它在前端的连接、对象树和行数据仍是模拟数据 (`frontend/src/pages/sql/mock`)。其他网络数据库尚未出现在界面中。
+
+**新增一项能力**
+
+1. Rust：在 `protocol` 中添加参数和结果类型，在 `dispatch::route` 中添加分支，添加 `Cmd` 变体，在每个驱动中实现，并用 `cargo test` 测试。
+2. Go：参数结构体，以及用 `callNative[T]` (小结果) 或 `callNativeRaw` (行数据) 调用；新错误码映射为 `DBE...` 并添加 7 种语言的键；然后是模块方法、handler，并重新生成绑定。
+3. 不要图省事在 Go 中做这些工作：Go 始终只是桥梁。
+
 ## 3. 前端
 
 ### 3.1 调用后端：`callIPC`
@@ -191,7 +300,11 @@ Store 通过 `createAppStore(creator, name)` 创建 (zustand + immer，开发环
 
 **记住标签页**：`useTabPersistence` (在 `App.tsx` 中调用) 在标签页顺序、活动标签页和各标签页的配置文件停止变化 500 ms 后以及 `pagehide` 时，通过 `SaveTabState` 将其保存到 `tabs.json`。启动时 `restoreTabsFromDisk` (`pages/s3/utils/tabPersistence.ts`) 用 `GetTabState` 加载它们。如果加载失败，本次会话会禁用保存，因此 `tabs.json` 永远不会被覆盖。配置文件已被删除的标签页保留位置但失去配置文件 (`normalizeTabProfiles`)。
 
-### 3.8 设置、主题与更新
+### 3.8 SQL 模式
+
+`SqlWorkspace` (`pages/sql`) 由带对象树 (`dbTreeStore`) 的配置文件导航栏和包含 SQL 标签页 (`sqlTabStore`) 的 `SqlTabPage` 组成：CodeMirror 编辑器、Run (Ctrl+E) 和 Cancel、Find/Replace，以及结果面板 (每条 SELECT 一个标签页，外加 Messages 标签页，行显示在虚拟化的 `DataGrid` 中)。`useSqlRunner` 调用 `ExecuteSql`，滚动时用 `FetchRows` 加载后续页面，并在关闭标签页或更改标签页的配置文件时调用 `CloseDbTab`。打开一张表会显示其结构和数据 (`useTableRows`、`OpenTableRows`)。配置文件在 `dbProfileStore` 中 (`sqlite` 或 `postgres`)。
+
+### 3.9 设置、主题与更新
 
 `main.tsx` 在渲染之前等待 `loadStartupData()` (并行加载设置和 `restoreTabsFromDisk()`)，因此主题、字体、语言和已保存的标签页会最先就绪 (失败时使用默认值)。`settingStore` 保存 `saved` (文件)、`applied` (当前会话，由 Apply 修改) 和 `draft` (表单，实时预览)；关闭模态框会恢复到 `applied`。`applySettings` 设置 Mantine 的颜色方案 (内存中的 `settingColorSchemeManager`，不使用 localStorage)、`--mantine-font-family` 变量和 i18n 语言。
 
@@ -204,8 +317,10 @@ Store 通过 `createAppStore(creator, name)` 创建 (zustand + immer，开发环
 Wails 绑定由 Go handler 生成；修改 handler 签名或模型后需要重新生成：
 
 ```
-go tool wails3 generate bindings -clean=true -ts
+go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts
 ```
+
+标签 `wailsgen` 是必需的 (第 2.11 节)。Windows 构建任务会先构建 Rust 库 (`common:build:dll`：在 `rust/` 中执行 `cargo build --release --target x86_64-pc-windows-msvc`)，再把 `s3b_db.dll` 复制到 exe 旁边 (`common:copy:dll`)。`dev`、`build`、`package` 和 `build:portable` 会自动完成这些步骤，NSIS 安装程序和 portable 文件夹也都包含该 DLL。构建前请先关闭正在运行的应用，否则无法替换 DLL。
 
 | 任务 | 命令 (除特别说明外在仓库根目录运行) |
 |---|---|
@@ -215,9 +330,12 @@ go tool wails3 generate bindings -clean=true -ts
 | 便携版 (Windows) | `go tool wails3 task build:portable WEBVIEW2_DIR=<WebView2 Fixed Version 文件夹>` |
 | Go 检查 | `go build ./...`、`go vet ./...`、`go tool golangci-lint run ./...` |
 | sqlc | `go tool sqlc generate` |
+| Rust 检查 (`rust/`) | `cargo fmt --check`、`cargo clippy --target x86_64-pc-windows-msvc --all-targets -- -D warnings` |
+| Rust 测试 (`rust/`) | `cargo test`；需要数据库服务器的测试使用 `test-env/docker-compose.yml`，没有服务器时会跳过 (`S3B_REQUIRE_DB=1` 会把跳过变为失败) |
 | FE 类型检查 (`frontend/`) | `node_modules/.bin/tsc --noEmit` (Windows 上为 `tsc.exe`) |
 | FE lint / format | `npx oxlint <paths>`、`node_modules/.bin/biome check --write <paths>` |
 | FE 测试 | `bun run test` (vitest)；测试位于 `frontend/src/test/`，目录结构与 `src/` 一致 |
+| E2E 测试 (`frontend/`) | 先 `bun run e2e:build`，再 `bun run e2e`（Playwright，仅限本地）：服务器模式的真实应用连同 DLL 复制到 `frontend/e2e/.run/` 运行；spec 位于 `frontend/e2e/`；S3 spec 需要 `E2E_S3_ENDPOINT`、`E2E_S3_ACCESS_KEY`、`E2E_S3_SECRET_KEY`，未设置则跳过；控制台出现任何警告或错误即测试失败 |
 | 用户指南 PDF | `bun run --cwd docs build:pdf` (或 `go tool wails3 task docs:pdf`) |
 
-Go 工具 (wails3、sqlc、golangci-lint) 在 `go.mod` 的 `tool (...)` 块中声明，因此无需单独安装。后端没有提交的单元测试；前端要求每个修改过的文件分支和行覆盖率至少达到 95%。
+Go 工具 (wails3、sqlc、golangci-lint) 在 `go.mod` 的 `tool (...)` 块中声明，因此无需单独安装。Rust 需要带 `x86_64-pc-windows-msvc` 目标的 stable 工具链和 Visual Studio Build Tools (C++ 工作负载)，`setup/setup-project.sh` 会安装它们。Go 没有提交的单元测试，Rust 的测试已提交 (`rust/tests/`)，前端要求每个修改过的文件分支和行覆盖率至少达到 95%。
