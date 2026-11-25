@@ -32,7 +32,7 @@
     "@tanstack/react-virtual": "^3.14.28",
     "@wailsio/runtime": "^3.1.0",
     "dayjs": "^1.11.23",
-    "i18next": "^27.2.4",
+    "i18next": "^27.2.5",
     "immer": "^11.2.10",
     "lucide-react": "^1.78.0",
     "motion": "^14.14.0",

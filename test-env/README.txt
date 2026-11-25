@@ -235,13 +235,31 @@ mysql:8.4.13, mariadb:11.4.13, postgres:17.12, mssql/server:2022-CU28-ubuntu-22.
 
 Đo Private Working Set của cả cây process (app Go + msedgewebview2.exe), tách Go runtime/heap (probe), DLL Rust,
 WebView2 và JS heap, theo kịch bản a-f và i1-i4 (sprints/sprint-20/plan.md). Kết quả ghi vào mem/report/<ngày>_<giờ>/
-(đã gitignore): summary.md, samples.csv, timings.csv, probe-*.jsonl. Chạy trong thư mục này:
+(đã gitignore): summary.md, samples.csv, timings.csv, probe-*.jsonl.
+
+Một lệnh, chạy từ đầu tới cuối (ở gốc repo, cần Docker Desktop đang chạy và không có S3Browser.exe nào đang mở):
+
+  powershell -ExecutionPolicy Bypass -File test-env/mem-bench-all.ps1 -Runs 3
+
+  Script làm lần lượt: kiểm Docker -> bật MinIO (docker compose -f docker-compose-minio.yml -p s3b-minio-test up -d,
+  chờ healthy) -> lấy khoá admin từ container vào env S3B_BENCH_* của process script (không in, không ghi file;
+  đã đặt sẵn env thì giữ nguyên) -> tạo bucket s3b-mem-10k đủ 10.000 object -> build bản release và bản đo (devtools,
+  kiểm tag) -> mem-bench.ps1 -> dọn prefix a*-g* trong bucket. Lỗi một bước ghi FAIL rồi chạy tiếp bước độc lập;
+  exit code 1 nếu có FAIL. Tham số: -Runs (mặc định 3), -Scenario (a-f, i4, all; mặc định all), -OutDir (mặc định
+  test-env/mem/report/<ngày>_<giờ>), -SkipBuild (dùng bản build sẵn). Chỉ cần đọc <OutDir>/summary.md; cuối lệnh in
+  đường dẫn summary.md, samples.csv, timings.csv và danh sách FAIL. Các bước (a)-(d) dưới đây là cách làm từng bước tay.
+
+Từng bước tay, chạy trong thư mục này:
 
   (a) Build hai bản (ở gốc repo; tắt app đang chạy trước):
         go tool wails3 task windows:build
         go tool wails3 task windows:build EXTRA_TAGS=devtools OUT_DIR=build/bin/bench
       Bản đầu (build/bin/S3Browser.exe) là bản release thuần; bản sau (build/bin/bench/S3Browser.exe) có tag devtools,
-      cần cho cổng CDP của kịch bản b-f. Cách truyền biến KEY=value qua `wails3 task` chưa kiểm chứng; không được thì
+      cần cho cổng CDP của kịch bản b-f.
+      Cổng CDP do script mở bằng env `S3B_BENCH_CDP_PORT` (chỉ bản đo đọc, qua `Options.Windows.AdditionalBrowserArgs`,
+      file `main_devtools.go`); bản release bỏ qua env này. `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` không dùng được vì
+      Wails xoá nó trong process app.
+      Cách truyền biến KEY=value qua `wails3 task` chưa kiểm chứng; không được thì
       chạy `task` trực tiếp hoặc đặt biến môi trường EXTRA_TAGS và OUT_DIR.
   (b) Cài thư viện cho script UI (một lần): `bun install --cwd docs` (playwright đã có trong docs/package.json).
   (c) Dữ liệu cho b, c, e-s3: chạy MinIO (mục 1/docker-compose-minio.yml), rồi

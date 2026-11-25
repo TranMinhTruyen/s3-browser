@@ -105,19 +105,25 @@ if (-not $BenchExe) { $BenchExe = Join-Path $PSScriptRoot '..\build\bin\bench\S3
 $repo = Split-Path $PSScriptRoot -Parent
 $docs = Join-Path $repo 'docs'
 $LastKey = 'obj-10000.bin'
+# App chỉ cho tải tối đa 5 mục một lần (MAX_DOWNLOAD_OBJECTS ở ObjectListView.tsx); chọn nhiều hơn thì hiện modal C000005.
+$DownloadCount = 5
 if (-not $OutDir) { $OutDir = Join-Path $PSScriptRoot ('mem\report\' + (Get-Date -Format 'yyyyMMdd_HHmmss')) }
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 $OutDir = (Resolve-Path $OutDir).Path
 if (-not $SqliteFile) { $SqliteFile = Join-Path $OutDir 'mem.db' }
+# File 0 byte là DB SQLite rỗng hợp lệ; driver Rust mở với create_if_missing(false) nên file phải có sẵn.
+if (-not (Test-Path $SqliteFile)) { New-Item -ItemType File -Path $SqliteFile | Out-Null }
 # node đọc secret từ env (không qua argv)
 $env:S3B_BENCH_ENDPOINT = $S3Endpoint
 $env:S3B_BENCH_ACCESS_KEY = $S3AccessKey
 $env:S3B_BENCH_SECRET_KEY = $S3SecretKey
 
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Windows.Forms
-if (-not ('Native.Win' -as [type])) {
-    Add-Type -Namespace Native -Name Win -MemberDefinition @'
+if (-not ('Native.BenchWin' -as [type])) {
+    Add-Type -Namespace Native -Name BenchWin -MemberDefinition @'
 [System.Runtime.InteropServices.DllImport("user32.dll")] public static extern bool ShowWindow(System.IntPtr h, int n);
+[System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)] public static extern System.IntPtr SendMessage(System.IntPtr h, uint msg, System.IntPtr w, string l);
+[System.Runtime.InteropServices.DllImport("user32.dll")] public static extern bool PostMessage(System.IntPtr h, uint msg, System.IntPtr w, System.IntPtr l);
 '@
 }
 
@@ -151,7 +157,13 @@ echo xong
 $allScenarios = @('a', 'b', 'c', 'd', 'e', 'i4', 'f')
 $want = if ($Scenario -eq 'all') { $allScenarios } else { @($Scenario) }
 function Has([string]$s) { return $want -contains $s }
-$needS3 = (Has 'b') -or (Has 'c') -or (Has 'e')
+$haveS3Keys = [bool]($S3AccessKey -and $S3SecretKey)
+# b và c bắt buộc có MinIO: thiếu khoá thì dừng ngay (không in giá trị). e-s3 thì bỏ qua + Notes, e-sql vẫn chạy.
+$needS3 = (Has 'b') -or (Has 'c')
+if ($needS3 -and -not $haveS3Keys -and -not $NoCdp -and -not $ProcessName) {
+    throw 'Kịch bản b/c cần MinIO: đặt env S3B_BENCH_ACCESS_KEY và S3B_BENCH_SECRET_KEY (hoặc -S3AccessKey/-S3SecretKey).'
+}
+$useS3 = $needS3 -or ((Has 'e') -and $haveS3Keys)
 $needSql = (Has 'd') -or (Has 'e')
 $script:Samples = New-Object System.Collections.Generic.List[object]
 $script:Timings = New-Object System.Collections.Generic.List[object]
@@ -253,10 +265,29 @@ function Measure-Point($App, [string]$Point, [switch]$Js) {
 }
 
 # ---------- mem-ui.mjs ----------
+# Che giá trị secret S3B_BENCH_* (lớp phòng thủ thứ hai; mem-ui.mjs đã che tại nguồn). Giữ endpoint để chẩn đoán;
+# bỏ qua giá trị ngắn dưới 4 ký tự để không thay nhầm.
+function Hide-Secret([string]$Text) {
+    $secrets = Get-ChildItem Env: | Where-Object { $_.Name -like 'S3B_BENCH_*' -and $_.Name -match 'SECRET|ACCESS_KEY|PASSWORD|TOKEN' -and $_.Value -and $_.Value.Length -ge 4 }
+    foreach ($s in $secrets) { $Text = $Text.Replace($s.Value, '***') }
+    return $Text
+}
+
+# Lỗi một dòng, đã che secret: dùng cho log, Notes và summary.md.
+function Format-StepError($Text) {
+    return ((Hide-Secret "$Text") -replace '\s+', ' ').Trim()
+}
+
 function ConvertTo-StepResult($Lines) {
     $line = $Lines | Where-Object { $_ -match '^\s*\{' } | Select-Object -Last 1
-    if ($line) { try { return $line | ConvertFrom-Json } catch { } }
-    return [pscustomobject]@{ ok = $false; error = (($Lines | Out-String).Trim() -replace '\s+', ' ') }
+    if ($line) {
+        try {
+            $r = $line | ConvertFrom-Json
+            if ($r.error) { $r.error = Format-StepError $r.error }
+            return $r
+        } catch { }
+    }
+    return [pscustomobject]@{ ok = $false; error = (Format-StepError ($Lines | Out-String)) }
 }
 
 # Một bước UI, đồng bộ; lỗi trả { ok = false } chứ không ném, để phiên chạy tiếp.
@@ -266,7 +297,13 @@ function Invoke-MemUi([string]$Step, $App, [string[]]$StepArgs = @()) {
     Push-Location $docs
     try { $out = & node scripts/mem-ui.mjs $Step --port $App.Port @StepArgs 2>&1 | ForEach-Object { "$_" } } finally { Pop-Location }
     $r = ConvertTo-StepResult $out
-    if (-not $r.ok) { Write-Log "  mem-ui $Step LỖI: $($r.error)" }
+    if (-not $r.ok) {
+        # Toàn bộ output (stdout + stderr) vào mem-ui-<step>-<run>.err; che giá trị S3B_BENCH_* nếu lỡ xuất hiện.
+        $text = Hide-Secret ($out | Out-String).Trim()
+        $errFile = Join-Path $OutDir "mem-ui-$Step-$($App.Run).err"
+        Set-Content -Path $errFile -Value $text -Encoding UTF8
+        Write-Log "  mem-ui $Step LỖI: $($r.error) (chi tiết: $errFile)"
+    }
     return $r
 }
 
@@ -289,6 +326,9 @@ function Wait-MemUi($Job, $App, [scriptblock]$OnTick = $null) {
         Start-Sleep -Seconds 2
     }
     $lines = if (Test-Path $Job.Out) { @(Get-Content $Job.Out) } else { @() }
+    # stderr của bước nền có thể chứa call log của Playwright: che tại chỗ.
+    $errFile = "$($Job.Out).err"
+    if (Test-Path $errFile) { Set-Content -Path $errFile -Value (Hide-Secret ((Get-Content $errFile -Raw) + '')) -Encoding UTF8 }
     return [pscustomobject]@{ Result = (ConvertTo-StepResult $lines); Peak = $peak }
 }
 
@@ -307,19 +347,47 @@ function Find-Dialog([int]$ProcId) {
     return $A::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Children, $cond)
 }
 
-# Gõ đường dẫn vào ô Edit rồi bấm OK (AutomationId '1' = IDOK). Tìm theo AutomationId, không theo tên (tên phụ thuộc ngôn ngữ).
+# Gõ đường dẫn vào ô Edit rồi bấm OK. Tìm theo AutomationId ('1152'/'1001' = ô Edit, '1' = IDOK), không theo tên (phụ thuộc
+# ngôn ngữ) và không lọc ControlType: hộp thoại "Select Folder" báo cả hai control là Pane, không hỗ trợ pattern nào.
+# Control hỗ trợ ValuePattern/InvokePattern thì dùng pattern; không thì gửi WM_SETTEXT / BM_CLICK tới NativeWindowHandle.
+function Find-ById($Dialog, [string[]]$Ids) {
+    foreach ($id in $Ids) {
+        $e = $Dialog.FindFirst([System.Windows.Automation.TreeScope]::Descendants,
+            (New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::AutomationIdProperty, $id)))
+        if ($e) { return $e }
+    }
+    return $null
+}
+
 function Set-DialogPath($Dialog, [string]$Path) {
-    $A = [System.Windows.Automation.AutomationElement]
-    $edits = $Dialog.FindAll([System.Windows.Automation.TreeScope]::Descendants,
-        (New-Object System.Windows.Automation.PropertyCondition($A::ControlTypeProperty, [System.Windows.Automation.ControlType]::Edit)))
-    $edit = @($edits | Where-Object { $_.Current.AutomationId -in '1001', '1152' }) | Select-Object -First 1
-    if (-not $edit) { return $false }
-    ([System.Windows.Automation.ValuePattern]$edit.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)).SetValue($Path)
-    $ok = $Dialog.FindFirst([System.Windows.Automation.TreeScope]::Descendants,
-        (New-Object System.Windows.Automation.PropertyCondition($A::AutomationIdProperty, '1')))
-    if (-not $ok) { return $false }
-    ([System.Windows.Automation.InvokePattern]$ok.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+    $edit = Find-ById $Dialog @('1152', '1001')
+    $ok = Find-ById $Dialog @('1')
+    if (-not $edit -or -not $ok) { return $false }
+    $pat = $null
+    if ($edit.TryGetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern, [ref]$pat)) {
+        ([System.Windows.Automation.ValuePattern]$pat).SetValue($Path)
+    } else {
+        $h = [IntPtr]$edit.Current.NativeWindowHandle
+        if ($h -eq [IntPtr]::Zero) { return $false }
+        $WM_SETTEXT = 0x000C
+        $null = [Native.BenchWin]::SendMessage($h, $WM_SETTEXT, [IntPtr]::Zero, $Path)
+    }
+    $pat = $null
+    if ($ok.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$pat)) {
+        ([System.Windows.Automation.InvokePattern]$pat).Invoke()
+    } else {
+        $h = [IntPtr]$ok.Current.NativeWindowHandle
+        if ($h -eq [IntPtr]::Zero) { return $false }
+        $BM_CLICK = 0x00F5
+        $null = [Native.BenchWin]::PostMessage($h, $BM_CLICK, [IntPtr]::Zero, [IntPtr]::Zero)
+    }
     return $true
+}
+
+# Đóng hộp thoại bằng UIA (WindowPattern); SendKeys ESC chỉ dự phòng.
+function Close-Dialog($Dialog) {
+    try { ([System.Windows.Automation.WindowPattern]$Dialog.GetCurrentPattern([System.Windows.Automation.WindowPattern]::Pattern)).Close() }
+    catch { try { $Dialog.SetFocus(); [System.Windows.Forms.SendKeys]::SendWait('{ESC}') } catch { } }
 }
 
 # ---------- mở, đóng app ----------
@@ -335,56 +403,90 @@ function Start-App([string]$Path, [string]$Build, [int]$Run, [switch]$Cdp) {
     $appData = Join-Path $OutDir "appdata-$Build-$Run"
     New-Item -ItemType Directory -Force -Path $appData | Out-Null
     $probe = Join-Path $OutDir "probe-$Build-$Run.jsonl"
-    $psi = New-Object System.Diagnostics.ProcessStartInfo
-    $psi.FileName = (Resolve-Path $Path).Path
-    $psi.WorkingDirectory = Split-Path $psi.FileName -Parent
-    $psi.UseShellExecute = $false
-    $psi.EnvironmentVariables['APPDATA'] = $appData
-    $psi.EnvironmentVariables['S3B_MEMPROBE'] = $probe
-    # App không cần khoá MinIO trong env (profile do mem-ui tạo qua UI): không để lọt xuống process con.
-    foreach ($name in 'S3B_BENCH_ACCESS_KEY', 'S3B_BENCH_SECRET_KEY') { $psi.EnvironmentVariables.Remove($name) }
+    $exePath = (Resolve-Path $Path).Path
     $port = 0
-    if ($Cdp) {
-        $port = Get-FreePort
-        # Q23: nếu env ghi đè chuỗi args của app thì giữ lại các switch features đã thấy ở lượt không CDP.
-        $keep = @($script:Switches['nocdp'] | Where-Object { $_ -match '^--(disable|enable)-features=' })
-        $psi.EnvironmentVariables['WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS'] = (@($keep) + "--remote-debugging-port=$port") -join ' '
+    if ($Cdp) { $port = Get-FreePort }
+    # Logger DEBUG của app ghi args binding (có secretKey MinIO) ra stdout/stderr. Chuyển thẳng vào file (ghi liên tục,
+    # không bao giờ đầy pipe) nằm ngoài OutDir để không lọt vào artifact CI; Stop-App xoá chúng cùng appdata.
+    $logBase = Join-Path ([System.IO.Path]::GetTempPath()) "s3b-bench-app-$Build-$Run-$PID"
+    $logs = @("$logBase.out", "$logBase.err")
+    # Start-Process không có tham số env: đặt env của shell này rồi khôi phục ngay sau khi app khởi động.
+    # App không cần khoá MinIO trong env (profile do mem-ui tạo qua UI): không để lọt xuống process con.
+    $names = 'APPDATA', 'S3B_MEMPROBE', 'S3B_BENCH_CDP_PORT', 'S3B_BENCH_ACCESS_KEY', 'S3B_BENCH_SECRET_KEY'
+    $saved = @{}
+    foreach ($n in $names) { $saved[$n] = [System.Environment]::GetEnvironmentVariable($n, 'Process') }
+    try {
+        [System.Environment]::SetEnvironmentVariable('APPDATA', $appData, 'Process')
+        [System.Environment]::SetEnvironmentVariable('S3B_MEMPROBE', $probe, 'Process')
+        # B1d: bản đo (tag devtools) đọc env này và tự thêm --remote-debugging-port vào args của Wails (giữ nguyên các switch khác).
+        # Lượt không CDP phải xoá nó (shell có thể đã đặt sẵn) để không mở cổng.
+        $cdpEnv = if ($Cdp) { "$port" } else { $null }
+        [System.Environment]::SetEnvironmentVariable('S3B_BENCH_CDP_PORT', $cdpEnv, 'Process')
+        foreach ($n in 'S3B_BENCH_ACCESS_KEY', 'S3B_BENCH_SECRET_KEY') { [System.Environment]::SetEnvironmentVariable($n, $null, 'Process') }
+        $proc = Start-Process -FilePath $exePath -WorkingDirectory (Split-Path $exePath -Parent) -RedirectStandardOutput $logs[0] -RedirectStandardError $logs[1] -PassThru
+    } finally {
+        foreach ($n in $names) { [System.Environment]::SetEnvironmentVariable($n, $saved[$n], 'Process') }
     }
-    $proc = [System.Diagnostics.Process]::Start($psi)
-    $app = [pscustomobject]@{ Proc = $proc; Pid = $proc.Id; Port = $port; AppData = $appData; Probe = $probe; Build = $Build; Run = $Run; Started = Get-Date }
-    # Chờ process browser của WebView2 và kiểm cách ly user data.
-    $browser = $null
-    for ($i = 0; $i -lt 60 -and -not $browser; $i++) {
-        Start-Sleep -Seconds 1
-        $browser = Get-Tree $app.Pid | Where-Object { $_.Kind -eq 'browser' -and $_.CommandLine -match '--user-data-dir=' } | Select-Object -First 1
-    }
-    if (-not $browser) { Stop-App $app; throw 'Không thấy process browser của WebView2 sau 60 giây (thiếu WebView2 Runtime?).' }
-    $ud = [regex]::Match($browser.CommandLine, '--user-data-dir=("([^"]+)"|(\S+))')
-    $udPath = if ($ud.Groups[2].Success) { $ud.Groups[2].Value } else { $ud.Groups[3].Value }
-    if (-not $udPath.StartsWith($appData, [System.StringComparison]::OrdinalIgnoreCase)) {
-        Stop-App $app; throw "user data của WebView2 ($udPath) không nằm trong thư mục tạm ${appData}: dừng để không đụng dữ liệu thật."
-    }
-    $switches = [regex]::Matches($browser.CommandLine, '--[\w-]+(=("[^"]*"|\S+))?') | ForEach-Object { $_.Value } | Where-Object { $_ -notmatch '^--(user-data-dir|remote-debugging-port|webview-exe|embedded-browser|mojo|lang|metrics)' }
-    $key = if ($Cdp) { 'cdp' } elseif ($Build -eq 'release') { 'release' } else { 'nocdp' }
-    if (-not $script:Switches.ContainsKey($key)) { $script:Switches[$key] = @($switches) }
-    if ($Cdp) {
-        $ok = $false
-        for ($i = 0; $i -lt 60 -and -not $ok; $i++) {
-            try { $null = Invoke-RestMethod "http://127.0.0.1:$port/json/version" -TimeoutSec 2; $ok = $true } catch { Start-Sleep -Seconds 1 }
+    $app = [pscustomobject]@{ Proc = $proc; Pid = $proc.Id; Port = $port; AppData = $appData; Probe = $probe; Logs = $logs; Build = $Build; Run = $Run; Started = Get-Date }
+    # Lỗi ở bất kỳ bước nào dưới đây (kể cả Get-Tree ném) thì đóng app trước khi ném tiếp.
+    try {
+        # Chờ process browser của WebView2 và kiểm cách ly user data.
+        $browser = $null
+        for ($i = 0; $i -lt 60 -and -not $browser; $i++) {
+            Start-Sleep -Seconds 1
+            $browser = Get-Tree $app.Pid | Where-Object { $_.Kind -eq 'browser' -and $_.CommandLine -match '--user-data-dir=' } | Select-Object -First 1
         }
-        if (-not $ok) { Stop-App $app; throw "Cổng CDP $port không trả lời (kiểm tag devtools của bản đo, plan rủi ro 4 và 6)." }
-    }
+        if (-not $browser) { throw 'Không thấy process browser của WebView2 sau 60 giây (thiếu WebView2 Runtime?).' }
+        $ud = [regex]::Match($browser.CommandLine, '--user-data-dir=("([^"]+)"|(\S+))')
+        $udPath = if ($ud.Groups[2].Success) { $ud.Groups[2].Value } else { $ud.Groups[3].Value }
+        if (-not $udPath.StartsWith($appData, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "user data của WebView2 ($udPath) không nằm trong thư mục tạm ${appData}: dừng để không đụng dữ liệu thật."
+        }
+        $switches = [regex]::Matches($browser.CommandLine, '--[\w-]+(=("[^"]*"|\S+))?') | ForEach-Object { $_.Value } | Where-Object { $_ -notmatch '^--(user-data-dir|remote-debugging-port|webview-exe|embedded-browser|mojo|lang|metrics)' }
+        $key = if ($Cdp) { 'cdp' } elseif ($Build -eq 'release') { 'release' } else { 'nocdp' }
+        if (-not $script:Switches.ContainsKey($key)) { $script:Switches[$key] = @($switches) }
+        if ($Cdp) {
+            if ($browser.CommandLine -notmatch "--remote-debugging-port=$port(\s|`"|$)") { throw "Process browser không có --remote-debugging-port=$port (bản đo thiếu tag devtools?)." }
+            # Q23: ngoài cổng debug, switch phải giống lượt không CDP; lệch thì ghi Notes.
+            if ($script:Switches.ContainsKey('nocdp')) {
+                $diff = @(Compare-Object @($script:Switches['nocdp']) @($switches) | ForEach-Object { "$($_.SideIndicator)$($_.InputObject)" })
+                if ($diff.Count -gt 0) { $script:Notes.Add("cdp run ${Run}: switch browser lệch lượt không CDP (<= chỉ không CDP, => chỉ CDP): $($diff -join ' ')") }
+            }
+            $ok = $false
+            for ($i = 0; $i -lt 60 -and -not $ok; $i++) {
+                try { $null = Invoke-RestMethod "http://127.0.0.1:$port/json/version" -TimeoutSec 2; $ok = $true } catch { Start-Sleep -Seconds 1 }
+            }
+            if (-not $ok) { throw "Cổng CDP $port không trả lời (kiểm tag devtools của bản đo, plan rủi ro 4 và 6)." }
+        }
+    } catch { $app.Port = 0; Stop-App $app; throw }   # Port = 0: không gọi close-app qua cổng có thể đã chết
     Write-Log "Mở $Build run $Run (pid $($app.Pid)$(if ($Cdp) { ", CDP $port" }))"
     return $app
 }
 
 function Stop-App($App) {
     if (-not $App) { return }
+    # L1: nhớ cả cây process (gồm msedgewebview2.exe) trước khi đóng, vì sau đó không dựng lại được.
+    $pids = @()
+    try { $pids = @(Get-Tree $App.Pid | ForEach-Object { $_.ProcessId }) } catch { }
     try {
         if ($App.Port -and -not $App.Proc.HasExited) { $null = Invoke-MemUi 'close-app' $App; $null = $App.Proc.WaitForExit(15000) }
     } catch { }
+    if (-not $App.Proc.HasExited) {
+        try { $null = $App.Proc.CloseMainWindow(); $null = $App.Proc.WaitForExit(5000) } catch { }
+    }
     if (-not $App.Proc.HasExited) { & taskkill /PID $App.Pid /T /F 2>&1 | Out-Null; $null = $App.Proc.WaitForExit(10000) }
-    if ($App.AppData -and $App.AppData.StartsWith($OutDir) -and (Test-Path $App.AppData)) { Remove-Item $App.AppData -Recurse -Force -ErrorAction SilentlyContinue }
+    # Chờ mọi PID của cây thoát (tối đa ~15 giây), còn sót thì taskkill từng cái.
+    $deadline = (Get-Date).AddSeconds(15)
+    while ((Get-Date) -lt $deadline -and @($pids | Where-Object { Get-Process -Id $_ -ErrorAction SilentlyContinue }).Count -gt 0) { Start-Sleep -Milliseconds 500 }
+    foreach ($p in $pids) { if (Get-Process -Id $p -ErrorAction SilentlyContinue) { & taskkill /PID $p /F 2>&1 | Out-Null } }
+    foreach ($f in @($App.Logs)) { if ($f -and (Test-Path $f)) { Remove-Item $f -Force -ErrorAction SilentlyContinue } }
+    if ($App.AppData -and $App.AppData.StartsWith($OutDir) -and (Test-Path $App.AppData)) {
+        for ($i = 0; $i -lt 4 -and (Test-Path $App.AppData); $i++) {
+            if ($i -gt 0) { Start-Sleep -Seconds 2 }
+            try { Remove-Item $App.AppData -Recurse -Force -ErrorAction Stop } catch { $why = $_.Exception.Message }
+        }
+        if (Test-Path $App.AppData) { $script:Notes.Add("appdata-$($App.Build)-$($App.Run) không xoá được: $why") }
+    }
 }
 
 function Wait-AppAge($App, [int]$Seconds) {
@@ -397,11 +499,15 @@ function Wait-AppAge($App, [int]$Seconds) {
 function Wait-Idle([int]$Seconds) { Write-Log "  chờ $Seconds giây"; Start-Sleep -Seconds $Seconds }
 
 # ---------- dữ liệu cho c ----------
-function New-UploadFiles {
-    $dir = Join-Path $OutDir 'upload-src'
+# Thư mục nhóm đặt tên theo lượt (a<run>-g01) để các lượt không ghi đè nhau trong bucket. Tiền tố 'a' để S3 (xếp theo tên)
+# đặt chúng trước obj-NNNNN.bin: sau upload danh sách chỉ nạp trang đầu, mem-ui phải thấy thư mục mà không cuộn.
+function Get-UploadFolder([int]$Run) { return 'a{0}-g01' -f $Run }
+
+function New-UploadFiles([int]$Run) {
+    $dir = Join-Path $OutDir "upload-src-$Run"
     if (Test-Path $dir) { return $dir }
     for ($i = 0; $i -lt $UploadCount; $i++) {
-        $folder = Join-Path $dir ('g{0:D2}' -f [int][math]::Floor($i / 50 + 1))
+        $folder = Join-Path $dir ('a{0}-g{1:D2}' -f $Run, [int][math]::Floor($i / 50 + 1))
         New-Item -ItemType Directory -Force -Path $folder | Out-Null
         $fs = [System.IO.File]::Create((Join-Path $folder ('f{0:D3}.bin' -f ($i + 1))))
         $fs.SetLength($UploadSizeMiB * 1MB); $fs.Dispose()
@@ -428,7 +534,7 @@ function Invoke-MainSession([int]$Run) {
             Wait-AppAge $app 30; Measure-Point $app 'a@30s' -Js
             Wait-AppAge $app 360; Measure-Point $app 'i1@6m' -Js
         }
-        if ($needS3) {
+        if ($useS3) {
             $r = Invoke-MemUi 'connect-s3' $app @('--bucket', $Bucket, '--last', $LastKey)
             $s3Ok = [bool]$r.ok
             if (-not $s3Ok) { Add-Timing $Run 'connect-s3' $null 'FAIL' }
@@ -442,7 +548,10 @@ function Invoke-MainSession([int]$Run) {
             if ($r.ok) { Add-Timing $Run 'scroll-after-idle' $r.scrollMs } else { Add-Timing $Run 'scroll-after-idle' $null 'FAIL' }
         }
         if ((Has 'c') -and $s3Ok) { Invoke-ScenarioC $app $Run }
-        if (Has 'd') { Invoke-ScenarioD $app $Run } elseif ($needSql) { $null = Invoke-MemUi 'sqlite' $app @('--file', $SqliteFile) }
+        if (Has 'd') { Invoke-ScenarioD $app $Run } elseif ($needSql) {
+            $r = Invoke-MemUi 'sqlite' $app @('--file', $SqliteFile)
+            if (-not $r.ok) { Add-Timing $Run 'sqlite' $null 'FAIL' }
+        }
         if (Has 'e') { Invoke-ScenarioE $app $Run $s3Ok }
         if (Has 'i4') { Invoke-ScenarioI4 $app $Run }
         if (Has 'f') { Invoke-ScenarioF $app }
@@ -450,37 +559,52 @@ function Invoke-MainSession([int]$Run) {
 }
 
 function Invoke-ScenarioC($App, [int]$Run) {
-    $src = New-UploadFiles
+    $src = New-UploadFiles $Run
     $job = Start-MemUi 'upload' $App @('--dir', $src)
     $w = Wait-MemUi $job $App
     Add-Peak $App 'c-peak-upload' $w.Peak
     if ($w.Result.ok) { Add-Timing $Run 'upload' $w.Result.ms } else { Add-Timing $Run 'upload' $null 'FAIL'; Write-Log "  upload: $($w.Result.error)" }
+    Remove-Item $src -Recurse -Force -ErrorAction SilentlyContinue
 
     # Download: hộp thoại chọn thư mục của app do UI Automation điền (Q15=A); lỗi thì chỉ còn số upload.
     $dest = Join-Path $OutDir "download-$Run"
     New-Item -ItemType Directory -Force -Path $dest | Out-Null
-    $job = Start-MemUi 'download' $App @('--out', $dest, '--folder', 'g01', '--count', '50')
-    $state = @{ filled = $false; since = Get-Date; reason = '' }
+    $job = Start-MemUi 'download' $App @('--out', $dest, '--folder', (Get-UploadFolder $Run), '--count', "$DownloadCount")
+    $state = @{ filled = $false; filledAt = $null; since = Get-Date; reason = '' }
     $w = Wait-MemUi $job $App {
         if (-not $state.filled) {
             $dlg = Find-Dialog $App.Pid
             if ($dlg) {
-                try { $state.filled = Set-DialogPath $dlg $dest; if (-not $state.filled) { $state.reason = 'không thấy ô Edit 1152/1001 hoặc nút OK' } } catch { $state.reason = $_.Exception.Message }
+                try {
+                    $state.filled = Set-DialogPath $dlg $dest
+                    if ($state.filled) { $state.filledAt = Get-Date } else { $state.reason = 'không thấy ô Edit 1152/1001 hoặc nút OK' }
+                } catch { $state.reason = $_.Exception.Message }
             }
             if (-not $state.filled -and ((Get-Date) - $state.since).TotalSeconds -gt 60) {
                 # Không điền được: đóng hộp thoại (nếu có) và dừng node để app không treo ở modal.
                 if (-not $state.reason) { $state.reason = 'không thấy hộp thoại' }
                 $d = Find-Dialog $App.Pid
-                if ($d) { try { $d.SetFocus(); [System.Windows.Forms.SendKeys]::SendWait('{ESC}') } catch { } }
+                if ($d) { Close-Dialog $d }
                 if (-not $job.Proc.HasExited) { $job.Proc.Kill() }
+            }
+        } elseif (((Get-Date) - $state.filledAt).TotalSeconds -gt 10 -and -not $job.Proc.HasExited) {
+            # Đã điền mà hộp thoại vẫn còn sau 10 giây: app không nhận đường dẫn.
+            $d = Find-Dialog $App.Pid
+            if ($d) {
+                $state.reason = 'hộp thoại không nhận đường dẫn'
+                Close-Dialog $d
+                $job.Proc.Kill()
             }
         }
     }
+    # Không để hộp thoại treo modal sang các bước sau.
+    $left = Find-Dialog $App.Pid
+    if ($left) { Close-Dialog $left; $script:Notes.Add("download run ${Run}: còn hộp thoại sau khi kết thúc, đã đóng") }
     Add-Peak $App 'c-peak-download' $w.Peak
     if ($w.Result.ok) {
         Add-Timing $Run 'download' $w.Result.ms
     } else {
-        $why = if ($state.reason) { $state.reason } else { $w.Result.error }
+        $why = Format-StepError $(if ($state.reason) { $state.reason } else { $w.Result.error })
         Add-Timing $Run 'download' $null 'FAIL'
         $script:Notes.Add("download run ${Run}: FAIL ($why); kịch bản c chỉ còn số upload")
     }
@@ -509,7 +633,10 @@ function Invoke-ScenarioE($App, [int]$Run, [bool]$S3Ok) {
         if ($r.ok) { Wait-Idle 30; Measure-Point $App 'e-s3-open' -Js } else { Add-Timing $Run 'tabs-s3' $null 'FAIL' }
         $r = Invoke-MemUi 'close-all' $App @('--mode', 's3')
         if ($r.ok) { Wait-Idle 30; Measure-Point $App 'e-s3-closed' -Js } else { Add-Timing $Run 'close-all-s3' $null 'FAIL' }
-    } else { $script:Notes.Add("e-s3 run ${Run}: bỏ qua (không nối được MinIO)") }
+    } else {
+        $why = if ($haveS3Keys) { 'không nối được MinIO' } else { 'thiếu S3B_BENCH_ACCESS_KEY/S3B_BENCH_SECRET_KEY' }
+        $script:Notes.Add("e-s3 run ${Run}: bỏ qua ($why)")
+    }
     $r = Invoke-MemUi 'tabs-sql' $App
     if ($r.ok) { Wait-Idle 30; Measure-Point $App 'e-sql-open' -Js } else { Add-Timing $Run 'tabs-sql' $null 'FAIL' }
     $r = Invoke-MemUi 'close-all' $App @('--mode', 'sql')
@@ -530,12 +657,12 @@ function Invoke-ScenarioI4($App, [int]$Run) {
     if (-not $arm.ok -or $arm.visibility -ne 'hidden') {
         $vis = if ($arm.ok) { $arm.visibility } else { 'không đọc được' }
         Add-Timing $Run 'restore' $null "N/A (visibility=$vis)"
-        $null = [Native.Win]::ShowWindow($App.Proc.MainWindowHandle, 9)
+        $null = [Native.BenchWin]::ShowWindow($App.Proc.MainWindowHandle, 9)
         return
     }
     $App.Proc.Refresh()
     $t0 = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-    $null = [Native.Win]::ShowWindow($App.Proc.MainWindowHandle, 9)
+    $null = [Native.BenchWin]::ShowWindow($App.Proc.MainWindowHandle, 9)
     Start-Sleep -Seconds 3
     $r = Invoke-MemUi 'read-restore' $App
     if ($r.ok -and $r.restoreAt) { Add-Timing $Run 'restore' ([int64]$r.restoreAt - $t0) } else { Add-Timing $Run 'restore' $null 'FAIL' }
@@ -609,7 +736,7 @@ function Get-PartMedian([string]$Build, [string]$Point, [string]$Part) {
 }
 
 function Write-Summary([datetime]$Started) {
-    $cols = 'go_runtime', 'go_heap', 'go_private', 'native_other', 'browser', 'renderer', 'gpu', 'utility', 'other', 'total', 'js_heap'
+    $cols = 'go_runtime', 'go_heap', 'go_private', 'native_other', 'go', 'browser', 'renderer', 'gpu', 'utility', 'other', 'total', 'js_heap'
     $md = New-Object System.Collections.Generic.List[string]
     $md.Add('# Kết quả đo RAM (Private Working Set, MiB)')
     $md.Add('')
@@ -736,14 +863,15 @@ try {
             if (-not (Get-Command node -ErrorAction SilentlyContinue)) { throw 'Cần node trong PATH (và `bun install --cwd docs`) cho các bước UI.' }
             if (-not (Test-Path (Join-Path $docs 'node_modules\playwright'))) { throw 'Thiếu docs/node_modules/playwright: chạy `bun install --cwd docs`.' }
             $info = Get-BuildInfo $BenchExe
-            if ($info -notmatch 'devtools|không đọc được' -and (Test-Path $BenchExe)) { throw "Bản đo không có tag devtools ($info): cổng CDP không mở. Build lại theo test-env/README.txt mục 11." }
+            if ($info -match 'không đọc được') { $script:Notes.Add('Không đọc được tag build của bản đo (thiếu go trong PATH?): chưa kiểm được tag devtools; nếu cổng CDP không mở thì build lại theo README mục 11.') }
+            elseif ($info -notmatch 'devtools' -and (Test-Path $BenchExe)) { throw "Bản đo không có tag devtools ($info): cổng CDP không mở. Build lại theo test-env/README.txt mục 11." }
         }
         if ((Has 'a') -or $NoCdp) {
             for ($i = 1; $i -le $Runs; $i++) { Invoke-IdleRun $Exe 'release' $i }
         }
         if (-not $NoCdp) {
             if (Has 'a') { for ($i = 1; $i -le $Runs; $i++) { Invoke-IdleRun $BenchExe 'nocdp' $i } }
-            # Q23: lượt không CDP chỉ để đọc switch của WebView2 (phiên chính giữ lại features), nên luôn có, kể cả khi không chạy a.
+            # Q23: lượt không CDP để so switch với lượt CDP, nên luôn có, kể cả khi không chạy a.
             if (-not $script:Switches.ContainsKey('nocdp')) { Stop-App (Start-App $BenchExe 'nocdp' 0) }
             for ($i = 1; $i -le $Runs; $i++) { Invoke-MainSession $i }
         }
