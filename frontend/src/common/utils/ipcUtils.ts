@@ -80,7 +80,7 @@ export async function callIPC<A extends unknown[], T>(
     }
 
     if (showMessage) {
-      showMessages(output);
+      showOutputMessages(output);
     }
 
     // Body phía Go là kiểu giá trị nên lời gọi thất bại vẫn mang body có giá trị zero; ẩn body đó đi.
@@ -108,7 +108,7 @@ function translateParams({ moduleName, messageCode, params }: Message) {
   return i18n.exists(key) ? { ...params, secret: i18n.t(key) } : params;
 }
 
-function showMessages<T>(output: Output<T>): void {
+export function showOutputMessages<T>(output: Output<T>): void {
   [...(output.messageList ?? [])]
     .sort((a, b) => (a.order ?? '').localeCompare(b.order ?? ''))
     .forEach(item => {

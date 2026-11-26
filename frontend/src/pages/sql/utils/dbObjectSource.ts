@@ -1,7 +1,9 @@
 import type { TreeNodeData } from '@mantine/core';
 import { FetchRows, GetSchemaTree, GetTableInfo, OpenTableRows } from '@wails/S3Browser/internal/handlers/dbhandler';
-import type { SchemaTreeOutput, TableInfoOutput } from '@wails/S3Browser/models';
-import { callIPC } from '@/common/utils/ipcUtils';
+import type { FetchRowsOutput, SchemaTreeOutput, TableInfoOutput } from '@wails/S3Browser/models';
+import type { Output } from '@wails/S3Browser/models/common';
+import { JSONStream } from '@wailsio/runtime';
+import { callIPC, showOutputMessages } from '@/common/utils/ipcUtils';
 import { getMockRows, getMockSchemas, getMockTableInfo } from '@/pages/sql/mock/dbObjectMock';
 import type { Provider } from '@/pages/sql/stores/dbProfileStore';
 
@@ -107,6 +109,82 @@ export const loadTableInfo = async (
 
 /** Một trang dữ liệu. Trang có thể ít hàng hơn kích thước trang mà vẫn chưa phải trang cuối. */
 export type RowPage = { rows: (string | null)[][]; done: boolean };
+
+/** Stream every remaining page from an open row cursor. */
+export const streamCursorRows = (
+  tabId: string,
+  cursorId: number,
+  signal: AbortSignal,
+  onPage: (page: RowPage) => void
+): Promise<boolean> => {
+  const stream = JSONStream('db-fetch-rows');
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+
+    const finish = (completed: boolean, error?: Error) => {
+      if (settled) return;
+      settled = true;
+      signal.removeEventListener('abort', onAbort);
+      if (error) reject(error);
+      else resolve(completed);
+    };
+
+    const onAbort = () => {
+      stream.close();
+      finish(false);
+    };
+
+    stream.onopen = () => {
+      if (signal.aborted) {
+        onAbort();
+        return;
+      }
+      stream.send({ tabId, cursorId, all: true });
+    };
+
+    stream.onmessage = event => {
+      const output = event.data as Output<FetchRowsOutput>;
+      showOutputMessages(output);
+      if (!output.result || !output.body) {
+        stream.close();
+        finish(false);
+        return;
+      }
+
+      try {
+        onPage(output.body);
+      } catch (error) {
+        stream.close();
+        finish(false, error instanceof Error ? error : new Error(String(error)));
+        return;
+      }
+
+      if (output.body.done) {
+        try {
+          stream.send({ type: 'ack' });
+        } catch (error) {
+          stream.close();
+          finish(false, error instanceof Error ? error : new Error(String(error)));
+          return;
+        }
+        finish(true);
+      }
+    };
+
+    stream.onclose = () => {
+      if (signal.aborted) finish(false);
+      else if (!settled) finish(false, new Error('Rows stream closed before all rows arrived'));
+    };
+
+    stream.onerror = () => {
+      finish(false, new Error('Rows stream failed'));
+    };
+
+    signal.addEventListener('abort', onAbort, { once: true });
+    if (signal.aborted) onAbort();
+  });
+};
 
 /** Trang đầu của bảng; `cursorId` là null khi đã đọc hết dữ liệu. */
 export type TableRows = RowPage & { columns: string[]; cursorId: number | null };

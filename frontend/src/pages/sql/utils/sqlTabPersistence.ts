@@ -12,6 +12,12 @@ export async function restoreSqlTabsFromDisk(): Promise<boolean> {
   restoreFailed = !saved;
   if (!saved) return false;
   useSqlTabStore.getState().restoreTabs(saved);
+  const savedSqlTabs = saved.sqlTabs ?? [];
+  const sqlTabIds = savedSqlTabs.filter(tab => tab.id && !tab.table).map(tab => tab.id);
+  const hasLegacyTableTabs = savedSqlTabs.some(tab => !!tab.table);
+  if (hasLegacyTableTabs && new Set(sqlTabIds).size === sqlTabIds.length) {
+    void saveSqlTabState(useSqlTabStore.getState().serializeTabs());
+  }
   return true;
 }
 

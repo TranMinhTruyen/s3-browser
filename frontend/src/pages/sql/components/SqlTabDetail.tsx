@@ -50,7 +50,7 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
     [provider, tableNames]
   );
   const editorRef = useRef<EditorView | null>(null);
-  const initialDoc = useRef(useSqlTabStore.getState().queryByTab[tabId] ?? '').current;
+  const [initialDoc] = useState(() => useSqlTabStore.getState().queryByTab[tabId] ?? '');
   // State tìm kiếm được lưu ở đây (không nằm trong panel) để giữ lại khi đóng panel hoặc chuyển tab.
   const [findOpen, setFindOpen] = useState(false);
   const [findText, setFindText] = useState('');
@@ -59,7 +59,19 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
   // Panel đang mở đặt hàm làm mới bộ đếm tại đây; editor gọi hàm sau mỗi lần văn bản thay đổi.
   const docChangeRef = useRef<(() => void) | null>(null);
   const [focusKey, setFocusKey] = useState(0);
-  const { runId, statements, cancelled, running, loadingMore, run, cancel, detach, loadMore } = useSqlRunner(tabId);
+  const {
+    runId,
+    statements,
+    cancelled,
+    running,
+    loadingMore,
+    fetchAll,
+    run,
+    cancel,
+    detach,
+    loadMore,
+    setFetchAllRows,
+  } = useSqlRunner(tabId);
 
   const optionsData = useMemo(
     () => Object.entries(profileNames).map(([key, name]) => ({ name, value: key })),
@@ -179,7 +191,9 @@ function SqlTabDetail({ tabId }: SqlTabDetailProps) {
             cancelled={cancelled}
             running={running}
             loadingMore={loadingMore}
+            fetchAll={fetchAll}
             onLoadMore={loadMore}
+            onChangeFetchAll={setFetchAllRows}
           />
         </Splitter.Pane>
       </Splitter>

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -52,7 +53,90 @@ func newSubmoduleQueryMng(
 	native *submoduleNativeMng,
 	conns *submoduleConnMng,
 ) *submoduleQueryMng {
-	return &submoduleQueryMng{logger: logger.With("submodules", "query"), app: app, native: native, conns: conns}
+	m := &submoduleQueryMng{logger: logger.With("submodules", "query"), app: app, native: native, conns: conns}
+	app.HandleStream("db-fetch-rows", m.streamFetchAll)
+	return m
+}
+
+// streamFetchAll drains a cursor page by page and sends each page over Wails Stream.
+// Closing the frontend stream cancels the active native call through c.Context().
+func (m *submoduleQueryMng) streamFetchAll(c *application.StreamConn) {
+	defer c.Close()
+
+	var input models.FetchRowsInput
+	if err := c.ReceiveJSON(&input); err != nil {
+		return
+	}
+	started := time.Now()
+	pages := 0
+	var bytesSent int64
+	outcome := "completed"
+	defer func() {
+		m.logger.Info("fetch all stream finished",
+			"tabId", input.TabId,
+			"duration_ms", time.Since(started).Milliseconds(),
+			"pages", pages,
+			"bytes", bytesSent,
+			"outcome", outcome,
+		)
+	}()
+
+	for {
+		if c.Context().Err() != nil {
+			outcome = "cancelled"
+			return
+		}
+		// Stream mode always uses the normal bounded page size. The `all` flag
+		// on the regular FetchRows method deliberately remains a single-call API.
+		page := m.fetchRows(c.Context(), models.FetchRowsInput{TabId: input.TabId, CursorId: input.CursorId})
+		pageRaw, err := json.Marshal(page)
+		if err != nil {
+			outcome = "encode_error"
+			logCallFailure(c.Context(), m.logger, "encode streamed SQL page failed", err, "tabId", input.TabId)
+			return
+		}
+		if err := c.Send(pageRaw); err != nil {
+			if c.Context().Err() != nil {
+				outcome = "cancelled"
+			} else {
+				outcome = "stream_error"
+			}
+			return
+		}
+		pages++
+		bytesSent += int64(len(pageRaw))
+		if !page.Result {
+			outcome = "query_error"
+			return
+		}
+
+		// Only inspect `done`; json.Unmarshal skips the potentially large rows array.
+		var pageMeta struct {
+			Body struct {
+				Done bool `json:"done"`
+			} `json:"body"`
+		}
+		if err := json.Unmarshal(pageRaw, &pageMeta); err != nil {
+			outcome = "decode_error"
+			logCallFailure(c.Context(), m.logger, "read streamed SQL page metadata failed", err, "tabId", input.TabId)
+			return
+		}
+		if pageMeta.Body.Done {
+			// The frontend acknowledges the final frame after parsing it and
+			// applying the last page, so this duration includes client receipt.
+			var ack struct {
+				Type string `json:"type"`
+			}
+			if err := c.ReceiveJSON(&ack); err != nil || ack.Type != "ack" {
+				if c.Context().Err() != nil {
+					outcome = "cancelled"
+				} else {
+					outcome = "ack_error"
+				}
+			}
+			return
+		}
+	}
 }
 
 // statementErrorKey đánh dấu câu lệnh lỗi trong JSON kết quả. Cell và câu SQL không thể chứa chuỗi này

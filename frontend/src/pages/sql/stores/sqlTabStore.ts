@@ -217,19 +217,20 @@ export const useSqlTabStore = createAppStore<SqlTabState & SqlTabAction>((set, g
 
     serializeTabs: () => {
       const { tabList, activeTab, queryByTab } = get();
+      const sqlTabs = Object.entries(tabList).filter(([, tab]) => !tab.table);
+      const activeSqlTab = sqlTabs.some(([id]) => id === activeTab) ? activeTab : (sqlTabs[0]?.[0] ?? '');
       return {
-        tabs: Object.entries(tabList).map(([id, tab]) => ({
+        tabs: sqlTabs.map(([id, tab]) => ({
           id,
           profileId: tab.profileId,
           query: queryByTab[id] ?? '',
-          ...(tab.table ? { table: { ...tab.table } } : {}),
         })),
-        activeTab,
+        activeTab: activeSqlTab,
       };
     },
 
     restoreTabs: saved => {
-      const tabs = (saved.sqlTabs ?? []).filter(tab => tab.id);
+      const tabs = (saved.sqlTabs ?? []).filter(tab => tab.id && !tab.table);
       if (tabs.length === 0 || new Set(tabs.map(tab => tab.id)).size !== tabs.length) return;
 
       const tabList: Record<string, SqlTab> = {};

@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { callIPC } from '@/common/utils/ipcUtils';
+import i18n from '@/locales/i18n';
 import { useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
+import { streamCursorRows } from '@/pages/sql/utils/dbObjectSource';
 import { runSql } from '@/pages/sql/utils/sqlToast';
 
 /** Các câu lệnh của lần chạy gần nhất. `runId` thay đổi sau mỗi lần chạy để panel có thể reset state riêng. */
@@ -26,9 +28,19 @@ export function useSqlRunner(tabId: string) {
   const [state, setState] = useState<RunState>(INITIAL_STATE);
   const [running, setRunning] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [fetchAll, setFetchAll] = useState(false);
   const runRef = useRef<AbortController | null>(null);
   const fetchRef = useRef<AbortController | null>(null);
   const cursorRef = useRef<number | null>(null);
+
+  const updateLastStatement = useCallback((update: (statement: StatementResult) => StatementResult) => {
+    setState(prev => {
+      const lastIndex = prev.statements.length - 1;
+      const last = prev.statements[lastIndex];
+      if (!last) return prev;
+      return { ...prev, statements: [...prev.statements.slice(0, -1), update(last)] };
+    });
+  }, []);
 
   // Rời tab sẽ hủy thao tác đang chạy; kết quả trả về muộn sẽ bị bỏ qua.
   useEffect(
@@ -59,6 +71,7 @@ export function useSqlRunner(tabId: string) {
       fetchRef.current = null;
       cursorRef.current = null;
       setLoadingMore(false);
+      setFetchAll(false);
       const controller = new AbortController();
       runRef.current = controller;
       setRunning(true);
@@ -100,6 +113,7 @@ export function useSqlRunner(tabId: string) {
     cursorRef.current = null;
     setRunning(false);
     setLoadingMore(false);
+    setFetchAll(false);
   }, []);
 
   const loadMore = useCallback(async () => {
@@ -113,22 +127,90 @@ export function useSqlRunner(tabId: string) {
       const page = await callIPC(FetchRows, [{ tabId, cursorId, all: false }], { signal: controller.signal });
       if (controller.signal.aborted) return;
 
-      // Nếu tải thất bại thì con trỏ không còn dùng được, vì vậy câu lệnh ngừng yêu cầu thêm dữ liệu.
       const done = page?.done ?? true;
       if (done) cursorRef.current = null;
-      setState(prev => {
-        const last = prev.statements[prev.statements.length - 1];
-        if (!last) return prev;
-        const updated = { ...last, rows: page ? [...last.rows, ...page.rows] : last.rows, done };
-        return { ...prev, statements: [...prev.statements.slice(0, -1), updated] };
-      });
+      updateLastStatement(last => ({
+        ...last,
+        rows: page ? [...last.rows, ...page.rows] : last.rows,
+        done,
+        cursorId: done ? null : last.cursorId,
+      }));
     } finally {
       if (fetchRef.current === controller) {
         fetchRef.current = null;
         setLoadingMore(false);
       }
     }
-  }, [tabId]);
+  }, [tabId, updateLastStatement]);
 
-  return { ...state, running, loadingMore, run, cancel, detach, loadMore };
+  const fetchAllRows = useCallback(async () => {
+    const cursorId = cursorRef.current;
+    if (cursorId === null || fetchRef.current) return;
+
+    const controller = new AbortController();
+    fetchRef.current = controller;
+    setLoadingMore(true);
+    const streamStartedAt = performance.now();
+    let streamedRows = 0;
+    try {
+      const completed = await streamCursorRows(tabId, cursorId, controller.signal, page => {
+        if (controller.signal.aborted) return;
+        streamedRows += page.rows.length;
+        if (page.done) cursorRef.current = null;
+        updateLastStatement(last => ({
+          ...last,
+          rows: [...last.rows, ...page.rows],
+          done: page.done,
+          cursorId: page.done ? null : last.cursorId,
+        }));
+      });
+      console.info('SQL Fetch All stream completed', {
+        duration_ms: Math.round(performance.now() - streamStartedAt),
+        rows: streamedRows,
+        outcome: controller.signal.aborted ? 'cancelled' : completed ? 'completed' : 'incomplete',
+      });
+      if (controller.signal.aborted) return;
+      if (!completed) {
+        cursorRef.current = null;
+        updateLastStatement(last => ({ ...last, done: true, cursorId: null }));
+      }
+    } catch (error) {
+      console.info('SQL Fetch All stream completed', {
+        duration_ms: Math.round(performance.now() - streamStartedAt),
+        rows: streamedRows,
+        outcome: controller.signal.aborted ? 'cancelled' : 'failed',
+      });
+      if (!controller.signal.aborted) {
+        toast.error(i18n.t('ipcMessage:common.CME001'), {
+          description: error instanceof Error ? error.message : String(error),
+        });
+        cursorRef.current = null;
+        updateLastStatement(last => ({ ...last, done: true, cursorId: null }));
+      }
+    } finally {
+      if (fetchRef.current === controller) {
+        fetchRef.current = null;
+        setLoadingMore(false);
+      }
+    }
+  }, [tabId, updateLastStatement]);
+
+  const setFetchAllRows = useCallback(
+    (checked: boolean) => {
+      setFetchAll(checked);
+      if (checked) {
+        void fetchAllRows();
+        return;
+      }
+      if (!fetchRef.current) return;
+      fetchRef.current.abort();
+      fetchRef.current = null;
+      cursorRef.current = null;
+      setLoadingMore(false);
+      updateLastStatement(last => ({ ...last, done: true, cursorId: null }));
+    },
+    [fetchAllRows, updateLastStatement]
+  );
+
+  return { ...state, running, loadingMore, fetchAll, run, cancel, detach, loadMore, setFetchAllRows };
 }

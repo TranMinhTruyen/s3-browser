@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import i18n from '@/locales/i18n';
 import type { Provider } from '@/pages/sql/stores/dbProfileStore';
-import { fetchTableRows, openTableRows } from '@/pages/sql/utils/dbObjectSource';
+import { fetchTableRows, openTableRows, streamCursorRows } from '@/pages/sql/utils/dbObjectSource';
 
 type RowsState = { columns: string[]; rows: (string | null)[][]; hasMore: boolean; loading: boolean };
 
@@ -66,7 +68,35 @@ export function useTableRows(tabId: string, provider: Provider, profileId: strin
       const controller = new AbortController();
       fetchRef.current = controller;
       setLoadingMore(true);
+      const measureStream = all && provider === 'sqlite';
+      const streamStartedAt = measureStream ? performance.now() : 0;
+      let streamedRows = 0;
       try {
+        if (measureStream) {
+          const completed = await streamCursorRows(tabId, cursorId, controller.signal, page => {
+            if (controller.signal.aborted) return;
+            streamedRows += page.rows.length;
+            loadedRef.current += page.rows.length;
+            if (page.done) cursorRef.current = null;
+            setState(prev => ({
+              ...prev,
+              rows: [...prev.rows, ...page.rows],
+              hasMore: !page.done,
+            }));
+          });
+          console.info('fetch all stream completed', {
+            duration_ms: Math.round(performance.now() - streamStartedAt),
+            rows: streamedRows,
+            outcome: controller.signal.aborted ? 'cancelled' : completed ? 'completed' : 'incomplete',
+          });
+          if (controller.signal.aborted) return;
+          if (!completed) {
+            cursorRef.current = null;
+            setState(prev => ({ ...prev, hasMore: false }));
+          }
+          return;
+        }
+
         const page = await fetchTableRows(
           provider,
           tabId,
@@ -87,6 +117,23 @@ export function useTableRows(tabId: string, provider: Provider, profileId: strin
           rows: page ? [...prev.rows, ...page.rows] : prev.rows,
           hasMore: !done,
         }));
+      } catch (error) {
+        if (measureStream) {
+          console.info('fetch all stream completed', {
+            duration_ms: Math.round(performance.now() - streamStartedAt),
+            rows: streamedRows,
+            outcome: controller.signal.aborted ? 'cancelled' : 'failed',
+          });
+        }
+        if (!controller.signal.aborted) {
+          toast.error(i18n.t('ipcMessage:common.CME001'), {
+            description: error instanceof Error ? error.message : String(error),
+          });
+          if (all) {
+            cursorRef.current = null;
+            setState(prev => ({ ...prev, hasMore: false }));
+          }
+        }
       } finally {
         if (fetchRef.current === controller) {
           fetchRef.current = null;

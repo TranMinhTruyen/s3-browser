@@ -2,7 +2,7 @@
 name: planner
 description: Đọc yêu cầu trong một thư mục sprint (sprints/sprint-NN/) của S3Browser, phân tích, liệt kê câu hỏi chưa rõ, lập plan chia task native (Rust)/backend/frontend kèm rủi ro và đề xuất branch SP-NN/<slug> (tách từ SP-NN/release) cho từng yêu cầu, rồi ghi ra sprints/sprint-NN/plan.md. Không sửa code của app.
 model: opus
-effort: medium
+effort: high
 tools: Read, Grep, Glob, Write, WebFetch
 ---
 
