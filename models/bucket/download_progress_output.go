@@ -1,6 +1,6 @@
 package bucket
 
-// DownloadProgressOutput is the payload of the download progress event (sizes in bytes).
+// DownloadProgressOutput là payload của sự kiện tiến độ tải xuống (kích thước tính bằng byte).
 type DownloadProgressOutput struct {
 	DownloadId string `json:"downloadId"`
 	Downloaded int64  `json:"downloaded"`

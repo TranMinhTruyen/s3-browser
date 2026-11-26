@@ -8,7 +8,7 @@ const DEFAULT_PG_PORT = 5432;
 const MIN_PORT = 1;
 const MAX_PORT = 65535;
 
-/** Form values; `port` is a string while the user is typing in the NumberInput. */
+/** Giá trị form; `port` là chuỗi trong lúc người dùng nhập vào NumberInput. */
 export type DbProfileForm = {
   name: string;
   color: string;
@@ -27,8 +27,8 @@ const text = z.string().trim();
 const required = text.nonempty('V000001');
 
 /**
- * Validation of the profile form. `isNameTaken` tells whether another profile already uses the name;
- * only the fields of the selected DB type are checked.
+ * Kiểm tra dữ liệu của form profile. `isNameTaken` cho biết profile khác đã dùng tên này chưa;
+ * chỉ kiểm tra các trường thuộc loại DB đang chọn.
  */
 export const createDbProfileSchema = (isNameTaken: (name: string) => boolean) =>
   z
@@ -66,7 +66,7 @@ export const createDbProfileSchema = (isNameTaken: (name: string) => boolean) =>
       }
     });
 
-/** Empty form with the given default profile name. */
+/** Form trống với tên profile mặc định đã cho. */
 export const getDefaultDbProfileForm = (name: string): DbProfileForm => ({
   name,
   color: DEFAULT_PROFILE_COLOR,
@@ -81,7 +81,7 @@ export const getDefaultDbProfileForm = (name: string): DbProfileForm => ({
   readOnly: false,
 });
 
-/** Form values of a saved profile; the password is never loaded, so the field starts empty. */
+/** Giá trị form của profile đã lưu; mật khẩu không bao giờ được tải nên trường này luôn bắt đầu trống. */
 export const toFormValues = (profile: DbProfile): DbProfileForm => {
   const { config } = profile;
   return {
@@ -99,7 +99,7 @@ export const toFormValues = (profile: DbProfile): DbProfileForm => {
   };
 };
 
-/** Backend input: only the config fields of the selected provider are sent. `id` is set when editing. */
+/** Dữ liệu gửi backend: chỉ gửi các trường cấu hình của provider đang chọn. `id` được đặt khi chỉnh sửa. */
 export const toDbProfileInput = (values: DbProfileForm, id?: string): DbProfileInput => {
   const base = { id, name: values.name.trim(), color: values.color, provider: values.provider };
   return values.provider === 'sqlite'

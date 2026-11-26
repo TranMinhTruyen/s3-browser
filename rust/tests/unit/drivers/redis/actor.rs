@@ -72,7 +72,7 @@ fn statements(e: &Executed) -> Vec<Json> {
         .collect()
 }
 
-// ---- unsupported / Session::send ----
+// ---- không hỗ trợ / Session::send ----
 
 #[test]
 fn unsupported_methods_use_a_stable_code() {
@@ -296,7 +296,7 @@ async fn a_request_cancelled_before_reconnecting_does_not_open_a_socket() {
     assert_eq!(fake.accepted(), 1, "không nối lại cho request đã huỷ");
 }
 
-// ---- execute ----
+// ---- thực thi ----
 
 #[tokio::test]
 async fn empty_text_runs_nothing() {

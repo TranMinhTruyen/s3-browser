@@ -17,7 +17,7 @@ type ModalKey =
   | 'importPassword';
 type LazyModals = typeof import('@/components/modals/lazyModals');
 
-// The chunk factories wait for `gate` and throw when `fail` is set, which makes the dynamic `import()` reject.
+// Factory của chunk chờ `gate` và ném lỗi khi `fail` được bật, khiến `import()` động bị reject.
 const h = vi.hoisted(() => ({
   gate: Promise.resolve() as Promise<void>,
   fail: false,
@@ -94,7 +94,7 @@ const wrappers: [ModalKey, (m: LazyModals) => Promise<unknown>][] = [
   ['importPassword', m => m.showImportPasswordModal(PROPS.importPassword)],
 ];
 
-// What MfaCodeModal imports besides modalUtils; stubbed by the string-failure test.
+// Các module MfaCodeModal import ngoài modalUtils; được thay bằng stub trong test lỗi chuỗi.
 const HEAVY_CHUNK_DEPS = [
   '@mantine/core',
   '@mantine/form',
@@ -106,7 +106,7 @@ const HEAVY_CHUNK_DEPS = [
   '@/components/inputs/FieldInput',
 ];
 
-// A fresh module registry per test, so a chunk that failed (or loaded) once is not cached for the next test.
+// Dùng registry module mới cho từng test để chunk từng lỗi (hoặc tải thành công) không bị lưu đệm sang test sau.
 async function loadModule() {
   vi.resetModules();
   vi.doUnmock('@/common/utils/modalUtils');
@@ -149,7 +149,7 @@ describe('lazyModals', () => {
       expect(h.show[key]).not.toHaveBeenCalled();
       const message = i18n.t('common:modalLoadError');
       expect(message).not.toBe('modalLoadError');
-      // vitest reports a failing mock factory as an Error, whose message is the description.
+      // vitest báo lỗi factory mock dưới dạng Error, message chính là nội dung mô tả.
       expect(h.toast.error).toHaveBeenCalledExactlyOnceWith(message, {
         description: expect.stringContaining('error when mocking a module'),
       });
@@ -167,9 +167,9 @@ describe('lazyModals', () => {
   });
 
   it('describes a failure that is not an Error with its string form', async () => {
-    // vitest wraps what a mock factory throws in an Error, so the raw string is thrown by evaluating a real chunk
-    // (the MfaCodeModal one: its only top-level work is createMantineModal). Its heavy imports are stubbed, so no
-    // Mantine/app tree is loaded and the test stays fast on a cold, loaded run.
+    // vitest bọc lỗi factory mock ném ra trong Error, nên cần đánh giá chunk thật để ném chuỗi trực tiếp
+    // (chunk MfaCodeModal: thao tác duy nhất ở cấp cao nhất là createMantineModal). Các import nặng đã được stub,
+    // nên không tải cây Mantine/ứng dụng và test vẫn chạy nhanh kể cả khi bộ nhớ đệm lạnh hoặc máy đang bận.
     const { i18n } = await loadModule();
     vi.resetModules();
     vi.doUnmock('@/pages/s3/modals/connect/MfaCodeModal');

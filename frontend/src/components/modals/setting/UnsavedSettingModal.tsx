@@ -9,7 +9,7 @@ import { WARNING_BG_COLOR, WARNING_COLOR } from '@/components/modals/modalColors
 
 type UnsavedSettingChoice = 'back' | 'discard' | 'save';
 
-/** Asks what to do with the unsaved settings; closing it (X, Esc, click outside) counts as `back`. */
+/** Hỏi cách xử lý cài đặt chưa lưu; đóng hộp thoại (X, Esc, bấm bên ngoài) được tính là `back`. */
 export default createMantineModal<ModalProps, UnsavedSettingChoice>(
   props => {
     const { mantine, size = 'sm', centered = true, ...restProps } = props;

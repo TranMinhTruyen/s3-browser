@@ -27,7 +27,7 @@ type EditorProps = {
 
 const editor = vi.hoisted(() => ({ props: null as unknown, view: null as unknown, mount: true }));
 
-// The real editor is covered by its own test; here it hands the page a real view and its callbacks.
+// Editor thật được kiểm tra riêng; ở đây mock trả cho trang một view thật cùng các callback của nó.
 vi.mock('@/pages/sql/components/sqlEditor/SqlEditor', () => ({
   default: function EditorMock(props: EditorProps) {
     editor.props = props;
@@ -58,7 +58,7 @@ vi.mock('@/pages/sql/components/sqlResult/SqlResultPanel', () => ({
 
 const callIPCMock = vi.mocked(callIPC);
 
-/** Adds a SQLite profile (they come from the backend, so the store does not start with one). */
+/** Thêm profile SQLite (profile được backend cung cấp nên store không có sẵn profile khi khởi tạo). */
 const addSqlite = (isConnected = false) =>
   useDbProfileStore.setState(state => ({
     dbProfiles: { ...state.dbProfiles, 'sqlite-1': sqliteProfile('sqlite-1', { name: 'Local SQLite', isConnected }) },

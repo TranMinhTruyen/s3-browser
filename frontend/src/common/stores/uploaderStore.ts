@@ -3,14 +3,14 @@ import { UploadProgressOutput } from '@wails/S3Browser/models/bucket';
 import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
 
-/** Running upload and the bytes sent so far. */
+/** Lượt tải lên đang chạy và số byte đã gửi. */
 type UploadItem = UploadStartedOutput & {
   uploaded: number;
 };
 
 interface UploaderState {
   uploadItems: Record<string, UploadItem>;
-  /** Ids already finished, so a late `started` event is ignored. Bounded by MAX_FINISHED_IDS. */
+  /** Các id đã hoàn tất để bỏ qua event `started` đến muộn. Số lượng tối đa là MAX_FINISHED_IDS. */
   finishedIds: string[];
 }
 
@@ -24,7 +24,7 @@ interface UploaderAction {
 const SCOPE = 'uploader';
 const MAX_FINISHED_IDS = 200;
 
-/** Running uploads and the ids already finished. */
+/** Các lượt tải lên đang chạy và các id đã hoàn tất. */
 export const useUploaderStore = createAppStore<UploaderState & UploaderAction>(
   set => ({
     uploadItems: {},
@@ -47,9 +47,9 @@ export const useUploaderStore = createAppStore<UploaderState & UploaderAction>(
           for (const input of items) {
             const item = state.uploadItems[input.uploadId];
             if (!item) continue;
-            // Assign only on change so an unchanged batch keeps the same state.
+            // Chỉ gán khi có thay đổi để batch không đổi giữ nguyên state.
             if (item.uploaded !== input.uploaded) item.uploaded = input.uploaded;
-            // Progress may carry a more accurate total than the started event.
+            // Event tiến độ có thể chứa tổng dung lượng chính xác hơn event bắt đầu.
             if (input.total > 0 && item.total !== input.total) item.total = input.total;
           }
         },
@@ -80,5 +80,5 @@ export const useUploaderStore = createAppStore<UploaderState & UploaderAction>(
   SCOPE
 );
 
-/** Ids of running uploads. Returns a new array: use with `useShallow`. */
+/** Id của các lượt tải lên đang chạy. Trả về mảng mới: dùng cùng `useShallow`. */
 export const selectUploadingIds = (s: UploaderState) => Object.keys(s.uploadItems);

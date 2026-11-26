@@ -1,40 +1,39 @@
 #!/bin/sh
-# One script for the test environment (test-env/README.txt). POSIX sh: it also runs inside the MinIO image
-# (sh + mc, no grep) and the aws-cli image. Every step is safe to run again.
+# Một script cho môi trường test (test-env/README.txt). Dùng POSIX sh để chạy được trong image MinIO
+# (sh + mc, không có grep) và image aws-cli. Có thể chạy lại an toàn từng bước.
 #
-#   sh scripts/test-env.sh up      on the host: everything in one command (certs if missing, then every container:
-#                                  S3 servers + 6 databases; returns when all are healthy and initialised)
-#   sh scripts/test-env.sh certs   on the host (Git Bash, macOS, Linux; needs openssl): TLS certificates in certs/
-#   sh scripts/test-env.sh seed    on the host: sample database "demo" in the running database containers (db/seed/)
-#   test-env.sh minio              in the minio-init container: LDAP, policies, access keys, buckets
-#   test-env.sh minio-tls          in the minio-tls-init container: bucket for the OIDC / Certificate profiles
-#   test-env.sh floci              in the floci-init container: IAM users/roles, buckets, AWS CLI profiles in /out
-# Test values only.
+#   sh scripts/test-env.sh up      trên máy chủ: chạy mọi thứ bằng một lệnh (tạo cert nếu thiếu, rồi chạy mọi container:
+#                                  máy chủ S3 và 6 database; kết thúc khi tất cả đều khỏe và đã khởi tạo)
+#   sh scripts/test-env.sh certs   trên máy chủ (Git Bash, macOS, Linux; cần openssl): tạo chứng chỉ TLS trong certs/
+#   sh scripts/test-env.sh seed    trên máy chủ: nạp database mẫu "demo" vào các container database đang chạy (db/seed/)
+#   test-env.sh minio              trong container minio-init: LDAP, policy, access key và bucket
+#   test-env.sh minio-tls          trong container minio-tls-init: bucket cho profile OIDC / Certificate
+#   test-env.sh floci              trong container floci-init: user/role IAM, bucket, file profile AWS CLI trong /out
+# Chỉ dùng cho dữ liệu test.
 set -e
-# test-env/ as an absolute path, whatever the current directory (inside a container this is /, unused there).
+# Lấy đường dẫn tuyệt đối tới test-env/ bất kể thư mục hiện tại (trong container là /, không dùng tại đó).
 ENV_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 # ---------------------------------------------------------------------------------------------------- up
 up() {
   cd "$ENV_DIR"
-  # Subshell: certs changes directory. Certificates are kept when they exist (making new ones means recreating
-  # the running containers, see certs below).
+  # Dùng subshell vì lệnh tạo cert đổi thư mục. Giữ chứng chỉ nếu đã có (tạo lại sẽ cần dựng lại
+  # các container đang chạy, xem phần certs bên dưới).
   [ -f certs/ca.pem ] && [ -f certs/db/server.pem ] || (certs)
-  # First run pulls ~7 GB of images; SQL Server needs >= 2 GB RAM free for Docker.
+  # Lần chạy đầu tải khoảng 7 GB image; SQL Server cần Docker còn trống ít nhất 2 GB RAM.
   docker compose up -d --wait
   seed
   echo "Test environment is up: docker compose ps (in test-env). Profiles to create in the app: test-profiles.txt"
 }
 
 # ---------------------------------------------------------------------------------------------------- seed
-# Sample data to try the SQL mode by hand: database "demo" (customers, products, orders, order_items, events with
-# 10,000 rows, view v_order_summary), Redis db 1 with keys demo:*. The Rust tests use database s3b, never demo.
-# A database that is not running or already has demo is skipped (edits made in the app are kept); a failed load
-# drops demo so the next run loads it again. Redis keeps nothing on disk (--save ""), so it is loaded again after
-# each restart of its container.
+# Dữ liệu mẫu để thử chế độ SQL: database "demo" (customers, products, orders, order_items, events với
+# 10.000 hàng, view v_order_summary), Redis db 1 với key demo:*. Test Rust dùng database s3b, không dùng demo.
+# Bỏ qua database chưa chạy hoặc đã có demo (giữ lại thay đổi thực hiện trong ứng dụng); nếu nạp lỗi thì xóa demo
+# để lần sau nạp lại. Redis không lưu dữ liệu xuống đĩa (--save ""), vì vậy sẽ nạp lại sau mỗi lần khởi động container.
 running() { [ "$(docker inspect -f '{{.State.Running}}' "$1" 2>/dev/null)" = true ]; }
 
-# seed_db <label> <container> <seed file> <check: prints something when demo exists> <load: reads stdin> <drop>
+# seed_db <label> <container> <seed file> <check: in ra nội dung nếu demo tồn tại> <load: đọc stdin> <drop>
 seed_db() {
   if ! running "$2"; then echo "  $1: not running, skipped"; return 0; fi
   if [ -n "$(docker exec "$2" sh -c "$4" </dev/null)" ]; then echo "  $1: demo already loaded"; return 0; fi
@@ -51,7 +50,7 @@ seed() {
   cd "$ENV_DIR/db/seed"
   export MSYS_NO_PATHCONV=1 # Git Bash would turn /opt/... in the commands into Windows paths
   echo "Loading sample data (database demo)..."
-  # Passwords are read inside each container from its own environment, never on this host.
+  # Mật khẩu được đọc từ biến môi trường bên trong từng container, không đọc trên máy chủ này.
   ok=0
   my='MYSQL_PWD=$MYSQL_ROOT_PASSWORD mysql -uroot'
   seed_db MySQL s3b-test-mysql mysql.sql "$my -N -e \"SHOW DATABASES LIKE 'demo'\"" "$my"     "$my -e 'DROP DATABASE IF EXISTS demo'" || ok=1
@@ -67,16 +66,16 @@ seed() {
 }
 
 # ---------------------------------------------------------------------------------------------------- certs
-# certs/ca.pem, ca.key            self-signed CA (pick ca.pem as "CA certificate file" in S3Browser)
-# certs/minio/                    server cert for MinIO TLS: public.crt, private.key, CAs/ca.pem
-# certs/client/client.crt         client cert, CN=readwrite (MinIO maps the CN to a policy), EKU clientAuth
-# certs/client/client.key         its key, PKCS#8, no password
-# certs/client/client-enc.key     the same key, PKCS#8 encrypted with KEY_PASSWORD
-# certs/client/client-legacy.key  the same key in the old PEM encryption (Proc-Type), must be rejected (S3E043)
-# certs/db/                       server cert shared by the 6 test databases: server.crt, server.key (RSA 2048),
-#                                 server.pem (key + cert, for MongoDB), ca.pem (copy).
-#                                 SAN: localhost, 127.0.0.1, ::1 and the service names.
-# Run again to replace everything (running containers keep the old files: `docker compose up -d --force-recreate`).
+# certs/ca.pem, ca.key            CA tự ký (chọn ca.pem làm "CA certificate file" trong S3Browser)
+# certs/minio/                    chứng chỉ máy chủ MinIO TLS: public.crt, private.key, CAs/ca.pem
+# certs/client/client.crt         chứng chỉ client, CN=readwrite (MinIO ánh xạ CN thành policy), EKU clientAuth
+# certs/client/client.key         key tương ứng, PKCS#8, không có mật khẩu
+# certs/client/client-enc.key     cùng key đó, PKCS#8 được mã hóa bằng KEY_PASSWORD
+# certs/client/client-legacy.key  cùng key ở định dạng mã hóa PEM cũ (Proc-Type), phải bị từ chối (S3E043)
+# certs/db/                       chứng chỉ máy chủ dùng chung cho 6 database test: server.crt, server.key (RSA 2048),
+#                                 server.pem (key + cert, dùng cho MongoDB), ca.pem (bản sao).
+#                                 SAN: localhost, 127.0.0.1, ::1 và tên các service.
+# Chạy lại để thay toàn bộ file (container đang chạy vẫn giữ file cũ: `docker compose up -d --force-recreate`).
 certs() {
   export MSYS_NO_PATHCONV=1 # Git Bash would turn the "/CN=..." subjects into Windows paths
   KEY_PASSWORD='ClientKey#2026'
@@ -106,7 +105,7 @@ extendedKeyUsage=serverAuth"
   openssl ec -in client/client.key -aes256 -passout "pass:$KEY_PASSWORD" -out client/client-legacy.key >/dev/null 2>&1
 
   echo "Database server certificate..."
-  # RSA because SQL Server on Linux does not take EC keys.
+  # Dùng RSA vì SQL Server trên Linux không chấp nhận key EC.
   sign dbserver "/CN=localhost" "subjectAltName=DNS:localhost,DNS:mysql,DNS:mariadb,DNS:postgres,DNS:mssql,DNS:mongo,DNS:redis,IP:127.0.0.1,IP:::1
 extendedKeyUsage=serverAuth" rsa
   mv dbserver.crt db/server.crt
@@ -115,14 +114,14 @@ extendedKeyUsage=serverAuth" rsa
   cat db/server.key db/server.crt >db/server.pem
 
   rm -f ca.srl
-  # The containers read the keys as other users (PostgreSQL copies its key and sets 0600 itself).
+  # Container đọc key bằng user khác (PostgreSQL tự sao chép key và đặt quyền 0600).
   chmod 644 minio/private.key client/*.key db/*
 
   echo "Done: $OUT"
   echo "Key password of client-enc.key and client-legacy.key: $KEY_PASSWORD"
 }
 
-# sign <name> <subject> <extensions> [rsa]: key (EC by default) + certificate signed by the CA.
+# sign <name> <subject> <extensions> [rsa]: tạo key (mặc định EC) và chứng chỉ do CA ký.
 sign() {
   if [ "$4" = rsa ]; then
     openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$1.key"
@@ -141,7 +140,7 @@ minio() {
   LDAP_BASE="dc=s3browser,dc=local"
   mc alias set local http://minio:10000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null
 
-  # LDAP takes a few seconds on its first start; MinIO checks the connection when the config is set.
+  # LDAP mất vài giây để khởi động lần đầu; MinIO kiểm tra kết nối ngay khi đặt cấu hình.
   echo "Configuring LDAP..."
   i=0
   until mc admin config set local identity_ldap \
@@ -154,7 +153,7 @@ minio() {
     [ "$i" -ge 30 ] && { echo "LDAP is not reachable"; exit 1; }
     sleep 2
   done
-  # --json: without a TTY the restart progress UI fails.
+  # --json: giao diện tiến độ restart lỗi khi không có TTY.
   mc admin service restart local --json >/dev/null
   until mc ready local >/dev/null 2>&1; do sleep 1; done
 
@@ -163,7 +162,7 @@ minio() {
   mc idp ldap policy attach local readonly --user="uid=ldap-ro,ou=users,$LDAP_BASE" >/dev/null 2>&1 || true
 
   echo "Creating access keys..."
-  # `accesskey info` exits 0 even for a missing key, so look the key up in the list instead (no grep here).
+  # `accesskey info` trả mã 0 kể cả khi không có key nên tìm key trong danh sách (ở đây không có grep).
   keys=$(mc idp ldap accesskey ls local)
   case "$keys" in *s3b-rw-key*) ;; *)
     mc idp ldap accesskey create local ldap-rw --access-key s3b-rw-key --secret-key 'S3bRwKey#2026' \
@@ -184,8 +183,8 @@ minio() {
     mc cp -q /tmp/hello.txt "local/$b/docs/readme.txt" >/dev/null
   done
 
-  # Data for test-env/mem-bench-all.ps1: 10,000 small objects (same names as mem-bench.ps1 -PrepareData).
-  # Skipped when the bucket already has them, so restarting the stack stays fast.
+  # Dữ liệu cho test-env/mem-bench-all.ps1: 10.000 object nhỏ (cùng tên với mem-bench.ps1 -PrepareData).
+  # Bỏ qua nếu bucket đã có các object này để khởi động lại stack nhanh hơn.
   echo "Creating bucket s3b-mem-10k (10,000 objects for the memory benchmark)..."
   mc mb --ignore-existing local/s3b-mem-10k >/dev/null
   n=$(mc ls local/s3b-mem-10k | wc -l)
@@ -202,7 +201,7 @@ minio() {
 
 # ---------------------------------------------------------------------------------------------------- minio-tls
 minio_tls() {
-  # --insecure: this only talks to the test MinIO inside the Docker network.
+  # --insecure: lệnh này chỉ kết nối MinIO test bên trong mạng Docker.
   mc --insecure alias set local https://minio-tls:10000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null
   mc --insecure mb --ignore-existing local/s3b-tls >/dev/null
   echo "hello tls" | mc --insecure pipe local/s3b-tls/docs/readme.txt >/dev/null
@@ -210,8 +209,8 @@ minio_tls() {
 }
 
 # ---------------------------------------------------------------------------------------------------- floci
-# Writes floci-config / floci-credentials to /out (./generated). Access keys are only created when
-# /out/floci-credentials does not exist yet.
+# Ghi floci-config / floci-credentials vào /out (./generated). Chỉ tạo access key khi
+# /out/floci-credentials chưa tồn tại.
 floci() {
   E="--endpoint-url http://floci:4566 --region ap-southeast-1"
   RW='{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"s3:*","Resource":"*"}]}'
@@ -228,7 +227,7 @@ floci() {
     sleep 2
   done
 
-  # Managed AWS policies in Floci are "Allow *" stubs, so only inline policies are used.
+  # Policy AWS quản lý trong Floci chỉ là stub "Allow *" nên chỉ dùng inline policy.
   echo "Creating IAM users and roles..."
   for u in s3b-rw s3b-ro s3b-assumer; do
     aws iam get-user --user-name $u $E >/dev/null 2>&1 || aws iam create-user --user-name $u $E >/dev/null
@@ -250,7 +249,7 @@ floci() {
     echo "hello floci" | aws s3 cp - s3://$b/hello.txt $E >/dev/null
     echo "hello floci" | aws s3 cp - s3://$b/docs/readme.txt $E >/dev/null
   done
-  # Floci >= 2.5 turns on Block Public Access for new buckets (like real AWS), which rejects the public policy.
+  # Floci >= 2.5 bật Block Public Access cho bucket mới (giống AWS thật), khiến public policy bị từ chối.
   aws s3api delete-public-access-block --bucket s3b-public-read $E >/dev/null 2>&1 || true
   aws s3api put-bucket-policy --bucket s3b-public-read --policy "$PUBLIC" $E
 

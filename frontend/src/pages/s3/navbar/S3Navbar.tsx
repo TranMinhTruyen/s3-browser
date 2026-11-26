@@ -3,7 +3,7 @@ import ConnectionProfiles from '@/pages/s3/navbar/ConnectionProfiles';
 import S3HeaderButtonGroup from '@/pages/s3/navbar/S3HeaderButtonGroup';
 
 function S3Navbar() {
-  // Flex column: the profile list takes the remaining height and scrolls (virtualized) on its own.
+  // Cột flex: danh sách hồ sơ chiếm phần chiều cao còn lại và tự cuộn (dùng virtualizer).
   return (
     <Paper withBorder h="100%" style={{ overflowX: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <S3HeaderButtonGroup />

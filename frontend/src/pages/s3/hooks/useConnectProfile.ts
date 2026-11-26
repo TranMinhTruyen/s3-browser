@@ -5,10 +5,10 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { type ConnectionProfile, useProfileStore } from '@/pages/s3/stores/profileStore';
 
 /**
- * Returns a function that connects a saved profile through the backend and marks it connected in the profile store.
- * Resolves true when connected, false when the connection failed (the backend already showed the message) or the
- * caller unmounted meanwhile (the call is canceled silently).
- * Only the IPC part is shared: guards (already connected, missing keys) and the "connecting" state stay with the caller.
+ * Trả về hàm kết nối profile đã lưu qua backend và đánh dấu đã kết nối trong profile store.
+ * Trả về true khi kết nối thành công, false nếu kết nối thất bại (backend đã hiện thông báo) hoặc component gọi
+ * unmount trong lúc chờ (lời gọi bị hủy im lặng).
+ * Chỉ phần IPC được dùng chung: các bước kiểm tra (đã kết nối, thiếu key) và state "đang kết nối" thuộc về nơi gọi.
  */
 export function useConnectProfile() {
   const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);

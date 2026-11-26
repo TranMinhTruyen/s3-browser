@@ -15,14 +15,14 @@ import (
 )
 
 const (
-	// connectTimeout bounds the probe of a connect or test call.
+	// connectTimeout giới hạn thời gian thăm dò khi kết nối hoặc kiểm tra kết nối.
 	connectTimeout = 30 * time.Second
 
-	// credentialWarnWindow is how long before expiry EventCredentialExpiring is sent.
+	// credentialWarnWindow là khoảng thời gian trước lúc hết hạn để gửi EventCredentialExpiring.
 	credentialWarnWindow = 5 * time.Minute
 )
 
-// submoduleConnMng connects, tests and disconnects S3 connections and keeps them in the global store.
+// submoduleConnMng kết nối, kiểm tra và ngắt kết nối S3, đồng thời lưu các kết nối trong kho toàn cục.
 type submoduleConnMng struct {
 	logger  *slog.Logger
 	app     *application.App
@@ -32,7 +32,7 @@ type submoduleConnMng struct {
 	submoduleCfgMng *submoduleCfgMng
 }
 
-// newSubmoduleConnMng wires the connection submodule to the app, store, profiles and client builder.
+// newSubmoduleConnMng kết nối submodule connection với ứng dụng, kho dữ liệu, hồ sơ và bộ tạo client.
 func newSubmoduleConnMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -50,14 +50,14 @@ func newSubmoduleConnMng(
 	}
 }
 
-// probe builds a client for input and checks it with ListBuckets (HeadBucket when anonymous). The caller owns c:
-// on success it must keep it (replaceConn) or Close it; on failure probe already closed it.
-// ctx is the call context, so the frontend can cancel a slow connect.
+// probe tạo client cho input rồi kiểm tra bằng ListBuckets (HeadBucket nếu là kết nối ẩn danh). Bên gọi sở hữu c:
+// khi thành công phải giữ lại (replaceConn) hoặc gọi Close; khi thất bại, probe đã đóng kết nối.
+// ctx là context của lời gọi để frontend có thể hủy thao tác kết nối chậm.
 func (m *submoduleConnMng) probe(
 	ctx context.Context,
 	input models.ConnectionProfileInput,
 ) (*global.S3Conn, models.Output[models.ConnectOutput], error) {
-	// A call context only ends when the frontend cancels, so always bound the I/O with a timeout.
+	// Context của lời gọi chỉ kết thúc khi frontend hủy, vì vậy luôn giới hạn I/O bằng timeout.
 	ctx, cancel := withCallContext(ctx, m.app.Context(), connectTimeout)
 	defer cancel()
 
@@ -73,8 +73,8 @@ func (m *submoduleConnMng) probe(
 	return c, status, err
 }
 
-// connectFailed ends a failed connect with the messages in status. When the frontend canceled the call (ctx),
-// nobody waits for the result, so it fails without a message.
+// connectFailed kết thúc lần kết nối thất bại bằng các thông báo trong status. Nếu frontend đã hủy lời gọi (ctx),
+// không còn bên nào chờ kết quả nên hàm trả lỗi mà không gửi thông báo.
 func connectFailed(
 	ctx context.Context,
 	status models.Output[models.ConnectOutput],
@@ -86,7 +86,7 @@ func connectFailed(
 	return status.ThrowError()
 }
 
-// testAction checks the credentials and endpoint of input (S3S001) without keeping the connection.
+// testAction kiểm tra thông tin xác thực và endpoint trong input (S3S001) nhưng không giữ kết nối.
 func (m *submoduleConnMng) testAction(
 	ctx context.Context,
 	input models.ConnectionProfileInput,
@@ -97,7 +97,7 @@ func (m *submoduleConnMng) testAction(
 		return connectFailed(ctx, status)
 	}
 
-	// A test connection is never kept.
+	// Không bao giờ giữ lại kết nối dùng để kiểm tra.
 	c.Close()
 	status.Body.IsConnected = true
 	status.AddMessage(
@@ -108,7 +108,7 @@ func (m *submoduleConnMng) testAction(
 	return status
 }
 
-// connectAction connects with input and keeps the connection; see Module.Connect.
+// connectAction kết nối bằng input và giữ kết nối; xem Module.Connect.
 func (m *submoduleConnMng) connectAction(
 	ctx context.Context,
 	input models.ConnectionProfileInput,
@@ -120,7 +120,7 @@ func (m *submoduleConnMng) connectAction(
 		return connectFailed(ctx, status)
 	}
 
-	// An existing profile keeps its id; a new connection creates a profile and uses its id.
+	// Hồ sơ có sẵn giữ nguyên id; kết nối mới tạo hồ sơ rồi dùng id của hồ sơ đó.
 	connectionId := input.Id
 	if !isExistingProfile {
 		createResult := m.profile.CreateProfile(input)
@@ -147,8 +147,7 @@ func (m *submoduleConnMng) connectAction(
 	return status
 }
 
-// replaceConn stores the connection, closes any previous one with the same id and starts watching the expiry
-// of the new one.
+// replaceConn lưu kết nối, đóng kết nối trước đó có cùng id và bắt đầu theo dõi thời hạn của kết nối mới.
 func (m *submoduleConnMng) replaceConn(id string, c *global.S3Conn) {
 	if old := m.global.ReplaceConn(id, c); old != nil {
 		old.Close()
@@ -156,9 +155,9 @@ func (m *submoduleConnMng) replaceConn(id string, c *global.S3Conn) {
 	m.watchExpiry(id, c)
 }
 
-// watchExpiry sends EventCredentialExpiring once, credentialWarnWindow before credentials that can't be
-// renewed automatically expire. The timer belongs to c: Close (disconnect or replace) stops it.
-// The expiry is known after the first request, which the probe made.
+// watchExpiry gửi EventCredentialExpiring một lần, trước credentialWarnWindow khi thông tin xác thực không thể tự
+// gia hạn sắp hết hạn. Bộ hẹn giờ thuộc về c: Close (ngắt kết nối hoặc thay thế) sẽ dừng bộ hẹn giờ này.
+// Thời hạn được xác định sau yêu cầu đầu tiên do probe gửi đi.
 func (m *submoduleConnMng) watchExpiry(id string, c *global.S3Conn) {
 	if c.CredInfo.Refreshable || c.CredInfo.Expiry == nil {
 		return
@@ -168,11 +167,11 @@ func (m *submoduleConnMng) watchExpiry(id string, c *global.S3Conn) {
 	}
 }
 
-// armExpiry starts the timer for expiresAt. When it fires the expiry is read again: an SSO token renewed by the
-// SDK moves it, and then the timer is re-armed instead of warning.
+// armExpiry khởi động bộ hẹn giờ đến expiresAt. Khi hết giờ, hàm đọc lại thời hạn: nếu SDK đã gia hạn token SSO
+// thì đặt lại bộ hẹn giờ thay vì gửi cảnh báo.
 func (m *submoduleConnMng) armExpiry(id string, c *global.S3Conn, expiresAt time.Time) {
 	timer := time.AfterFunc(max(time.Until(expiresAt)-credentialWarnWindow, 0), func() {
-		// Skip if the connection was dropped or replaced meanwhile.
+		// Bỏ qua nếu kết nối đã bị gỡ hoặc thay thế trong lúc chờ.
 		if current, ok := m.global.GetConnContainer(id); !ok || current != c {
 			return
 		}
@@ -195,13 +194,13 @@ func (m *submoduleConnMng) armExpiry(id string, c *global.S3Conn, expiresAt time
 	c.SetExpiryTimer(timer)
 }
 
-// profileConnectAction connects with a saved profile and keeps the connection (S3S002).
+// profileConnectAction kết nối bằng hồ sơ đã lưu rồi giữ kết nối (S3S002).
 func (m *submoduleConnMng) profileConnectAction(
 	ctx context.Context,
 	connectionId string,
 ) models.Output[models.ConnectOutput] {
 	output := models.NewOutput[models.ConnectOutput]()
-	// The saved secrets are decrypted here only; the frontend never sees them.
+	// Secret đã lưu chỉ được giải mã tại đây; frontend không bao giờ nhận được chúng.
 	profile := m.profile.GetConnectInput(connectionId)
 
 	if !profile.Result {
@@ -228,9 +227,9 @@ func (m *submoduleConnMng) profileConnectAction(
 	return output
 }
 
-// reauthAction renews the credentials of a live connection. The saved profile gives the settings and secrets;
-// input only adds what is not saved: the new MFA code, and secrets the user typed again. The S3 client is
-// kept (SwapCreds), so running transfers go on.
+// reauthAction gia hạn thông tin xác thực của kết nối đang hoạt động. Hồ sơ đã lưu cung cấp cấu hình và secret;
+// input chỉ bổ sung những giá trị không được lưu: mã MFA mới và các secret người dùng nhập lại. Client S3 được
+// giữ nguyên (SwapCreds) nên các lượt truyền đang chạy vẫn tiếp tục.
 func (m *submoduleConnMng) reauthAction(
 	ctx context.Context,
 	connectionId string,
@@ -282,7 +281,7 @@ func (m *submoduleConnMng) reauthAction(
 	conn.Creds.Store(creds.AWS)
 	conn.Access.Reset() // the new credentials may have other permissions
 	m.submoduleCfgMng.oidc.remove(fresh.OidcSessionId)
-	// The new credentials are cached by buildCredentials: this only reads their expiry into conn.Creds.
+	// buildCredentials đã cache thông tin xác thực mới; tại đây chỉ đọc thời hạn của chúng vào conn.Creds.
 	_, _ = conn.Creds.Retrieve(ctx)
 	m.watchExpiry(connectionId, conn)
 
@@ -296,8 +295,8 @@ func (m *submoduleConnMng) reauthAction(
 	return output
 }
 
-// missingSecret returns the first secret the method needs to renew credentials that is empty, or "".
-// Secrets are only kept when the profile saves them, so the user may have to type them again.
+// missingSecret trả về secret đầu tiên cần để phương thức gia hạn thông tin xác thực nhưng đang để trống, hoặc "".
+// Secret chỉ được giữ khi hồ sơ lưu chúng, nên người dùng có thể phải nhập lại.
 func missingSecret(in models.ConnectionProfileInput) string {
 	switch in.AuthType {
 	case cnst.AuthAssumeRole:
@@ -327,7 +326,7 @@ func missingSecret(in models.ConnectionProfileInput) string {
 	return ""
 }
 
-// withTypedSecrets returns saved with the one-time codes of typed and any secret the user typed again.
+// withTypedSecrets trả về saved cùng mã dùng một lần từ typed và mọi secret người dùng đã nhập lại.
 func withTypedSecrets(saved, typed models.ConnectionProfileInput) models.ConnectionProfileInput {
 	saved.MfaCode = typed.MfaCode
 	saved.OidcSessionId = typed.OidcSessionId
@@ -338,7 +337,7 @@ func withTypedSecrets(saved, typed models.ConnectionProfileInput) models.Connect
 	return saved
 }
 
-// disconnectAction removes a connection from the store and closes its idle HTTP connections.
+// disconnectAction gỡ kết nối khỏi kho và đóng các kết nối HTTP đang nhàn rỗi.
 func (m *submoduleConnMng) disconnectAction(connectionId string) models.Output[bool] {
 	output := models.NewOutput[bool]()
 

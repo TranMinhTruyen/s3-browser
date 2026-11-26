@@ -1,6 +1,6 @@
 package setting
 
-// AppSettings is the content of settings.json.
+// AppSettings là nội dung của settings.json.
 type AppSettings struct {
 	Theme           string `json:"theme"`
 	Font            string `json:"font"`
@@ -11,7 +11,7 @@ type AppSettings struct {
 	BetaUpdate      bool   `json:"betaUpdate"`
 }
 
-// SettingsOutput is the settings plus whether "launch on startup" can be used on this build and OS.
+// SettingsOutput chứa cài đặt và thông tin tùy chọn "khởi chạy cùng hệ thống" có dùng được trên bản dựng, hệ điều hành này hay không.
 type SettingsOutput struct {
 	Settings           AppSettings `json:"settings"`
 	AutostartSupported bool        `json:"autostartSupported"`

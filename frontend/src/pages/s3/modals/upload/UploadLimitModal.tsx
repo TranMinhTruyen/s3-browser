@@ -19,13 +19,13 @@ import {
 
 type UploadLimitModalProps = ModalProps & {
   groups: DroppedGroup[];
-  // Max files per group.
+  // Số file tối đa trong mỗi nhóm.
   maxFilesPerFolder: number;
-  // Size in bytes above which a file counts as large.
+  // Ngưỡng dung lượng byte để một file được tính là file lớn.
   largeFileSize: number;
-  // A group may upload at most this many large files.
+  // Mỗi nhóm được tải lên tối đa số file lớn này.
   largeFileMaxCount: number;
-  // The folder scan stopped early, so the list may be incomplete.
+  // Quét thư mục đã dừng sớm nên danh sách có thể chưa đầy đủ.
   capped?: boolean;
 };
 
@@ -35,12 +35,12 @@ type FileListProps = {
   stats: GroupStat[];
   maxFilesPerFolder: number;
   largeFileMaxCount: number;
-  // The section only counts large files, so the header shows the large-file counter.
+  // Phần này chỉ đếm file lớn nên tiêu đề hiển thị bộ đếm file lớn.
   largeOnly: boolean;
   onToggleFile: (path: string, checked: boolean) => void;
 };
 
-// Max list height in px at the medium size; the list height itself is given in rem.
+// Chiều cao tối đa của danh sách theo px ở cỡ trung bình; chiều cao thực tế của danh sách được tính bằng rem.
 const LIST_MAX_HEIGHT = 320;
 
 const FileList = memo(function FileList(props: FileListProps) {
@@ -87,7 +87,7 @@ const FileList = memo(function FileList(props: FileListProps) {
   );
 });
 
-/** Lets the user pick the files to upload; resolves the chosen files (empty or null when canceled). */
+/** Cho phép người dùng chọn file cần tải lên; trả về các file đã chọn (mảng rỗng hoặc null nếu hủy). */
 export default createMantineModal<UploadLimitModalProps, DroppedFile[]>(props => {
   const {
     groups,
@@ -103,10 +103,10 @@ export default createMantineModal<UploadLimitModalProps, DroppedFile[]>(props =>
 
   const { t } = useTranslation('uploadLimitModal');
 
-  // Groups over a limit need a choice; the others are uploaded in full.
+  // Nhóm vượt giới hạn cần người dùng chọn; các nhóm còn lại được tải lên đầy đủ.
   const violating = useMemo(() => groups.map(g => g.overMaxFiles || g.overLargeCount), [groups]);
 
-  // Default: the first `max` files per violating group, with at most `largeFileMaxCount` large ones.
+  // Mặc định: chọn `max` file đầu tiên trong mỗi nhóm vượt giới hạn, trong đó tối đa `largeFileMaxCount` file lớn.
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => {
     const initial = new Set<string>();
     groups.forEach((group, i) => {

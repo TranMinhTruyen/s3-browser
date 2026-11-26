@@ -13,20 +13,20 @@ import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
 export type Provider = 'sqlite' | 'postgres';
 export type SslMode = 'disable' | 'allow' | 'prefer' | 'require' | 'verify-ca' | 'verify-full';
 
-/** i18n keys (`dbType.*`, `form.dbType.*`) are named after the DB type, not the provider id. */
+/** Key i18n (`dbType.*`, `form.dbType.*`) được đặt theo loại DB, không theo id của provider. */
 export const PROVIDER_LABEL_KEY: Record<Provider, 'sqlite' | 'postgresql'> = {
   sqlite: 'sqlite',
   postgres: 'postgresql',
 };
 
-/** Database connection profile as saved by the backend (never holds the password). PostgreSQL connect is still fake. */
+/** Profile kết nối database theo dữ liệu backend lưu (không bao giờ chứa mật khẩu). Kết nối PostgreSQL hiện vẫn là giả lập. */
 export type DbProfile = {
   id: string;
   name: string;
   color: string;
   provider: Provider;
   config: DbProfileOutput['config'];
-  /** A password is stored in the backend. */
+  /** Mật khẩu đã được lưu ở backend. */
   hasSecret: boolean;
   isConnected: boolean;
 };
@@ -37,30 +37,30 @@ interface DbProfileState {
 
 interface DbProfileAction {
   getDbProfileById: (key?: string | null) => DbProfile | null | undefined;
-  /** Reloads the profiles from the backend; connected flags are kept. */
+  /** Tải lại profile từ backend; giữ nguyên các cờ trạng thái kết nối. */
   loadDbProfiles: () => Promise<boolean>;
-  /** Saves the profile in the backend, then in the store. Resolves false when the backend refused. */
+  /** Lưu profile ở backend rồi cập nhật store. Trả về false nếu backend từ chối. */
   saveDbProfile: (input: DbProfileInput, isUpdate: boolean) => Promise<boolean>;
   deleteDbProfile: (key: string) => void;
-  /** Deletes the profile in the backend first. Resolves false when it was kept. */
+  /** Xóa profile ở backend trước. Trả về false nếu profile không bị xóa. */
   removeDbProfile: (key: string) => Promise<boolean>;
   setConnected: (key: string, connected: boolean) => void;
-  /** Connects the profile (PostgreSQL is fake: only the flag). Resolves false when it failed or is busy. */
+  /** Kết nối profile (PostgreSQL giả lập: chỉ cập nhật cờ). Trả về false nếu thất bại hoặc đang bận. */
   connectDbProfile: (key: string) => Promise<boolean>;
-  /** Disconnects the profile (PostgreSQL is fake: only the flag). Resolves false when it failed or is busy. */
+  /** Ngắt kết nối profile (PostgreSQL giả lập: chỉ cập nhật cờ). Trả về false nếu thất bại hoặc đang bận. */
   disconnectDbProfile: (key: string) => Promise<boolean>;
   reset: () => void;
 }
 
 const SCOPE = 'dbProfile';
 
-/** Profiles with a connect/disconnect in flight, so a double click does not send the call twice. */
+/** Các profile đang kết nối/ngắt kết nối để click đúp không gửi yêu cầu hai lần. */
 const busy = new Set<string>();
 
 let lastProfiles: DbProfileState['dbProfiles'] | null = null;
 let lastNames: Record<string, string> = {};
 
-/** Profile id -> name. Computed once per `dbProfiles` change and shared by every tab that selects it. */
+/** Ánh xạ id profile -> tên. Tính lại mỗi khi `dbProfiles` thay đổi và dùng chung cho mọi tab chọn profile đó. */
 export const selectProfileNames = (s: DbProfileState): Record<string, string> => {
   if (s.dbProfiles !== lastProfiles) {
     lastProfiles = s.dbProfiles;
@@ -79,7 +79,7 @@ const fromOutput = (output: DbProfileOutput, isConnected: boolean): DbProfile =>
   isConnected,
 });
 
-/** Runs `task` unless another connect/disconnect of the profile is in flight. */
+/** Chạy `task` nếu profile chưa có thao tác kết nối/ngắt kết nối nào đang thực hiện. */
 const runExclusive = async (key: string, task: () => Promise<boolean>): Promise<boolean> => {
   if (busy.has(key)) return false;
   busy.add(key);
@@ -90,7 +90,7 @@ const runExclusive = async (key: string, task: () => Promise<boolean>): Promise<
   }
 };
 
-/** Database profiles by id. */
+/** Các profile database được lập chỉ mục theo id. */
 export const useDbProfileStore = createAppStore<DbProfileState & DbProfileAction>(
   (set, get) => ({
     dbProfiles: {},

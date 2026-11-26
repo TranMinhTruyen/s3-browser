@@ -1,6 +1,6 @@
-/* Mantine centers each mark label on its mark, and the absolutely positioned mark wrapper is as wide as its label,
-   so the last wrapper (and the first and last labels) stick out of the slider and add a horizontal scrollbar.
-   Make each wrapper exactly one mark wide and align the first label to the left end and the last to the right end. */
+/* Mantine căn giữa từng nhãn mốc theo mốc tương ứng, còn wrapper định vị tuyệt đối rộng bằng nhãn,
+   nên wrapper cuối (và nhãn đầu/cuối) tràn khỏi thanh trượt, tạo thanh cuộn ngang.
+   Đặt mỗi wrapper rộng đúng bằng khoảng cách giữa hai mốc, căn nhãn đầu về mép trái và nhãn cuối về mép phải. */
 .markWrapper {
   width: var(--slider-size);
 }

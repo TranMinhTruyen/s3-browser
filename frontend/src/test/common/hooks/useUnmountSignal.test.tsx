@@ -40,7 +40,7 @@ describe('useUnmountSignal', () => {
 
     const current = result.current();
     expect(current?.aborted).toBe(false);
-    // The first render ran before any effect, so it saw no controller yet.
+    // Lần render đầu tiên chạy trước mọi effect, nên lúc đó chưa có controller.
     expect(signals[0]).toBeUndefined();
   });
 

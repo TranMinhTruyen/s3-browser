@@ -10,15 +10,15 @@ import { ITEM_HEIGHT } from '@/pages/s3/transfer/transferItem';
 type TransferRowProps = {
   title: string;
   percent: number;
-  // Content inside the progress ring.
+  // Nội dung bên trong vòng tiến độ.
   ringLabel: ReactNode;
-  // Size details under the title.
+  // Thông tin dung lượng bên dưới tiêu đề.
   children: ReactNode;
   cancelTooltip: string;
   onCancel: () => void;
 };
 
-/** Fixed-height transfer row shared by upload and download: progress ring, details and a cancel button on hover. */
+/** Hàng truyền file có chiều cao cố định, dùng chung cho tải lên/tải xuống: vòng tiến độ, thông tin chi tiết và nút hủy khi rê chuột. */
 function TransferRow(props: TransferRowProps) {
   const { title, percent, ringLabel, children, cancelTooltip, onCancel } = props;
 

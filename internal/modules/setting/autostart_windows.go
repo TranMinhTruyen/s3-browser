@@ -12,12 +12,12 @@ import (
 
 const runKeyPath = `Software\Microsoft\Windows\CurrentVersion\Run`
 
-// autostartSupported is true only for the installed build: a portable exe can move, so its path must not be registered.
+// autostartSupported chỉ là true với bản đã cài: exe portable có thể bị di chuyển nên không được đăng ký đường dẫn.
 func autostartSupported() bool {
 	return !portable.Enabled
 }
 
-// setAutostart adds or removes the HKCU Run entry that starts the app with Windows.
+// setAutostart thêm hoặc xóa mục HKCU Run dùng để khởi chạy ứng dụng cùng Windows.
 func setAutostart(appName string, enable bool) error {
 	key, err := registry.OpenKey(registry.CURRENT_USER, runKeyPath, registry.SET_VALUE)
 	if err != nil {

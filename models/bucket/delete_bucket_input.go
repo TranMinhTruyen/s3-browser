@@ -1,6 +1,6 @@
 package bucket
 
-// DeleteBucketInput identifies the bucket to delete, or whose delete info is requested.
+// DeleteBucketInput chỉ định bucket cần xóa hoặc bucket cần lấy thông tin trước khi xóa.
 type DeleteBucketInput struct {
 	ConnectionId string `json:"connectionId"`
 	ProfileName  string `json:"profileName,omitempty"`

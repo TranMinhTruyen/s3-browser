@@ -17,7 +17,7 @@ import { setTableDirty } from '@/pages/sql/utils/dirtyTables';
 import { pgProfile, sqliteProfile, toProfileMap } from '@/test/_helpers/dbProfiles';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// jsdom has no layout, so render every row. The mock sizes each row with `estimateSize(index)` like the real one.
+// jsdom không có layout nên render mọi hàng. Mock tính kích thước mỗi hàng bằng `estimateSize(index)` như virtualizer thật.
 const virtual = vi.hoisted(() => ({ measure: vi.fn(), sizes: [] as number[] }));
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: (options: {
@@ -112,7 +112,7 @@ describe('DbProfiles', () => {
 
     it('keeps the 68px card and the 8px gap above the next card at the medium size', () => {
       renderWithProviders(<DbProfiles />);
-      // The gap is part of the height of every card but the first (it was a virtualizer `gap` before).
+      // Khoảng cách được tính vào chiều cao của mọi thẻ trừ thẻ đầu (trước đây đặt bằng `gap` của virtualizer).
       expect(virtual.sizes).toEqual([68, 76]);
       expect(row('Local PostgreSQL')).toHaveStyle({ height: '68px', transform: 'translateY(0px)' });
       expect(row('Staging PostgreSQL')).toHaveStyle({ height: '76px', transform: 'translateY(68px)' });
@@ -435,7 +435,7 @@ describe('DbProfiles', () => {
     const codes = () => confirmMock.mock.calls.map(c => (c[0] as { confirmCode: string }).confirmCode);
     const dirtyTabs: string[] = [];
 
-    /** Opens a table tab of the profile and marks it dirty; `dirty` false leaves it clean. */
+    /** Mở tab bảng của profile và đánh dấu có thay đổi; `dirty` false thì giữ nguyên trạng thái sạch. */
     const openTable = (profileId: string, dirty = true) => {
       useSqlTabStore.getState().openTableTab(profileId, 'main', `t${dirtyTabs.length}`);
       const tab = useSqlTabStore.getState().activeTab as string;
@@ -583,7 +583,7 @@ describe('DbProfiles', () => {
       expect(wrapper('Node db')).toHaveClass(classes.inGroup);
       expect(wrapper('Node db')).not.toHaveClass(classes.groupEnd);
       expect(wrapper('Node t1')).toHaveClass(classes.inGroup, classes.groupEnd);
-      // The next card is outside the group.
+      // Thẻ tiếp theo nằm bên ngoài group.
       expect(wrapper('Staging PostgreSQL').className).toBe('');
     });
 

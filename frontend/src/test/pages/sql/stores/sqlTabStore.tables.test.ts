@@ -10,7 +10,7 @@ const store = () => useSqlTabStore.getState();
 const ids = () => Object.keys(store().tabList);
 const callIPCMock = vi.mocked(callIPC);
 
-/** The id of the tab opened last (it becomes the active one). */
+/** ID của tab được mở gần nhất (tab đó trở thành tab đang hoạt động). */
 const open = (profileId: string, schema: string, name: string) => {
   store().openTableTab(profileId, schema, name);
   return store().activeTab;

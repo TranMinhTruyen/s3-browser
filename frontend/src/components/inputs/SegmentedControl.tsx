@@ -1,10 +1,10 @@
 import { SegmentedControl as MSegmentedControl, SegmentedControlProps, useMantineTheme } from '@mantine/core';
 import classes from './segmentedControl.module.css';
 
-/** Thin wrapper over Mantine `SegmentedControl`; the label text is centered on its cap height. */
+/** Lớp bọc mỏng quanh `SegmentedControl` của Mantine; văn bản nhãn được căn giữa theo chiều cao chữ hoa. */
 function SegmentedControl(props: SegmentedControlProps) {
   const theme = useMantineTheme();
-  // The caller's classNames (object or function) are kept; the own classes are appended per part.
+  // Giữ nguyên classNames của nơi gọi (object hoặc function); nối thêm class riêng cho từng phần tử.
   const given = typeof props.classNames === 'function' ? props.classNames(theme, props, undefined) : props.classNames;
   const classNames = {
     ...given,

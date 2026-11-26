@@ -22,13 +22,13 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// submoduleCfgMng builds S3 clients from a profile and probes them.
+// submoduleCfgMng tạo client S3 từ hồ sơ và kiểm tra các client đó.
 type submoduleCfgMng struct {
 	logger *slog.Logger
 	oidc   *submoduleOidcMng
 }
 
-// newSubmoduleCfgMng builds the client builder; oidc supplies the sign-in sessions of minioOidc profiles.
+// newSubmoduleCfgMng tạo bộ dựng client; oidc cung cấp phiên đăng nhập cho hồ sơ minioOidc.
 func newSubmoduleCfgMng(
 	logger *slog.Logger,
 	oidc *submoduleOidcMng,
@@ -39,18 +39,18 @@ func newSubmoduleCfgMng(
 	}
 }
 
-// anonymousProbeConcurrency is the most HeadBucket calls at the same time when connecting anonymously.
+// anonymousProbeConcurrency là số lần gọi HeadBucket tối đa chạy đồng thời khi kết nối ẩn danh.
 const anonymousProbeConcurrency = 8
 
-// buildClient creates the S3 client, presigner and (for MinIO) admin client of input. Each connection
-// gets its own http.Transport so Disconnect can close its idle connections without touching others.
-// The credentials come from buildCredentials, so a credentials failure is returned before any client exists.
-// The client signs through a SwapCreds, so ReauthConnection can replace the credentials without a new client.
+// buildClient tạo client S3, presigner và (với MinIO) client quản trị theo input. Mỗi kết nối có http.Transport riêng
+// để Disconnect có thể đóng các kết nối nhàn rỗi mà không ảnh hưởng kết nối khác.
+// Thông tin xác thực lấy từ buildCredentials nên lỗi xác thực được trả về trước khi tạo client.
+// Client ký yêu cầu qua SwapCreds để ReauthConnection có thể thay thông tin xác thực mà không cần tạo client mới.
 func (m *submoduleCfgMng) buildClient(
 	ctx context.Context,
 	input models.ConnectionProfileInput,
 ) (*global.S3Conn, error) {
-	// The extra CA only applies to MinIO connections.
+	// CA bổ sung chỉ áp dụng cho kết nối MinIO.
 	caFile := ""
 	if input.Provider == cnst.ProviderMinio {
 		caFile = input.AuthConfig.CaFile
@@ -60,7 +60,7 @@ func (m *submoduleCfgMng) buildClient(
 		return nil, err
 	}
 
-	// The credential providers (minio-go) need the bare transport; only the S3 client uses http11Transport.
+	// Provider thông tin xác thực (minio-go) cần transport nguyên bản; chỉ client S3 dùng http11Transport.
 	creds, err := buildCredentials(ctx, input, &http.Client{Transport: transport}, m.oidc)
 	if err != nil {
 		transport.CloseIdleConnections()
@@ -96,7 +96,7 @@ func (m *submoduleCfgMng) buildClient(
 	}
 
 	conn.Client = s3.NewFromConfig(cfg, func(o *s3.Options) {
-		// An empty endpoint means AWS itself: leave the SDK to resolve it from the region.
+		// Endpoint rỗng nghĩa là AWS thật: để SDK tự phân giải theo region.
 		if input.Endpoint != "" {
 			o.BaseEndpoint = aws.String(input.Endpoint)
 		}
@@ -105,7 +105,7 @@ func (m *submoduleCfgMng) buildClient(
 	conn.Presign = s3.NewPresignClient(conn.Client)
 
 	if input.Provider == cnst.ProviderMinio && conn.Creds != nil {
-		// madmin wants a bare host, and the scheme decides whether TLS is used.
+		// madmin cần host thuần; scheme quyết định có dùng TLS hay không.
 		u, err := url.Parse(normalizeEndpoint(input.Endpoint))
 		if err == nil && u.Host == "" {
 			err = errors.New("endpoint has no host")
@@ -115,7 +115,7 @@ func (m *submoduleCfgMng) buildClient(
 			return conn, nil
 		}
 
-		// A refused admin client must not break the connection: S3 works without it.
+		// Không để lỗi khởi tạo client quản trị làm hỏng kết nối: S3 vẫn hoạt động khi thiếu client này.
 		admin, err := madmin.NewWithOptions(u.Host, &madmin.Options{
 			Creds:     newAdminCreds(conn.Creds),
 			Secure:    u.Scheme == "https",
@@ -131,8 +131,8 @@ func (m *submoduleCfgMng) buildClient(
 	return conn, nil
 }
 
-// normalizeEndpoint adds https:// to an endpoint without a scheme (e.g. "localhost:9000"), which url.Parse
-// would not split into a host.
+// normalizeEndpoint thêm https:// vào endpoint chưa có scheme (ví dụ "localhost:9000"), vì url.Parse
+// không thể tách chuỗi đó thành host.
 func normalizeEndpoint(endpoint string) string {
 	if strings.Contains(endpoint, "://") {
 		return endpoint
@@ -140,10 +140,10 @@ func normalizeEndpoint(endpoint string) string {
 	return "https://" + endpoint
 }
 
-// probe checks the connection and maps the error to a connect message. An anonymous connection checks its
-// buckets with HeadBucket, any other one uses ListBuckets.
-// AccessDenied is not an error: the connection works but is limited (S3W001, Body.Limited).
-// On error it closes the idle connections of c.
+// probe kiểm tra kết nối và ánh xạ lỗi sang thông báo kết nối. Kết nối ẩn danh kiểm tra bucket bằng HeadBucket,
+// các kết nối khác dùng ListBuckets.
+// AccessDenied không được xem là lỗi: kết nối vẫn hoạt động nhưng bị giới hạn (S3W001, Body.Limited).
+// Nếu có lỗi, hàm đóng các kết nối nhàn rỗi của c.
 func (m *submoduleCfgMng) probe(ctx context.Context, c *global.S3Conn) (models.Output[models.ConnectOutput], error) {
 	if c.AuthType == cnst.AuthAnonymous {
 		return m.probeAnonymous(ctx, c)
@@ -163,9 +163,9 @@ func (m *submoduleCfgMng) probe(ctx context.Context, c *global.S3Conn) (models.O
 	return output, nil
 }
 
-// checkAnonymousBuckets runs HeadBucket on every bucket of an anonymous connection, in parallel, and returns the
-// error of each (nil when accessible), in the order of c.AnonymousBuckets(). The Accessible flags are updated
-// only when the server answered; on a network failure the previous flag is kept.
+// checkAnonymousBuckets gọi HeadBucket song song cho mọi bucket của kết nối ẩn danh rồi trả lỗi tương ứng của từng bucket
+// (nil nếu truy cập được), theo thứ tự trong c.AnonymousBuckets(). Chỉ cập nhật cờ Accessible khi máy chủ phản hồi;
+// nếu lỗi mạng thì giữ nguyên cờ trước đó.
 func checkAnonymousBuckets(ctx context.Context, c *global.S3Conn) []error {
 	buckets := c.AnonymousBuckets()
 	errs := make([]error, len(buckets))
@@ -187,9 +187,9 @@ func checkAnonymousBuckets(ctx context.Context, c *global.S3Conn) []error {
 	return errs
 }
 
-// probeAnonymous checks every entered bucket (checkAnonymousBuckets). One accessible
-// bucket is enough to connect; each failed one is reported with S3W009. All failing is S3E044, unless the
-// failures are not S3 answers (network, timeout), which are reported as a connect error.
+// probeAnonymous kiểm tra mọi bucket đã nhập (checkAnonymousBuckets). Chỉ cần một bucket truy cập được là có thể kết nối;
+// mỗi bucket thất bại được báo bằng S3W009. Nếu tất cả đều thất bại thì trả S3E044, trừ khi lỗi không phải phản hồi S3
+// (lỗi mạng, timeout), khi đó báo lỗi kết nối.
 func (m *submoduleCfgMng) probeAnonymous(
 	ctx context.Context,
 	c *global.S3Conn,
@@ -232,8 +232,8 @@ func (m *submoduleCfgMng) probeAnonymous(
 	return failure, err
 }
 
-// describeConnectStatus fills output with the message for err and returns the error that makes the
-// connect fail, or nil when the connection is usable (limited access). name is the profile name.
+// describeConnectStatus điền thông báo tương ứng với err vào output và trả lỗi khiến kết nối thất bại,
+// hoặc nil nếu kết nối vẫn sử dụng được (quyền truy cập bị giới hạn). name là tên hồ sơ.
 func describeConnectStatus(err error, name string, output *models.Output[models.ConnectOutput]) error {
 	if errors.Is(err, context.DeadlineExceeded) {
 		output.MessageList = []models.Message{
@@ -293,8 +293,8 @@ func describeConnectStatus(err error, name string, output *models.Output[models.
 	}
 }
 
-// UnwrapAwsError returns the error code of an AWS API error, or the text of a smithy
-// canceled/serialization/deserialization/operation error. It returns "" for any other error.
+// UnwrapAwsError trả mã lỗi của AWS API hoặc nội dung lỗi canceled/serialization/deserialization/operation của smithy.
+// Với lỗi khác, hàm trả "".
 func UnwrapAwsError(err error) string {
 	if err == nil {
 		return ""
@@ -328,10 +328,10 @@ func UnwrapAwsError(err error) string {
 	return ""
 }
 
-// newTransport returns a dedicated transport tuned for many parallel transfers: large idle pool, 64 KiB
-// buffers, no HTTP/2 (S3-compatible servers often lack it). The caller closes its idle connections.
-// A non-empty caFile adds its certificates to the system CA pool (S3E049 if it can't be loaded). TLSClientConfig is
-// always set: minio-go's certificate STS call writes into it.
+// newTransport trả về transport riêng được tinh chỉnh cho nhiều lượt truyền song song: pool kết nối nhàn rỗi lớn,
+// bộ đệm 64 KiB, không dùng HTTP/2 (máy chủ tương thích S3 thường không hỗ trợ). Bên gọi đóng các kết nối nhàn rỗi.
+// Nếu caFile không rỗng, chứng chỉ được thêm vào kho CA của hệ thống (không nạp được thì trả S3E049).
+// TLSClientConfig luôn được thiết lập vì lời gọi STS bằng chứng chỉ của minio-go ghi cấu hình vào đây.
 func newTransport(caFile string) (*http.Transport, error) {
 	tlsConfig := &tls.Config{}
 	if caFile != "" {
@@ -364,11 +364,11 @@ func newTransport(caFile string) (*http.Transport, error) {
 	return tr, nil
 }
 
-// http11Transport marks requests as HTTP/1.1 before sending them. smithy-go leaves Proto at 0.0,
-// and net/http only honors "Expect: 100-continue" for HTTP/1.1, so without this the body is sent at
-// once and an upload hangs when the server rejects it early (e.g. a 403) and stops reading.
-// Only the S3 client uses it: minio-go's certificate STS call type-asserts the client transport to
-// *http.Transport, so credential providers and madmin get the bare transport.
+// http11Transport đặt giao thức của yêu cầu thành HTTP/1.1 trước khi gửi. smithy-go để Proto là 0.0,
+// còn net/http chỉ xử lý "Expect: 100-continue" với HTTP/1.1. Nếu thiếu thiết lập này, body được gửi ngay
+// và lượt tải lên có thể bị treo khi máy chủ từ chối sớm (ví dụ 403) rồi ngừng đọc.
+// Chỉ client S3 dùng transport này: lời gọi STS bằng chứng chỉ của minio-go ép kiểu transport của client thành
+// *http.Transport, vì vậy provider xác thực và madmin vẫn dùng transport nguyên bản.
 type http11Transport struct{ http.RoundTripper }
 
 func (t http11Transport) RoundTrip(r *http.Request) (*http.Response, error) {

@@ -1,6 +1,6 @@
 import type { DbProfile } from '@/pages/sql/stores/dbProfileStore';
 
-/** PostgreSQL profile in the shape the backend returns (no password). */
+/** Profile PostgreSQL theo cấu trúc backend trả về (không có mật khẩu). */
 export const pgProfile = (id = 'pg-1', extra: Partial<DbProfile> = {}): DbProfile => ({
   id,
   name: `${id}-name`,
@@ -12,7 +12,7 @@ export const pgProfile = (id = 'pg-1', extra: Partial<DbProfile> = {}): DbProfil
   ...extra,
 });
 
-/** SQLite profile in the shape the backend returns. */
+/** Profile SQLite theo cấu trúc backend trả về. */
 export const sqliteProfile = (id = 'sqlite-1', extra: Partial<DbProfile> = {}): DbProfile => ({
   id,
   name: `${id}-name`,
@@ -24,6 +24,6 @@ export const sqliteProfile = (id = 'sqlite-1', extra: Partial<DbProfile> = {}): 
   ...extra,
 });
 
-/** Seeds the store state directly (no IPC). */
+/** Khởi tạo trực tiếp state của store (không qua IPC). */
 export const toProfileMap = (...profiles: DbProfile[]): Record<string, DbProfile> =>
   Object.fromEntries(profiles.map(p => [p.id, p]));

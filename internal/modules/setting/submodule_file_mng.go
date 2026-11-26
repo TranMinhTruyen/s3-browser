@@ -10,8 +10,8 @@ import (
 
 const settingsFileName = "settings.json"
 
-// submoduleFileMng reads and writes settings.json in the app data dir.
-// It has no lock of its own: submoduleSettingMng.mu serializes every call.
+// submoduleFileMng đọc và ghi settings.json trong thư mục dữ liệu ứng dụng.
+// Module không có khóa riêng: submoduleSettingMng.mu tuần tự hóa mọi lời gọi.
 type submoduleFileMng struct {
 	logger  *slog.Logger
 	appName string
@@ -21,8 +21,8 @@ func newSubmoduleFileMng(logger *slog.Logger, appName string) *submoduleFileMng 
 	return &submoduleFileMng{logger: logger.With("submodules", "file_mng"), appName: appName}
 }
 
-// read loads the file over the defaults. A missing or malformed file yields the defaults;
-// only a real I/O error is returned.
+// read tải file và ghi đè lên giá trị mặc định. File không tồn tại hoặc sai định dạng sẽ dùng giá trị mặc định;
+// chỉ lỗi I/O thực sự mới được trả về.
 func (m *submoduleFileMng) read() (models.AppSettings, error) {
 	settings := defaultSettings()
 	path, err := dataFilePath(m.appName, settingsFileName)
@@ -45,7 +45,7 @@ func (m *submoduleFileMng) read() (models.AppSettings, error) {
 	return sanitize(settings), nil
 }
 
-// write saves the settings atomically (see writeJSONAtomic).
+// write lưu cài đặt theo cách nguyên tử (xem writeJSONAtomic).
 func (m *submoduleFileMng) write(settings models.AppSettings) error {
 	path, err := dataFilePath(m.appName, settingsFileName)
 	if err != nil {

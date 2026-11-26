@@ -11,9 +11,9 @@ import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 vi.mock('@/components/modals/confirm/ConfirmModal', () => ({ default: { show: vi.fn() } }));
 vi.mock('@/pages/sql/hooks/useTableRows', () => ({ useTableRows: vi.fn() }));
-// The edit prop the view gave the grid last, so tests can act as the grid.
+// Prop edit gần nhất view truyền cho grid để test có thể mô phỏng thao tác của grid.
 const grid = vi.hoisted(() => ({ edit: undefined as unknown as GridEdit, fit: vi.fn() }));
-// jsdom has no layout, so the virtualized grid is replaced by a stub that shows what it was given.
+// jsdom không có layout nên thay grid ảo bằng stub hiển thị dữ liệu được truyền vào.
 vi.mock('@/components/display/dataGrid/DataGrid', () => ({
   default: function MockDataGrid(props: {
     columns: string[];

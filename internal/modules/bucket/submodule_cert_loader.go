@@ -11,10 +11,9 @@ import (
 	"github.com/youmark/pkcs8"
 )
 
-// loadClientCertificate reads the PEM certificate and private key of a minioCert profile. The key may be
-// unencrypted or PKCS#8 encrypted ("ENCRYPTED PRIVATE KEY", needs password). The old OpenSSL encryption
-// (Proc-Type: 4,ENCRYPTED) is not supported. Failures are credErrors: S3E042 (file missing), S3E048 (password
-// missing) and S3E043 (anything else).
+// loadClientCertificate đọc chứng chỉ PEM và khóa riêng của hồ sơ minioCert. Khóa có thể không mã hóa hoặc được mã hóa
+// theo PKCS#8 ("ENCRYPTED PRIVATE KEY", cần mật khẩu). Không hỗ trợ kiểu mã hóa OpenSSL cũ (Proc-Type: 4,ENCRYPTED).
+// Lỗi trả về là credError: S3E042 (thiếu file), S3E048 (thiếu mật khẩu) và S3E043 (các lỗi khác).
 func loadClientCertificate(certPath, keyPath, password string) (tls.Certificate, error) {
 	certPEM, err := readAuthFile(certPath)
 	if err != nil {
@@ -53,7 +52,7 @@ func loadClientCertificate(certPath, keyPath, password string) (tls.Certificate,
 	return cert, nil
 }
 
-// decryptPKCS8 decrypts a PKCS#8 key and returns it as an unencrypted PEM block.
+// decryptPKCS8 giải mã khóa PKCS#8 rồi trả về dưới dạng khối PEM không mã hóa.
 func decryptPKCS8(der []byte, password string) ([]byte, error) {
 	key, err := pkcs8.ParsePKCS8PrivateKey(der, []byte(password))
 	if err != nil {
@@ -66,7 +65,7 @@ func decryptPKCS8(der []byte, password string) ([]byte, error) {
 	return pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: plain}), nil
 }
 
-// readAuthFile reads a certificate or key file; a missing file is S3E042.
+// readAuthFile đọc file chứng chỉ hoặc khóa; file không tồn tại sẽ trả S3E042.
 func readAuthFile(path string) ([]byte, error) {
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -78,8 +77,8 @@ func readAuthFile(path string) ([]byte, error) {
 	return data, nil
 }
 
-// loadCaPool returns the system CA pool plus the certificates of the PEM file caPath. A missing or unreadable
-// file, or one without a valid certificate, is S3E049.
+// loadCaPool trả về kho CA của hệ thống cùng các chứng chỉ trong file PEM caPath. File không tồn tại, không đọc được
+// hoặc không có chứng chỉ hợp lệ sẽ trả S3E049.
 func loadCaPool(caPath string) (*x509.CertPool, error) {
 	fail := func(err error) (*x509.CertPool, error) {
 		return nil, &credError{code: S3E049, params: map[string]any{"path": caPath}, err: err}

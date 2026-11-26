@@ -19,15 +19,15 @@ import (
 )
 
 const (
-	// detailConcurrency is the most reads of one bucket detail running at once.
+	// detailConcurrency là số trường thông tin chi tiết của một bucket tối đa được đọc cùng lúc.
 	detailConcurrency = 8
-	// rootCountMaxPages caps the pages counted at the bucket root: 10 pages of 1000 = 10,000 items.
+	// rootCountMaxPages giới hạn số trang được đếm ở gốc bucket: 10 trang, mỗi trang 1000 mục = 10.000 mục.
 	rootCountMaxPages = 10
 )
 
-// getBucketDetail reads the detail of input.Bucket (10s timeout). Each item is read on its own: one that fails
-// (denied, not supported, timeout) stays nil. Only a canceled call, expired credentials or a missing bucket fail
-// the whole call. Anonymous connections are allowed, the items they can't read just stay nil.
+// getBucketDetail đọc thông tin chi tiết của input.Bucket (timeout 10 giây). Mỗi mục được đọc riêng; mục nào thất bại
+// (bị từ chối, không hỗ trợ, timeout) sẽ giữ nil. Chỉ lời gọi bị hủy, thông tin xác thực hết hạn hoặc bucket không tồn tại
+// mới làm cả lời gọi thất bại. Cho phép kết nối ẩn danh; mục nào không đọc được sẽ giữ nil.
 func (m *submoduleBucketEditMng) getBucketDetail(
 	ctx context.Context,
 	input models.BucketDetailInput,
@@ -42,7 +42,7 @@ func (m *submoduleBucketEditMng) getBucketDetail(
 		return output.ThrowError(notConnectedMessage(input.ProfileName))
 	}
 
-	// A bucket in another region answers 301 to the other calls, so ask where it is first.
+	// Bucket ở region khác sẽ trả 301 cho các yêu cầu còn lại, vì vậy cần hỏi vị trí trước.
 	region, err := readBucketRegion(ctx, conn, input.Bucket)
 	if isFatalDetailError(ctx, err) {
 		return failCall(ctx, output, input.ProfileName, err,
@@ -85,8 +85,8 @@ func (m *submoduleBucketEditMng) getBucketDetail(
 	return output
 }
 
-// detailReads lists the reads of the bucket detail; each one fills its own field of body, so they can run in
-// parallel. An error means the field stays nil.
+// detailReads liệt kê các thao tác đọc thông tin bucket; mỗi thao tác điền một trường riêng trong body nên có thể chạy
+// song song. Nếu có lỗi, trường tương ứng sẽ giữ nil.
 func (m *submoduleBucketEditMng) detailReads(
 	ctx context.Context,
 	conn *global.S3Conn,
@@ -151,15 +151,15 @@ func (m *submoduleBucketEditMng) detailReads(
 	return reads
 }
 
-// isFatalDetailError reports whether err must fail the whole detail call: a canceled call, expired credentials
-// or a bucket that does not exist.
+// isFatalDetailError cho biết err có làm thất bại toàn bộ thao tác đọc chi tiết hay không: lời gọi bị hủy,
+// thông tin xác thực hết hạn hoặc bucket không tồn tại.
 func isFatalDetailError(ctx context.Context, err error) bool {
 	return err != nil &&
 		(isCallCanceled(ctx) || isCredentialsExpired(err) || UnwrapAwsError(err) == "NoSuchBucket")
 }
 
-// readBucketRegion returns the region of the bucket. An empty location is us-east-1 on AWS; other servers that
-// answer nothing leave it empty.
+// readBucketRegion trả về region của bucket. Trên AWS, location rỗng nghĩa là us-east-1; các máy chủ khác không có
+// câu trả lời sẽ giữ giá trị rỗng.
 func readBucketRegion(ctx context.Context, conn *global.S3Conn, bucket string) (string, error) {
 	result, err := conn.Client.GetBucketLocation(ctx, &s3.GetBucketLocationInput{Bucket: &bucket})
 	if err != nil {
@@ -175,8 +175,8 @@ func readBucketRegion(ctx context.Context, conn *global.S3Conn, bucket string) (
 	}
 }
 
-// bucketEndpointUrl is the URL of the bucket: virtual-hosted on AWS, and on a custom endpoint path style or
-// virtual-hosted following the client option.
+// bucketEndpointUrl là URL của bucket: dùng virtual-hosted trên AWS; với endpoint tùy chỉnh, dùng path style hoặc
+// virtual-hosted tùy theo tùy chọn client.
 func bucketEndpointUrl(conn *global.S3Conn, bucket, region string) string {
 	opts := conn.Client.Options()
 	if aws.ToString(opts.BaseEndpoint) == "" {
@@ -190,7 +190,7 @@ func bucketEndpointUrl(conn *global.S3Conn, bucket, region string) string {
 	return u.Scheme + "://" + bucket + "." + u.Host
 }
 
-// readEncryption returns the default encryption: the algorithm (with the KMS key id if any), or "None".
+// readEncryption trả về mã hóa mặc định: thuật toán (kèm id khóa KMS nếu có) hoặc "None".
 func readEncryption(
 	ctx context.Context,
 	conn *global.S3Conn,
@@ -217,7 +217,7 @@ func readEncryption(
 	return "None", nil
 }
 
-// readObjectLock returns "Disabled", or "Enabled" followed by the default retention, like "Enabled (GOVERNANCE, 30d)".
+// readObjectLock trả về "Disabled" hoặc "Enabled" kèm thời hạn lưu giữ mặc định, ví dụ "Enabled (GOVERNANCE, 30d)".
 func readObjectLock(
 	ctx context.Context,
 	conn *global.S3Conn,
@@ -247,7 +247,7 @@ func readObjectLock(
 	return fmt.Sprintf("Enabled (%s, %s)", retention.Mode, period), nil
 }
 
-// readTags returns the tags of the bucket, empty when it has none.
+// readTags trả về tag của bucket, rỗng nếu bucket không có tag.
 func readTags(
 	ctx context.Context,
 	conn *global.S3Conn,
@@ -268,8 +268,8 @@ func readTags(
 	return tags, nil
 }
 
-// countRoot counts the objects and folders at the bucket root (a folder counts 1) over at most rootCountMaxPages
-// pages. capped is true when more is left after the last page counted.
+// countRoot đếm object và thư mục ở gốc bucket (mỗi thư mục tính là 1) trong tối đa rootCountMaxPages trang.
+// capped là true nếu còn mục sau trang cuối đã đếm.
 func countRoot(
 	ctx context.Context,
 	conn *global.S3Conn,

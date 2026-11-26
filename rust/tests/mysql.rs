@@ -84,7 +84,7 @@ fn assert_cancelled_quickly_and_usable(s: &Server, c: &Conn, sql: &str, marker: 
 }
 
 both! {
-    // ---- open ----
+    // ---- mở ----
 
     fn open_runs_a_query_and_close_makes_the_connection_unknown(s: &Server) {
         let r = s.open("disable");
@@ -206,7 +206,7 @@ both! {
         assert!(took < Duration::from_secs(15), "{took:?}");
     }
 
-    // ---- execute ----
+    // ---- thực thi ----
 
     fn select_returns_columns_rows_and_done(s: &Server) {
         let c = s.conn();
@@ -375,7 +375,7 @@ both! {
              call s3b.{name}(); select 9"
         ));
         let all = statements(&r);
-        // create, call (2 set), call (2 set), select.
+        // CREATE, CALL (2 lần set), CALL (2 lần set), SELECT.
         assert_eq!(all.len(), 6, "{r}");
         assert_eq!(all[0]["kind"], "affected");
         assert!(all[0]["sql"].as_str().unwrap().ends_with("end"), "{}", all[0]);
@@ -1079,7 +1079,7 @@ both! {
         }
     }
 
-    // ---- method chỉ SQLite có ----
+    // ---- phương thức chỉ SQLite có ----
 
     fn schema_methods_are_invalid_request_for_mysql_and_mariadb(s: &Server) {
         let c = s.conn();
@@ -1094,7 +1094,7 @@ both! {
         assert_eq!(c.first("select 1"), "1");
     }
 
-    // ---- nhiều connection ----
+    // ---- nhiều kết nối ----
 
     fn connections_are_isolated_from_each_other(s: &Server) {
         let a = s.conn();

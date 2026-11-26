@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import WarningIcon from '@/components/display/WarningIcon';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// env="test" makes Mantine render transitions at once (no timers, no portal animation).
+// env="test" khiến Mantine hiển thị chuyển cảnh ngay lập tức (không dùng timer hay hoạt ảnh portal).
 describe('WarningIcon', () => {
   it('labels the icon and uses the default size of 1rem', () => {
     renderWithProviders(<WarningIcon label="Careful" />);

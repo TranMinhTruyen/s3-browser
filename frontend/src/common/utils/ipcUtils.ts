@@ -4,22 +4,22 @@ import { toast } from 'sonner';
 import { createUUID, formatStringJson, isNullOrEmpty } from '@/common/utils/stringUtils';
 import i18n from '@/locales/i18n';
 
-/** Options of {@link callIPC}. */
+/** Các tùy chọn của {@link callIPC}. */
 interface Optionals<T> {
-  /** Stale-result guard key: a newer call with the same scope makes the older result be dropped (null). */
+  /** Khóa kiểm soát kết quả lỗi thời: lời gọi mới hơn cùng phạm vi sẽ khiến kết quả cũ bị loại bỏ (null). */
   scope?: string;
-  /** Show the backend messages as toasts. Default true. */
+  /** Hiển thị thông báo từ backend dưới dạng toast. Mặc định là true. */
   showMessage?: boolean;
-  /** Cancels the call (and drops its result) when aborted. */
+  /** Hủy lời gọi (và loại bỏ kết quả) khi signal bị abort. */
   signal?: AbortSignal;
-  /** Runs when the backend reports success. */
+  /** Chạy khi backend báo thành công. */
   resolveAction?: (output?: Output<T>) => void;
-  /** Runs when the backend reports failure or the call throws (then `output` is undefined). */
+  /** Chạy khi backend báo thất bại hoặc lời gọi phát sinh lỗi (`output` khi đó là undefined). */
   rejectAction?: (output?: Output<T>) => void;
 }
 
 /* -------------------------------------------------------------------------- */
-/* Stale-result guard                                                         */
+/* Kiểm soát kết quả lỗi thời                                                  */
 /* -------------------------------------------------------------------------- */
 
 const keys = new Map<string, string>();
@@ -34,7 +34,7 @@ function isStaleKey(key: string, sequence: string): boolean {
   return keys.get(key) !== sequence;
 }
 
-/** Drops the pending results of `scope` and its sub-scopes (`scope/...`), e.g. on store reset. */
+/** Loại bỏ các kết quả đang chờ của `scope` và phạm vi con (`scope/...`), ví dụ khi reset store. */
 export function invalidateLoads(scope: string): void {
   for (const key of keys.keys()) {
     if (key === scope || key.startsWith(`${scope}/`)) {
@@ -44,15 +44,15 @@ export function invalidateLoads(scope: string): void {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Call                                                                       */
+/* Gọi                                                                        */
 /* -------------------------------------------------------------------------- */
 /**
- * Calls a Wails binding: shows its messages, ignores canceled / stale results and turns thrown errors into a toast.
+ * Gọi binding của Wails: hiển thị thông báo, bỏ qua kết quả đã hủy/lỗi thời và hiện lỗi phát sinh dưới dạng toast.
  *
- * @param binding - generated binding returning `Output<T>`.
- * @param args - arguments of the binding.
- * @param options - see {@link Optionals}.
- * @returns the body on success; null on failure, cancel or stale result.
+ * @param binding - binding được sinh tự động, trả về `Output<T>`.
+ * @param args - các đối số của binding.
+ * @param options - xem {@link Optionals}.
+ * @returns phần body khi thành công; null nếu thất bại, bị hủy hoặc kết quả đã lỗi thời.
  */
 export async function callIPC<A extends unknown[], T>(
   binding: (...args: A) => Promise<Output<T>>,
@@ -83,10 +83,10 @@ export async function callIPC<A extends unknown[], T>(
       showMessages(output);
     }
 
-    // Body is a value type on the Go side, so a failed call still carries a zero-value body; hide it.
+    // Body phía Go là kiểu giá trị nên lời gọi thất bại vẫn mang body có giá trị zero; ẩn body đó đi.
     return output.result ? output.body : null;
   } catch (err) {
-    // Canceled on purpose: not an error for the user.
+    // Chủ động hủy: không xem đây là lỗi cần báo cho người dùng.
     if (err instanceof CancelError) {
       return null;
     }
@@ -98,10 +98,10 @@ export async function callIPC<A extends unknown[], T>(
   }
 }
 
-/** Message codes (of the `bucket` module) whose `secret` param is a technical name (e.g. `mfaCode`). */
+/** Mã thông báo (của module `bucket`) có tham số `secret` là tên kỹ thuật (ví dụ `mfaCode`). */
 const SECRET_PARAM_CODES = new Set(['S3E046']);
 
-/** Replaces the technical `secret` param of {@link SECRET_PARAM_CODES} with its `ipcMessage:params.secret.*` label. */
+/** Thay tham số kỹ thuật `secret` của {@link SECRET_PARAM_CODES} bằng nhãn `ipcMessage:params.secret.*` tương ứng. */
 function translateParams({ moduleName, messageCode, params }: Message) {
   if (moduleName !== 'bucket' || !SECRET_PARAM_CODES.has(messageCode ?? '')) return params;
   const key = `ipcMessage:params.secret.${params?.secret}`;

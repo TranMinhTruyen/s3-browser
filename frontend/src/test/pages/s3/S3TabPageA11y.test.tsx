@@ -4,7 +4,7 @@ import S3TabPage from '@/pages/s3/S3TabPage';
 import { useTabListStore } from '@/pages/s3/stores/tabListStore';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// Real dnd-kit here: the screen reader description element is rendered by DndContext itself.
+// Dùng dnd-kit thật: phần tử mô tả cho trình đọc màn hình được DndContext tự render.
 vi.mock('@/pages/s3/components/TabDetail', () => ({ default: () => <div>tab detail</div> }));
 vi.mock('@/pages/s3/components/TabLabel', () => ({ default: () => <span>tab label</span> }));
 vi.mock('motion/react', async () => (await import('@/test/_helpers/mockMotion')).motionMock);

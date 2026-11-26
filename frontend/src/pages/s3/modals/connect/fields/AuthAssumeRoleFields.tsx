@@ -8,7 +8,7 @@ import type { AuthFieldsProps } from '@/pages/s3/modals/connect/connectSchema';
 import AuthDurationField from '@/pages/s3/modals/connect/fields/AuthDurationField';
 import AuthStaticFields from '@/pages/s3/modals/connect/fields/AuthStaticFields';
 
-/** Role to assume, the credentials that assume it (access key or AWS CLI profile) and the optional MFA device. */
+/** Role cần assume, thông tin xác thực để assume (access key hoặc profile AWS CLI) và thiết bị MFA tùy chọn. */
 function AuthAssumeRoleFields(props: AuthFieldsProps) {
   const { form, secretRequired } = props;
   const { t } = useTranslation('connectModal');

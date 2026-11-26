@@ -2,17 +2,17 @@ package internal
 
 import "encoding/json"
 
-// Config holds the fields we read back from wails.json at runtime,
-// so the project config stays the single source of truth for app metadata.
+// Config chứa các trường được đọc lại từ wails.json khi chạy,
+// để file cấu hình dự án tiếp tục là nguồn duy nhất của metadata ứng dụng.
 type Config struct {
 	Name string `json:"name"`
-	// Version and DevMode are not in wails.json: main fills them from build/config.yml and the build tag.
+	// Version và DevMode không có trong wails.json: main lấy chúng từ build/config.yml và build tag.
 	Version string `json:"-"`
 	DevMode bool   `json:"-"`
 }
 
-// ParseConfig decodes the embedded wails.json payload handed in by main.
-// A malformed payload yields a zero Config instead of an error.
+// ParseConfig giải mã payload wails.json được nhúng và truyền vào từ main.
+// Payload sai định dạng sẽ trả Config zero thay vì lỗi.
 func ParseConfig(raw []byte) Config {
 	var cfg Config
 	_ = json.Unmarshal(raw, &cfg) // on error keep whatever was decoded, see doc

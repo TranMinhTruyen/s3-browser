@@ -1,24 +1,24 @@
 package bucket
 
-// BucketDetailOutput is the read-only detail of a bucket. A nil pointer means the item could not be read
-// (denied, not supported, timeout), the frontend shows "-".
+// BucketDetailOutput chứa thông tin chi tiết chỉ đọc của bucket. Con trỏ nil nghĩa là không đọc được mục đó
+// (bị từ chối, không hỗ trợ, timeout); frontend sẽ hiển thị "-".
 type BucketDetailOutput struct {
 	Region      *string `json:"region"`
 	Arn         string  `json:"arn"`
 	EndpointUrl string  `json:"endpointUrl"`
-	// PolicyMode is "private", "public" or "custom".
+	// PolicyMode là "private", "public" hoặc "custom".
 	PolicyMode    *string `json:"policyMode"`
 	PublicBlocked *bool   `json:"publicBlocked"`
-	// Versioning is "Enabled", "Suspended" or "Off".
+	// Versioning là "Enabled", "Suspended" hoặc "Off".
 	Versioning *string `json:"versioning"`
-	// Encryption is the default algorithm (with the KMS key id if any), or "None".
+	// Encryption là thuật toán mặc định (kèm id khóa KMS nếu có) hoặc "None".
 	Encryption *string `json:"encryption"`
-	// ObjectLock is "Enabled" (with the default retention if any) or "Disabled".
+	// ObjectLock là "Enabled" (kèm thời hạn lưu giữ mặc định nếu có) hoặc "Disabled".
 	ObjectLock *string `json:"objectLock"`
-	// Tags is empty when the bucket has no tag.
+	// Tags rỗng nếu bucket không có tag.
 	Tags *map[string]string `json:"tags"`
-	// RootCount is the number of objects and folders at the root, at most 10,000.
+	// RootCount là số object và thư mục ở gốc, tối đa 10.000.
 	RootCount *int `json:"rootCount"`
-	// RootCountCapped is true when the root has more than RootCount items.
+	// RootCountCapped là true nếu ở gốc có nhiều mục hơn RootCount.
 	RootCountCapped bool `json:"rootCountCapped"`
 }

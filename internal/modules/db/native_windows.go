@@ -11,18 +11,24 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// dllName is the native library, shipped next to the exe.
+// dllName là thư viện native được đặt cạnh exe.
 const dllName = "s3b_db.dll"
 
-// nativeLib calls the exports of s3b_db.dll without cgo.
+// nativeCaller là thư viện s3b_db: call chờ đến khi JSON phản hồi sẵn sàng, cancel ngắt yêu cầu đang chạy theo id.
+type nativeCaller interface {
+	call(req []byte) ([]byte, error)
+	cancel(id uint64)
+}
+
+// nativeLib gọi các hàm export của s3b_db.dll mà không dùng cgo.
 type nativeLib struct {
 	callProc   uintptr
 	cancelProc uintptr
 	freeProc   uintptr
 }
 
-// loadNative loads s3b_db.dll from the folder of the exe (absolute path, so no search path can substitute it)
-// and runs s3b_init.
+// loadNative nạp s3b_db.dll từ thư mục exe (dùng đường dẫn tuyệt đối để không thể bị thay thế qua search path)
+// rồi gọi s3b_init.
 func loadNative() (nativeCaller, error) {
 	exe, err := os.Executable()
 	if err != nil {
@@ -51,7 +57,7 @@ func loadNative() (nativeCaller, error) {
 	return lib, nil
 }
 
-// call runs s3b_call and returns a copy of the response; the library buffer is freed on every path.
+// call chạy s3b_call và trả bản sao phản hồi; buffer của thư viện luôn được giải phóng trên mọi luồng xử lý.
 func (l *nativeLib) call(req []byte) ([]byte, error) {
 	if len(req) == 0 {
 		return nil, errors.New("empty request")
@@ -70,7 +76,7 @@ func (l *nativeLib) call(req []byte) ([]byte, error) {
 	return append([]byte(nil), unsafe.Slice(outPtr, outLen)...), nil
 }
 
-// cancel asks the library to interrupt request id.
+// cancel yêu cầu thư viện ngắt request id.
 func (l *nativeLib) cancel(id uint64) {
 	_, _, _ = syscall.SyscallN(l.cancelProc, uintptr(id))
 }

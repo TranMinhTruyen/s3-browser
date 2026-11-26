@@ -8,7 +8,7 @@ import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 vi.mock('@/pages/s3/components/TabDetail', () => ({ default: () => <div>tab detail</div> }));
 vi.mock('@/pages/s3/components/TabLabel', () => ({ default: () => <span>tab label</span> }));
 vi.mock('motion/react', async () => (await import('@/test/_helpers/mockMotion')).motionMock);
-// A scroller that never attaches the forwarded ref: the scroll-into-view sync must be skipped safely.
+// Scroller này không bao giờ gắn forwarded ref, nên cần bỏ qua an toàn bước đồng bộ cuộn vào vùng nhìn thấy.
 vi.mock('@/components/tabs/TabScroller', () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));

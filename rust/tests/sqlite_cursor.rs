@@ -289,7 +289,7 @@ fn pragma_with_and_without_columns() {
     assert_eq!(st[1]["rows"], json!([["5"]]));
 }
 
-// ---------- cursor / hold ----------
+// ---------- cursor / giữ ----------
 
 #[test]
 fn wrong_cursor_id_does_not_disturb_sequence() {
@@ -365,7 +365,7 @@ fn cancel_during_fetch_drops_cursor() {
     assert_eq!(rows(&statements(&db.exec("SELECT 8"))[0])[0], json!(["8"]));
 }
 
-// ---------- đóng connection khi còn cursor ----------
+// ---------- đóng kết nối khi còn cursor ----------
 
 #[test]
 fn close_with_open_cursor_releases_file_and_reopens() {
@@ -462,7 +462,7 @@ fn json_contract_field_names() {
     };
     let with_timing = |base: &[&'static str]| set(&[base, timing].concat());
 
-    // rows + cursor
+    // các hàng + cursor
     let r = db.exec(&series(600));
     let st = &statements(&r)[0];
     assert_eq!(
@@ -481,7 +481,7 @@ fn json_contract_field_names() {
     assert_eq!(keys(&st["columns"][0]), set(&["name", "type"]));
     let cur = st["cursorId"].as_u64().unwrap();
 
-    // fetch
+    // lấy dữ liệu
     let f = fetch(db.conn, cur);
     assert_eq!(keys(ok(&f)), set(&["rows", "done"]));
 
@@ -516,7 +516,7 @@ fn json_contract_field_names() {
         ])
     );
 
-    // affected
+    // số hàng bị ảnh hưởng
     let r = db.exec("INSERT INTO t VALUES(1)");
     assert_eq!(
         keys(&statements(&r)[0]),
@@ -831,7 +831,7 @@ fn runtime_error_in_later_page_drops_page_and_cursor() {
     assert_eq!(rows(&statements(&db.exec("SELECT 9"))[0])[0], json!(["9"]));
 }
 
-// ---------- bổ sung: nhiều câu, câu không trả dòng, connection chỉ đọc ----------
+// ---------- bổ sung: nhiều câu, câu không trả dòng, kết nối chỉ đọc ----------
 
 #[test]
 fn mixed_statements_in_one_script() {
@@ -1003,7 +1003,7 @@ fn cancelled_fetch_does_not_affect_next_request_on_same_connection() {
     );
 }
 
-// ---------- huỷ đua với lúc request vừa xong (B1) ----------
+// ---------- hủy đua với lúc yêu cầu vừa xong (B1) ----------
 
 /// Gọi `method` trong khi thread khác spam `s3b_cancel(id)` cho tới khi gọi xong, để `cancel` có
 /// cơ hội rơi vào mọi pha của request (xếp hàng, đang đọc, vừa đọc xong, vừa trả lời).

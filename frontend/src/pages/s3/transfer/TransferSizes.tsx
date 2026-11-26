@@ -7,7 +7,7 @@ type TransferSizesProps = {
   remainingSize: string;
 };
 
-/** "Transferred / remaining" size pair shown in a transfer row. */
+/** Cặp dung lượng "đã truyền / còn lại" hiển thị trong một hàng truyền tải. */
 function TransferSizes(props: TransferSizesProps) {
   const { doneLabel, doneSize, remainingLabel, remainingSize } = props;
 

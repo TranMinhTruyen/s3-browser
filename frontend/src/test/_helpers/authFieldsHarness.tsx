@@ -21,7 +21,7 @@ export const input = (name: RegExp | string) => screen.getByLabelText(name, { se
 export const queryInput = (name: RegExp | string) =>
   screen.queryByLabelText(name, { selector: 'input:not([type=radio])' });
 
-/** Mantine puts the asterisk in the label of a required field. */
+/** Mantine đặt dấu hoa thị trong nhãn của trường bắt buộc. */
 export const starred = (el: HTMLElement) => !!(el as HTMLInputElement).labels?.[0]?.textContent?.includes('*');
 
 export type Probe = { form?: ReturnType<typeof useForm<ConnectionInfo>> };

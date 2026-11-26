@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import TruncatedText from '@/components/display/TruncatedText';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-/** jsdom has no layout: fake the measured widths of the text element. */
+/** jsdom không có layout: giả lập chiều rộng đo được của phần tử văn bản. */
 const setWidths = (el: HTMLElement, scrollWidth: number, clientWidth: number) => {
   Object.defineProperty(el, 'scrollWidth', { configurable: true, value: scrollWidth });
   Object.defineProperty(el, 'clientWidth', { configurable: true, value: clientWidth });

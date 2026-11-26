@@ -1,7 +1,7 @@
-// Package master holds the output models of the master data module.
+// Package master chứa các model đầu ra của module dữ liệu danh mục.
 package master
 
-// MasterOutput is one master data row; Value1..Value10 are generic columns whose meaning depends on the group.
+// MasterOutput là một hàng dữ liệu danh mục; ý nghĩa các cột chung Value1..Value10 tùy thuộc vào group.
 type MasterOutput struct {
 	Code      string `json:"code,omitempty"`
 	Name      string `json:"name,omitempty"`
@@ -18,7 +18,7 @@ type MasterOutput struct {
 	Value10   string `json:"value10,omitempty"`
 }
 
-// GetMasterDataOutput groups master data rows by group code.
+// GetMasterDataOutput nhóm các hàng dữ liệu danh mục theo group code.
 type GetMasterDataOutput struct {
 	MasterData map[string][]MasterOutput `json:"masterData"`
 }

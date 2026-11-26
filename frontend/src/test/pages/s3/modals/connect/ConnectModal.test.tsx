@@ -108,8 +108,8 @@ describe('ConnectModal', () => {
       callIPCMock.mockResolvedValue({ isConnected: true } as never);
       const user = await open();
 
-      // One change event per field instead of one per keystroke: typing ~30 keys through the form was
-      // what made this test time out when the whole suite runs in parallel.
+      // Chỉ phát một event thay đổi cho mỗi trường thay vì mỗi lần nhấn phím: nhập khoảng 30 ký tự qua form
+      // từng khiến test timeout khi toàn bộ bộ test chạy song song.
       fireEvent.change(field(/Endpoint/), { target: { value: 'https://play.min.io' } });
       await user.click(screen.getByRole('button', { name: /Region/ }));
       await user.click(await screen.findByText('Tokyo'));
@@ -196,7 +196,7 @@ describe('ConnectModal', () => {
       expect(field(/Access key/)).toHaveValue('AK');
       expect(screen.getByRole('checkbox', { name: 'Save secrets' })).toBeChecked();
 
-      // The backend never returns the secret, so it has to be typed again.
+      // Backend không bao giờ trả về secret nên cần nhập lại.
       fireEvent.change(field(/Secret key/), { target: { value: 'SK' } });
       await user.click(button('Connect'));
 
@@ -216,7 +216,7 @@ describe('ConnectModal', () => {
       const user = await open({ mode: 'manualconnect', connectionProfile: profile({ savedSecrets: [] }) });
 
       expect(screen.getByRole('checkbox', { name: 'Save secrets' })).not.toBeChecked();
-      // The secret key is required to connect.
+      // Cần secret key để kết nối.
       await user.click(button('Connect'));
       expect(await screen.findByText('Secret key is required')).toBeInTheDocument();
       expect(callIPCMock).not.toHaveBeenCalled();
@@ -396,7 +396,7 @@ describe('ConnectModal', () => {
   describe('form behaviour', () => {
     it('switches path style on for MinIO and off again for AWS, locking it while MinIO is selected', async () => {
       const user = await open();
-      // The form remounts an input when its value is set from code, so query it again every time.
+      // Form mount lại input khi đặt giá trị bằng code nên cần truy vấn lại mỗi lần.
       const pathStyle = () => screen.getByRole('checkbox', { name: 'Path style' });
       expect(pathStyle()).not.toBeChecked();
       expect(pathStyle()).toBeEnabled();
@@ -417,7 +417,7 @@ describe('ConnectModal', () => {
       expect(auto()).toBeDisabled();
 
       await user.click(save());
-      // Saving is on but there is no secret key yet.
+      // Đã bật lưu nhưng chưa có secret key.
       expect(auto()).toBeDisabled();
 
       await user.type(field(/Secret key/), 'SK');
@@ -439,7 +439,7 @@ describe('ConnectModal', () => {
 
       await waitFor(() => expect(callIPCMock).toHaveBeenCalledTimes(1));
       await flush();
-      // An empty provider does not toggle the path style on its own.
+      // Provider rỗng không tự bật/tắt kiểu đường dẫn.
       expect(screen.getByRole('checkbox', { name: 'Path style' })).toBeChecked();
     });
 

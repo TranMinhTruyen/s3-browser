@@ -2,7 +2,7 @@ import { Splitter } from '@mantine/core';
 import S3Navbar from '@/pages/s3/navbar/S3Navbar';
 import S3TabPage from '@/pages/s3/S3TabPage';
 
-/** S3 mode body: navbar (profiles) + tab page, same split ratio and padding as SQL mode. */
+/** Nội dung chế độ S3: thanh điều hướng (profile) và trang tab, dùng cùng tỷ lệ chia và padding như chế độ SQL. */
 function S3Workspace() {
   return (
     <Splitter h="100%">

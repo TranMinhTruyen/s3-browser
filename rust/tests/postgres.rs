@@ -24,7 +24,7 @@ fn message_of(statement: &Value) -> &str {
     statement["error"]["message"].as_str().unwrap_or("")
 }
 
-// ---- open ----
+// ---- mở ----
 
 #[test]
 fn open_runs_a_query_and_close_makes_the_connection_unknown() {
@@ -157,7 +157,7 @@ fn connect_timeout_gives_open_failed_within_about_ten_seconds() {
     assert!(took < Duration::from_secs(15), "{took:?}");
 }
 
-// ---- execute ----
+// ---- thực thi ----
 
 #[test]
 fn select_returns_columns_rows_and_done() {
@@ -216,7 +216,7 @@ fn dml_and_ddl_report_rows_affected() {
     assert_eq!(st(&r, 0)["rowsAffected"], 5);
     let r = c.exec("update t_aff set a = a + 1 where a <= 2");
     assert_eq!(st(&r, 0)["rowsAffected"], 2);
-    // Sau update: 2, 3, 3, 4, 5.
+    // Sau UPDATE: 2, 3, 3, 4, 5.
     let r = c.exec("delete from t_aff where a > 3");
     assert_eq!(st(&r, 0)["rowsAffected"], 2);
     let r = c.exec("delete from t_aff where false");
@@ -986,7 +986,7 @@ fn duplicate_column_names_and_unnamed_columns_are_kept() {
     assert_eq!(st(&r, 0)["rows"], json!([["1", "2", "3"]]));
 }
 
-// ---- nhiều connection ----
+// ---- nhiều kết nối ----
 
 #[test]
 fn connections_are_isolated_from_each_other() {

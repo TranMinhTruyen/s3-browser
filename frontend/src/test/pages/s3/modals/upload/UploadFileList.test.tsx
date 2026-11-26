@@ -14,7 +14,7 @@ const virtual = vi.hoisted(() => ({
 }));
 const setSize = (size: UiSizeKey) => act(() => useSettingStore.setState(st => ({ draft: { ...st.draft, size } })));
 
-// jsdom has no layout, so the real virtualizer would render no row: render every row instead.
+// jsdom không có layout, nên virtualizer thật sẽ không hiển thị hàng nào; thay vào đó, hiển thị mọi hàng.
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: ({
     count,

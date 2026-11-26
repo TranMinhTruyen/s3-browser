@@ -5,19 +5,19 @@ import ActionIcon from '@/components/buttons/ActionIcon';
 import FieldInput from '@/components/inputs/FieldInput';
 
 type SearchInputProps = {
-  // Initial text. To reset the text box from outside, remount the component with a new `key`.
+  // Văn bản ban đầu. Để reset ô nhập từ bên ngoài, mount lại component với `key` mới.
   value?: string;
   placeholder?: string;
   searchLabel: string;
   clearLabel: string;
   disabled?: boolean;
-  // Called with the trimmed, non-empty keyword.
+  // Được gọi với từ khóa không rỗng đã trim.
   onSearch: (keyword: string) => void;
-  // Called when the keyword is cleared or submitted empty.
+  // Được gọi khi xóa từ khóa hoặc gửi truy vấn rỗng.
   onClear: () => void;
 };
 
-/** Search box with a clear button and a search button; Enter or the button submits the trimmed text. */
+/** Ô tìm kiếm có nút xóa và nút tìm; Enter hoặc nút tìm sẽ gửi văn bản đã trim. */
 function SearchInput(props: SearchInputProps) {
   const { value = '', placeholder, searchLabel, clearLabel, disabled, onSearch, onClear } = props;
 

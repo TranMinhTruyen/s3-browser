@@ -4,7 +4,7 @@ import BucketItem from '@/pages/s3/bucket/BucketItem';
 import { BUCKET_ITEM_LABELS } from '@/test/_helpers/bucketItemLabels';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// BucketItem calls dayjs once per render: counting the calls counts the renders.
+// BucketItem gọi dayjs một lần mỗi lần render; đếm số lần gọi cũng là đếm số lần render.
 const dayjsCalls = vi.hoisted(() => ({ count: 0 }));
 vi.mock('dayjs', async importOriginal => {
   const real = (await importOriginal<{ default: typeof import('dayjs') }>()).default;

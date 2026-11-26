@@ -6,11 +6,11 @@ type ComboboxClearButtonProps = {
   onClear: () => void;
 };
 
-/** Close button shown inside a combobox target to clear the selection without toggling the dropdown. */
+/** Nút đóng bên trong đích combobox, dùng để xóa lựa chọn mà không bật/tắt danh sách thả xuống. */
 function ComboboxClearButton({ onClear }: ComboboxClearButtonProps) {
   const { t } = useTranslation('common');
 
-  // Keep the target button from taking focus.
+  // Ngăn nút đích nhận tiêu điểm.
   const onMouseDownClear = useCallback((event: MouseEvent<HTMLButtonElement>) => event.preventDefault(), []);
 
   const onClickClear = useCallback(

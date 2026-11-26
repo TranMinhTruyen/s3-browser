@@ -17,7 +17,7 @@ type Grid = { headers: string[]; rows: (string | null)[][] };
 
 type InfoState = { loading: boolean; info: TableInfoOutput | null };
 
-/** Spinner while the structure loads, an error text when it could not be loaded, else `children`. */
+/** Hiện spinner khi đang tải cấu trúc, văn bản lỗi nếu tải thất bại, hoặc `children` khi thành công. */
 function InfoPanel({ loading, loaded, children }: { loading: boolean; loaded: boolean; children: React.ReactNode }) {
   const { t } = useTranslation('tableStructure');
   if (loading) {
@@ -42,8 +42,8 @@ type TableStructureDetailProps = {
 };
 
 /**
- * Content of a TableStructure tab: Data, Column, Index, Constraint, FK and Source of one table.
- * Hidden panels stay mounted (display: none), so the loaded rows and the scroll position survive switching.
+ * Nội dung tab TableStructure: Data, Column, Index, Constraint, FK và Source của một bảng.
+ * Panel bị ẩn vẫn được mount (display: none) để giữ các hàng đã tải và vị trí cuộn khi chuyển tab.
  */
 function TableStructureDetail({ tabId }: TableStructureDetailProps) {
   const { t } = useTranslation('tableStructure');

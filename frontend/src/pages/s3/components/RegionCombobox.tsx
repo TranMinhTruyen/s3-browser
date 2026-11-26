@@ -36,7 +36,7 @@ type RegionComboboxProps = Omit<ComboboxProps, 'store' | 'onOptionSubmit' | 'chi
     onChange?: (value: string | null) => void;
   };
 
-/** Single-select dropdown of cloud regions from the master data, grouped by availability zone. */
+/** Danh sách thả xuống chọn một region đám mây từ dữ liệu chính, được nhóm theo vùng khả dụng. */
 function RegionCombobox(props: RegionComboboxProps) {
   const { value, defaultValue, withAsterisk, disabled, error, onChange, onFocus, onBlur, ...rest } = props;
 

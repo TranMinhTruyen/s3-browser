@@ -11,9 +11,9 @@ const grid = vi.hoisted(() => ({ calls: [] as Record<string, any>[], mounts: 0, 
 vi.mock('@/components/display/dataGrid/DataGrid', () => ({
   default: function MockDataGrid(props: Record<string, any>) {
     grid.calls.push(props);
-    // The handle the panel drives: records the first value of the grid that was asked to fit.
+    // Handle do panel điều khiển: ghi lại giá trị đầu tiên của grid được yêu cầu căn vừa.
     useImperativeHandle(props.ref, () => ({ fitColumns: () => grid.fits.push(String(props.rows[0]?.[0])) }));
-    // Effect of the real grid: with Activity it would be torn down and rerun on every tab switch.
+    // Effect của grid thật: nếu dùng Activity thì effect sẽ bị gỡ và chạy lại mỗi lần chuyển tab.
     useEffect(() => {
       grid.mounts += 1;
       return () => {
@@ -35,7 +35,7 @@ vi.mock('@/pages/sql/components/sqlResult/SqlMessageList', () => ({
 
 const base = { cancelled: false, running: false, loadingMore: false, onLoadMore: vi.fn() };
 const select = (index: number, extra = {}) => statement({ index, sql: `select ${index}`, ...extra });
-/** Every panel stays mounted; only the selected one is shown. */
+/** Mọi panel luôn được mount; chỉ panel đang chọn được hiển thị. */
 const shown = (id: string) => {
   const found = screen
     .getAllByTestId(id)

@@ -970,7 +970,7 @@ function Invoke-ScenarioF($App) {
     Measure-Point $App 'f' -Js
 }
 
-# Fetch all (Q31=B): phiên riêng, không nằm trong all, để không đổi nền các điểm khác. Điểm g-pre, g-peak, g-loaded, g-closed.
+# Lấy toàn bộ (Q31=B): chạy trong phiên riêng, không thuộc nhóm all, để không làm thay đổi điều kiện nền của các điểm khác. Các điểm gồm g-pre, g-peak, g-loaded và g-closed.
 function Invoke-ScenarioG([int]$Run) {
     if ($Run -eq 1) { $script:Notes.Add("g run 1: bảng t$FetchRows được tạo trong phiên nếu chưa có trong $SqliteFile; g-pre lượt 1 có thể cao hơn lượt 2-3 (đã có bảng, không chạy lệnh tạo)") }
     $app = Start-App $BenchExe 'cdp-g' $Run -Cdp

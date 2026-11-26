@@ -5,11 +5,11 @@ import AwsProfileCombobox from '@/pages/s3/components/AwsProfileCombobox';
 import type { AuthFieldsProps } from '@/pages/s3/modals/connect/connectSchema';
 
 type AuthAwsProfileFieldsProps = Pick<AuthFieldsProps, 'form'> & {
-  /** `sso`: list only SSO profiles, hide the credentials file and show the login command. */
+  /** `sso`: chỉ liệt kê profile SSO, ẩn file credentials và hiện lệnh đăng nhập. */
   ssoOnly?: boolean;
 };
 
-/** AWS CLI profile picker with optional custom config/credentials files. Used by `sharedProfile` and `sso`. */
+/** Bộ chọn profile AWS CLI với file config/credentials tùy chỉnh không bắt buộc. Dùng cho `sharedProfile` và `sso`. */
 function AuthAwsProfileFields({ form, ssoOnly }: AuthAwsProfileFieldsProps) {
   const { t } = useTranslation('connectModal');
   const profileName = form.useWatchValue('authConfig.profileName');

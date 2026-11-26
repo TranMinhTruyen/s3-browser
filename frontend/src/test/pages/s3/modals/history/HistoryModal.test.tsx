@@ -12,8 +12,8 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import HistoryModal from '@/pages/s3/modals/history/HistoryModal';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// jsdom has no layout, so the real virtualizer would render no row: render every row instead.
-// `endIndex` is the last row the user "sees"; null means the end of the list.
+// jsdom không có layout nên virtualizer thật sẽ không render hàng nào: thay bằng cách render mọi hàng.
+// `endIndex` là hàng cuối người dùng "nhìn thấy"; null nghĩa là cuối danh sách.
 const virtual = vi.hoisted(() => ({
   endIndex: null as number | null,
   estimates: [] as number[],
@@ -106,7 +106,7 @@ describe('HistoryModal', () => {
     expect(screen.getAllByText(dayjs('2026-01-02T03:04:05.000Z').format(FULL_DATE_TIME_FORMAT))).toHaveLength(2);
     expect(screen.getAllByText('DONE')).toHaveLength(2);
     expect(screen.getByText('/dl/a.bin')).toBeInTheDocument();
-    // An item without a destination shows the placeholder instead of a link.
+    // Mục không có đích đến hiển thị nội dung giữ chỗ thay vì liên kết.
     expect(screen.getByText('EMPTY')).toBeInTheDocument();
   });
 

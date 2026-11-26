@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-// dataFilePath returns the path of a file in the app data dir, creating the dir when missing.
+// dataFilePath trả về đường dẫn đến file trong thư mục dữ liệu ứng dụng, tạo thư mục nếu chưa tồn tại.
 func dataFilePath(appName, fileName string) (string, error) {
 	dir, err := portable.DataDir(appName)
 	if err != nil {
@@ -16,9 +16,9 @@ func dataFilePath(appName, fileName string) (string, error) {
 	return filepath.Join(dir, fileName), nil
 }
 
-// writeJSONAtomic saves v as JSON: a temp file in the same dir is flushed to disk, then renamed over the target,
-// so a crash or power loss never leaves half a file.
-// It takes no lock: callers serialize writes (submoduleSettingMng.mu for settings, submoduleTabMng.mu for tabs).
+// writeJSONAtomic lưu v dưới dạng JSON: flush file tạm trong cùng thư mục xuống đĩa rồi đổi tên file tạm đè lên file đích,
+// nhờ đó sự cố hoặc mất điện không để lại file ghi dở.
+// Hàm không khóa; bên gọi tuần tự hóa các lần ghi (submoduleSettingMng.mu cho cài đặt, submoduleTabMng.mu cho tab).
 func writeJSONAtomic(path string, v any) error {
 	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
@@ -31,7 +31,7 @@ func writeJSONAtomic(path string, v any) error {
 	}
 	_, err = tmp.Write(data)
 	if err == nil {
-		// Without Sync the rename can reach the disk before the data, leaving an empty file after a crash.
+		// Nếu thiếu Sync, thao tác đổi tên có thể xuống đĩa trước dữ liệu, khiến file rỗng sau sự cố.
 		err = tmp.Sync()
 	}
 	if closeErr := tmp.Close(); err == nil {

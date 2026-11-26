@@ -1,8 +1,8 @@
 import { useTabListStore } from '@/pages/s3/stores/tabListStore';
 
 /**
- * True when the tab still exists but is not the active one, i.e. its content is only hidden (React `Activity`).
- * Effect cleanups use it to tell "hidden" (keep state and requests) from a real unmount (clean up).
+ * Trả về true nếu tab vẫn tồn tại nhưng không hoạt động, nghĩa là nội dung chỉ bị ẩn (React `Activity`).
+ * Cleanup của effect dùng để phân biệt "bị ẩn" (giữ state và yêu cầu) với việc unmount thật sự (dọn dữ liệu).
  */
 export function isTabHidden(tabId: string): boolean {
   const { tabList, activeTab } = useTabListStore.getState();
@@ -10,9 +10,9 @@ export function isTabHidden(tabId: string): boolean {
 }
 
 /**
- * Builds an effect cleanup that runs `fn` when the tab's view goes away for good.
- * A hidden tab (React `Activity`) runs its cleanups too, so there `fn` is deferred until the tab is closed;
- * the wait ends without running `fn` as soon as the tab is shown again.
+ * Tạo hàm cleanup của effect, chỉ chạy `fn` khi view của tab bị gỡ hẳn.
+ * Tab bị ẩn (React `Activity`) cũng chạy cleanup nên hoãn `fn` cho đến khi tab đóng;
+ * nếu tab được hiện lại thì kết thúc thời gian chờ mà không chạy `fn`.
  */
 export function onTabGone(tabId: string, fn: () => void): () => void {
   return () => {

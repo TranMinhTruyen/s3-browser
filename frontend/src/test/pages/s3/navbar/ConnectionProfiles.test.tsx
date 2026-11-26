@@ -15,7 +15,7 @@ import { useProfileStore } from '@/pages/s3/stores/profileStore';
 import { useTabListStore } from '@/pages/s3/stores/tabListStore';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// jsdom has no layout, so render every row except the keys listed in `hidden` (scrolled out of the range).
+// jsdom không có layout nên render mọi hàng trừ các key trong `hidden` (đã cuộn ra ngoài vùng hiển thị).
 const virtual = vi.hoisted(() => ({
   hidden: new Set<string>(),
   options: null as null | Record<string, unknown>,
@@ -80,12 +80,12 @@ const profile = (id: string, extra: Partial<ConnectionProfileOutput> = {}) =>
 
 const profiles = () => useProfileStore.getState().connectionProfiles;
 
-// Results of the backend calls, by binding; a function result is called lazily.
+// Kết quả các lệnh gọi backend theo binding; nếu kết quả là hàm thì chỉ gọi khi cần.
 let ipcResult: Map<unknown, unknown>;
 const loadConnectionProfiles = vi.fn();
 const resetViewByProfile = vi.fn();
 const clearProfile = vi.fn();
-// Handlers registered through Events.On, by event name.
+// Các handler đăng ký qua Events.On, được lập chỉ mục theo tên event.
 let handlers: Record<string, (e: { data: unknown }) => void>;
 const unsubscribe = vi.fn();
 
@@ -98,7 +98,7 @@ const card = (name: string) => screen.getByText(name).closest<HTMLElement>('.man
 
 async function clickMenuItem(user: ReturnType<typeof userEvent.setup>, name: string, item: string) {
   fireEvent.contextMenu(card(name));
-  // Matching by text: the accessible name is not reliable while the dropdown transition runs.
+  // Tìm theo văn bản vì tên trợ năng không ổn định khi hiệu ứng mở danh sách thả xuống đang chạy.
   const items = await screen.findAllByRole('menuitem');
   await user.click(items.find(i => i.textContent === item)!);
 }
@@ -282,7 +282,7 @@ describe('ConnectionProfiles', () => {
       expect(callIPCMock).toHaveBeenCalledWith(ConnectS3ByProfile, ['auto'], { signal: expect.any(AbortSignal) });
       expect(profiles().auto?.isConnected).toBe(true);
 
-      // A later change of the list does not auto connect again.
+      // Danh sách thay đổi sau đó không kích hoạt tự động kết nối lại.
       act(() =>
         useProfileStore.getState().updateConnectionProfiles('manual', profile('manual', { autoConnect: true }))
       );
@@ -487,8 +487,8 @@ describe('ConnectionProfiles', () => {
 
       fireEvent.contextMenu(card('a-name'));
       const disconnect = (await screen.findAllByRole('menuitem')).find(i => i.textContent === 'Disconnect')!;
-      // Click the same item twice, dispatching straight to it so the second click does reach the handler
-      // even though the menu closes after the first one; the first call is still pending.
+      // Click cùng một mục hai lần và gửi sự kiện trực tiếp để lần click thứ hai vẫn đến handler
+      // dù menu đã đóng sau lần đầu; lời gọi đầu tiên vẫn đang chờ.
       fireEvent.click(disconnect);
       await flush();
       expect(callIPCMock).toHaveBeenCalledTimes(1);
@@ -641,7 +641,7 @@ describe('ConnectionProfiles', () => {
 
     it('resets the views when the failed deletion left the profile disconnected', async () => {
       confirmMock.mockResolvedValue(true);
-      // The reload after the failed deletion.
+      // Tải lại sau khi xóa thất bại.
       loadConnectionProfiles.mockImplementationOnce(async () => {
         useProfileStore.getState().updateConnectionProfiles('a', profile('a', { isConnected: false }));
       });
@@ -744,14 +744,14 @@ describe('ConnectionProfiles', () => {
 
       fireEvent.contextMenu(card('a-name'));
       await screen.findAllByRole('menuitem');
-      // Floating UI also listens for scroll while the dropdown is open, so check passive listeners in general.
+      // Floating UI cũng lắng nghe scroll khi danh sách thả xuống mở, nên kiểm tra chung các listener passive.
       expect(scrollCalls(add).length).toBeGreaterThan(0);
       expect(scrollCalls(add).some(c => (c[2] as AddEventListenerOptions | undefined)?.passive === true)).toBe(true);
       expect(scrollCalls(remove)).toHaveLength(0);
 
       await userEvent.keyboard('{Escape}');
 
-      // Every listener added while open is removed again on close.
+      // Mọi listener thêm lúc mở đều được gỡ khi đóng.
       await waitFor(() => expect(scrollCalls(remove)).toHaveLength(scrollCalls(add).length));
       scrollCalls(add).forEach(c => expect(scrollCalls(remove).map(r => r[1])).toContain(c[1]));
     });
@@ -774,7 +774,7 @@ describe('ConnectionProfiles', () => {
       ]);
 
       fireEvent.contextMenu(card('b-name'));
-      // The dropdown is re-positioned for the new row, so it is not exposed to the accessibility tree meanwhile.
+      // Danh sách thả xuống đang được định vị lại theo hàng mới nên tạm thời không xuất hiện trong cây trợ năng.
       await waitFor(() =>
         expect(screen.getAllByRole('menuitem', { hidden: true }).map(i => i.textContent)).toEqual([
           'Disconnect',

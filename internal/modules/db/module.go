@@ -1,5 +1,5 @@
-// Package db runs the SQL mode: saved database profiles, connections to the native database engine
-// (s3b_db.dll, loaded without cgo) and the queries the frontend sends through them.
+// Package db xử lý chế độ SQL: hồ sơ cơ sở dữ liệu đã lưu, kết nối đến engine cơ sở dữ liệu native
+// (s3b_db.dll, được nạp không dùng cgo) và các truy vấn frontend gửi qua những kết nối đó.
 package db
 
 import (
@@ -15,67 +15,67 @@ import (
 )
 
 var (
-	// DBE001 - Invalid request to the database engine.
+	// DBE001 - Yêu cầu gửi đến engine cơ sở dữ liệu không hợp lệ.
 	DBE001 = "DBE001"
 
-	// DBE002 - Cannot open database file {path}.
+	// DBE002 - Không thể mở file cơ sở dữ liệu {path}.
 	DBE002 = "DBE002"
 
-	// DBE003 - The file is not a SQLite database.
+	// DBE003 - File không phải cơ sở dữ liệu SQLite.
 	DBE003 = "DBE003"
 
-	// DBE004 - The connection was closed. Connect again.
+	// DBE004 - Kết nối đã đóng. Hãy kết nối lại.
 	DBE004 = "DBE004"
 
-	// DBE005 - The result is no longer available. Run the query again.
+	// DBE005 - Kết quả không còn khả dụng. Hãy chạy lại truy vấn.
 	DBE005 = "DBE005"
 
-	// DBE006 - SQL error (the detail is the engine error; shown with the result, not as a toast).
+	// DBE006 - Lỗi SQL (chi tiết là lỗi từ engine; hiển thị cùng kết quả, không hiện dưới dạng toast).
 	DBE006 = "DBE006"
 
-	// DBE007 - Table [{name}] does not exist.
+	// DBE007 - Bảng [{name}] không tồn tại.
 	DBE007 = "DBE007"
 
-	// DBE008 - Database engine error.
+	// DBE008 - Lỗi engine cơ sở dữ liệu.
 	DBE008 = "DBE008"
 
-	// DBE009 - The database engine (s3b_db.dll) could not be loaded.
+	// DBE009 - Không thể nạp engine cơ sở dữ liệu (s3b_db.dll).
 	DBE009 = "DBE009"
 
-	// DBE010 - Cannot save database profile [{name}].
+	// DBE010 - Không thể lưu hồ sơ cơ sở dữ liệu [{name}].
 	DBE010 = "DBE010"
 
-	// DBE011 - Cannot delete database profile [{name}].
+	// DBE011 - Không thể xóa hồ sơ cơ sở dữ liệu [{name}].
 	DBE011 = "DBE011"
 
-	// DBE012 - Cannot load database profiles.
+	// DBE012 - Không thể tải danh sách hồ sơ cơ sở dữ liệu.
 	DBE012 = "DBE012"
 
-	// DBE013 - Cannot open the file dialog.
+	// DBE013 - Không thể mở hộp thoại chọn file.
 	DBE013 = "DBE013"
 
-	// DBE014 - Profile [{name}] is not connected.
+	// DBE014 - Hồ sơ [{name}] chưa được kết nối.
 	DBE014 = "DBE014"
 
-	// DBE015 - The operation timed out after {timeout}.
+	// DBE015 - Thao tác đã hết thời gian chờ sau {timeout}.
 	DBE015 = "DBE015"
 )
 
 const (
-	// queryTimeout limits one ExecuteSql, OpenTableRows or FetchRows call; an idle open cursor is not timed.
+	// queryTimeout giới hạn thời gian của một lần gọi ExecuteSql, OpenTableRows hoặc FetchRows; cursor đang mở nhưng nhàn rỗi không bị tính giờ.
 	queryTimeout = 5 * time.Minute
-	// metaTimeout limits opening a connection and reading the schema.
+	// metaTimeout giới hạn thời gian mở kết nối và đọc schema.
 	metaTimeout = 30 * time.Second
 
-	// pageSize is the rows of the first page and of each FetchRows page.
+	// pageSize là số hàng trong trang đầu và mỗi trang FetchRows.
 	pageSize = 10000
-	// maxPageBytes caps the text of one page (always at least one row), so a page of big values stays small.
+	// maxPageBytes giới hạn lượng văn bản của mỗi trang (luôn có ít nhất một hàng) để trang chứa giá trị lớn không quá nặng.
 	maxPageBytes = 16 << 20
-	// unlimited is the page limit of FetchRows with All; far above any real table, and still fits Rust usize.
+	// unlimited là giới hạn trang của FetchRows khi bật All; cao hơn nhiều so với mọi bảng thực tế và vẫn nằm trong kiểu usize của Rust.
 	unlimited = 1 << 62
 )
 
-// Module owns the database profiles and the connections of the SQL mode.
+// Module quản lý hồ sơ cơ sở dữ liệu và các kết nối trong chế độ SQL.
 type Module struct {
 	logger *slog.Logger
 	app    *application.App
@@ -86,7 +86,7 @@ type Module struct {
 	nativeMng  *submoduleNativeMng
 }
 
-// NewModule creates the database module. The native library is only loaded by the first connection.
+// NewModule tạo module cơ sở dữ liệu. Thư viện native chỉ được nạp khi tạo kết nối đầu tiên.
 func NewModule(app *application.App, logger *slog.Logger, db *sql.DB, km *utils.KeyManager) *Module {
 	log := logger.With("component", "db_module")
 	native := newSubmoduleNativeMng(logger, loadNative)
@@ -103,49 +103,48 @@ func NewModule(app *application.App, logger *slog.Logger, db *sql.DB, km *utils.
 	}
 }
 
-// Loaded reports whether the native library is loaded. It never loads it.
+// Loaded cho biết thư viện native đã được nạp hay chưa; hàm này không tự nạp thư viện.
 func (m *Module) Loaded() bool {
 	return m.nativeMng.loaded()
 }
 
-// GetAllDbProfile lists the saved database profiles.
+// GetAllDbProfile trả về danh sách hồ sơ cơ sở dữ liệu đã lưu.
 func (m *Module) GetAllDbProfile() models.Output[models.GetAllDbProfileOutput] {
 	return m.profileMng.getAll()
 }
 
-// CreateDbProfile saves a new profile. The provider is sqlite or postgres; the password is stored sealed.
+// CreateDbProfile lưu hồ sơ mới. Provider là sqlite hoặc postgres; mật khẩu được lưu ở dạng mã hóa.
 func (m *Module) CreateDbProfile(input models.DbProfileInput) models.Output[models.DbProfileOutput] {
 	return m.profileMng.create(input)
 }
 
-// UpdateDbProfileById updates a profile.
+// UpdateDbProfileById cập nhật hồ sơ.
 func (m *Module) UpdateDbProfileById(input models.DbProfileInput) models.Output[models.DbProfileOutput] {
 	return m.profileMng.update(input)
 }
 
-// DeleteDbProfileById deletes the profile, then closes its connections; a failed delete keeps them open.
+// DeleteDbProfileById xóa hồ sơ rồi đóng các kết nối của hồ sơ; nếu xóa thất bại, kết nối vẫn được giữ mở.
 func (m *Module) DeleteDbProfileById(input models.DbProfileInput) models.Output[bool] {
 	return m.profileMng.delete(input)
 }
 
-// ChooseDbFile opens the native dialog to pick a SQLite file and returns its path; the body is empty when
-// the user cancels.
+// ChooseDbFile mở hộp thoại của hệ điều hành để chọn file SQLite và trả về đường dẫn; body rỗng nếu người dùng hủy.
 func (m *Module) ChooseDbFile() models.Output[string] {
 	return m.profileMng.chooseFile()
 }
 
-// ConnectDb opens the main connection of a saved profile (used for the object tree and table info).
-// Connecting an already connected profile does nothing.
+// ConnectDb mở kết nối chính của hồ sơ đã lưu (dùng cho cây đối tượng và thông tin bảng).
+// Nếu hồ sơ đã kết nối thì hàm không làm gì.
 func (m *Module) ConnectDb(ctx context.Context, input models.DbProfileRefInput) models.Output[bool] {
 	return m.connMng.connect(ctx, input.ProfileId)
 }
 
-// DisconnectDb closes the main connection and every tab connection of the profile.
+// DisconnectDb đóng kết nối chính và mọi kết nối tab của hồ sơ.
 func (m *Module) DisconnectDb(input models.DbProfileRefInput) models.Output[bool] {
 	return m.connMng.disconnect(input.ProfileId)
 }
 
-// GetSchemaTree reads the object tree of a connected profile.
+// GetSchemaTree đọc cây đối tượng của hồ sơ đã kết nối.
 func (m *Module) GetSchemaTree(
 	ctx context.Context,
 	input models.DbProfileRefInput,
@@ -153,7 +152,7 @@ func (m *Module) GetSchemaTree(
 	return m.connMng.schemaTree(ctx, input.ProfileId)
 }
 
-// GetTableInfo reads the columns, indexes, constraints, foreign keys and source of a table.
+// GetTableInfo đọc cột, chỉ mục, ràng buộc, khóa ngoại và câu lệnh tạo bảng.
 func (m *Module) GetTableInfo(
 	ctx context.Context,
 	input models.TableInfoInput,
@@ -161,8 +160,8 @@ func (m *Module) GetTableInfo(
 	return m.connMng.tableInfo(ctx, input)
 }
 
-// ExecuteSql runs the statements of input.Sql in order on the connection of the tab, stopping at the first
-// failed one. A SQL error is reported in the statement, not as a message.
+// ExecuteSql chạy lần lượt các câu lệnh trong input.Sql trên kết nối của tab và dừng ở câu đầu tiên thất bại.
+// Lỗi SQL được ghi vào kết quả câu lệnh, không gửi dưới dạng thông báo.
 func (m *Module) ExecuteSql(
 	ctx context.Context,
 	input models.ExecuteSqlInput,
@@ -170,7 +169,7 @@ func (m *Module) ExecuteSql(
 	return m.queryMng.execute(ctx, input)
 }
 
-// OpenTableRows reads the first page of the rows of a table on the connection of the tab.
+// OpenTableRows đọc trang đầu tiên của các hàng trong bảng trên kết nối của tab.
 func (m *Module) OpenTableRows(
 	ctx context.Context,
 	input models.OpenTableRowsInput,
@@ -178,18 +177,18 @@ func (m *Module) OpenTableRows(
 	return m.queryMng.openTableRows(ctx, input)
 }
 
-// FetchRows loads the next page of the cursor of the tab, or all remaining rows (no page limit, no timeout;
-// the frontend stops it by canceling the call) when input.All is set.
+// FetchRows tải trang tiếp theo từ cursor của tab hoặc, nếu input.All được bật, tải toàn bộ hàng còn lại
+// (không giới hạn số trang hay thời gian chờ; frontend có thể dừng bằng cách hủy lời gọi).
 func (m *Module) FetchRows(ctx context.Context, input models.FetchRowsInput) models.Output[models.FetchRowsOutput] {
 	return m.queryMng.fetchRows(ctx, input)
 }
 
-// CloseDbTab closes the connection of the tab; a tab without one is fine.
+// CloseDbTab đóng kết nối của tab; tab không có kết nối cũng được chấp nhận.
 func (m *Module) CloseDbTab(input models.CloseDbTabInput) models.Output[bool] {
 	return m.connMng.closeTab(input.TabId)
 }
 
-// Close closes every connection (app shutdown). It does nothing if the native library was never loaded.
+// Close đóng mọi kết nối khi ứng dụng tắt. Hàm không làm gì nếu thư viện native chưa từng được nạp.
 func (m *Module) Close() {
 	m.connMng.closeAll()
 }

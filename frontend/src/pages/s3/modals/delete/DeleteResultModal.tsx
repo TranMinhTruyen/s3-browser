@@ -10,16 +10,16 @@ import { INFO_BG_COLOR, INFO_COLOR } from '@/components/modals/modalColors';
 import DeleteKeyList, { DeleteKeyRow } from '@/pages/s3/modals/delete/DeleteKeyList';
 
 type DeleteResultModalProps = ModalProps & {
-  // Number of keys deleted and failed (the whole count, even if `failures` was cut).
+  // Số key đã xóa và thất bại (tổng số đầy đủ, kể cả khi `failures` đã bị rút gọn).
   deleted: number;
   failed: number;
-  // Deleted keys; omitted when the backend only counts them (folder delete).
+  // Các key đã xóa; không có nếu backend chỉ trả số lượng (xóa thư mục).
   deletedKeys?: string[];
-  // Failed keys with their reason, possibly only the first ones.
+  // Các key thất bại kèm lý do, có thể chỉ gồm những mục đầu tiên.
   failures: { key: string; error: string }[];
 };
 
-/** Shows how many keys a delete removed and which ones failed (or succeeded) in an accordion. */
+/** Hiển thị số key đã xóa và các key thất bại (hoặc thành công) trong một accordion. */
 export default createMantineModal<DeleteResultModalProps, void>(props => {
   const { deleted, failed, deletedKeys, failures, mantine, size = 'xl', centered = true, ...restProps } = props;
 

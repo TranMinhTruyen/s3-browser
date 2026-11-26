@@ -2,28 +2,27 @@ package bucket
 
 import "time"
 
-// Bucket is one bucket of a connection.
+// Bucket là một bucket của kết nối.
 type Bucket struct {
 	Name         string    `json:"name,omitempty"`
 	CreationDate time.Time `json:"creationDate"`
-	// Inaccessible is set when the bucket is known to be unreadable: HeadBucket failed (anonymous connection) or
-	// answered 403 (any other connection).
+	// Inaccessible được bật nếu đã xác định không đọc được bucket: HeadBucket thất bại (kết nối ẩn danh) hoặc trả 403
+	// (các kết nối khác).
 	Inaccessible bool `json:"inaccessible,omitempty"`
-	// ReadOnly is set only when the listing asked for CheckWrite and the connection could not write (upload) to the
-	// bucket.
+	// Chỉ bật ReadOnly khi thao tác liệt kê yêu cầu CheckWrite và kết nối không thể ghi (tải lên) vào bucket.
 	ReadOnly bool `json:"readOnly,omitempty"`
-	// AccessPending is set when the access of the bucket is not known yet (not probed, or the probe gave no sure
-	// answer); the frontend should check it with CheckBucketAccess.
+	// Bật AccessPending khi chưa xác định quyền truy cập bucket (chưa thăm dò hoặc kết quả chưa chắc chắn);
+	// frontend nên kiểm tra bằng CheckBucketAccess.
 	AccessPending bool `json:"accessPending,omitempty"`
-	// DeleteDenied is set only for MinIO with credentials when the account is known not to be allowed to
-	// delete the bucket (s3:DeleteBucket).
+	// Chỉ bật DeleteDenied với MinIO có thông tin xác thực khi tài khoản được xác định là không có quyền
+	// xóa bucket (s3:DeleteBucket).
 	DeleteDenied bool `json:"deleteDenied,omitempty"`
-	// PolicyMode is "private", "public" or "custom"; "unknown" when the policy can't be read. Empty means not
-	// known yet (only CheckBucketAccess with WithPolicy reads it) or an anonymous connection.
+	// PolicyMode là "private", "public" hoặc "custom"; là "unknown" nếu không đọc được policy. Rỗng nghĩa là chưa
+	// xác định (chỉ CheckBucketAccess có WithPolicy mới đọc trường này) hoặc đang dùng kết nối ẩn danh.
 	PolicyMode string `json:"policyMode,omitempty"`
 }
 
-// ListBucketOutput is one page of buckets; NextCursor is nil on the last page.
+// ListBucketOutput là một trang bucket; NextCursor là nil ở trang cuối.
 type ListBucketOutput struct {
 	BucketList []Bucket `json:"bucketList,omitempty"`
 	NextCursor *string  `json:"nextCursor,omitempty"`

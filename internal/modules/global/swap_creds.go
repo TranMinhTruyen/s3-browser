@@ -8,29 +8,29 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
-// SwapCreds is the credentials provider of an S3 client. The provider behind it can be replaced (Store) while
-// the client keeps running, so renewed credentials never need a new client and running transfers continue.
-// It does not cache: the providers stored in it already do.
+// SwapCreds là provider thông tin xác thực của client S3. Có thể thay provider bên trong (Store) khi client đang chạy,
+// nhờ đó không cần tạo client mới khi gia hạn thông tin xác thực và các lượt truyền vẫn tiếp tục.
+// SwapCreds không lưu cache; các provider bên trong đã tự thực hiện việc đó.
 type SwapCreds struct {
 	current atomic.Pointer[swapState]
 }
 
-// swapState is one provider with the expiry of its last retrieved credentials. They live in one value so a
-// Retrieve that finishes after Store only updates the expiry of its own (old) provider.
+// swapState gồm một provider và thời hạn của thông tin xác thực lấy gần nhất. Chúng được giữ trong cùng một giá trị,
+// để Retrieve hoàn tất sau Store chỉ cập nhật thời hạn của provider cũ mà nó đã gọi.
 type swapState struct {
 	provider aws.CredentialsProvider
-	// expiry is nil when the credentials don't expire or aren't known yet.
+	// expiry là nil nếu thông tin xác thực không hết hạn hoặc chưa xác định được thời hạn.
 	expiry atomic.Pointer[time.Time]
 }
 
-// NewSwapCreds starts with provider.
+// NewSwapCreds khởi tạo với provider.
 func NewSwapCreds(provider aws.CredentialsProvider) *SwapCreds {
 	s := &SwapCreds{}
 	s.Store(provider)
 	return s
 }
 
-// Retrieve implements aws.CredentialsProvider with the current provider.
+// Retrieve triển khai aws.CredentialsProvider bằng provider hiện tại.
 func (s *SwapCreds) Retrieve(ctx context.Context) (aws.Credentials, error) {
 	st := s.current.Load()
 	creds, err := st.provider.Retrieve(ctx)
@@ -45,12 +45,12 @@ func (s *SwapCreds) Retrieve(ctx context.Context) (aws.Credentials, error) {
 	return creds, nil
 }
 
-// Store replaces the provider; the expiry is known again after the next Retrieve.
+// Store thay provider; thời hạn được xác định lại sau lần Retrieve tiếp theo.
 func (s *SwapCreds) Store(provider aws.CredentialsProvider) {
 	s.current.Store(&swapState{provider: provider})
 }
 
-// Expiry returns when the last retrieved credentials expire. It never calls the provider, so it can't block.
+// Expiry trả thời điểm thông tin xác thực lấy gần nhất hết hạn. Hàm không gọi provider nên không bị chặn.
 func (s *SwapCreds) Expiry() (time.Time, bool) {
 	if at := s.current.Load().expiry.Load(); at != nil {
 		return *at, true

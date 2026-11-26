@@ -2,23 +2,23 @@ package db
 
 import "encoding/json"
 
-// DbColumn is a result column; Type is the declared type ("" when the engine has none).
+// DbColumn là một cột kết quả; Type là kiểu đã khai báo ("" nếu engine không có kiểu).
 type DbColumn struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
 }
 
-// StatementError is the error of one statement. Code is a message code (DBE006 for an SQL error) and
-// Message the engine detail; it is shown with the result, not as a toast.
+// StatementError là lỗi của một câu lệnh. Code là mã thông báo (DBE006 cho lỗi SQL), còn Message là chi tiết từ engine;
+// lỗi được hiển thị cùng kết quả, không hiện dưới dạng toast.
 type StatementError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
 }
 
-// StatementResult is the result of one statement. Kind is "rows" (Columns, Rows, and CursorId while Done is
-// false) or "affected" (RowsAffected). A page can hold fewer rows than the page size without being Done.
-// Truncated means rows were left unread and cannot be loaded (only the last statement keeps its cursor).
-// Cells are text; a nil cell is NULL.
+// StatementResult là kết quả của một câu lệnh. Kind là "rows" (Columns, Rows và CursorId khi Done là false)
+// hoặc "affected" (RowsAffected). Trang có thể chứa ít hàng hơn page size mà Done vẫn chưa bật.
+// Truncated nghĩa là còn hàng chưa đọc nhưng không thể tải thêm (chỉ câu lệnh cuối cùng giữ cursor).
+// Cells chứa văn bản; cell nil là NULL.
 type StatementResult struct {
 	Index        int             `json:"index"`
 	Sql          string          `json:"sql"`
@@ -35,27 +35,27 @@ type StatementResult struct {
 	raw json.RawMessage // JSON of the whole result when the native library's bytes are forwarded as they are
 }
 
-// WithRaw returns r that marshals as raw, the JSON the native library sent, without decoding it. The typed
-// fields stay empty: they exist for the bindings and for the path that must read the result.
+// WithRaw trả về r được marshal thành JSON thô do thư viện native gửi, không giải mã JSON. Các trường có kiểu vẫn rỗng:
+// chúng tồn tại cho binding và cho luồng cần đọc kết quả.
 func (r StatementResult) WithRaw(raw json.RawMessage) StatementResult {
 	r.raw = raw
 	return r
 }
 
-// ExecuteSqlOutput lists the statements that ran; a failed statement is the last one and has Error.
+// ExecuteSqlOutput liệt kê các câu lệnh đã chạy; câu lệnh thất bại nằm cuối cùng và có Error.
 type ExecuteSqlOutput struct {
 	Statements []StatementResult `json:"statements"`
 
 	raw json.RawMessage // see StatementResult.raw
 }
 
-// WithRaw is like StatementResult.WithRaw.
+// WithRaw hoạt động tương tự StatementResult.WithRaw.
 func (o ExecuteSqlOutput) WithRaw(raw json.RawMessage) ExecuteSqlOutput {
 	o.raw = raw
 	return o
 }
 
-// FetchRowsOutput is the next page of a cursor.
+// FetchRowsOutput chứa trang tiếp theo của cursor.
 type FetchRowsOutput struct {
 	Rows [][]*string `json:"rows"`
 	Done bool        `json:"done"`
@@ -63,7 +63,7 @@ type FetchRowsOutput struct {
 	raw json.RawMessage // see StatementResult.raw
 }
 
-// WithRaw is like StatementResult.WithRaw.
+// WithRaw hoạt động tương tự StatementResult.WithRaw.
 func (o FetchRowsOutput) WithRaw(raw json.RawMessage) FetchRowsOutput {
 	o.raw = raw
 	return o

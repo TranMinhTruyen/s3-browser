@@ -11,19 +11,19 @@ import { selectUploadingIds, useUploaderStore } from '@/common/stores/uploaderSt
 import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 
-/** `state` is idle, checking, upToDate, available, downloading, ready or error. */
+/** `state` là idle, checking, upToDate, available, downloading, ready hoặc error. */
 type UpdateState = UpdateStateOutput;
 
 interface UpdateAction {
-  /** Reads the backend state (the feature is hidden until `supported` is true). */
+  /** Đọc state từ backend (tính năng bị ẩn cho đến khi `supported` là true). */
   load: () => Promise<void>;
-  /** Takes the state pushed by the `update:state-changed` event. */
+  /** Nhận state được gửi qua event `update:state-changed`. */
   setState: (next: UpdateStateOutput) => void;
-  /** Looks for a new release (the backend downloads it itself when auto update is on). */
+  /** Tìm bản phát hành mới (backend tự tải khi bật tự động cập nhật). */
   check: () => Promise<void>;
-  /** Starts the download in the background; progress arrives through the event. */
+  /** Bắt đầu tải trong nền; tiến độ được gửi qua event. */
   download: () => Promise<void>;
-  /** After the user confirms, runs the installer; the app quits on success. */
+  /** Chạy trình cài đặt sau khi người dùng xác nhận; ứng dụng thoát nếu thành công. */
   install: () => Promise<void>;
   reset: () => void;
 }
@@ -32,7 +32,7 @@ const SCOPE = 'Update';
 
 const INITIAL_STATE: UpdateState = { supported: false, state: 'idle', currentVersion: '', written: 0, total: 0 };
 
-/** Self-update state mirrored from the backend. */
+/** State tự cập nhật được đồng bộ từ backend. */
 export const useUpdateStore = createAppStore<UpdateState & UpdateAction>(set => {
   const setState = (next: UpdateStateOutput | null | undefined, action: string) => {
     if (!next) return;

@@ -3,7 +3,7 @@ import type { MouseEvent } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { useAutoLoading } from '@/common/hooks/useAutoLoading';
 
-// The tsconfig has no Node types; unhandled rejections can only be observed through Node's process.
+// tsconfig không có kiểu Node; chỉ có thể theo dõi unhandled rejection qua process của Node.
 const nodeGlobals = globalThis as unknown as {
   process: {
     on: (name: 'unhandledRejection', fn: (reason: unknown) => void) => void;
@@ -34,7 +34,7 @@ describe('useAutoLoading', () => {
     try {
       let reject!: (e: Error) => void;
       const pending = new Promise<void>((_, r) => (reject = r));
-      // The caller owns the rejection of its own promise and still receives the original error.
+      // Nơi gọi chịu trách nhiệm xử lý rejection của promise và vẫn nhận được lỗi gốc.
       const callerResult = expect(pending).rejects.toThrow('boom');
       const onClick = vi.fn(() => pending);
       const { result } = renderHook(() => useAutoLoading(onClick, undefined));
@@ -43,7 +43,7 @@ describe('useAutoLoading', () => {
       expect(result.current.isLoading).toBe(true);
 
       await act(async () => reject(new Error('boom')));
-      // Let Node run its unhandled-rejection check (it runs after the microtask queue drains).
+      // Để Node kiểm tra unhandled rejection (việc này chạy sau khi hàng đợi microtask được xử lý hết).
       await new Promise(r => nodeGlobals.setImmediate(r));
       await callerResult;
 

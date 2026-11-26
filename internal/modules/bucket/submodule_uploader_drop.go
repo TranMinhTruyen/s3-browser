@@ -13,25 +13,25 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// dropKindPicker is the data-drop-kind of the drop zone inside the upload picker modal.
+// dropKindPicker là data-drop-kind của vùng thả trong hộp thoại chọn file tải lên.
 const dropKindPicker = "picker"
 
-// dropContext is the part of the Wails window event context used for a drop.
+// dropContext là phần context sự kiện cửa sổ Wails được dùng cho thao tác thả file.
 type dropContext interface {
 	DropTargetDetails() *application.DropTargetDetails
 	DroppedFiles() []string
 }
 
-// handleFilesDropped forwards files dropped on an object list to the frontend.
-// The drop target carries the tab ID in data-tab-id; drops elsewhere are ignored.
+// handleFilesDropped chuyển tiếp file được thả vào danh sách object đến frontend.
+// Vùng nhận file chứa tab ID trong data-tab-id; bỏ qua thao tác thả ở vị trí khác.
 func (m *submoduleUploaderMng) handleFilesDropped(event *application.WindowEvent) {
-	// The context is nil for an event that didn't come from a real drop.
+	// Context là nil nếu sự kiện không xuất phát từ thao tác thả file thật.
 	if ctx := event.Context(); ctx != nil {
 		m.handleDrop(ctx)
 	}
 }
 
-// handleDrop reads the drop target and the dropped paths from ctx and forwards them.
+// handleDrop đọc vùng nhận và các đường dẫn file được thả từ ctx rồi chuyển tiếp chúng.
 func (m *submoduleUploaderMng) handleDrop(ctx dropContext) {
 	target := ctx.DropTargetDetails()
 	if target == nil {
@@ -45,8 +45,8 @@ func (m *submoduleUploaderMng) handleDrop(ctx dropContext) {
 	m.dropFiles(event, attrs["data-tab-id"], ctx.DroppedFiles())
 }
 
-// dropFiles expands the dropped paths and emits the result as event. An empty tabID
-// (a drop outside a tab) is ignored.
+// dropFiles mở rộng các đường dẫn được thả rồi phát kết quả thành sự kiện. Bỏ qua tabID rỗng
+// (thao tác thả bên ngoài tab).
 func (m *submoduleUploaderMng) dropFiles(event, tabID string, dropped []string) {
 	if tabID == "" {
 		return
@@ -54,8 +54,7 @@ func (m *submoduleUploaderMng) dropFiles(event, tabID string, dropped []string) 
 	m.app.Event.Emit(event, buildFilesDropped(tabID, dropped))
 }
 
-// buildFilesDropped expands paths (folders included) into groups of files, with the
-// limits the frontend must apply.
+// buildFilesDropped mở rộng đường dẫn (bao gồm thư mục) thành các nhóm file cùng giới hạn frontend cần áp dụng.
 func buildFilesDropped(tabID string, paths []string) models.FilesDroppedOutput {
 	res := expandDropped(paths)
 	return models.FilesDroppedOutput{
@@ -72,13 +71,13 @@ func buildFilesDropped(tabID string, paths []string) models.FilesDroppedOutput {
 	}
 }
 
-// pickFiles opens the native file dialog (multiple files) and returns the chosen files
-// as groups with their limits, sorted by file name. If the user cancels, Body is empty
-// (no groups) and Result stays true. The dialog blocks until closed, so it has no timeout.
+// pickFiles mở hộp thoại của hệ điều hành để chọn nhiều file rồi trả các file đã chọn theo nhóm, kèm giới hạn,
+// sắp xếp theo tên file. Nếu người dùng hủy, Body rỗng (không có nhóm) và Result vẫn là true. Hộp thoại chặn
+// cho đến khi đóng nên không đặt timeout.
 func (m *submoduleUploaderMng) pickFiles(ctx context.Context) models.Output[models.FilesDroppedOutput] {
 	output := models.NewOutput[models.FilesDroppedOutput]()
 	if ctx.Err() != nil {
-		// Canceled by the frontend: fail silently, nobody waits for the result.
+		// Frontend đã hủy: dừng im lặng vì không còn bên nào chờ kết quả.
 		return output.ThrowError()
 	}
 	paths, err := m.pickPaths()
@@ -93,7 +92,7 @@ func (m *submoduleUploaderMng) pickFiles(ctx context.Context) models.Output[mode
 	if len(paths) == 0 {
 		return output
 	}
-	// The dialog doesn't guarantee an order, so sort for a stable list.
+	// Hộp thoại không bảo đảm thứ tự nên cần sắp xếp để danh sách luôn ổn định.
 	slices.SortFunc(paths, func(a, b string) int {
 		byName := strings.Compare(strings.ToLower(filepath.Base(a)), strings.ToLower(filepath.Base(b)))
 		if byName != 0 {

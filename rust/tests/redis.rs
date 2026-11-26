@@ -28,7 +28,7 @@ fn expected(n: usize) -> Vec<String> {
 }
 
 redis! {
-    // ---- open / close ----
+    // ---- mở / đóng ----
 
     fn open_pings_and_close_makes_the_connection_unknown(s: &Server) {
         let r = call("open", s.params());
@@ -93,7 +93,7 @@ redis! {
         assert!(t0.elapsed() < Duration::from_secs(5), "{:?}", t0.elapsed());
     }
 
-    // ---- database ----
+    // ---- cơ sở dữ liệu ----
 
     fn the_database_param_selects_the_db_and_empty_means_db_0(s: &Server) {
         let db_of = |c: &Conn| c.text("CLIENT INFO").split(' ').find_map(|f| f.strip_prefix("db=")).unwrap().to_owned();
@@ -287,7 +287,7 @@ redis! {
         assert!(info.lines().count() > 3);
     }
 
-    // ---- nhiều lệnh trong một request ----
+    // ---- nhiều lệnh trong một yêu cầu ----
 
     fn several_lines_run_in_order_one_statement_each(s: &Server) {
         let c = s.conn();
@@ -557,7 +557,7 @@ redis! {
         // Đọc hết cursor mới rồi fetch lại.
         assert_eq!(ok(&c.fetch_page(cursor2, 100, MAX_BYTES))["done"], true);
         assert_eq!(err_code(&c.fetch(cursor2)), "cursorNotFound");
-        // Fetch khi chưa có cursor nào.
+        // Gọi Fetch khi chưa có cursor nào.
         assert_eq!(err_code(&c.fetch(1)), "cursorNotFound");
     }
 
@@ -706,7 +706,7 @@ BLPOP {k} 0"));
         }
     }
 
-    // ---- method chỉ SQLite có ----
+    // ---- phương thức chỉ SQLite có ----
 
     fn schema_methods_are_invalid_request_for_redis(s: &Server) {
         let c = s.conn();
@@ -722,7 +722,7 @@ BLPOP {k} 0"));
         assert_eq!(c.text("PING"), "PONG");
     }
 
-    // ---- nhiều connection ----
+    // ---- nhiều kết nối ----
 
     fn connections_are_isolated_and_closing_one_does_not_affect_another(s: &Server) {
         let a = s.conn();

@@ -4,7 +4,7 @@ type StatusDotProps = {
   connected: boolean;
 };
 
-/** Connection status dot, same colors as the profile cards: connected = green, disconnected = red. */
+/** Chấm trạng thái kết nối, dùng cùng màu với thẻ profile: xanh khi đã kết nối, đỏ khi mất kết nối. */
 function StatusDot({ connected }: StatusDotProps) {
   return (
     <ColorSwatch

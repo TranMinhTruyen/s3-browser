@@ -15,7 +15,7 @@ const SEP = '\u001f';
 const mainSchema = { name: 'main', tables: ['users'], views: ['v1'], indexes: [], triggers: [] };
 const TOP = `s1${SEP}${SEP}main`;
 
-/** A GetSchemaTree call that settles when the test says so. */
+/** Lời gọi GetSchemaTree chỉ hoàn tất khi kiểm thử cho phép. */
 const deferred = () => {
   let resolve!: (value: unknown) => void;
   let signal!: AbortSignal;

@@ -2,24 +2,24 @@
 
 set -euo pipefail
 
-# Project root = parent of the folder holding this script (setup/),
-# so the script works no matter which directory you run it from.
+# Thư mục gốc dự án là thư mục cha của nơi chứa script này (setup/),
+# nhờ đó có thể chạy script từ bất kỳ thư mục nào.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Minimum Go version required by go.mod.
+# Phiên bản Go tối thiểu theo go.mod.
 GO_MIN_VERSION="1.27"
 WAILS3_VERSION="${WAILS3_VERSION:-latest}"
 SQLC_VERSION="${SQLC_VERSION:-latest}"
 PACKAGE_MANAGER="${PACKAGE_MANAGER:-bun}"
-# Set to 0 to skip the knowledge graph (graphify-out/), the Docker test containers (test-env/)
-# or the Playwright E2E setup (browser + server-mode build used by `bun run e2e`).
+# Đặt thành 0 để bỏ qua đồ thị tri thức (graphify-out/), các container Docker phục vụ test (test-env/)
+# hoặc bước thiết lập Playwright E2E (trình duyệt + bản build chế độ server dùng bởi `bun run e2e`).
 SETUP_GRAPHIFY="${SETUP_GRAPHIFY:-1}"
 SETUP_TEST_ENV="${SETUP_TEST_ENV:-1}"
 SETUP_E2E="${SETUP_E2E:-1}"
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Hàm trợ giúp
 # ---------------------------------------------------------------------------
 detect_os() {
   case "$(uname -s)" in
@@ -38,12 +38,12 @@ detect_linux_pkg_mgr() {
   fi
 }
 
-# Compare two dotted versions: returns 0 if $1 >= $2.
+# So sánh hai phiên bản dạng các số cách nhau bằng dấu chấm: trả về 0 nếu $1 >= $2.
 version_ge() {
   [[ "$(printf '%s\n%s\n' "$2" "$1" | sort -V | head -n1)" == "$2" ]]
 }
 
-# Install a package with winget (Windows). Extra args are passed through.
+# Cài package bằng winget (Windows). Các đối số bổ sung được truyền tiếp.
 winget_install() {
   local id="$1"; shift
   if ! command -v winget >/dev/null 2>&1; then
@@ -55,7 +55,7 @@ winget_install() {
 }
 
 require_go() {
-  # Default install folder of the Go MSI; not on PATH of this shell right after install.
+  # Thư mục cài mặc định của Go MSI; chưa có trong PATH của shell hiện tại ngay sau khi cài.
   [[ "$(detect_os)" == "windows" ]] && export PATH="/c/Program Files/Go/bin:$PATH"
 
   if ! command -v go >/dev/null 2>&1; then
@@ -82,8 +82,8 @@ require_go() {
   fi
 }
 
-# Make sure $GOBIN (or $GOPATH/bin) is on PATH for this session, so tools
-# installed with `go install` are callable right away.
+# Đảm bảo $GOBIN (hoặc $GOPATH/bin) có trong PATH của phiên này để gọi được ngay các công cụ
+# vừa cài bằng `go install`.
 ensure_gobin_path() {
   local gobin
   gobin="$(go env GOBIN)"
@@ -97,7 +97,7 @@ ensure_gobin_path() {
 }
 
 # ---------------------------------------------------------------------------
-# 1. Wails v3 CLI (wails3) - also provides the built-in Task runner
+# 1. CLI Wails v3 (wails3) - đồng thời cung cấp Task runner tích hợp
 # ---------------------------------------------------------------------------
 install_wails_cli() {
   require_go
@@ -120,7 +120,7 @@ install_wails_cli() {
 }
 
 # ---------------------------------------------------------------------------
-# 2. sqlc CLI (generates internal/modules/*/sqlc from queries + schemas)
+# 2. CLI sqlc (sinh internal/modules/*/sqlc từ truy vấn và schema)
 # ---------------------------------------------------------------------------
 install_sqlc() {
   ensure_gobin_path
@@ -131,7 +131,7 @@ install_sqlc() {
   fi
 
   echo "==> Installing sqlc ($SQLC_VERSION)..."
-  # CGO-free build works on every OS without a C toolchain.
+  # Bản build không dùng CGO chạy trên mọi hệ điều hành mà không cần bộ công cụ C.
   CGO_ENABLED=0 go install "github.com/sqlc-dev/sqlc/cmd/sqlc@$SQLC_VERSION"
   ensure_gobin_path
 
@@ -143,7 +143,7 @@ install_sqlc() {
 }
 
 # ---------------------------------------------------------------------------
-# 3. bun (frontend package manager - see frontend/package.json packageManager)
+# 3. bun (trình quản lý package frontend - xem packageManager trong frontend/package.json)
 # ---------------------------------------------------------------------------
 install_bun() {
   [[ "$PACKAGE_MANAGER" != "bun" ]] && return 0
@@ -173,10 +173,10 @@ install_bun() {
 }
 
 # ---------------------------------------------------------------------------
-# 4. Webview runtime dependency per OS
+# 4. Phụ thuộc runtime WebView theo từng hệ điều hành
 # ---------------------------------------------------------------------------
 install_webview_windows() {
-  # WebView2 Runtime ships pre-installed on modern Win10/11, but check anyway.
+  # WebView2 Runtime được cài sẵn trên Windows 10/11 hiện đại, nhưng vẫn kiểm tra lại.
   local client_id="{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}"
   local reg_path="HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\EdgeUpdate\\Clients\\$client_id"
   local installed="0"
@@ -205,7 +205,7 @@ install_webview_windows() {
 }
 
 install_webview_linux() {
-  # Wails v3 targets GTK3 + WebKitGTK 4.1 (4.0 only on older distros).
+  # Wails v3 cần GTK3 + WebKitGTK 4.1 (chỉ dùng 4.0 trên các bản phân phối cũ).
   local pkg_mgr
   pkg_mgr="$(detect_linux_pkg_mgr)"
 
@@ -255,9 +255,9 @@ install_webview() {
 }
 
 # ---------------------------------------------------------------------------
-# 5. Rust toolchain for the native DB library (rust/ -> s3b_db.dll, Windows only)
+# 5. Bộ công cụ Rust cho thư viện DB native (rust/ -> s3b_db.dll, chỉ dành cho Windows)
 # ---------------------------------------------------------------------------
-# The MSVC target links with link.exe from the VS Build Tools (C++ workload).
+# Target MSVC liên kết bằng link.exe trong VS Build Tools (workload C++).
 has_msvc_build_tools() {
   local vswhere="/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe"
   [[ -x "$vswhere" ]] && [[ -n "$("$vswhere" -latest -products '*' \
@@ -270,7 +270,7 @@ install_msvc_build_tools() {
     return
   fi
 
-  # C++ workload = MSVC compiler/linker + Windows SDK. Takes a while; UAC prompt asks for admin.
+  # Workload C++ gồm compiler/linker MSVC và Windows SDK. Có thể mất thời gian; UAC sẽ yêu cầu quyền quản trị.
   winget_install Microsoft.VisualStudio.BuildTools \
     --override "--quiet --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
 
@@ -290,7 +290,7 @@ setup_rust() {
 
   install_msvc_build_tools
 
-  # rustup installs cargo here, but it is not always on PATH (e.g. Git Bash).
+  # rustup cài cargo tại đây nhưng đường dẫn này không phải lúc nào cũng có trong PATH (ví dụ Git Bash).
   export PATH="$HOME/.cargo/bin:$PATH"
   if ! command -v rustup >/dev/null 2>&1; then
     echo "==> rustup not found, installing..."
@@ -308,24 +308,24 @@ setup_rust() {
     exit 1
   fi
 
-  # Installs the channel + target pinned in rust/rust-toolchain.toml, then downloads crates (Cargo.lock).
+  # Cài channel và target được ghim trong rust/rust-toolchain.toml, sau đó tải các crate (Cargo.lock).
   echo "==> Installing Rust toolchain from rust/rust-toolchain.toml..."
   (cd "$PROJECT_ROOT/rust" && rustup toolchain install && cargo --version && cargo fetch)
 }
 
 # ---------------------------------------------------------------------------
-# 6. graphify knowledge graph (graphify-out/, AST only, no LLM / API cost)
+# 6. Đồ thị tri thức graphify (graphify-out/, chỉ phân tích AST, không tốn chi phí LLM/API)
 # ---------------------------------------------------------------------------
 setup_graphify() {
   if ! command -v graphify >/dev/null 2>&1; then
     echo "==> graphify not found, installing (Python package graphifyy)..."
-    # Windows: prefer uv (installed via winget, brings its own Python). A bare "python"
-    # there may be the Microsoft Store stub, which fails instead of installing.
+    # Windows: ưu tiên uv (cài qua winget và đi kèm Python riêng). Lệnh "python" thông thường
+    # có thể trỏ tới placeholder của Microsoft Store, khiến quá trình chạy lỗi thay vì cài đặt.
     if [[ "$(detect_os)" == "windows" ]] && ! command -v uv >/dev/null 2>&1 && command -v winget >/dev/null 2>&1; then
       winget_install astral-sh.uv
       export PATH="$HOME/AppData/Local/Microsoft/WinGet/Links:$PATH"
     fi
-    # uv tool / pipx put the graphify command here.
+    # uv tool / pipx đặt lệnh graphify tại đây.
     export PATH="$HOME/.local/bin:$PATH"
 
     if command -v uv >/dev/null 2>&1; then
@@ -350,14 +350,14 @@ setup_graphify() {
 }
 
 # ---------------------------------------------------------------------------
-# 7. Docker test containers (see test-env/README.txt)
+# 7. Container Docker phục vụ test (xem test-env/README.txt)
 # ---------------------------------------------------------------------------
-# Docker Desktop on Windows (winget); other OS: install Docker yourself. Starts the engine and waits for it.
+# Docker Desktop trên Windows (winget); hệ điều hành khác cần tự cài Docker. Khởi động engine rồi chờ sẵn sàng.
 ensure_docker() {
   if [[ "$(detect_os)" == "windows" ]]; then
     export PATH="/c/Program Files/Docker/Docker/resources/bin:$PATH"
     if ! command -v docker >/dev/null 2>&1; then
-      # Needs WSL2; Windows may ask for a restart before the engine can run.
+      # Cần WSL2; Windows có thể yêu cầu khởi động lại trước khi engine chạy được.
       winget_install Docker.DockerDesktop || return 1
     fi
     if ! docker info >/dev/null 2>&1; then
@@ -373,7 +373,7 @@ ensure_docker() {
   command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1
 }
 
-# Wait until a one-shot init container exits; fail if it exits non-zero.
+# Chờ container khởi tạo chạy một lần kết thúc; báo lỗi nếu mã thoát khác 0.
 wait_init() {
   local name="$1" code
   echo "    waiting for $name..."
@@ -395,8 +395,8 @@ setup_test_env() {
 
   cd "$env_dir"
 
-  # One command for every S3 server and database: certificates if missing (needs openssl), then
-  # `docker compose up -d --wait`. Without openssl only the stacks that do not mount certs/ are started.
+  # Một lệnh khởi chạy mọi máy chủ S3 và database: tạo chứng chỉ nếu chưa có (cần openssl), sau đó chạy
+  # `docker compose up -d --wait`. Nếu thiếu openssl thì chỉ khởi chạy các stack không mount cert/.
   if [[ -f certs/ca.pem ]] || command -v openssl >/dev/null 2>&1; then
     echo "==> Starting the test environment (S3 servers + databases, the first pull takes a few minutes)..."
     sh scripts/test-env.sh up || echo "WARNING: some test containers did not start, see: docker compose ps -a"
@@ -413,24 +413,24 @@ setup_test_env() {
 }
 
 # ---------------------------------------------------------------------------
-# 8. Playwright E2E (frontend/e2e, see README "End-to-end tests")
+# 8. Playwright E2E (frontend/e2e, xem README mục "End-to-end tests")
 # ---------------------------------------------------------------------------
 setup_e2e() {
   if [[ "$(detect_os)" != "windows" ]]; then
     echo "==> Skipping E2E: the server-mode build needs s3b_db.dll (Windows only)."
     return 0
   fi
-  # Node runs the docs scripts that test-env/mem-bench.ps1 calls (node scripts/mem-ui.mjs).
+  # Node chạy các script mà test-env/mem-bench.ps1 gọi (node scripts/mem-ui.mjs).
   export PATH="/c/Program Files/nodejs:$PATH"
   if ! command -v node >/dev/null 2>&1; then
-    # winget_install exits the script when winget is missing, so check first: Node is optional here.
+    # winget_install sẽ thoát script nếu thiếu winget nên kiểm tra trước: Node là tùy chọn ở đây.
     if command -v winget >/dev/null 2>&1; then
       winget_install OpenJS.NodeJS.LTS || echo "WARNING: Node.js install failed (needed by mem-bench)."
     else
       echo "WARNING: Node.js not found and no winget: install Node.js LTS for mem-bench."
     fi
   fi
-  # One Chromium for frontend/ and docs/ (same Playwright version): e2e, qa evidence, shots.mjs, mem-bench.
+  # Dùng chung một Chromium cho frontend/ và docs/ (cùng phiên bản Playwright): e2e, bằng chứng QA, shots.mjs, mem-bench.
   echo "==> Installing Chromium for Playwright..."
   (cd "$PROJECT_ROOT/frontend" && node_modules/.bin/playwright install chromium)
   echo "==> Building the server-mode app for E2E (bun run e2e:build)..."
@@ -438,7 +438,7 @@ setup_e2e() {
 }
 
 # ---------------------------------------------------------------------------
-# Main
+# Luồng chính
 # ---------------------------------------------------------------------------
 echo "==> Project root: $PROJECT_ROOT"
 echo "==> Detected OS: $(detect_os)"
@@ -477,12 +477,12 @@ echo "==> Installing docs dependencies (user guide PDF, screenshots, evidence/ar
 
 echo
 echo "==> Generating TypeScript IPC bindings..."
-# -tags=wailsgen is required: without it result models in models/db become `any`.
+# Bắt buộc dùng -tags=wailsgen: nếu không, các model kết quả trong models/db sẽ thành `any`.
 wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts
 
 echo
 echo "==> Building the application (frontend + Go binary)..."
-# `wails3 task build` re-runs the frontend build and binding generation as deps.
+# `wails3 task build` chạy lại build frontend và sinh bindings như các bước phụ thuộc.
 wails3 task build PACKAGE_MANAGER="$PACKAGE_MANAGER"
 
 if [[ "$SETUP_GRAPHIFY" == "1" ]]; then
@@ -497,7 +497,7 @@ fi
 
 if [[ "$SETUP_TEST_ENV" == "1" ]]; then
   echo
-  # A failing stack (e.g. port already in use) must not fail the whole setup.
+  # Một stack lỗi (ví dụ cổng đã được sử dụng) không được làm hỏng toàn bộ quá trình thiết lập.
   setup_test_env || echo "WARNING: test-env setup did not finish, see test-env/README.txt."
 fi
 

@@ -1,4 +1,4 @@
-/** Ids of the TableStructure tabs that hold uncommitted row changes; closing such a tab asks for confirmation. */
+/** ID của các tab TableStructure đang có thay đổi hàng chưa lưu; đóng những tab này sẽ yêu cầu xác nhận. */
 const dirtyTabs = new Set<string>();
 
 export const setTableDirty = (tabId: string, dirty: boolean) => {

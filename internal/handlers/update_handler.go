@@ -6,39 +6,39 @@ import (
 	"context"
 )
 
-// UpdateHandler is the Wails service for the app self-update.
+// UpdateHandler là service Wails quản lý việc tự cập nhật ứng dụng.
 type UpdateHandler struct {
 	update *update.Module
 }
 
-// NewUpdateHandler creates the update handler.
+// NewUpdateHandler tạo handler cập nhật.
 func NewUpdateHandler(update *update.Module) *UpdateHandler {
 	return &UpdateHandler{
 		update: update,
 	}
 }
 
-// GetUpdateState returns the current update state.
+// GetUpdateState trả về trạng thái cập nhật hiện tại.
 func (h *UpdateHandler) GetUpdateState() models.Output[models.UpdateStateOutput] {
 	return h.update.GetState()
 }
 
-// CheckUpdate looks for a newer release when the user asks.
+// CheckUpdate tìm bản phát hành mới hơn khi người dùng yêu cầu.
 func (h *UpdateHandler) CheckUpdate(ctx context.Context) models.Output[models.UpdateStateOutput] {
 	return h.update.Check(ctx)
 }
 
-// DownloadUpdate starts downloading the new release and returns at once.
+// DownloadUpdate bắt đầu tải bản phát hành mới xuống rồi trả về ngay.
 func (h *UpdateHandler) DownloadUpdate() models.Output[models.UpdateStateOutput] {
 	return h.update.Download()
 }
 
-// SetUpdateOptions applies the beta and auto update switches to the updater now, without saving settings.
+// SetUpdateOptions áp dụng ngay các tùy chọn beta và tự động cập nhật cho bộ cập nhật, không lưu cài đặt.
 func (h *UpdateHandler) SetUpdateOptions(betaUpdate, autoUpdate bool) models.Output[models.UpdateStateOutput] {
 	return h.update.SetOptions(betaUpdate, autoUpdate)
 }
 
-// InstallUpdate runs the downloaded installer and quits the app.
+// InstallUpdate chạy bộ cài đã tải xuống rồi thoát ứng dụng.
 func (h *UpdateHandler) InstallUpdate() models.Output[models.UpdateStateOutput] {
 	return h.update.Install()
 }

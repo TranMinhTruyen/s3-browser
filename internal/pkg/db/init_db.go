@@ -1,4 +1,4 @@
-// Package db opens the SQLite database and runs the goose migrations.
+// Package db mở cơ sở dữ liệu SQLite và chạy các migration goose.
 package db
 
 import (
@@ -8,13 +8,13 @@ import (
 	"log"
 	"path/filepath"
 
-	// Registers the pure-Go "sqlite" database/sql driver (modernc).
+	// Đăng ký database/sql driver "sqlite" thuần Go (modernc).
 	_ "modernc.org/sqlite"
 )
 
-// InitDB opens <data dir>/data.db (WAL, foreign keys on) and pings it.
-// It exits the process on failure: nothing in the app works without the database.
-// The backup before a migration is made by RunMigrations.
+// InitDB mở <thư mục dữ liệu>/data.db (bật WAL và khóa ngoại) rồi ping cơ sở dữ liệu.
+// Nếu thất bại thì thoát tiến trình vì ứng dụng không thể hoạt động khi thiếu cơ sở dữ liệu.
+// RunMigrations tạo bản sao lưu trước khi migration.
 func InitDB(ctx context.Context, appName string) *sql.DB {
 	appDir, err := portable.DataDir(appName)
 	if err != nil {
@@ -33,7 +33,7 @@ func InitDB(ctx context.Context, appName string) *sql.DB {
 		log.Fatalf("failed to open db at %s: %v", dbPath, err)
 	}
 
-	// One connection avoids SQLITE_BUSY between concurrent writers.
+	// Chỉ dùng một kết nối để tránh SQLITE_BUSY giữa các thao tác ghi đồng thời.
 	db.SetMaxOpenConns(1)
 
 	if err := db.PingContext(ctx); err != nil {

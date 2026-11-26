@@ -12,27 +12,27 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// errNotConnected means the profile of a request has no main connection.
+// errNotConnected cho biết hồ sơ trong yêu cầu chưa có kết nối chính.
 var errNotConnected = errors.New("profile is not connected")
 
-// errTabClosed means the tab was closed while its connection was opening.
+// errTabClosed cho biết tab đã đóng trong lúc kết nối đang được mở.
 var errTabClosed = errors.New("tab was closed")
 
-// mainConn is the connection of a connected profile, used for the object tree and table info. It keeps what
-// the tab connections need to open the same file.
+// mainConn là kết nối của hồ sơ đã kết nối, dùng cho cây đối tượng và thông tin bảng. Giá trị này lưu dữ liệu cần thiết
+// để các kết nối tab mở cùng một file.
 type mainConn struct {
 	connId   uint64
 	path     string
 	readOnly bool
 }
 
-// tabConn is the connection of one tab; the first query of the tab opens it.
+// tabConn là kết nối của một tab; truy vấn đầu tiên trong tab sẽ mở kết nối này.
 type tabConn struct {
 	profileId string
 	connId    uint64
 }
 
-// submoduleConnMng owns the connections: one main connection per connected profile and one per tab.
+// submoduleConnMng quản lý các kết nối: mỗi hồ sơ đã kết nối có một kết nối chính và mỗi tab có một kết nối riêng.
 type submoduleConnMng struct {
 	logger *slog.Logger
 	app    *application.App
@@ -42,15 +42,15 @@ type submoduleConnMng struct {
 	mu    sync.RWMutex
 	mains map[string]mainConn
 	tabs  map[string]tabConn
-	// opening holds the tab connections being opened, per tab; only in-flight opens, so it stays small.
+	// opening lưu các kết nối tab đang được mở, theo từng tab; chỉ lưu thao tác đang chạy nên danh sách luôn nhỏ.
 	opening map[string]map[*pendingOpen]struct{}
 }
 
-// pendingOpen is one tab connection being opened; closeTab marks it so the open drops what it opened.
-// closed is only read and written under submoduleConnMng.mu.
+// pendingOpen là một kết nối tab đang được mở; closeTab đánh dấu để thao tác mở tự đóng kết nối vừa tạo.
+// Chỉ đọc và ghi closed khi đang giữ submoduleConnMng.mu.
 type pendingOpen struct{ closed bool }
 
-// newSubmoduleConnMng creates an empty connection set.
+// newSubmoduleConnMng tạo kho kết nối rỗng.
 func newSubmoduleConnMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -69,38 +69,38 @@ func newSubmoduleConnMng(
 	}
 }
 
-// openParams are the params of the native "open" method.
+// openParams là tham số của phương thức native "open".
 type openParams struct {
 	Driver   string `json:"driver"`
 	Path     string `json:"path"`
 	ReadOnly bool   `json:"readOnly"`
 }
 
-// connIdResult is the result of the native "open" method.
+// connIdResult là kết quả của phương thức native "open".
 type connIdResult struct {
 	ConnId uint64 `json:"connId"`
 }
 
-// connParams are the params of the native methods that only need a connection.
+// connParams là tham số của các phương thức native chỉ cần kết nối.
 type connParams struct {
 	ConnId uint64 `json:"connId"`
 }
 
-// tableInfoParams are the params of the native "tableInfo" method.
+// tableInfoParams là tham số của phương thức native "tableInfo".
 type tableInfoParams struct {
 	ConnId uint64 `json:"connId"`
 	Schema string `json:"schema"`
 	Table  string `json:"table"`
 }
 
-// open opens a connection to the SQLite file.
+// open mở kết nối đến file SQLite.
 func (m *submoduleConnMng) open(ctx context.Context, path string, readOnly bool) (uint64, error) {
 	res, err := callNative[connIdResult](ctx, m.native, "open", openParams{"sqlite", path, readOnly})
 	return res.ConnId, err
 }
 
-// closeConns closes connections that are already out of the maps. Errors are only logged: there is nothing
-// to retry. It does not follow the app context, so it still runs at shutdown. Call it without the lock held.
+// closeConns đóng các kết nối đã được gỡ khỏi map. Lỗi chỉ được ghi log vì không có thao tác nào để thử lại.
+// Hàm không phụ thuộc context ứng dụng nên vẫn chạy khi tắt ứng dụng. Gọi hàm khi không giữ khóa.
 func (m *submoduleConnMng) closeConns(connIds ...uint64) {
 	for _, id := range connIds {
 		ctx, cancel := context.WithTimeout(context.Background(), metaTimeout)
@@ -111,7 +111,7 @@ func (m *submoduleConnMng) closeConns(connIds ...uint64) {
 	}
 }
 
-// connect opens the main connection of the profile. A connected profile is left as it is.
+// connect mở kết nối chính của hồ sơ. Nếu hồ sơ đã kết nối thì giữ nguyên trạng thái hiện tại.
 func (m *submoduleConnMng) connect(ctx context.Context, profileId string) models.Output[bool] {
 	output := models.NewOutput[bool]()
 
@@ -131,7 +131,7 @@ func (m *submoduleConnMng) connect(ctx context.Context, profileId string) models
 		}
 		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Db, DBE012, err.Error()))
 	}
-	// Only SQLite has a native driver so far.
+	// Hiện tại chỉ SQLite có native driver.
 	if profile.Provider != providerSqlite {
 		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Db, DBE001, "unsupported provider"))
 	}
@@ -161,7 +161,7 @@ func (m *submoduleConnMng) connect(ctx context.Context, profileId string) models
 	return output
 }
 
-// disconnect closes the main connection and the tab connections of the profile.
+// disconnect đóng kết nối chính và các kết nối tab của hồ sơ.
 func (m *submoduleConnMng) disconnect(profileId string) models.Output[bool] {
 	output := models.NewOutput[bool]()
 	m.closeConns(m.removeProfile(profileId)...)
@@ -169,7 +169,7 @@ func (m *submoduleConnMng) disconnect(profileId string) models.Output[bool] {
 	return output
 }
 
-// removeProfile takes the connections of the profile out of the maps and returns their ids to close.
+// removeProfile gỡ các kết nối của hồ sơ khỏi map và trả về id của chúng để đóng.
 func (m *submoduleConnMng) removeProfile(profileId string) []uint64 {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -188,7 +188,7 @@ func (m *submoduleConnMng) removeProfile(profileId string) []uint64 {
 	return ids
 }
 
-// closeTab closes the connection of the tab.
+// closeTab đóng kết nối của tab.
 func (m *submoduleConnMng) closeTab(tabId string) models.Output[bool] {
 	output := models.NewOutput[bool]()
 
@@ -207,7 +207,7 @@ func (m *submoduleConnMng) closeTab(tabId string) models.Output[bool] {
 	return output
 }
 
-// closeAll closes every connection.
+// closeAll đóng mọi kết nối.
 func (m *submoduleConnMng) closeAll() {
 	m.mu.Lock()
 	ids := make([]uint64, 0, len(m.mains)+len(m.tabs))
@@ -224,7 +224,7 @@ func (m *submoduleConnMng) closeAll() {
 	m.closeConns(ids...)
 }
 
-// notConnectedMessage is the DBE014 message of the profile, named by its saved name (the id if unreadable).
+// notConnectedMessage tạo thông báo DBE014 cho hồ sơ, dùng tên đã lưu (hoặc id nếu không đọc được tên).
 func (m *submoduleConnMng) notConnectedMessage(profileId string) models.Message {
 	name := profileId
 	if profile, err := m.q.SelectDbProfileById(m.app.Context(), profileId); err == nil {
@@ -233,12 +233,12 @@ func (m *submoduleConnMng) notConnectedMessage(profileId string) models.Message 
 	return models.NewParamsMessage(cnst.MessageTypeError, cnst.Db, DBE014, "", map[string]any{"name": name})
 }
 
-// closedMessage is the DBE004 message.
+// closedMessage tạo thông báo DBE004.
 func closedMessage() models.Message {
 	return models.NewMessage(cnst.MessageTypeError, cnst.Db, DBE004, "")
 }
 
-// mainOf returns the main connection of the profile.
+// mainOf trả về kết nối chính của hồ sơ.
 func (m *submoduleConnMng) mainOf(profileId string) (mainConn, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -246,7 +246,7 @@ func (m *submoduleConnMng) mainOf(profileId string) (mainConn, bool) {
 	return main, ok
 }
 
-// tabOf returns the connection of the tab.
+// tabOf trả về kết nối của tab.
 func (m *submoduleConnMng) tabOf(tabId string) (tabConn, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -254,9 +254,9 @@ func (m *submoduleConnMng) tabOf(tabId string) (tabConn, bool) {
 	return tab, ok
 }
 
-// tabConnOf returns the connection id of the tab, opening it on the first use. A tab that moved to another
-// profile closes its old connection. errNotConnected means the profile has no main connection; errTabClosed
-// means the tab was closed meanwhile (the caller returns Result=false silently).
+// tabConnOf trả id kết nối của tab và mở kết nối ở lần dùng đầu tiên. Nếu tab chuyển sang hồ sơ khác, kết nối cũ bị đóng.
+// errNotConnected nghĩa là hồ sơ chưa có kết nối chính; errTabClosed nghĩa là tab đã đóng trong lúc chờ
+// (bên gọi trả Result=false mà không gửi thông báo).
 func (m *submoduleConnMng) tabConnOf(ctx context.Context, profileId, tabId string) (uint64, error) {
 	main, connected := m.mainOf(profileId)
 	if !connected {
@@ -307,7 +307,7 @@ func (m *submoduleConnMng) tabConnOf(ctx context.Context, profileId, tabId strin
 	return connId, nil
 }
 
-// schemaTree reads the object tree on the main connection.
+// schemaTree đọc cây đối tượng qua kết nối chính.
 func (m *submoduleConnMng) schemaTree(ctx context.Context, profileId string) models.Output[models.SchemaTreeOutput] {
 	output := models.NewOutput[models.SchemaTreeOutput]()
 
@@ -328,7 +328,7 @@ func (m *submoduleConnMng) schemaTree(ctx context.Context, profileId string) mod
 	return output
 }
 
-// tableInfo reads the structure of a table on the main connection.
+// tableInfo đọc cấu trúc bảng qua kết nối chính.
 func (m *submoduleConnMng) tableInfo(
 	ctx context.Context,
 	input models.TableInfoInput,

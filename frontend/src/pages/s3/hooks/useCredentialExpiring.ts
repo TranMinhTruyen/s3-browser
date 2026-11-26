@@ -10,16 +10,16 @@ import { showMfaCodeModal } from '@/components/modals/lazyModals';
 import i18n from '@/locales/i18n';
 import { useProfileStore } from '@/pages/s3/stores/profileStore';
 
-/** Signs in again with what the profile has saved (the user ran `aws sso login` first). */
+/** Đăng nhập lại bằng thông tin profile đã lưu (người dùng chạy `aws sso login` trước). */
 export const reauthConnection = (connectionId: string) =>
   callIPC(ReauthConnection, [connectionId, { authConfig: {}, authSecret: {} }]);
 
 const relogging = new Set<string>();
 
-/** Signs in again in the browser, then renews the credentials with the new sign-in (nothing happens if either fails). */
+/** Đăng nhập lại trong trình duyệt rồi gia hạn thông tin xác thực bằng phiên mới (không làm gì nếu một trong hai bước thất bại). */
 export const reloginOidc = async (connectionId: string) => {
   const profile = useProfileStore.getState().connectionProfiles[connectionId];
-  // The toast stays open, so a second click while the browser sign-in runs is ignored.
+  // Toast vẫn mở nên lần click thứ hai trong lúc trình duyệt đăng nhập sẽ bị bỏ qua.
   if (!profile || relogging.has(connectionId)) return;
   relogging.add(connectionId);
   try {
@@ -32,12 +32,12 @@ export const reloginOidc = async (connectionId: string) => {
 };
 
 /**
- * `assumeRole` asks for a new MFA code; `sso` shows the login command; `minioOidc` offers to sign in again;
- * any other method must connect again.
+ * `assumeRole` yêu cầu mã MFA mới; `sso` hiện lệnh đăng nhập; `minioOidc` cho phép đăng nhập lại;
+ * các phương thức khác cần kết nối lại.
  */
 export function onCredentialExpiring(data: CredentialExpiringOutput) {
   const { connectionId, profileName, authType, awsProfile, expiresAt } = data;
-  // One toast per connection, so a repeated event updates it instead of stacking.
+  // Mỗi kết nối chỉ có một toast; sự kiện lặp lại sẽ cập nhật toast đó thay vì xếp thêm.
   const id = `credential-expiring-${connectionId}`;
 
   if (authType === 'assumeRole') {
@@ -76,7 +76,7 @@ export function onCredentialExpiring(data: CredentialExpiringOutput) {
   }
 }
 
-/** Listens (once, mount it in `App`) to `bucket:credential-expiring` and tells the user how to renew. */
+/** Lắng nghe `bucket:credential-expiring` (chỉ một lần, mount trong `App`) và hướng dẫn người dùng gia hạn. */
 export function useCredentialExpiring() {
   useEffect(() => Events.On('bucket:credential-expiring', e => onCredentialExpiring(e.data)), []);
 }

@@ -6,38 +6,38 @@ import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
 import { applySettings, isUpdateOptionsChanged, normalizeSettings } from '@/common/utils/settingUtils';
 
 interface SettingState {
-  /** Values persisted in settings.json. */
+  /** Các giá trị được lưu trong settings.json. */
   saved: AppSettingValues;
-  /** Values in effect for this session (saved values plus Apply); lost when the app closes. */
+  /** Các giá trị đang áp dụng trong phiên này (giá trị đã lưu cộng với thay đổi được áp dụng); mất khi đóng ứng dụng. */
   applied: AppSettingValues;
-  /** Values being edited in the modal; theme, font and language are previewed live. */
+  /** Các giá trị đang chỉnh sửa trong modal; giao diện, phông chữ và ngôn ngữ được xem trước trực tiếp. */
   draft: AppSettingValues;
   autostartSupported: boolean;
 }
 
 interface SettingAction {
-  /** Loads settings.json and applies it; keeps the defaults when loading fails. */
+  /** Tải và áp dụng settings.json; giữ giá trị mặc định nếu tải thất bại. */
   load: () => Promise<void>;
-  /** Updates the draft and previews it; the update switches reach the updater at once (not saved). */
+  /** Cập nhật và xem trước bản nháp; các tùy chọn cập nhật được chuyển ngay cho trình cập nhật (chưa lưu). */
   setDraft: (patch: Partial<AppSettingValues>) => void;
-  /** Saves the draft; resolves true on success. */
+  /** Lưu bản nháp; trả về true nếu thành công. */
   save: () => Promise<boolean>;
-  /** Keeps the draft for this session only (not saved), but writes launchOnStartup at once; resolves true on success. */
+  /** Chỉ giữ bản nháp trong phiên này (không lưu), nhưng ghi launchOnStartup ngay; trả về true nếu thành công. */
   apply: () => Promise<boolean>;
-  /** Puts the draft back to the defaults (previewed, not saved). */
+  /** Đưa bản nháp về mặc định (được xem trước nhưng chưa lưu). */
   resetDraft: () => void;
-  /** Drops the draft and restores the applied values. */
+  /** Bỏ bản nháp và khôi phục các giá trị đang áp dụng. */
   revert: () => void;
-  /** Clears the store back to the defaults and drops pending loads (used on app reset). */
+  /** Đặt store về mặc định và loại bỏ các lượt tải đang chờ (dùng khi reset ứng dụng). */
   reset: () => boolean;
 }
 
 const SCOPE = 'Setting';
 
-/** Updater calls run one after another, so toggling switches fast cannot make them arrive out of order. */
+/** Các lệnh gọi trình cập nhật chạy lần lượt để thao tác bật/tắt nhanh không làm chúng đến sai thứ tự. */
 let updaterQueue: Promise<unknown> = Promise.resolve();
 
-/** Sends both update switches to the updater (not saved) when `next` changes them compared to `previous`. */
+/** Gửi cả hai tùy chọn cập nhật tới trình cập nhật (chưa lưu) khi `next` khác `previous`. */
 const syncUpdater = (previous: AppSettingValues, next: AppSettingValues) => {
   if (!isUpdateOptionsChanged(previous, next)) {
     return;
@@ -52,7 +52,7 @@ const syncUpdater = (previous: AppSettingValues, next: AppSettingValues) => {
     .catch(() => null);
 };
 
-/** App settings (theme, font, language, launch on startup). */
+/** Thiết lập ứng dụng (giao diện, phông chữ, ngôn ngữ, chạy khi khởi động). */
 export const useSettingStore = createAppStore<SettingState & SettingAction>((set, get) => {
   const setBoth = (values: AppSettingValues, action: string): Promise<void> => {
     set(
@@ -93,7 +93,7 @@ export const useSettingStore = createAppStore<SettingState & SettingAction>((set
       if (!output) {
         return false;
       }
-      // The backend may keep a different launchOnStartup (STE003), so follow what it returns.
+      // Backend có thể giữ launchOnStartup ở giá trị khác (STE003), nên dùng giá trị backend trả về.
       setBoth(normalizeSettings(output.settings), 'save');
       return true;
     },
@@ -102,12 +102,12 @@ export const useSettingStore = createAppStore<SettingState & SettingAction>((set
       const { draft, applied } = get();
       let launchOnStartup = draft.launchOnStartup;
       if (launchOnStartup !== applied.launchOnStartup) {
-        // launchOnStartup is registry state, so it is written now and Cancel cannot undo it.
+        // launchOnStartup là trạng thái trong registry nên được ghi ngay; Cancel không thể hoàn tác.
         const output = await callIPC(SetLaunchOnStartup, [launchOnStartup], { scope: `${SCOPE}/apply` });
         if (!output) {
           return false;
         }
-        // The backend may keep the old value (STE003), so follow what it returns.
+        // Backend có thể giữ giá trị cũ (STE003), nên dùng giá trị backend trả về.
         launchOnStartup = output.settings?.launchOnStartup === true;
       }
       set(

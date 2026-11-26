@@ -9,14 +9,14 @@ import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 import classes from '@/pages/s3/object/page.module.css';
 import { useTabListStore } from '@/pages/s3/stores/tabListStore';
 
-// Section layouts shared by the folder and file rows.
+// Bố cục phần dùng chung cho hàng thư mục và hàng file.
 const ICON_SECTION_STYLE = { flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } as const;
 const NAME_SECTION_STYLE = { flex: 1, minWidth: 0, display: 'flex', alignItems: 'center' } as const;
 const MENU_SECTION_STYLE = { ...ICON_SECTION_STYLE, minWidth: '3.5rem' } as const;
 const CHECKBOX_STYLES = { input: { cursor: 'pointer' } };
 const CHECKBOX_SECTION_STYLE = { ...ICON_SECTION_STYLE, cursor: 'pointer' } as const;
 
-/** Texts of a row, translated once by the list so rows do not subscribe to i18n. */
+/** Nội dung của một hàng, được danh sách dịch một lần để các hàng không phải đăng ký i18n. */
 export type ObjectItemLabels = {
   moreActions: string;
   download: string;
@@ -48,17 +48,17 @@ type ObjectRowProps = {
 
 const stopPropagation = (e: MouseEvent) => e.stopPropagation();
 
-/** Card layout of a row: leading icon section, truncated name and the "more actions" menu. */
+/** Bố cục thẻ của một hàng: phần biểu tượng đầu dòng, tên được cắt gọn và menu "thao tác khác". */
 const ObjectRow = memo(function ObjectRow(props: ObjectRowProps) {
   const { isFolder, isSelected, isDeleting, name, labels, onClick, onToggle, onClickDownload, onClickDelete } = props;
 
-  // A Menu is heavy and a list shows hundreds of rows: it is mounted only once the user opens it.
+  // Menu khá nặng và danh sách có thể có hàng trăm mục: chỉ mount menu khi người dùng mở.
   const [menuOpened, setMenuOpened] = useState(false);
 
   const onClickMoreActions = useCallback(() => setMenuOpened(true), []);
 
-  // The whole section toggles the selection (a click or Space on the checkbox bubbles up to it, so it fires once)
-  // and must not trigger the row click.
+  // Toàn bộ phần này bật/tắt lựa chọn (click hoặc nhấn Space trên checkbox nổi bọt lên đây nên chỉ chạy một lần)
+  // và không được kích hoạt thao tác click hàng.
   const onClickSection = useCallback(
     (e: MouseEvent) => {
       e.stopPropagation();
@@ -67,8 +67,8 @@ const ObjectRow = memo(function ObjectRow(props: ObjectRowProps) {
     [onToggle]
   );
 
-  // The button is remounted when the menu closes: give the focus back to it (not to body).
-  // On open the Menu moves the focus into its dropdown itself.
+  // Nút được mount lại khi menu đóng: trả tiêu điểm về nút (không chuyển sang body).
+  // Khi mở, Menu tự chuyển tiêu điểm vào danh sách thả xuống.
   const menuSectionRef = useRef<HTMLDivElement>(null);
   const wasOpened = useRef(false);
   useEffect(() => {
@@ -128,16 +128,16 @@ const ObjectRow = memo(function ObjectRow(props: ObjectRowProps) {
   );
 });
 
-/** One row of the object list: folder or file with selection and context actions. */
+/** Một hàng trong danh sách đối tượng: thư mục hoặc file, có lựa chọn và thao tác ngữ cảnh. */
 function ObjectItem(props: ObjectItemProps) {
   const { tabId, item, labels, onOpenDetail, onToggleSelect, onClickMenuButton, onClickDeleteFolder, onOpenFolder } =
     props;
 
-  // Subscribe to this row's own state only (a boolean), so toggling one row does not re-render the others.
+  // Chỉ theo dõi state riêng của hàng này (một giá trị boolean) để bật/tắt một hàng không làm các hàng khác render lại.
   const isSelected = useTabListStore(s => s.tabList[tabId]?.selectionItem[item.key] === true);
   const isDeleting = useTabListStore(s => s.tabList[tabId]?.deletingItems[item.key] === true);
 
-  // The confirmation is asked once, by ObjectListView.
+  // ObjectListView là nơi duy nhất hỏi xác nhận.
   const onClickDelete = useCallback(() => {
     if (item.isFolder) onClickDeleteFolder(item.key, item.name);
     else onClickMenuButton([item.key], 'delete');

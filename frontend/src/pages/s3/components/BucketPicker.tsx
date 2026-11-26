@@ -13,15 +13,15 @@ import ComboboxClearButton from '@/components/inputs/combobox/ComboboxClearButto
 import ComboboxOptions from '@/components/inputs/combobox/ComboboxOptions';
 import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 
-// Buckets fetched per page.
+// Số bucket tải mỗi trang.
 const BUCKET_PAGE_SIZE = 20;
-// Wait this long after the last keystroke before searching.
+// Chờ khoảng thời gian này sau lần nhấn phím cuối trước khi tìm kiếm.
 const SEARCH_DEBOUNCE_MS = 300;
 
 type BucketPickerProps = {
   connectionId?: string;
   profileName?: string;
-  // Selected bucket name.
+  // Tên bucket đang chọn.
   value: string | null;
   label?: string;
   disabled?: boolean;
@@ -30,8 +30,8 @@ type BucketPickerProps = {
 };
 
 /**
- * Dropdown that lists the buckets of a connection with server-side search (debounced) and "load more" paging.
- * Data is fetched when the dropdown opens and in-flight requests are aborted on close or keyword change.
+ * Danh sách thả xuống hiển thị bucket của kết nối, hỗ trợ tìm kiếm phía máy chủ (có debounce) và phân trang "tải thêm".
+ * Tải dữ liệu khi mở danh sách và hủy các yêu cầu đang chạy khi đóng danh sách hoặc đổi từ khóa.
  */
 function BucketPicker(props: BucketPickerProps) {
   const { connectionId, profileName, value, label, disabled, error, onChange } = props;
@@ -42,7 +42,7 @@ function BucketPicker(props: BucketPickerProps) {
   const [keyword, setKeyword] = useState('');
   const [debouncedKeyword] = useDebouncedValue(keyword.trim(), SEARCH_DEBOUNCE_MS);
   const [buckets, setBuckets] = useState<Bucket[]>([]);
-  // A bucket without a name cannot be picked (and has no React key), so it is not listed.
+  // Không thể chọn bucket không có tên (và cũng không có React key), nên không đưa vào danh sách.
   const namedBuckets = useMemo(() => buckets.filter(bucket => bucket.name), [buckets]);
   const [nextCursor, setNextCursor] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -66,7 +66,7 @@ function BucketPicker(props: BucketPickerProps) {
     return ctrl;
   }, []);
 
-  // Lists the buckets, or searches them when a keyword is applied. Both return the same shape.
+  // Liệt kê bucket hoặc tìm kiếm khi có từ khóa. Cả hai đều trả về cùng một cấu trúc dữ liệu.
   const fetchPage = useCallback(
     (cursor: string, signal: AbortSignal) => {
       if (!connectionId) return Promise.resolve(undefined);
@@ -96,15 +96,15 @@ function BucketPicker(props: BucketPickerProps) {
     setIsLoading(false);
   }, [fetchPage, startRequest]);
 
-  // Loads the first page when the dropdown opens and again when the applied keyword changes.
+  // Tải trang đầu khi danh sách mở và tải lại khi từ khóa đang áp dụng thay đổi.
   useEffect(() => {
     if (!opened) return;
-    // Fetching is the external sync here; the loading flag only marks the request as started.
+    // Việc tải dữ liệu là thao tác đồng bộ bên ngoài; cờ loading chỉ đánh dấu yêu cầu đã bắt đầu.
     // oxlint-disable-next-line react/set-state-in-effect
     loadFirstPage();
     return () => {
       requestCtrl.current?.abort();
-      // An aborted request never reaches its own setIsLoading(false).
+      // Yêu cầu bị hủy sẽ không chạy đến lệnh setIsLoading(false) của chính nó.
       setIsLoading(false);
     };
   }, [opened, loadFirstPage]);
@@ -126,7 +126,7 @@ function BucketPicker(props: BucketPickerProps) {
   const onSubmitOption = useCallback(
     async (name: string) => {
       closeDropdown();
-      // The access probe can be wrong (e.g. prefix-scoped policies), so warn and let the user decide.
+      // Kiểm tra quyền truy cập có thể không chính xác (ví dụ policy giới hạn theo tiền tố), nên cảnh báo để người dùng tự quyết định.
       const picked = namedBuckets.find(bucket => bucket.name === name);
       if (picked?.inaccessible || picked?.readOnly) {
         const confirmCode = picked.inaccessible ? 'C000007' : 'C000008';

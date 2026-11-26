@@ -15,7 +15,7 @@ type Options = {
   rangeExtractor?: (range: { startIndex: number; endIndex: number; overscan: number; count: number }) => number[];
 };
 
-// jsdom has no layout, so the virtualizers render every item unless a visible window is set.
+// jsdom không có layout nên virtualizer render mọi mục trừ khi đặt phạm vi hiển thị.
 const virtual = vi.hoisted(() => ({
   scrollToIndex: vi.fn(),
   rowWindow: null as [number, number] | null,
@@ -90,8 +90,8 @@ describe('DataGrid editable', () => {
   });
 
   describe('without edit (read-only, as before)', () => {
-    // Changed with the selection rework: a read-only grid is now a focus stop with row hooks so that cells, columns
-    // and rows can be selected and copied; it still has no editor and no edit items in the menu.
+    // Sau khi sửa cách chọn: grid chỉ đọc vẫn nhận focus và có handler trên hàng để chọn/sao chép ô, cột và hàng;
+    // grid vẫn không có editor và không có mục chỉnh sửa trong menu.
     it('is a focus stop with row hooks for the selection, shows plain cells and has no editor', () => {
       renderWithProviders(<DataGrid columns={columns} rows={rows} nullText="NULL" copyLabels={COPY} />);
       expect(root()).toBeInTheDocument();
@@ -180,7 +180,7 @@ describe('DataGrid editable', () => {
   });
 
   describe('selecting', () => {
-    // Changed: a single cell no longer tints its whole row (class `selected`), it only gets `focused`.
+    // Đã đổi: chọn một ô không còn phủ màu cả hàng (class `selected`), ô đó chỉ nhận class `focused`.
     it('selects a cell on mouse down (not on click) and reports its row without tinting the row', () => {
       renderGrid();
       expect(lastSelection()).toEqual([]);
@@ -833,11 +833,11 @@ describe('DataGrid editable', () => {
       expect(rowEl(0)).toBeNull();
       expect(rowEl(1)).not.toBeNull();
       expect(rowEl(2)).not.toBeNull();
-      // The edited column stays rendered in the other rows too; the others are not.
+      // Cột đang chỉnh sửa vẫn được render ở các hàng khác; những cột còn lại thì không.
       expect(cellAt(2, 0)).not.toBeNull();
       fireEvent.keyDown(input, { key: 'Enter' });
       expect(onSetCell).toHaveBeenCalledExactlyOnceWith(1, 0, 'typed');
-      // The editor is closed: the row is released and drops out of the window.
+      // Editor đã đóng: hàng được giải phóng và biến mất khỏi vùng hiển thị.
       rerender(element());
       expect(rowEl(1)).toBeNull();
     });

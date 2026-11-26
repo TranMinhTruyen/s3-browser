@@ -1,6 +1,6 @@
 package bucket
 
-// DeletePrefixInput asks to delete every object under Prefix, recursively.
+// DeletePrefixInput yêu cầu xóa đệ quy mọi object nằm dưới Prefix.
 type DeletePrefixInput struct {
 	ConnectionId string `json:"connectionId"`
 	ProfileName  string `json:"profileName,omitempty"`

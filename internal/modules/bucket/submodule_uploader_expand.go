@@ -9,30 +9,29 @@ import (
 	"S3Browser/models"
 )
 
-// expandResult is what expandDropped found.
+// expandResult chứa kết quả expandDropped tìm được.
 type expandResult struct {
 	groups  []models.DroppedGroup
 	skipped int
-	// total is the number of files in groups.
+	// total là tổng số file trong các nhóm.
 	total int
-	// overTotal is true when there were more than maxTotalFiles files; the extra are left out.
+	// overTotal là true nếu có nhiều hơn maxTotalFiles file; các file vượt quá bị bỏ qua.
 	overTotal bool
-	// capped is true when a folder had more than maxWalkEntries entries.
+	// capped là true nếu thư mục có nhiều hơn maxWalkEntries mục.
 	capped bool
 }
 
-// expandDropped turns the dropped paths into groups of files. A file gives one entry whose
-// RelKey is its name; a folder is walked recursively and gives one entry per regular file,
-// with RelKey = <folder name>/<path inside the folder> ("/" separators).
+// expandDropped chuyển các đường dẫn được thả thành nhóm file. Một file tạo thành một mục có RelKey là tên file;
+// thư mục được duyệt đệ quy và tạo một mục cho mỗi file thông thường, với RelKey = <tên thư mục>/<đường dẫn bên trong>
+// (dùng dấu phân cách "/").
 //
-// The files are grouped by the folder that directly holds them (the RelKey without its
-// last segment; "" for dropped files): a folder with no file of its own is no group.
-// Symlinks, special files and entries that can't be read are skipped and counted.
+// Các file được nhóm theo thư mục chứa trực tiếp chúng (RelKey bỏ phần cuối; "" với file được thả trực tiếp):
+// thư mục không có file trực tiếp nào sẽ không tạo thành nhóm. Bỏ qua và đếm symbolic link, file đặc biệt
+// và các mục không đọc được.
 //
-// The whole tree is walked, but it stops once there are more than maxTotalFiles files
-// (overTotal), or when a folder has more than maxWalkEntries entries (capped); the files
-// found so far are kept. A drop of a volume root (e.g. "C:\") is skipped, as it has no
-// folder name to build a RelKey from.
+// Duyệt toàn bộ cây thư mục nhưng dừng khi có nhiều hơn maxTotalFiles file (overTotal) hoặc khi một thư mục có
+// nhiều hơn maxWalkEntries mục (capped); giữ lại các file đã tìm thấy. Bỏ qua khi người dùng thả thư mục gốc của ổ đĩa
+// (ví dụ "C:\") vì không có tên thư mục để tạo RelKey.
 func expandDropped(paths []string) expandResult {
 	c := &dropCollector{index: map[string]int{}}
 
@@ -40,7 +39,7 @@ func expandDropped(paths []string) expandResult {
 		info, err := os.Lstat(p)
 		switch {
 		case err != nil || !info.Mode().IsRegular() && !info.IsDir():
-			// Unreadable, symlink or special file (device, pipe, ...).
+			// Không đọc được, là symbolic link hoặc file đặc biệt (thiết bị, pipe, ...).
 			c.skipped++
 		case info.IsDir():
 			if isVolumeRoot(p) {
@@ -71,7 +70,7 @@ func expandDropped(paths []string) expandResult {
 	}
 }
 
-// dropCollector gathers the dropped files into groups.
+// dropCollector gom các file được thả thành từng nhóm.
 type dropCollector struct {
 	groups    []models.DroppedGroup
 	index     map[string]int // group name -> position in groups
@@ -81,8 +80,7 @@ type dropCollector struct {
 	capped    bool
 }
 
-// add puts f in its group. It returns false, and keeps nothing, once maxTotalFiles files
-// are already held.
+// add thêm f vào nhóm tương ứng. Hàm trả false và không giữ thêm file nếu đã có maxTotalFiles file.
 func (c *dropCollector) add(f models.DroppedFile) bool {
 	if c.total >= maxTotalFiles {
 		c.overTotal = true
@@ -105,7 +103,7 @@ func (c *dropCollector) add(f models.DroppedFile) bool {
 	return true
 }
 
-// relKeyDir returns the folder part of relKey ("a/b/c.txt" -> "a/b"), or "" if it has none.
+// relKeyDir trả về phần thư mục của relKey ("a/b/c.txt" -> "a/b") hoặc "" nếu không có.
 func relKeyDir(relKey string) string {
 	if i := strings.LastIndex(relKey, "/"); i >= 0 {
 		return relKey[:i]
@@ -113,18 +111,17 @@ func relKeyDir(relKey string) string {
 	return ""
 }
 
-// maxWalkEntries is the most entries (files, folders, symlinks, errors) visited in one
-// dropped folder.
+// maxWalkEntries là số mục tối đa (file, thư mục, symbolic link, lỗi) được duyệt trong một thư mục được thả.
 const maxWalkEntries = 100_000
 
-// isVolumeRoot reports whether p is a filesystem root such as "C:\" or "/": its base name
-// is a separator or empty, so there is no folder name for the RelKey.
+// isVolumeRoot cho biết p có phải thư mục gốc của hệ thống file như "C:\" hoặc "/" hay không: tên cơ sở của nó
+// là dấu phân cách hoặc rỗng nên không thể lấy tên thư mục tạo RelKey.
 func isVolumeRoot(p string) bool {
 	base := filepath.Base(filepath.Clean(p))
 	return base == "" || base == "." || os.IsPathSeparator(base[0])
 }
 
-// dropWalker collects the regular files under one dropped folder.
+// dropWalker gom các file thông thường bên trong một thư mục được thả.
 type dropWalker struct {
 	dir     string // cleaned folder path; every walked path starts with it
 	name    string // folder name, the first segment of every RelKey
@@ -134,18 +131,17 @@ type dropWalker struct {
 	capped  bool // stopped because maxWalkEntries was reached
 }
 
-// walkDropped adds the regular files under dir to c until maxWalkEntries entries were
-// visited or c is full. It returns how many entries were skipped, and whether the walk
-// stopped because of the entries cap.
+// walkDropped thêm các file thông thường bên trong dir vào c đến khi duyệt đủ maxWalkEntries mục hoặc c đã đầy.
+// Hàm trả về số mục bị bỏ qua và cho biết có dừng vì chạm giới hạn số mục hay không.
 func walkDropped(dir string, c *dropCollector) (skipped int, capped bool) {
-	// WalkDir joins (and so cleans) paths, so clean dir first to be sure every path starts with it.
+	// WalkDir nối đường dẫn và chuẩn hóa chúng, vì vậy cần chuẩn hóa dir trước để bảo đảm mọi đường dẫn đều bắt đầu bằng dir.
 	dir = filepath.Clean(dir)
 	w := &dropWalker{dir: dir, name: filepath.Base(dir), c: c}
 	_ = filepath.WalkDir(dir, w.visit)
 	return w.skipped, w.capped
 }
 
-// visit is the WalkDir callback. It never fails the walk, except to stop it once full.
+// visit là callback của WalkDir. Hàm không làm lượt duyệt thất bại, chỉ dừng khi đã đủ file.
 func (w *dropWalker) visit(path string, d fs.DirEntry, err error) error {
 	w.visited++
 	if w.visited > maxWalkEntries {
@@ -178,15 +174,15 @@ func (w *dropWalker) visit(path string, d fs.DirEntry, err error) error {
 	return nil
 }
 
-// cleanRelKey returns the key an upload item gets under the prefix, and false if it is
-// not safe: empty segments, "." / ".." segments, absolute paths or backslashes could
-// escape the prefix or make a bad key. An empty relKey falls back to the file name of path.
+// cleanRelKey trả về key của mục tải lên dưới prefix và false nếu key không an toàn: đoạn rỗng, đoạn "." / "..",
+// đường dẫn tuyệt đối hoặc dấu gạch chéo ngược có thể thoát khỏi prefix hoặc tạo key sai. Nếu relKey rỗng,
+// dùng tên file trong path.
 func cleanRelKey(relKey, path string) (string, bool) {
 	if relKey == "" {
 		relKey = filepath.Base(path)
 	}
-	// '\' and ':' are banned because only Windows is supported (Q11); review this when
-	// macOS/Linux are supported, where they are valid file name characters.
+	// Cấm '\' và ':' vì hiện chỉ hỗ trợ Windows (Q11); cần xem lại giới hạn này khi hỗ trợ macOS/Linux,
+	// nơi các ký tự đó hợp lệ trong tên file.
 	if strings.ContainsAny(relKey, `\:`) {
 		return "", false
 	}

@@ -11,8 +11,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// cleanUploadItems returns a copy of items with a safe RelKey set on each. If a RelKey
-// is not safe it returns the path of that item as badPath.
+// cleanUploadItems trả bản sao của items, trong đó mỗi mục có RelKey an toàn. Nếu RelKey không an toàn,
+// hàm trả về đường dẫn của mục đó trong badPath.
 func cleanUploadItems(items []models.UploadObj) (clean []models.UploadObj, badPath string) {
 	clean = make([]models.UploadObj, len(items))
 	for i, item := range items {
@@ -26,10 +26,9 @@ func cleanUploadItems(items []models.UploadObj) (clean []models.UploadObj, badPa
 	return clean, ""
 }
 
-// groupUploadItems groups the indexes of items by the folder of their RelKey, in order of
-// first appearance, and checks the per group limits. Sizes are read from disk; a file that
-// can't be read counts as small (the upload reports it). If a limit is broken it returns
-// the error message for it.
+// groupUploadItems nhóm chỉ mục của items theo thư mục trong RelKey, theo thứ tự xuất hiện đầu tiên, rồi kiểm tra
+// giới hạn từng nhóm. Kích thước được đọc từ đĩa; file không đọc được được tính là file nhỏ (lượt tải sẽ báo lỗi).
+// Nếu vượt giới hạn, hàm trả thông báo lỗi tương ứng.
 func groupUploadItems(items []models.UploadObj) (groups [][]int, violation []models.Message) {
 	pos := map[string]int{}
 	names := []string{}
@@ -56,7 +55,7 @@ func groupUploadItems(items []models.UploadObj) (groups [][]int, violation []mod
 		}
 		large := 0
 		for _, i := range indexes {
-			// Sequential on purpose: at most maxTotalFiles cheap stats; parallel stat is not worth the complexity.
+			// Cố ý xử lý tuần tự: tối đa maxTotalFiles lần stat nhẹ, xử lý song song không đáng để tăng độ phức tạp.
 			if info, err := os.Stat(items[i].Path); err == nil && info.Size() > largeFileSize {
 				large++
 			}
@@ -74,7 +73,7 @@ func groupUploadItems(items []models.UploadObj) (groups [][]int, violation []mod
 	return groups, nil
 }
 
-// renameKey puts id in front of the file name of relKey, keeping its folders:
+// renameKey thêm id trước tên file trong relKey và giữ nguyên thư mục:
 // "a/b/c.txt" -> "a/b/<id>_c.txt".
 func renameKey(relKey, id string) string {
 	dir, name := "", relKey
@@ -84,8 +83,8 @@ func renameKey(relKey, id string) string {
 	return dir + id + "_" + name
 }
 
-// normalizePrefix turns p into the form used for keys: no leading "/", and a trailing
-// "/" unless it is empty (the bucket root). Windows separators are converted to "/".
+// normalizePrefix chuẩn hóa p thành định dạng dùng cho key: bỏ dấu "/" đầu, thêm dấu "/" cuối trừ khi rỗng
+// (gốc bucket). Dấu phân cách của Windows được đổi thành "/".
 func normalizePrefix(p string) string {
 	p = strings.TrimLeft(strings.ReplaceAll(p, `\`, "/"), "/")
 	if p != "" && !strings.HasSuffix(p, "/") {
@@ -94,11 +93,10 @@ func normalizePrefix(p string) string {
 	return p
 }
 
-// existingKeys checks, uploadFileConcurrency at a time, whether an object with key
-// prefix + RelKey already exists in bucket, for each item. Each distinct RelKey is
-// checked once. It returns the RelKeys (without prefix) except those the bucket
-// answered 404 for: a key that couldn't be checked is treated as existing, so its file
-// gets a renamed key and nothing is overwritten.
+// existingKeys kiểm tra từng mục, tối đa uploadFileConcurrency mục cùng lúc, xem object có key prefix + RelKey đã tồn tại
+// trong bucket hay chưa. Mỗi RelKey riêng biệt chỉ được kiểm tra một lần. Hàm trả về các RelKey (không gồm prefix),
+// trừ những key nhận phản hồi 404 từ bucket. Key không kiểm tra được sẽ được xem như đã tồn tại, để file được đổi tên
+// thay vì ghi đè dữ liệu.
 func existingKeys(
 	ctx context.Context,
 	client *s3.Client,
@@ -114,7 +112,7 @@ func existingKeys(
 		}
 	}
 
-	// Each goroutine writes only its own index, so no lock is needed.
+	// Mỗi goroutine chỉ ghi vào vị trí riêng nên không cần khóa.
 	errs := make([]error, len(names))
 	var g errgroup.Group
 	g.SetLimit(uploadFileConcurrency)

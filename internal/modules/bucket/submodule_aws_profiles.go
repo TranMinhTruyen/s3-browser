@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-// awsProfileEntry is what is read of one profile; hasProcess and isSso are set only by the profile's own keys.
+// awsProfileEntry chứa dữ liệu đọc được của một hồ sơ; chỉ đặt hasProcess và isSso theo key của chính hồ sơ đó.
 type awsProfileEntry struct {
 	region        string
 	sourceProfile string
@@ -22,21 +22,21 @@ type awsProfileEntry struct {
 	hasProcess    bool
 }
 
-// submoduleAwsProfilesMng lists the profiles of the AWS CLI config files. It only parses text: it never runs a
-// credential_process or reads a secret.
+// submoduleAwsProfilesMng liệt kê hồ sơ trong các file cấu hình AWS CLI. Hàm chỉ phân tích văn bản:
+// không chạy credential_process hoặc đọc thông tin bí mật.
 type submoduleAwsProfilesMng struct {
 	logger *slog.Logger
 }
 
-// newSubmoduleAwsProfilesMng creates the AWS CLI profile reader.
+// newSubmoduleAwsProfilesMng tạo bộ đọc hồ sơ AWS CLI.
 func newSubmoduleAwsProfilesMng(logger *slog.Logger) *submoduleAwsProfilesMng {
 	return &submoduleAwsProfilesMng{
 		logger: logger.With("submodules", "aws_profiles"),
 	}
 }
 
-// list returns the profiles of the config and credentials files sorted by name. An empty path means the standard
-// file (AWS_CONFIG_FILE / AWS_SHARED_CREDENTIALS_FILE, else ~/.aws/...). A missing file is not an error.
+// list trả về hồ sơ trong file cấu hình và file thông tin xác thực, sắp xếp theo tên. Đường dẫn rỗng nghĩa là dùng file
+// mặc định (AWS_CONFIG_FILE / AWS_SHARED_CREDENTIALS_FILE, nếu không có thì dùng ~/.aws/...). File không tồn tại không phải lỗi.
 func (m *submoduleAwsProfilesMng) list(configFile, credentialsFile string) models.Output[[]models.AwsProfileOutput] {
 	output := models.NewOutput[[]models.AwsProfileOutput]()
 
@@ -70,7 +70,8 @@ func (m *submoduleAwsProfilesMng) list(configFile, credentialsFile string) model
 	return output
 }
 
-// awsFilePath resolves an AWS CLI file: the path given, else the env variable, else ~/.aws/<name>.
+// awsFilePath xác định file AWS CLI cần dùng: ưu tiên đường dẫn đã cho, tiếp theo là biến môi trường,
+// cuối cùng là ~/.aws/<name>.
 func awsFilePath(path, envName, name string) string {
 	if path = cmp.Or(path, os.Getenv(envName)); path != "" {
 		return expandHome(path)
@@ -82,7 +83,7 @@ func awsFilePath(path, envName, name string) string {
 	return filepath.Join(home, ".aws", name)
 }
 
-// expandHome replaces a leading "~" with the user's home directory.
+// expandHome thay dấu "~" ở đầu bằng thư mục home của người dùng.
 func expandHome(path string) string {
 	if path == "~" || strings.HasPrefix(path, "~/") || strings.HasPrefix(path, `~\`) {
 		if home, err := os.UserHomeDir(); err == nil {
@@ -92,8 +93,8 @@ func expandHome(path string) string {
 	return path
 }
 
-// readAwsIni adds the profiles of an AWS INI file to entries. Sections are "[default]" and "[profile x]" in the
-// config file, "[x]" in the credentials file; other sections (sso-session, services) are skipped.
+// readAwsIni thêm hồ sơ trong file AWS INI vào entries. Section trong file cấu hình là "[default]" và "[profile x]",
+// trong file thông tin xác thực là "[x]"; bỏ qua các section khác (sso-session, services).
 func readAwsIni(path string, isConfig bool, entries map[string]*awsProfileEntry) error {
 	if path == "" {
 		return nil
@@ -131,7 +132,7 @@ func readAwsIni(path string, isConfig bool, entries map[string]*awsProfileEntry)
 	return scanner.Err()
 }
 
-// profileSectionName extracts the profile name of an INI section header; ok is false for non-profile sections.
+// profileSectionName lấy tên hồ sơ từ header section INI; ok là false với section không phải hồ sơ.
 func profileSectionName(section string, isConfig bool) (name string, ok bool) {
 	if !isConfig {
 		return section, section != ""
@@ -146,7 +147,7 @@ func profileSectionName(section string, isConfig bool) (name string, ok bool) {
 	return "", false
 }
 
-// setAwsProfileKey records the keys of a profile that the UI needs.
+// setAwsProfileKey ghi nhận các key của hồ sơ mà UI cần dùng.
 func setAwsProfileKey(e *awsProfileEntry, key, value string) {
 	switch key {
 	case "region":
@@ -160,8 +161,8 @@ func setAwsProfileKey(e *awsProfileEntry, key, value string) {
 	}
 }
 
-// hasCredentialProcess reports whether name or a profile in its source_profile chain runs a credential_process.
-// The visited set stops source_profile loops.
+// hasCredentialProcess cho biết name hoặc một hồ sơ trong chuỗi source_profile có chạy credential_process hay không.
+// Tập visited dùng để ngăn vòng lặp source_profile.
 func hasCredentialProcess(name string, entries map[string]*awsProfileEntry) bool {
 	visited := map[string]bool{}
 	for e := entries[name]; e != nil && !visited[name]; e = entries[name] {
@@ -174,5 +175,5 @@ func hasCredentialProcess(name string, entries map[string]*awsProfileEntry) bool
 	return false
 }
 
-// utf8BOM may start a file saved by Windows editors.
+// File được lưu bằng trình soạn thảo Windows có thể bắt đầu bằng utf8BOM.
 var utf8BOM = string(rune(0xFEFF))

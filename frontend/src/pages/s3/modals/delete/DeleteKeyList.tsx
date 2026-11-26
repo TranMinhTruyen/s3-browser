@@ -6,16 +6,16 @@ import { useRemeasureOnScale, useUiScale } from '@/common/hooks/useUiScale';
 import TruncatedText from '@/components/display/TruncatedText';
 
 const LIST_MAX_HEIGHT = '20rem';
-// Px at the medium size (scaled with the interface size): one-line card plus its gap; the real height is measured,
-// as error reasons may wrap.
+// Số px ở cỡ trung bình (co giãn theo cỡ giao diện): chiều cao thẻ một dòng cộng khoảng cách; chiều cao thật được đo
+// vì lý do lỗi có thể xuống dòng.
 const ROW_ESTIMATE_HEIGHT = 56;
 const ROW_GAP = '0.5rem';
-// Same border as the cards of the object list.
+// Dùng cùng đường viền với các thẻ trong danh sách đối tượng.
 const CARD_BORDER_COLOR = 'light-dark(var(--mantine-color-black), var(--mantine-color-dark-2))';
 
 export type DeleteKeyRow = {
   key: string;
-  // Why the key failed.
+  // Lý do key không xử lý được.
   error?: string;
 };
 
@@ -24,7 +24,7 @@ type DeleteKeyListProps = {
   maxHeight?: number | string;
 };
 
-// Error reasons wrap anywhere (no spaces in keys); nothing may widen the list (no horizontal scroll).
+// Lý do lỗi có thể xuống dòng ở mọi vị trí (key không có dấu cách); không để nội dung làm rộng danh sách (không cuộn ngang).
 const wrapStyle: CSSProperties = { overflowWrap: 'anywhere', wordBreak: 'break-word' };
 const ICON_SECTION_STYLE: CSSProperties = {
   flexShrink: 0,
@@ -35,21 +35,21 @@ const ICON_SECTION_STYLE: CSSProperties = {
 };
 const NAME_SECTION_STYLE: CSSProperties = { flex: 1, minWidth: 0 };
 
-/** Last path segment of a key; a folder key ends with "/" and keeps it out of the name. */
+/** Đoạn cuối đường dẫn của key; key thư mục kết thúc bằng "/" nên bỏ dấu đó khỏi tên. */
 const getKeyName = (key: string) => key.replace(/\/$/, '').split('/').pop() || key;
 
-/** Virtualized, vertically scrollable list of cards, one per key (and why it failed). Text wraps, never scrolls sideways. */
+/** Danh sách thẻ ảo có thể cuộn dọc, mỗi key một thẻ kèm lý do lỗi. Văn bản tự xuống dòng, không cuộn ngang. */
 const DeleteKeyList = memo(function DeleteKeyList(props: DeleteKeyListProps) {
   const { rows, maxHeight = LIST_MAX_HEIGHT } = props;
 
-  // State, not a ref: inside a Modal portal the element mounts one render late.
+  // Dùng state thay vì ref vì bên trong portal của Modal, phần tử mount chậm một lần render.
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null);
 
   const getScrollElement = useCallback(() => scrollElement, [scrollElement]);
   const scale = useUiScale();
   const estimateSize = useCallback(() => ROW_ESTIMATE_HEIGHT * scale, [scale]);
 
-  // React Compiler is disabled, so this compiler-only lint does not apply.
+  // React Compiler đang tắt nên quy tắc lint chỉ dành cho compiler này không áp dụng.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
     count: rows.length,

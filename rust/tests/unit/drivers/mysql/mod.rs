@@ -10,7 +10,7 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 const THREAD_ID: u32 = 4242;
 const PASSWORD: &str = "super-secret-pw";
 
-// ---- server MySQL giả ----
+// ---- máy chủ MySQL giả ----
 
 /// Ghi một gói của giao thức MySQL: 3 byte độ dài (little-endian) + 1 byte số thứ tự + nội dung.
 fn write_packet(s: &mut TcpStream, seq: u8, payload: &[u8]) {
@@ -188,7 +188,7 @@ async fn attempts(mode: TlsMode, ssl: Option<SslOpts>) -> (Vec<String>, DbError)
     (drain(&mut rx), err)
 }
 
-// ---- ssl_opts: ánh xạ 6 mode ----
+// ---- ssl_opts: ánh xạ 6 chế độ ----
 
 #[test]
 fn disable_has_no_ssl_opts_even_with_a_bad_ca_file() {
@@ -274,7 +274,7 @@ fn verify_modes_with_a_bad_ca_file_fail_with_open_failed() {
     }
 }
 
-// ---- open: kiểm input ----
+// ---- mở: kiểm dữ liệu đầu vào ----
 
 #[tokio::test]
 async fn open_requires_a_host() {
@@ -359,7 +359,7 @@ async fn open_to_a_silent_server_times_out() {
     assert_eq!(err.message, "connection timed out");
 }
 
-// ---- connect: thứ tự thử theo từng mode (server giả luôn từ chối) ----
+// ---- kết nối: thứ tự thử theo từng chế độ (máy chủ giả luôn từ chối) ----
 
 #[tokio::test]
 async fn disable_tries_only_plain() {
@@ -415,7 +415,7 @@ async fn connect_errors_never_contain_the_password() {
     }
 }
 
-// ---- connect: server giả chấp nhận ----
+// ---- kết nối: máy chủ giả chấp nhận ----
 
 #[tokio::test]
 async fn connect_runs_init_on_the_main_connection_only() {

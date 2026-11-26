@@ -14,7 +14,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// Supported providers.
+// Các provider được hỗ trợ.
 const (
 	providerSqlite   = "sqlite"
 	providerPostgres = "postgres"
@@ -22,10 +22,10 @@ const (
 
 const maxPort = 65535
 
-// errInvalidConfig is the detail of DBE010 for a missing or invalid config field.
+// errInvalidConfig là nội dung chi tiết của DBE010 khi thiếu trường cấu hình hoặc trường không hợp lệ.
 var errInvalidConfig = errors.New("invalid profile config")
 
-// submoduleProfileMng saves the database profiles of the SQL mode; the password is sealed with the key manager.
+// submoduleProfileMng lưu hồ sơ cơ sở dữ liệu trong chế độ SQL; mật khẩu được mã hóa bằng key manager.
 type submoduleProfileMng struct {
 	logger *slog.Logger
 	app    *application.App
@@ -34,7 +34,7 @@ type submoduleProfileMng struct {
 	km     *utils.KeyManager
 }
 
-// newSubmoduleProfileMng creates the profile store; conns is asked to close a profile's connections on delete.
+// newSubmoduleProfileMng tạo kho hồ sơ; khi xóa hồ sơ, conns được yêu cầu đóng các kết nối tương ứng.
 func newSubmoduleProfileMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -45,7 +45,7 @@ func newSubmoduleProfileMng(
 	return &submoduleProfileMng{logger: logger.With("submodules", "profile"), app: app, q: q, conns: conns, km: km}
 }
 
-// parseConfig reads the config JSON of a stored profile.
+// parseConfig đọc JSON cấu hình của hồ sơ đã lưu.
 func parseConfig(p sqlc.DbProfile) (models.DbProfileConfig, error) {
 	var cfg models.DbProfileConfig
 	if err := json.Unmarshal([]byte(p.Config), &cfg); err != nil {
@@ -54,7 +54,7 @@ func parseConfig(p sqlc.DbProfile) (models.DbProfileConfig, error) {
 	return cfg, nil
 }
 
-// toOutput maps a stored profile; the secret is only reported as present.
+// toOutput ánh xạ hồ sơ đã lưu; chỉ báo secret có tồn tại hay không.
 func toOutput(p sqlc.DbProfile) (models.DbProfileOutput, error) {
 	cfg, err := parseConfig(p)
 	if err != nil {
@@ -70,8 +70,7 @@ func toOutput(p sqlc.DbProfile) (models.DbProfileOutput, error) {
 	}, nil
 }
 
-// validateConfig checks the required fields of the provider and returns the config reduced to the fields
-// that provider uses.
+// validateConfig kiểm tra các trường bắt buộc của provider rồi trả cấu hình chỉ gồm những trường provider đó sử dụng.
 func validateConfig(provider string, cfg models.DbProfileConfig) (models.DbProfileConfig, error) {
 	switch provider {
 	case providerSqlite:
@@ -93,12 +92,12 @@ func validateConfig(provider string, cfg models.DbProfileConfig) (models.DbProfi
 	return cfg, fmt.Errorf("%w: unsupported provider %q", errInvalidConfig, provider)
 }
 
-// nameMessage is a profile message whose text takes the profile name as {name}.
+// nameMessage tạo thông báo về hồ sơ, trong đó {name} được thay bằng tên hồ sơ.
 func nameMessage(code, name, errorDetail string) models.Message {
 	return models.NewParamsMessage(cnst.MessageTypeError, cnst.Db, code, errorDetail, map[string]any{"name": name})
 }
 
-// seal encrypts the password; an empty one is stored as NULL.
+// seal mã hóa mật khẩu; nếu mật khẩu rỗng thì lưu thành NULL.
 func (m *submoduleProfileMng) seal(v string) (sql.NullString, error) {
 	if v == "" {
 		return sql.NullString{}, nil
@@ -107,9 +106,8 @@ func (m *submoduleProfileMng) seal(v string) (sql.NullString, error) {
 	return sql.NullString{String: cipher, Valid: err == nil}, err
 }
 
-// prepare validates input and returns the config JSON and sealed secret to store. stored is the current row on
-// update (nil on create): an empty secret keeps the stored one when the provider is unchanged, otherwise the old
-// secret is dropped.
+// prepare kiểm tra input rồi trả JSON cấu hình và secret đã mã hóa để lưu. stored là hàng hiện tại khi cập nhật
+// (nil khi tạo mới): secret để trống sẽ giữ giá trị đã lưu nếu provider không đổi, nếu không thì xóa secret cũ.
 func (m *submoduleProfileMng) prepare(
 	input models.DbProfileInput,
 	stored *sqlc.DbProfile,
@@ -130,7 +128,7 @@ func (m *submoduleProfileMng) prepare(
 	return string(raw), secret, err
 }
 
-// getAll lists the profiles, oldest first.
+// getAll liệt kê hồ sơ theo thứ tự từ cũ đến mới.
 func (m *submoduleProfileMng) getAll() models.Output[models.GetAllDbProfileOutput] {
 	output := models.NewOutput[models.GetAllDbProfileOutput]()
 
@@ -152,7 +150,7 @@ func (m *submoduleProfileMng) getAll() models.Output[models.GetAllDbProfileOutpu
 	return output
 }
 
-// create saves a new profile.
+// create lưu hồ sơ mới.
 func (m *submoduleProfileMng) create(input models.DbProfileInput) models.Output[models.DbProfileOutput] {
 	output := models.NewOutput[models.DbProfileOutput]()
 
@@ -178,7 +176,7 @@ func (m *submoduleProfileMng) create(input models.DbProfileInput) models.Output[
 	return m.saved(output, row, input.Name)
 }
 
-// saved maps the stored row into the output body.
+// saved ánh xạ hàng đã lưu thành body đầu ra.
 func (m *submoduleProfileMng) saved(
 	output models.Output[models.DbProfileOutput],
 	row sqlc.DbProfile,
@@ -193,7 +191,7 @@ func (m *submoduleProfileMng) saved(
 	return output
 }
 
-// update saves the changes of the profile input.Id, keeping the id; an unknown id is DBE010.
+// update lưu các thay đổi của hồ sơ input.Id và giữ nguyên id; id không xác định sẽ trả DBE010.
 func (m *submoduleProfileMng) update(input models.DbProfileInput) models.Output[models.DbProfileOutput] {
 	output := models.NewOutput[models.DbProfileOutput]()
 
@@ -224,7 +222,7 @@ func (m *submoduleProfileMng) update(input models.DbProfileInput) models.Output[
 	return m.saved(output, row, input.Name)
 }
 
-// delete removes the profile, then closes its connections; if the delete fails the connections stay open.
+// delete xóa hồ sơ rồi đóng các kết nối tương ứng; nếu thao tác xóa thất bại thì giữ các kết nối mở.
 func (m *submoduleProfileMng) delete(input models.DbProfileInput) models.Output[bool] {
 	output := models.NewOutput[bool]()
 
@@ -238,15 +236,15 @@ func (m *submoduleProfileMng) delete(input models.DbProfileInput) models.Output[
 	return output
 }
 
-// chooseFile opens the native dialog for a SQLite file and returns its path. The dialog blocks until closed,
-// so it has no timeout.
+// chooseFile mở hộp thoại của hệ điều hành để chọn file SQLite rồi trả về đường dẫn. Hộp thoại chặn cho đến khi đóng,
+// vì vậy không đặt timeout.
 func (m *submoduleProfileMng) chooseFile() models.Output[string] {
 	output := models.NewOutput[string]()
 
 	dialog := m.app.Dialog.OpenFile().CanChooseFiles(true).CanChooseDirectories(false)
 	dialog.AddFilter("SQLite database", "*.db;*.sqlite;*.sqlite3;*.db3")
 	dialog.AddFilter("All files", "*.*")
-	// The app has one window; attach to it so the dialog is modal (Current may be nil).
+	// Ứng dụng chỉ có một cửa sổ; gắn hộp thoại vào cửa sổ này để hộp thoại ở chế độ modal (Current có thể là nil).
 	if window := m.app.Window.Current(); window != nil {
 		dialog.AttachToWindow(window)
 	}

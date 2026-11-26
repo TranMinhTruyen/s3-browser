@@ -1,7 +1,7 @@
 package profile
 
-// ImportProfileInput selects the profile file to import. Password opens the secrets of an encrypted file and is
-// never stored or logged.
+// ImportProfileInput chọn file hồ sơ cần nhập. Password dùng để giải mã secret trong file đã mã hóa và không bao giờ
+// được lưu hoặc ghi log.
 type ImportProfileInput struct {
 	Path     string `json:"path"`
 	Password string `json:"password,omitempty"`

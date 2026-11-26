@@ -26,13 +26,13 @@ type MfaCodeForm = {
   secretKey: string;
 };
 
-// Scrolls instead of leaving the viewport on short screens.
+// Cho phép cuộn để modal không vượt khỏi khung nhìn trên màn hình thấp.
 const BODY_MAX_HEIGHT = `calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT})`;
 
 /**
- * Asks for a new MFA code (and the secret key when the profile does not store it) to renew the credentials of a
- * connected `assumeRole` profile that is about to expire. Resolves true when the connection was renewed.
- * Load it through `showMfaCodeModal` (lazy chunk).
+ * Yêu cầu mã MFA mới (và secret key nếu profile chưa lưu) để gia hạn thông tin xác thực của profile `assumeRole`
+ * đã kết nối và sắp hết hạn. Trả về true khi kết nối được gia hạn.
+ * Tải qua `showMfaCodeModal` (lazy chunk).
  */
 export default createMantineModal<MfaCodeModalProps, boolean>(
   props => {
@@ -42,7 +42,7 @@ export default createMantineModal<MfaCodeModalProps, boolean>(
     const { resolve, hide } = mantine.handler;
 
     const profile = useProfileStore(s => s.connectionProfiles[connectionId]);
-    // The secret key is never kept in memory: ask for it again unless the profile stores it.
+    // Secret key không bao giờ được giữ trong bộ nhớ: yêu cầu nhập lại trừ khi profile đã lưu nó.
     const needsSecretKey =
       !!profile && getRequiredSecrets(profile).includes('secretKey') && !profile.savedSecrets?.includes('secretKey');
 

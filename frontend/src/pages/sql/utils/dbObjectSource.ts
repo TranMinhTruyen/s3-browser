@@ -6,8 +6,8 @@ import { getMockRows, getMockSchemas, getMockTableInfo } from '@/pages/sql/mock/
 import type { Provider } from '@/pages/sql/stores/dbProfileStore';
 
 /*
- * Where the object tree, table structure and table rows come from: SQLite asks the backend, PostgreSQL still
- * reads the mock. Each function resolves null when the call failed or was aborted (the backend already toasted).
+ * Nguồn lấy cây đối tượng, cấu trúc bảng và các hàng: SQLite gọi backend, PostgreSQL hiện vẫn dùng dữ liệu mock.
+ * Mỗi hàm trả về null nếu lời gọi thất bại hoặc bị hủy (backend đã hiển thị toast).
  */
 
 type DbSchema = SchemaTreeOutput['schemas'][number];
@@ -15,15 +15,15 @@ type DbSchema = SchemaTreeOutput['schemas'][number];
 export type NodeKind = 'database' | 'schema' | 'group' | 'table' | 'view' | 'index' | 'trigger';
 type GroupKind = 'tables' | 'views' | 'indexes' | 'triggers';
 
-/** What a tree node is. `name` is the object name (the group id for a group). Kept in `nodeProps` of the node. */
+/** Kiểu dữ liệu của một node trong cây. `name` là tên đối tượng (hoặc id nhóm nếu là nhóm), lưu trong `nodeProps`. */
 export type NodeMeta = { kind: NodeKind; schema: string; name: string; group?: GroupKind };
 
 const SEP = '\u001f';
 
-/** Node value, unique across profiles: the profile id followed by the path of the node. */
+/** Giá trị node, duy nhất giữa các profile: id profile nối với đường dẫn của node. */
 const nodeValue = (profileId: string, ...path: string[]) => [profileId, ...path].join(SEP);
 
-/** True when the node value belongs to the tree of the profile. */
+/** Trả về true nếu giá trị node thuộc cây của profile đó. */
 export const isNodeOf = (profileId: string, value: string) => value.startsWith(`${profileId}${SEP}`);
 
 const leaf = (profileId: string, path: string[], meta: NodeMeta): TreeNodeData => ({
@@ -62,7 +62,7 @@ const schemaNode = (profileId: string, root: string, schema: DbSchema): TreeNode
   };
 };
 
-/** Tree of a profile: schemas at the top (SQLite `main`), or one database node over them (PostgreSQL). */
+/** Cây của profile: schema ở cấp trên cùng (SQLite `main`), hoặc một node database phía trên chúng (PostgreSQL). */
 export const buildTreeNodes = (profileId: string, database: string | null, schemas: DbSchema[]): TreeNodeData[] => {
   const nodes = schemas.map(schema => schemaNode(profileId, database ?? '', schema));
   if (database === null) return nodes;
@@ -76,12 +76,12 @@ export const buildTreeNodes = (profileId: string, database: string | null, schem
   ];
 };
 
-/** Names of the tables and views, for SQL autocomplete. */
+/** Tên các bảng và view để gợi ý SQL tự động. */
 export const listTableNames = (schemas: DbSchema[]): string[] => [
   ...new Set(schemas.flatMap(schema => [...(schema.tables ?? []), ...(schema.views ?? [])])),
 ];
 
-/** Schemas of a connected profile. */
+/** Các schema của profile đã kết nối. */
 export const loadSchemas = async (
   provider: Provider,
   profileId: string,
@@ -95,7 +95,7 @@ export const loadSchemas = async (
 
 export type TableRef = { profileId: string; schema: string; table: string };
 
-/** Columns, indexes, constraints, foreign keys and DDL of a table. */
+/** Cột, chỉ mục, ràng buộc, khóa ngoại và DDL của một bảng. */
 export const loadTableInfo = async (
   provider: Provider,
   ref: TableRef,
@@ -105,13 +105,13 @@ export const loadTableInfo = async (
   return (await callIPC(GetTableInfo, [ref], { signal })) ?? null;
 };
 
-/** A page of rows. It can hold fewer rows than the page size and still not be the last one. */
+/** Một trang dữ liệu. Trang có thể ít hàng hơn kích thước trang mà vẫn chưa phải trang cuối. */
 export type RowPage = { rows: (string | null)[][]; done: boolean };
 
-/** First page of a table; `cursorId` is null once everything was read. */
+/** Trang đầu của bảng; `cursorId` là null khi đã đọc hết dữ liệu. */
 export type TableRows = RowPage & { columns: string[]; cursorId: number | null };
 
-/** The first page of the rows of a table, on the connection of tab `tabId`. */
+/** Trang đầu các hàng của bảng, trên kết nối của tab `tabId`. */
 export const openTableRows = async (
   provider: Provider,
   tabId: string,
@@ -129,8 +129,8 @@ export const openTableRows = async (
 };
 
 /**
- * The next page after `loaded` rows; the mock has no cursor, so it works from the row count. `all` reads every
- * remaining row in one call.
+ * Trang kế tiếp sau `loaded` hàng; dữ liệu mock không có con trỏ nên dùng số lượng hàng đã tải. `all` đọc toàn bộ
+ * số hàng còn lại trong một lần gọi.
  */
 export const fetchTableRows = async (
   provider: Provider,

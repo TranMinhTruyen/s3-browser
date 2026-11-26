@@ -1,11 +1,11 @@
 package bucket
 
-// DeleteBucketInfoOutput is what the delete bucket dialog needs to know.
+// DeleteBucketInfoOutput chứa thông tin hộp thoại xóa bucket cần biết.
 type DeleteBucketInfoOutput struct {
-	// Empty is nil when it could not be read.
+	// Empty là nil nếu không đọc được trạng thái.
 	Empty *bool `json:"empty"`
-	// Versioning is "Enabled", "Suspended" or "Off"; empty when it could not be read.
+	// Versioning là "Enabled", "Suspended" hoặc "Off"; rỗng nếu không đọc được.
 	Versioning string `json:"versioning"`
-	// ObjectLock is true when Object Lock is enabled; false also when it could not be read.
+	// ObjectLock là true nếu bật Object Lock; cũng là false nếu không đọc được trạng thái.
 	ObjectLock bool `json:"objectLock"`
 }

@@ -11,7 +11,7 @@ const MODAL = 'pages/sql/modals/dbProfileModal';
 const PROFILE = 'E2E SQLite';
 const USERS = 25_000; // more than one result page (10,000 rows)
 
-// The Rust driver never creates a missing file, so the test database is made here.
+// Driver Rust không tự tạo file còn thiếu, nên cơ sở dữ liệu kiểm thử được tạo tại đây.
 const dbFile = join(dirname(fileURLToPath(import.meta.url)), '.run', 'data', 'e2e.sqlite');
 
 test.describe.configure({ mode: 'serial' });
@@ -34,7 +34,7 @@ test.beforeAll(() => {
 
 const card = (page: Page) => page.locator('[data-profile-key]', { hasText: PROFILE });
 
-/** SQL mode with the profile selected in the active query tab. */
+/** Chế độ SQL với hồ sơ được chọn trong tab truy vấn đang hoạt động. */
 async function openSqlTab(page: Page) {
   await switchMode(page, 'sql');
   await expect(card(page)).toBeVisible();
@@ -42,7 +42,7 @@ async function openSqlTab(page: Page) {
   await page.getByRole('option').filter({ hasText: PROFILE }).first().click();
 }
 
-/** Replaces the editor text and runs it with the Run button. */
+/** Thay nội dung trình soạn thảo rồi chạy bằng nút Run. */
 async function runSql(page: Page, sql: string) {
   await page.locator('.cm-content').first().click();
   await page.keyboard.press('Control+a');
@@ -89,11 +89,11 @@ test('run SQL and page through a large result', async ({ page }) => {
   await hideToasts(page);
   await runSql(page, 'SELECT * FROM users ORDER BY id');
 
-  // The first page has 10,000 rows and "+" while the cursor still has rows.
+  // Trang đầu tiên có 10.000 hàng và dấu "+" khi cursor vẫn còn hàng.
   const summary = page.getByText(rowsReturned('10000+'));
   await expect(summary).toBeVisible({ timeout: 20_000 });
 
-  // Scrolling to the end of the grid fetches the next pages until all rows are read.
+  // Cuộn đến cuối lưới sẽ tải các trang tiếp theo cho đến khi đọc hết các hàng.
   const all = page.getByText(rowsReturned(String(USERS)));
   await expect(async () => {
     await page.evaluate(() => {
@@ -107,7 +107,7 @@ test('run SQL and page through a large result', async ({ page }) => {
 test('cancel a running query', async ({ page }) => {
   await openSqlTab(page);
   await hideToasts(page);
-  // Never ends on its own: only the cancel stops it.
+  // Tiến trình không tự kết thúc; chỉ thao tác hủy mới dừng được.
   await runSql(page, 'WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM c) SELECT count(*) FROM c');
   const cancel = page.getByRole('button', { name: t(TAB, 'tooltip.cancel'), exact: true });
   await expect(cancel).toBeVisible();

@@ -7,19 +7,19 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 import { runSql } from '@/pages/sql/utils/sqlToast';
 
-/** The statements of the last run. `runId` changes with every run, so the panel can reset its own state. */
+/** Các câu lệnh của lần chạy gần nhất. `runId` thay đổi sau mỗi lần chạy để panel có thể reset state riêng. */
 type RunState = { runId: number; statements: StatementResult[]; cancelled: boolean };
 
 const INITIAL_STATE: RunState = { runId: 0, statements: [], cancelled: false };
 
-/** True when the statement is a SELECT whose rows are not all loaded yet. */
+/** Trả về true nếu câu lệnh là SELECT và chưa tải hết các hàng. */
 export const canLoadMore = (statement: StatementResult): boolean =>
   statement.kind === 'rows' && !statement.error && statement.cursorId !== null && !statement.done;
 
 /**
- * Runs the SQL of one tab. SQLite goes to the backend (connecting first when needed); PostgreSQL is still fake.
- * The rows live here, not in a zustand store: a result can hold 100,000+ rows and immer would copy and freeze
- * them on every page. Only the last statement keeps a cursor, so `loadMore` always fetches for that one.
+ * Chạy SQL của một tab. SQLite gọi backend (kết nối trước nếu cần); PostgreSQL hiện vẫn dùng dữ liệu giả.
+ * Các hàng được lưu ở đây thay vì zustand store: kết quả có thể chứa hơn 100.000 hàng và immer sẽ sao chép, đóng băng
+ * chúng sau mỗi trang. Chỉ câu lệnh cuối cùng giữ con trỏ nên `loadMore` luôn tải thêm dữ liệu cho câu đó.
  */
 export function useSqlRunner(tabId: string) {
   const { t } = useTranslation('sqlTab');
@@ -30,7 +30,7 @@ export function useSqlRunner(tabId: string) {
   const fetchRef = useRef<AbortController | null>(null);
   const cursorRef = useRef<number | null>(null);
 
-  // Leaving the tab drops what is in flight; the late results are ignored.
+  // Rời tab sẽ hủy thao tác đang chạy; kết quả trả về muộn sẽ bị bỏ qua.
   useEffect(
     () => () => {
       runRef.current?.abort();
@@ -67,7 +67,7 @@ export function useSqlRunner(tabId: string) {
         if (!profile.isConnected) {
           const connected = await connectDbProfile(profile.id);
           if (connected) toast.success(t('toast.connected', { ns: 'sqlNavbar', name: profile.name }));
-          // Cancelled (or the tab left) while connecting: do not run the SQL.
+          // Đã hủy (hoặc đã rời tab) trong lúc kết nối: không chạy câu SQL.
           if (!connected || controller.signal.aborted) return;
         }
         const output = await callIPC(ExecuteSql, [{ profileId: profile.id, tabId, sql }], {
@@ -91,7 +91,7 @@ export function useSqlRunner(tabId: string) {
 
   const cancel = useCallback(() => runRef.current?.abort(), []);
 
-  /** The tab moved to another profile: its backend connection is gone, so stop what is in flight and the cursor. */
+  /** Tab đã chuyển sang profile khác: kết nối backend cũ không còn, nên dừng thao tác đang chạy và bỏ con trỏ. */
   const detach = useCallback(() => {
     runRef.current?.abort();
     fetchRef.current?.abort();
@@ -113,7 +113,7 @@ export function useSqlRunner(tabId: string) {
       const page = await callIPC(FetchRows, [{ tabId, cursorId, all: false }], { signal: controller.signal });
       if (controller.signal.aborted) return;
 
-      // A failed fetch leaves the cursor unusable, so the statement stops asking for more.
+      // Nếu tải thất bại thì con trỏ không còn dùng được, vì vậy câu lệnh ngừng yêu cầu thêm dữ liệu.
       const done = page?.done ?? true;
       if (done) cursorRef.current = null;
       setState(prev => {

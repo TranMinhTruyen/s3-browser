@@ -27,44 +27,44 @@ import (
 )
 
 const (
-	// oidcLoginTimeout is how long the user has to sign in at the identity provider.
+	// oidcLoginTimeout là thời gian tối đa người dùng được phép đăng nhập tại nhà cung cấp danh tính.
 	oidcLoginTimeout = 5 * time.Minute
-	// oidcSessionTTL is the longest a signed-in session can be reused (also capped by the id_token expiry).
+	// oidcSessionTTL là thời gian tối đa có thể dùng lại phiên đã đăng nhập (cũng bị giới hạn bởi hạn của id_token).
 	oidcSessionTTL = 10 * time.Minute
-	// oidcRequestTimeout bounds each request to the identity provider.
+	// oidcRequestTimeout giới hạn thời gian của mỗi yêu cầu đến nhà cung cấp danh tính.
 	oidcRequestTimeout = 30 * time.Second
-	// oidcDefaultPort is the callback port when the profile has none.
+	// oidcDefaultPort là cổng callback mặc định nếu hồ sơ chưa chỉ định.
 	oidcDefaultPort = 48765
-	// oidcMaxSessions bounds the sessions kept in memory.
+	// oidcMaxSessions giới hạn số phiên được giữ trong bộ nhớ.
 	oidcMaxSessions = 8
-	// oidcMaxBody bounds a discovery document.
+	// oidcMaxBody giới hạn kích thước tài liệu discovery.
 	oidcMaxBody = 1 << 20
 )
 
-// oidcCallbackPage is shown in the browser tab after the redirect; it holds no data from the request.
+// oidcCallbackPage được hiển thị trong tab trình duyệt sau khi chuyển hướng; trang này không chứa dữ liệu từ yêu cầu.
 const oidcCallbackPage = `<!doctype html><meta charset="utf-8"><title>S3Browser</title>` +
 	`<body style="font-family:sans-serif;text-align:center;margin-top:20vh">` +
 	`<h2>Sign-in finished</h2><p>You can close this tab and return to S3Browser.</p></body>`
 
-// errOidcLoginRequired means the signed-in session was already used and a new sign-in is needed. It is reported
-// as S3E030, like an expired token.
+// errOidcLoginRequired cho biết phiên đăng nhập đã được dùng và cần đăng nhập lại. Lỗi này được báo bằng S3E030,
+// giống token hết hạn.
 var errOidcLoginRequired = errors.New("OIDC sign-in is required")
 
-// oidcSession holds the tokens of one sign-in. They live in memory only and never reach the frontend.
+// oidcSession lưu token của một lần đăng nhập. Token chỉ tồn tại trong bộ nhớ và không bao giờ được gửi đến frontend.
 type oidcSession struct {
 	idToken     string
 	accessToken string
 	expiresAt   time.Time
 }
 
-// callbackResult is what the redirect delivers: the authorization code, or the reason it failed.
+// callbackResult chứa dữ liệu chuyển hướng gửi về: authorization code hoặc lý do thất bại.
 type callbackResult struct {
 	code string
 	err  error
 }
 
-// submoduleOidcMng signs the user in with OpenID Connect (authorization code + PKCE, public client) and keeps
-// the resulting session until a connect uses it.
+// submoduleOidcMng đăng nhập người dùng bằng OpenID Connect (authorization code + PKCE, public client) và giữ phiên
+// cho đến khi một thao tác kết nối sử dụng phiên đó.
 type submoduleOidcMng struct {
 	logger *slog.Logger
 	app    *application.App
@@ -73,7 +73,7 @@ type submoduleOidcMng struct {
 	sessions map[string]oidcSession
 }
 
-// newSubmoduleOidcMng creates the OIDC submodule with an empty session store.
+// newSubmoduleOidcMng tạo submodule OIDC với kho phiên rỗng.
 func newSubmoduleOidcMng(app *application.App, logger *slog.Logger) *submoduleOidcMng {
 	return &submoduleOidcMng{
 		logger:   logger.With("submodules", "oidc_login"),
@@ -82,8 +82,8 @@ func newSubmoduleOidcMng(app *application.App, logger *slog.Logger) *submoduleOi
 	}
 }
 
-// login runs the sign-in in the system browser and stores the session. It blocks until the user finishes,
-// the call is canceled (silent failure) or oidcLoginTimeout passes (S3E039).
+// login thực hiện đăng nhập bằng trình duyệt hệ thống rồi lưu phiên. Hàm chờ đến khi người dùng hoàn tất,
+// lời gọi bị hủy (dừng im lặng) hoặc oidcLoginTimeout hết hạn (S3E039).
 func (m *submoduleOidcMng) login(ctx context.Context, cfg models.AuthConfig) models.Output[models.OidcLoginOutput] {
 	output := models.NewOutput[models.OidcLoginOutput]()
 	port := cmp.Or(cfg.CallbackPort, oidcDefaultPort)
@@ -111,8 +111,8 @@ func (m *submoduleOidcMng) login(ctx context.Context, cfg models.AuthConfig) mod
 	return output
 }
 
-// loginFailed turns err into the message of a failed sign-in: nothing when the frontend canceled, S3E039 on
-// timeout, S3E040 for a busy port, S3E041 for anything else.
+// loginFailed chuyển err thành thông báo đăng nhập thất bại: không gửi gì nếu frontend đã hủy, S3E039 nếu timeout,
+// S3E040 nếu cổng đang được sử dụng và S3E041 cho các lỗi khác.
 func (m *submoduleOidcMng) loginFailed(
 	ctx context.Context,
 	output models.Output[models.OidcLoginOutput],
@@ -139,14 +139,14 @@ func (m *submoduleOidcMng) loginFailed(
 	)
 }
 
-// authorize walks the authorization code flow: discovery, local callback server, browser, token exchange.
-// The local server listens on 127.0.0.1 only and is shut down before returning.
+// authorize thực hiện luồng authorization code: discovery, máy chủ callback cục bộ, trình duyệt, đổi token.
+// Máy chủ cục bộ chỉ lắng nghe trên 127.0.0.1 và được tắt trước khi hàm trả về.
 func (m *submoduleOidcMng) authorize(ctx context.Context, cfg models.AuthConfig, port int) (oidcSession, error) {
-	// Older profiles may not have passed the profile validation.
+	// Hồ sơ cũ có thể chưa được kiểm tra tính hợp lệ.
 	if !utils.IsSecureUrl(cfg.IssuerUrl) {
 		return oidcSession{}, errors.New("the issuer URL is not secure: it must be https (http only for localhost)")
 	}
-	// The identity provider is checked against the CA store of the OS: the profile CA only applies to MinIO.
+	// Nhà cung cấp danh tính được xác thực bằng kho CA của hệ điều hành: CA trong hồ sơ chỉ áp dụng cho MinIO.
 	endpoint, err := discoverOidc(ctx, cfg.IssuerUrl)
 	if err != nil {
 		return oidcSession{}, err
@@ -207,7 +207,7 @@ func (m *submoduleOidcMng) authorize(ctx context.Context, cfg models.AuthConfig,
 	return newOidcSession(idToken, token.AccessToken, nonce)
 }
 
-// newOidcSession checks the id_token (expiry and nonce, the signature is MinIO's job) and builds the session.
+// newOidcSession kiểm tra id_token (thời hạn và nonce; MinIO chịu trách nhiệm kiểm tra chữ ký) rồi tạo phiên.
 func newOidcSession(idToken, accessToken, nonce string) (oidcSession, error) {
 	if idToken == "" {
 		return oidcSession{}, errors.New("the identity provider returned no id_token")
@@ -230,7 +230,7 @@ func newOidcSession(idToken, accessToken, nonce string) (oidcSession, error) {
 	return oidcSession{idToken: idToken, accessToken: accessToken, expiresAt: expiresAt}, nil
 }
 
-// idTokenClaims reads exp and nonce from the payload of a JWT without verifying it.
+// idTokenClaims đọc exp và nonce từ payload của JWT mà không xác minh JWT.
 func idTokenClaims(idToken string) (expiresAt time.Time, nonce string, err error) {
 	parts := strings.Split(idToken, ".")
 	if len(parts) != 3 {
@@ -253,8 +253,8 @@ func idTokenClaims(idToken string) (expiresAt time.Time, nonce string, err error
 	return expiresAt, claims.Nonce, nil
 }
 
-// callbackHandler serves only /callback. A request with a wrong state is rejected and ignored, so a stray local
-// request can't end the sign-in.
+// callbackHandler chỉ xử lý /callback. Yêu cầu có state sai sẽ bị từ chối và bỏ qua để một yêu cầu cục bộ bất kỳ
+// không thể kết thúc quá trình đăng nhập.
 func callbackHandler(state string, results chan<- callbackResult) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/callback", func(w http.ResponseWriter, r *http.Request) {
@@ -281,7 +281,7 @@ func callbackHandler(state string, results chan<- callbackResult) http.Handler {
 	return mux
 }
 
-// discoverOidc reads the authorization and token endpoints from the issuer's discovery document.
+// discoverOidc đọc endpoint xác thực và endpoint token từ tài liệu discovery của issuer.
 func discoverOidc(ctx context.Context, issuer string) (oauth2.Endpoint, error) {
 	ctx, cancel := context.WithTimeout(ctx, oidcRequestTimeout)
 	defer cancel()
@@ -310,11 +310,11 @@ func discoverOidc(ctx context.Context, issuer string) (oauth2.Endpoint, error) {
 	if doc.AuthorizationEndpoint == "" || doc.TokenEndpoint == "" {
 		return oauth2.Endpoint{}, errors.New("discovery document has no authorization or token endpoint")
 	}
-	// The document is remote input: the browser opens the first URL and the code is exchanged at the second.
+	// Tài liệu đến từ nguồn bên ngoài: trình duyệt mở URL thứ nhất và authorization code được đổi tại URL thứ hai.
 	if !utils.IsSecureUrl(doc.AuthorizationEndpoint) || !utils.IsSecureUrl(doc.TokenEndpoint) {
 		return oauth2.Endpoint{}, errors.New("discovery document has an endpoint that is not secure (needs https)")
 	}
-	// A public client sends its client id in the body and has no secret.
+	// Public client gửi client id trong phần body và không có secret.
 	return oauth2.Endpoint{
 		AuthURL:   doc.AuthorizationEndpoint,
 		TokenURL:  doc.TokenEndpoint,
@@ -322,7 +322,7 @@ func discoverOidc(ctx context.Context, issuer string) (oauth2.Endpoint, error) {
 	}, nil
 }
 
-// oidcScopes returns the requested scopes, always including openid (without it there is no id_token).
+// oidcScopes trả về các scope được yêu cầu, luôn có openid (nếu thiếu sẽ không có id_token).
 func oidcScopes(scope string) []string {
 	scopes := strings.Fields(scope)
 	if !slices.Contains(scopes, "openid") {
@@ -331,7 +331,7 @@ func oidcScopes(scope string) []string {
 	return scopes
 }
 
-// randomToken returns n random bytes, URL-safe base64 encoded.
+// randomToken trả về n byte ngẫu nhiên được mã hóa base64 an toàn cho URL.
 func randomToken(n int) (string, error) {
 	b := make([]byte, n)
 	if _, err := rand.Read(b); err != nil {
@@ -340,7 +340,7 @@ func randomToken(n int) (string, error) {
 	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
-// put stores a session under id, dropping the expired ones and, past oidcMaxSessions, the oldest.
+// put lưu phiên dưới id, xóa các phiên hết hạn và, nếu vượt oidcMaxSessions, xóa phiên cũ nhất.
 func (m *submoduleOidcMng) put(id string, session oidcSession) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -363,7 +363,7 @@ func (m *submoduleOidcMng) put(id string, session oidcSession) {
 	m.sessions[id] = session
 }
 
-// session returns the unexpired session id; an expired one is dropped.
+// session trả về id của phiên chưa hết hạn; phiên hết hạn sẽ bị xóa.
 func (m *submoduleOidcMng) session(id string) (oidcSession, bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -376,7 +376,7 @@ func (m *submoduleOidcMng) session(id string) (oidcSession, bool) {
 	return s, ok
 }
 
-// remove forgets the session id; call it after a connect used it.
+// remove xóa phiên mang id đã cho; gọi hàm sau khi thao tác kết nối sử dụng phiên.
 func (m *submoduleOidcMng) remove(id string) {
 	if id == "" {
 		return
@@ -386,7 +386,7 @@ func (m *submoduleOidcMng) remove(id string) {
 	delete(m.sessions, id)
 }
 
-// clear forgets every session; call it when the app shuts down.
+// clear xóa mọi phiên; gọi hàm khi ứng dụng tắt.
 func (m *submoduleOidcMng) clear() {
 	m.mu.Lock()
 	defer m.mu.Unlock()

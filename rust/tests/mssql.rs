@@ -55,7 +55,7 @@ fn first_row(c: &Conn, sql: &str) -> Value {
 }
 
 mssql! {
-    // ---- open ----
+    // ---- mở ----
 
     fn open_runs_a_query_and_close_makes_the_connection_unknown(s: &Server) {
         let r = s.open("disable");
@@ -138,7 +138,7 @@ mssql! {
         assert!(took < Duration::from_secs(15), "{took:?}");
     }
 
-    // ---- execute ----
+    // ---- thực thi ----
 
     fn select_returns_columns_rows_and_done(s: &Server) {
         let c = s.conn();
@@ -1004,7 +1004,7 @@ GO
         assert_ne!(c.link(), old_link);
     }
 
-    // ---- method chỉ SQLite có ----
+    // ---- phương thức chỉ SQLite có ----
 
     fn schema_methods_are_invalid_request_for_sqlserver(s: &Server) {
         let c = s.conn();
@@ -1019,7 +1019,7 @@ GO
         assert_eq!(c.first("SELECT 1"), "1");
     }
 
-    // ---- nhiều connection ----
+    // ---- nhiều kết nối ----
 
     fn connections_are_isolated_from_each_other(s: &Server) {
         let a = s.conn();

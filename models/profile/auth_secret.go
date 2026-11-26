@@ -1,7 +1,7 @@
 package profile
 
-// AuthSecret holds the secrets of a profile besides SecretKey. It is stored encrypted as JSON in
-// connection_profiles.auth_secret, only when the user ticks Save password, and is never sent to the frontend.
+// AuthSecret chứa các secret của hồ sơ ngoài SecretKey. Chỉ lưu dưới dạng JSON đã mã hóa trong
+// connection_profiles.auth_secret khi người dùng chọn Save password và không bao giờ gửi đến frontend.
 type AuthSecret struct {
 	SessionToken string `json:"sessionToken,omitempty"`
 	LdapPassword string `json:"ldapPassword,omitempty"`

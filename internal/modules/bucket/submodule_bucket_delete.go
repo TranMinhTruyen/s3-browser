@@ -17,7 +17,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// regionOptFns makes the requests go to the region of the bucket; only real AWS needs it.
+// regionOptFns gửi yêu cầu đến region của bucket; chỉ AWS thật mới cần thiết lập này.
 func regionOptFns(conn *global.S3Conn, region string) []func(*s3.Options) {
 	if !isRealAws(conn) || region == "" {
 		return nil
@@ -25,13 +25,13 @@ func regionOptFns(conn *global.S3Conn, region string) []func(*s3.Options) {
 	return []func(*s3.Options){func(o *s3.Options) { o.Region = region }}
 }
 
-// isNotImplemented reports whether the server answered NotImplemented.
+// isNotImplemented cho biết máy chủ có trả về NotImplemented hay không.
 func isNotImplemented(err error) bool {
 	return UnwrapAwsError(err) == "NotImplemented"
 }
 
-// deleteCursor walks the versions and delete markers of a bucket page by page. A server without
-// ListObjectVersions falls back to ListObjectsV2 (current objects only).
+// deleteCursor duyệt phiên bản và delete marker của bucket lần lượt theo trang. Nếu máy chủ không hỗ trợ
+// ListObjectVersions thì dùng ListObjectsV2 thay thế (chỉ lấy object hiện tại).
 type deleteCursor struct {
 	limit         int32
 	keyMarker     *string
@@ -41,10 +41,10 @@ type deleteCursor struct {
 	done          bool
 }
 
-// errVersionMarkerStuck means the server says the version list continues but gives no new marker.
+// errVersionMarkerStuck cho biết máy chủ báo danh sách phiên bản còn tiếp nhưng không trả marker mới.
 var errVersionMarkerStuck = errors.New("ListObjectVersions returned no new marker")
 
-// stuck reports whether the next markers can't move the cursor forward: both missing, or the same as before.
+// stuck cho biết các marker tiếp theo không thể đưa cursor tiến lên: cả hai đều thiếu hoặc trùng với marker trước.
 func (c *deleteCursor) stuck(keyMarker, versionMarker *string) bool {
 	if keyMarker == nil && versionMarker == nil {
 		return true
@@ -53,7 +53,7 @@ func (c *deleteCursor) stuck(keyMarker, versionMarker *string) bool {
 		aws.ToString(versionMarker) == aws.ToString(c.versionMarker)
 }
 
-// nextPage returns the identifiers of the next page; done is set once the last page was returned.
+// nextPage trả về các định danh của trang tiếp theo; done được bật sau khi trả về trang cuối.
 func (c *deleteCursor) nextPage(
 	ctx context.Context,
 	client *s3.Client,
@@ -105,8 +105,8 @@ func (c *deleteCursor) nextPage(
 	return ids, nil
 }
 
-// getBucketDeleteInfo reads what the delete dialog needs (10s timeout): whether the bucket is empty, its
-// versioning and whether Object Lock is on. An item that can't be read stays unknown (nil, empty, false).
+// getBucketDeleteInfo đọc thông tin hộp thoại xóa cần (timeout 10 giây): bucket có rỗng không, trạng thái versioning
+// và Object Lock có bật không. Mục nào không đọc được thì giữ trạng thái chưa xác định (nil, rỗng, false).
 func (m *submoduleBucketEditMng) getBucketDeleteInfo(
 	ctx context.Context,
 	input models.DeleteBucketInput,
@@ -173,10 +173,9 @@ func (m *submoduleBucketEditMng) getBucketDeleteInfo(
 	return output
 }
 
-// deleteBucket deletes input.Bucket after deleting every object, version and delete marker in it (30 minute
-// timeout). Object Lock is checked before any object is deleted: a bucket that is not empty and has Object Lock
-// (or whose Object Lock can't be read) is left untouched. It stops at the first batch with a failed key and
-// then doesn't delete the bucket.
+// deleteBucket xóa input.Bucket sau khi xóa mọi object, phiên bản và delete marker bên trong (timeout 30 phút).
+// Kiểm tra Object Lock trước khi xóa object: bucket không rỗng và bật Object Lock (hoặc không đọc được trạng thái
+// Object Lock) sẽ được giữ nguyên. Dừng ở lô đầu tiên có key xóa thất bại và không xóa bucket sau đó.
 func (m *submoduleBucketEditMng) deleteBucket(
 	ctx context.Context,
 	input models.DeleteBucketInput,
@@ -237,10 +236,10 @@ func (m *submoduleBucketEditMng) deleteBucket(
 	return *output.AddMessage(bucketMessage(cnst.MessageTypeSuccess, S3S009, input.Bucket, ""))
 }
 
-// emptyBucket deletes every version and delete marker with d. It returns the message to stop with when it stopped
-// on purpose (Object Lock, or a key that failed), or an error when a call failed. lock and lockErr are the result
-// of readObjectLock; they only matter when the bucket is not empty. legacyList is set when the server can't list
-// versions and only the current objects were deleted.
+// emptyBucket dùng d để xóa mọi phiên bản và delete marker. Hàm trả thông báo cần dừng khi chủ động ngừng
+// (Object Lock hoặc key xóa thất bại), hoặc trả lỗi khi một lời gọi thất bại. lock và lockErr là kết quả của
+// readObjectLock; chỉ cần xét chúng nếu bucket không rỗng. legacyList được bật nếu máy chủ không liệt kê được phiên bản
+// và chỉ xóa được các object hiện tại.
 func emptyBucket(
 	ctx context.Context,
 	d *batchDeleter,
@@ -279,9 +278,9 @@ func emptyBucket(
 	return nil, cursor.v2, nil
 }
 
-// deleteBucketFailed ends a failed delete of the bucket with the message of the error: BucketNotEmpty gives S3E061,
-// NoSuchBucket S3E059, denied S3E052, anything else S3E060. legacyList is set when only the current objects could be
-// listed: BucketNotEmpty then means old versions are left, and gives S3E064.
+// deleteBucketFailed kết thúc thao tác xóa bucket thất bại bằng thông báo tương ứng: BucketNotEmpty dùng S3E061,
+// NoSuchBucket dùng S3E059, bị từ chối dùng S3E052, các lỗi khác dùng S3E060. Nếu bật legacyList vì chỉ liệt kê được
+// object hiện tại thì BucketNotEmpty nghĩa là còn phiên bản cũ và dùng S3E064.
 func deleteBucketFailed(
 	ctx context.Context,
 	output models.Output[models.DeleteBucketOutput],

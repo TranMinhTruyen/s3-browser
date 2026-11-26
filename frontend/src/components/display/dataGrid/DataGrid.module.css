@@ -1,4 +1,4 @@
-/* Sizes are rem so the grid follows the interface size; the virtualizers use the same values as px x scale. */
+/* Kích thước dùng rem để grid theo cỡ giao diện; virtualizer dùng cùng giá trị tính theo px x tỷ lệ. */
 .root {
   position: relative;
   height: 100%;
@@ -33,7 +33,7 @@
   box-sizing: border-box;
   height: 2rem;
   padding-inline: 0.5rem;
-  /* line-height = height keeps the text centered at fractional pixel sizes of small/large */
+  /* line-height = height giữ văn bản ở giữa khi kích thước small/large tạo ra số pixel lẻ */
   line-height: 2rem;
   overflow: hidden;
   white-space: nowrap;
@@ -58,7 +58,7 @@
   border-bottom: 1px solid var(--mantine-color-default-border);
 }
 
-/* The corner stays above both the sticky header and the sticky index column */
+/* Góc này nằm trên cả header cố định và cột index cố định */
 .corner {
   z-index: 3;
 }
@@ -68,7 +68,7 @@
   color: var(--mantine-color-dimmed);
 }
 
-/* Drag area on the right edge of a header cell; wider than the 1px border so it is easy to catch at every size */
+/* Vùng kéo ở mép phải ô header; rộng hơn viền 1px để dễ thao tác ở mọi cỡ */
 .resizer {
   position: absolute;
   top: 0;
@@ -84,7 +84,7 @@
   background-color: light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3));
 }
 
-/* The grid takes the keyboard focus, the active cell shows the focus ring instead of the grid. */
+/* Grid nhận tiêu điểm bàn phím; ô đang hoạt động hiển thị viền focus thay cho toàn grid. */
 .selectable {
   user-select: none;
 }
@@ -98,12 +98,12 @@
   outline-offset: -2px;
 }
 
-/* Cells of the selected rectangle or columns, selected rows, selected column titles: a layer over the row tint. */
+/* Các ô trong vùng/cột được chọn, hàng được chọn và tiêu đề cột được chọn: lớp phủ trên màu nền hàng. */
 .selected {
   background-image: linear-gradient(var(--mantine-primary-color-light), var(--mantine-primary-color-light));
 }
 
-/* Row states: a tint on the row, a bar on its number cell. Deleted rows are struck through. */
+/* Trạng thái hàng: phủ màu lên hàng và thêm vạch ở ô số thứ tự. Hàng bị xóa có gạch ngang. */
 .rowNew {
   background-color: color-mix(in srgb, var(--mantine-color-green-filled) 14%, transparent);
 }
@@ -134,7 +134,7 @@
   background-color: color-mix(in srgb, var(--mantine-color-yellow-filled) 30%, transparent);
 }
 
-/* The input fills its cell: the cell clips it, so a long value scrolls inside the input instead of overflowing. */
+/* Input lấp đầy ô và bị ô cắt theo kích thước, nhờ đó giá trị dài cuộn bên trong input thay vì tràn ra ngoài. */
 .editor {
   box-sizing: border-box;
   display: block;

@@ -12,17 +12,17 @@ import type { AuthFieldsProps } from '@/pages/s3/modals/connect/connectSchema';
 
 type FilePathFieldProps = Pick<AuthFieldsProps, 'form'> & {
   name: 'authConfig.certFile' | 'authConfig.keyFile' | 'authConfig.caFile';
-  /** Which file the backend dialog asks for. */
+  /** Loại file mà hộp thoại backend yêu cầu chọn. */
   kind: 'cert' | 'key' | 'ca';
   label: string;
   placeholder: string;
   description?: string;
   withAsterisk?: boolean;
-  /** Shows a button that empties the path. */
+  /** Hiện nút xóa đường dẫn. */
   clearable?: boolean;
 };
 
-/** Read-only path of a file picked with the backend dialog (only the path is kept, never the content). */
+/** Đường dẫn chỉ đọc của file chọn bằng hộp thoại backend (chỉ giữ đường dẫn, không đọc nội dung file). */
 function FilePathField({
   form,
   name,
@@ -39,7 +39,7 @@ function FilePathField({
 
   const onClickChooseFile = useCallback(async () => {
     const chosen = await callIPC(ChooseAuthFile, [kind], { signal: getSignal() });
-    // Empty means the user canceled the dialog: keep the current path.
+    // Giá trị rỗng nghĩa là người dùng hủy hộp thoại: giữ nguyên đường dẫn hiện tại.
     if (chosen) form.setFieldValue(name, chosen);
   }, [kind, name, form, getSignal]);
 

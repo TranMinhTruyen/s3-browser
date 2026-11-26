@@ -3,17 +3,17 @@ import { ConnectionProfileOutput } from '@wails/S3Browser/models';
 import { createAppStore } from '@/common/stores/createStore';
 import { callIPC, invalidateLoads } from '@/common/utils/ipcUtils';
 
-/** Saved connection profile, as returned by the backend. */
+/** Profile kết nối đã lưu, theo dữ liệu backend trả về. */
 export type ConnectionProfile = ConnectionProfileOutput & {};
 
 interface ProfileState {
   connectionProfiles: Partial<Record<string, ConnectionProfile>>;
-  /** True once the profiles were loaded successfully, so an empty list can be told from "not loaded yet". */
+  /** Bật sau khi tải profile thành công để phân biệt danh sách rỗng với trạng thái "chưa tải". */
   loaded: boolean;
 }
 
 interface ProfileAction {
-  // Resolves true when the profiles were loaded.
+  // Trả về true khi tải profile thành công.
   loadConnectionProfiles: () => Promise<boolean>;
   getConnectionProfileById: (key?: string | null) => ConnectionProfile | null | undefined;
   updateConnectionProfiles: (key: string, data: ConnectionProfile) => void;
@@ -23,7 +23,7 @@ interface ProfileAction {
 
 const SCOPE = 'profile';
 
-/** Saved connection profiles by id. */
+/** Các profile kết nối đã lưu, được lập chỉ mục theo id. */
 export const useProfileStore = createAppStore<ProfileState & ProfileAction>(
   (set, get) => ({
     connectionProfiles: {},

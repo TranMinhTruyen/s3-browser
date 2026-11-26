@@ -1,6 +1,6 @@
 package bucket
 
-// SearchBucketOutput is one page of matching buckets; an empty NextCursor means no more results.
+// SearchBucketOutput là một trang bucket khớp; NextCursor rỗng nghĩa là không còn kết quả.
 type SearchBucketOutput struct {
 	BucketList []Bucket `json:"bucketList"`
 	NextCursor string   `json:"nextCursor"`

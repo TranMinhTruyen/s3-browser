@@ -12,7 +12,7 @@ const setup = (prefix: string, bucket: string | undefined = 'bkt') => {
     tabList: { [TAB]: { currentView: 'objectList', bucket, prefix, selectionItem: {}, deletingItems: {} } as never },
   });
   const { container } = renderWithProviders(<TabBreadcrumb tabId={TAB} bucket={bucket} prefix={prefix} />);
-  // Anchors without href have no link role, so the clickable crumbs are found by tag.
+  // Anchor không có href sẽ không mang role link nên tìm các crumb có thể click theo tag.
   const anchors = () => [...container.querySelectorAll('a')];
   const links = () => anchors().map(a => a.textContent);
   return { user: userEvent.setup(), links, anchors };
@@ -57,7 +57,7 @@ describe('TabBreadcrumb', () => {
   it('names an empty folder "/"', async () => {
     const { user, links, anchors } = setup('a//b/');
     expect(links()).toEqual(['bkt', 'a', '/']);
-    // The separators are "/" too, so the crumb is picked from the links.
+    // Dấu phân cách cũng là "/" nên lấy crumb từ các liên kết.
     await user.click(anchors()[2]);
     expect(prefixOf()).toBe('a//');
   });

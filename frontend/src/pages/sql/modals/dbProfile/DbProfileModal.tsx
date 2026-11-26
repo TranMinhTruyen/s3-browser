@@ -28,23 +28,23 @@ import {
 import { type DbProfile, PROVIDER_LABEL_KEY, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 
 type DbProfileModalProps = {
-  /** Profile to edit; without it the modal creates a new one. */
+  /** Profile cần chỉnh sửa; nếu không có thì modal tạo profile mới. */
   profile?: DbProfile;
 };
 
 /**
- * Modal to create or edit a database profile (saved by the backend). While the profile is connected, the file path,
- * read-only switch and DB type are locked. A failed save keeps the modal open; editing asks for confirmation first. Resolves `false` when dismissed.
+ * Modal tạo hoặc chỉnh sửa profile database (được backend lưu). Khi profile đang kết nối, khóa đường dẫn file,
+ * tùy chọn chỉ đọc và loại DB. Lưu thất bại thì giữ modal mở; khi chỉnh sửa cần xác nhận trước. Trả về `false` khi đóng.
  */
 export default createMantineModal<DbProfileModalProps, false>(
   props => {
     const { profile, mantine } = props;
     const { t } = useTranslation('dbProfileModal');
     const saveDbProfile = useDbProfileStore(s => s.saveDbProfile);
-    // Live flag (the `profile` prop is a snapshot): the profile may connect or disconnect while the modal is open.
+    // Cờ trạng thái trực tiếp (prop `profile` chỉ là ảnh chụp): profile có thể kết nối hoặc ngắt kết nối khi modal đang mở.
     const locked = useDbProfileStore(s => !!(profile && s.dbProfiles[profile.id]?.isConnected));
 
-    // useForm only reads initialValues on mount; compute them once instead of on every keystroke.
+    // useForm chỉ đọc initialValues lúc mount; tính một lần thay vì mỗi lần nhấn phím.
     const [initialValues] = useState(() =>
       profile ? toFormValues(profile) : getDefaultDbProfileForm(`Connection No.${createUUID()}`)
     );
@@ -53,7 +53,7 @@ export default createMantineModal<DbProfileModalProps, false>(
       mode: 'uncontrolled',
       initialValues,
       validate: values => {
-        // Another profile with the same name (ignoring case and surrounding spaces); the edited one is skipped.
+        // Có profile khác trùng tên (không phân biệt hoa thường và khoảng trắng đầu/cuối); bỏ qua profile đang chỉnh sửa.
         const isNameTaken = (name: string) =>
           Object.values(useDbProfileStore.getState().dbProfiles).some(
             p => p && p.id !== profile?.id && p.name.trim().toLowerCase() === name.trim().toLowerCase()
@@ -74,7 +74,7 @@ export default createMantineModal<DbProfileModalProps, false>(
       [t]
     );
 
-    // Editing keeps the stored password only while the provider stays the same.
+    // Khi chỉnh sửa, chỉ giữ mật khẩu đã lưu nếu provider không thay đổi.
     const showKeepPassword = !!profile?.hasSecret && provider === profile.provider;
 
     const sslOptions = useMemo(() => SSL_MODES.map(value => ({ value, label: t(`form.sslMode.${value}`) })), [t]);

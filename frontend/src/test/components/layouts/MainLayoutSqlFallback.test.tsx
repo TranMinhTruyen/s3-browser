@@ -42,7 +42,7 @@ describe('MainLayout shared failed chunk', () => {
   it('renders the empty fallback in an instance that still has the mode visited', async () => {
     const a = renderWithProviders(<MainLayout />);
     const b = renderWithProviders(<MainLayout />);
-    // Only the first instance's onFail is bound to the cached lazy component, so the second keeps SQL visited.
+    // Chỉ onFail của instance đầu tiên được gắn với lazy component đã cache, nên instance thứ hai vẫn giữ trạng thái SQL đã truy cập.
     await userEvent.click(within(a.container).getByRole('radio', { name: 'SQL' }));
     await userEvent.click(within(b.container).getByRole('radio', { name: 'SQL' }));
     await waitFor(() => expect(gate.release).not.toBe(undefined));

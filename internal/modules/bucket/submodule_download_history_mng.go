@@ -18,20 +18,18 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// submoduleDownloadHistoryMng stores and lists download history in SQLite and opens a
-// downloaded file in the file manager.
+// submoduleDownloadHistoryMng lưu, liệt kê lịch sử tải xuống trong SQLite và mở file đã tải bằng trình quản lý file.
 //
-// Its queries use context.WithTimeout(m.app.Context(), ...) and not withCallContext: create
-// and update run from the downloader's own goroutines, which have no Wails call context, and
-// the history must still be written when the user cancels a download. The app context is the
-// only parent, so there is no second context to watch with AfterFunc.
+// Các truy vấn dùng context.WithTimeout(m.app.Context(), ...), không dùng withCallContext: create và update chạy trong
+// goroutine riêng của downloader, không có context lời gọi Wails; lịch sử vẫn phải được ghi khi người dùng hủy tải xuống.
+// Context ứng dụng là context cha duy nhất nên không cần theo dõi context thứ hai bằng AfterFunc.
 type submoduleDownloadHistoryMng struct {
 	logger *slog.Logger
 	app    *application.App
 	q      *sqlc.Queries
 }
 
-// newSubmoduleDownloadHistoryMng creates the history manager on top of db.
+// newSubmoduleDownloadHistoryMng tạo bộ quản lý lịch sử trên db.
 func newSubmoduleDownloadHistoryMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -44,7 +42,7 @@ func newSubmoduleDownloadHistoryMng(
 	}
 }
 
-// Download history statuses stored in the database and sent to the frontend.
+// Các trạng thái lịch sử tải xuống được lưu trong cơ sở dữ liệu và gửi đến frontend.
 const (
 	DOWNLOADING    = "DOWNLOADING"
 	DOWNLOADED     = "DOWNLOADED"
@@ -52,7 +50,7 @@ const (
 	DOWNLOAD_ERROR = "DOWNLOAD_ERROR"
 )
 
-// createDownloadHistory inserts a DOWNLOADING record for a download that is starting.
+// createDownloadHistory chèn bản ghi DOWNLOADING cho lượt tải xuống sắp bắt đầu.
 func (m *submoduleDownloadHistoryMng) createDownloadHistory(
 	input models.DownloadHistoryItem,
 ) (models.DownloadHistoryItem, error) {
@@ -80,8 +78,7 @@ func (m *submoduleDownloadHistoryMng) createDownloadHistory(
 	}, nil
 }
 
-// updateDownloadHistory writes the final status, path and size; input.Version is the
-// version returned by the previous create or update.
+// updateDownloadHistory ghi trạng thái cuối, đường dẫn và kích thước; input.Version là phiên bản trả về từ lần create hoặc update trước.
 func (m *submoduleDownloadHistoryMng) updateDownloadHistory(
 	input models.DownloadHistoryItem,
 ) (models.DownloadHistoryItem, error) {
@@ -111,7 +108,7 @@ func (m *submoduleDownloadHistoryMng) updateDownloadHistory(
 	}, nil
 }
 
-// getDownloadHistory returns one page of history after input.AfterID.
+// getDownloadHistory trả về một trang lịch sử sau input.AfterID.
 func (m *submoduleDownloadHistoryMng) getDownloadHistory(
 	input models.DownloadHistoryInput,
 ) models.Output[models.DownloadHistoryOutput] {
@@ -153,7 +150,7 @@ func (m *submoduleDownloadHistoryMng) getDownloadHistory(
 	return output
 }
 
-// openDownloadDest shows path in the OS file manager. Errors name fileName for the user.
+// openDownloadDest hiển thị path trong trình quản lý file của hệ điều hành. Thông báo lỗi dùng fileName để người dùng dễ nhận biết.
 func (m *submoduleDownloadHistoryMng) openDownloadDest(fileName, path string) models.Output[any] {
 	output := models.NewOutput[any]()
 

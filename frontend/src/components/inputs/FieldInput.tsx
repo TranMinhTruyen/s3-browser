@@ -61,8 +61,8 @@ type FieldInputProps =
   | ColorFieldProps;
 
 /**
- * Mantine text-like input chosen by `type` (text by default). Translates `error` through `useFieldError`;
- * `pin` and `color` do not show an error, so it is dropped for them.
+ * Input dạng văn bản của Mantine, chọn theo `type` (mặc định là text). Dịch `error` qua `useFieldError`;
+ * `pin` và `color` không hiển thị lỗi nên bỏ qua prop này với hai loại đó.
  */
 function FieldInput(props: FieldInputProps) {
   const { size = 'sm' } = props;

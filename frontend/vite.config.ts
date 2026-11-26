@@ -8,9 +8,9 @@ export default defineConfig(() => {
   return {
     plugins: [react(), svgr()],
     server: {
-      // Bind IPv4 explicitly: with the default 'localhost', Node resolves to
-      // ::1 only, while the Wails asset proxy dials 127.0.0.1 — which would
-      // leave the webview blank in dev mode.
+      // Gắn rõ IPv4: với giá trị 'localhost' mặc định, Node chỉ phân giải thành
+      // ::1, trong khi proxy tài nguyên của Wails kết nối tới 127.0.0.1 — điều này
+      // sẽ khiến webview trống ở chế độ phát triển.
       host: '127.0.0.1',
       port: 5174,
       strictPort: true,

@@ -17,22 +17,22 @@ type BucketPolicyModalProps = ModalProps & {
   connectionId: string;
   profileName?: string;
   bucket: string;
-  // Called with the saved mode after the policy was written.
+  // Được gọi với mode đã lưu sau khi ghi policy.
   onSaved?: (mode: PolicyMode) => void;
 };
 
-/** Shows and changes the access of a bucket as private / public read-only / custom policy JSON. */
+/** Hiển thị và thay đổi quyền truy cập bucket thành riêng tư / công khai chỉ đọc / policy JSON tùy chỉnh. */
 export default createMantineModal<BucketPolicyModalProps, boolean>(
   props => {
     const { connectionId, profileName, bucket, onSaved, mantine, size = 'md', centered = true, ...rest } = props;
 
     const { t } = useTranslation('bucketPolicyModal');
 
-    // undefined while loading, null when it failed to load.
+    // undefined khi đang tải, null nếu tải thất bại.
     const [current, setCurrent] = useState<BucketPolicyOutput | null>();
     const [mode, setMode] = useState<PolicyMode>('private');
     const [policy, setPolicy] = useState('');
-    // Controller of the running save, aborted when the modal closes.
+    // Controller của thao tác lưu đang chạy, bị hủy khi modal đóng.
     const saveCtrl = useRef<AbortController>(null);
 
     const applyOutput = useCallback((output: BucketPolicyOutput) => {
@@ -41,7 +41,7 @@ export default createMantineModal<BucketPolicyModalProps, boolean>(
       setPolicy(output.policy);
     }, []);
 
-    // Closing the modal (any way) cancels the load in flight, so a late result never sets state.
+    // Đóng modal bằng bất kỳ cách nào cũng hủy lượt tải đang chạy để kết quả về muộn không cập nhật state.
     useEffect(() => {
       const loadCtrl = new AbortController();
       callIPC(GetBucketPolicy, [{ connectionId, profileName, bucket }], { signal: loadCtrl.signal }).then(output => {
@@ -65,7 +65,7 @@ export default createMantineModal<BucketPolicyModalProps, boolean>(
         [{ connectionId, profileName, bucket, mode, policy: mode === 'custom' ? policy : undefined }],
         { signal }
       );
-      // On failure callIPC already showed the error and the form keeps what the user typed.
+      // Khi thất bại, callIPC đã hiện lỗi và form giữ nguyên nội dung người dùng đã nhập.
       if (signal.aborted || !output) return;
       applyOutput(output);
       onSaved?.(output.mode as PolicyMode);

@@ -26,7 +26,7 @@ type TabDetailProps = {
   tabId: string;
 };
 
-/** Content of one tab: toolbar, breadcrumb, the bucket or object list and the detail drawer. */
+/** Nội dung của một tab: thanh công cụ, đường dẫn, danh sách bucket hoặc đối tượng và ngăn chi tiết. */
 function TabDetail(props: TabDetailProps) {
   const { tabId } = props;
 
@@ -34,7 +34,7 @@ function TabDetail(props: TabDetailProps) {
   const tabView = useTabListStore(s => s.tabList[tabId]?.currentView ?? 'bucketList');
   const selectedBucket = useTabListStore(s => s.tabList[tabId]?.bucket);
   const prefix = useTabListStore(s => s.tabList[tabId]?.prefix ?? '');
-  // Only id -> name, so a profile change that keeps its name does not re-render every tab.
+  // Chỉ ánh xạ id -> tên, để thay đổi profile mà vẫn giữ nguyên tên không khiến mọi tab render lại.
   const profileNames = useProfileStore(
     useShallow(s =>
       Object.fromEntries(Object.entries(s.connectionProfiles).map(([key, value]) => [key, value?.name ?? '']))
@@ -83,9 +83,9 @@ function TabDetail(props: TabDetailProps) {
     await connectProfile(selectedProfileId, profile);
   }, [selectedProfile, connectProfile, selectedProfileId]);
 
-  // The keyword only lives in the context (profile, bucket, folder, view) it was entered in. When the context
-  // changes it is dropped during render (before commit), so the list loads once and a later return to the
-  // same context starts without a keyword.
+  // Từ khóa chỉ thuộc ngữ cảnh (profile, bucket, thư mục, view) nơi nó được nhập. Khi ngữ cảnh thay đổi,
+  // từ khóa được xóa ngay trong lúc render (trước khi commit), nên danh sách chỉ tải một lần và lần sau
+  // quay lại cùng ngữ cảnh sẽ không còn từ khóa đó.
   const searchContext = `${selectedProfileId}|${selectedBucket}|${prefix}|${currentView}`;
   const [search, setSearch] = useState({ keyword: '', context: searchContext });
   if (search.context !== searchContext) setSearch({ keyword: '', context: searchContext });
@@ -93,9 +93,9 @@ function TabDetail(props: TabDetailProps) {
 
   const onSearch = useCallback(
     (value: string) => {
-      // Only the object list has a selection.
+      // Chỉ danh sách đối tượng có lựa chọn.
       if (currentView === 'objectList') clearSelectItem(tabId);
-      // Same keyword: state would not change, so search again from the first page through the refresh path.
+      // Từ khóa không đổi nên state cũng không đổi; tìm lại từ trang đầu thông qua luồng làm mới.
       if (value === keyword) {
         (currentView === 'objectList' ? objectListRef : bucketListRef).current?.onRefresh?.();
         return;
@@ -106,7 +106,7 @@ function TabDetail(props: TabDetailProps) {
   );
 
   const onClearSearch = useCallback(() => {
-    // Selected files may not be in the unfiltered list's view anymore; skip when there is nothing to clear.
+    // Các file đã chọn có thể không còn trong danh sách chưa lọc; bỏ qua nếu không có lựa chọn nào cần xóa.
     if (!keyword) return;
     if (currentView === 'objectList') clearSelectItem(tabId);
     setSearch({ keyword: '', context: searchContext });
@@ -143,26 +143,26 @@ function TabDetail(props: TabDetailProps) {
     [tabId, changeCurrentView]
   );
 
-  // Go up one folder; at the bucket root, go back to the bucket list.
+  // Lùi lên một thư mục; nếu đang ở gốc bucket thì quay lại danh sách bucket.
   const onClickBack = useCallback(() => {
     if (!prefix) {
       changeCurrentView(tabId, 'bucketList');
       return;
     }
-    // "a/b/" -> "a/", "a/" -> "". Only the last "/" is dropped, so "a//" -> "a/" keeps the empty-named folder.
+    // "a/b/" -> "a/", "a/" -> "". Chỉ bỏ dấu "/" cuối cùng, nên "a//" -> "a/" vẫn giữ thư mục có tên rỗng.
     const parent = prefix.slice(0, -1);
     changePrefix(tabId, parent.slice(0, parent.lastIndexOf('/') + 1));
   }, [prefix, tabId, changeCurrentView, changePrefix]);
 
-  // Opens the file picker, then uploads the ticked files: into the current folder in the object list, or into the
-  // bucket chosen in the picker (at its root) in the bucket list.
+  // Mở hộp chọn file rồi tải các file đã đánh dấu lên: vào thư mục hiện tại nếu đang xem danh sách đối tượng,
+  // hoặc vào bucket được chọn trong hộp thoại (tại thư mục gốc) nếu đang xem danh sách bucket.
   const onClickUpload = useCallback(async () => {
     if (!selectedProfile?.id || !ensureUploadIdle()) return;
     const connectionId = selectedProfile.id;
     const profileName = selectedProfile.name;
     const inBucket = currentView === 'objectList' && !!selectedBucket;
     const uploadPrefix = inBucket ? prefix : '';
-    // undefined: the modal chunk failed to load (already toasted) or the user cancelled; either way nothing to upload.
+    // undefined nghĩa là không tải được phần modal (đã hiện thông báo) hoặc người dùng đã hủy; cả hai đều không tải gì.
     const picked = await showUploadPickerModal({
       tabId,
       connectionId,
@@ -175,7 +175,7 @@ function TabDetail(props: TabDetailProps) {
     await runUpload(
       { tabId, connectionId, profileName, bucket: picked.bucket, prefix: uploadPrefix, files: picked.files },
       async () => {
-        // The user may have moved on while uploading: refresh only the list the files went to.
+        // Người dùng có thể đã chuyển sang nơi khác trong lúc tải; chỉ làm mới danh sách nhận các file đó.
         const tab = useTabListStore.getState().tabList[tabId];
         if (tab?.currentView === 'objectList' && tab.bucket === picked.bucket && tab.prefix === uploadPrefix) {
           await objectListRef.current?.onRefresh?.();
@@ -186,7 +186,7 @@ function TabDetail(props: TabDetailProps) {
 
   const onClickCreateBucket = useCallback(async () => {
     if (!selectedProfile?.id) return;
-    // Only real AWS (no custom endpoint) lets the user choose the region of the new bucket.
+    // Chỉ AWS thật (không dùng endpoint tùy chỉnh) mới cho phép chọn region của bucket mới.
     const withRegion = selectedProfile.provider === 'aws' && !selectedProfile.endpoint;
     const created = await showCreateBucketModal({
       connectionId: selectedProfile.id,
@@ -223,13 +223,13 @@ function TabDetail(props: TabDetailProps) {
       });
       if (!result) return;
       if (result.bucketDeleted) removeBucket(selectedProfile.id, bucket);
-      // Only this tab's list is refreshed; other tabs show the bucket until they are refreshed.
+      // Chỉ làm mới danh sách của tab này; các tab khác vẫn hiện bucket cho đến khi được làm mới.
       await bucketListRef.current?.onRefresh?.();
     },
     [selectedProfile, removeBucket]
   );
 
-  // Activity hides the tab with display none, which resets the scroll offset: save it on hide, restore on show.
+  // Activity ẩn tab bằng display none khiến vị trí cuộn bị đặt lại: lưu khi ẩn và khôi phục khi hiện.
   const savedScrollTop = useRef(0);
   useLayoutEffect(() => {
     const el = scrollRef.current;

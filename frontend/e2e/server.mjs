@@ -1,7 +1,7 @@
-// Starts the server-mode build of the app for Playwright (webServer in playwright.config.ts).
-// The exe and s3b_db.dll are copied into a fresh folder each run: the portable build keeps its data (profiles,
-// settings, key) next to the exe, so every run starts from an empty app and never touches the developer's data.
-// Build first with `bun run e2e:build`.
+// Khởi chạy bản build ở chế độ server cho Playwright (webServer trong playwright.config.ts).
+// Mỗi lần chạy đều sao chép exe và s3b_db.dll vào thư mục mới: bản portable lưu dữ liệu (profile,
+// thiết lập, key) cạnh exe nên mỗi lượt bắt đầu với ứng dụng trống và không đụng đến dữ liệu của người phát triển.
+// Trước tiên chạy `bun run e2e:build` để build.
 import { spawn } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -13,7 +13,7 @@ const exe = join(repo, 'build', 'bin', 'S3Browser-server.exe');
 const dll = join(repo, 'rust', 'target', 'x86_64-pc-windows-msvc', 'release', 's3b_db.dll');
 for (const file of [exe, dll]) {
   if (!existsSync(file)) {
-    // oxlint-disable-next-line no-console -- CLI script, the message is for the developer
+    // oxlint-disable-next-line no-console -- script CLI, thông báo dành cho người phát triển
     console.error(`Missing ${file}. Run \`bun run e2e:build\` first.`);
     process.exit(1);
   }

@@ -5,9 +5,9 @@ import classes from '@/components/inputs/combobox/combobox.module.css';
 const dropdownClassNames = { dropdown: classes.dropdown, search: classes.search, option: classes.option };
 
 /**
- * App-wide Mantine theme. Every combobox-based dropdown shares one look. Select, MultiSelect,
- * Autocomplete and TagsInput render their own Combobox, so each needs its own entry. Badge labels
- * are trimmed to cap height so uppercase text is vertically centered at every UI size.
+ * Theme Mantine dùng cho toàn ứng dụng. Mọi danh sách thả xuống dựa trên combobox có giao diện đồng nhất. Select, MultiSelect,
+ * Autocomplete và TagsInput tự render Combobox riêng nên mỗi component cần một cấu hình riêng. Nhãn Badge
+ * được thu theo chiều cao chữ hoa để chữ in hoa luôn căn giữa dọc ở mọi cỡ giao diện.
  */
 export const appTheme = createTheme({
   components: {

@@ -21,18 +21,18 @@ import { mergePickedFiles, PickerLimits, PickerList, removePickedFiles } from '@
 import classes from './UploadPickerModal.module.css';
 
 type UploadPickerModalProps = ModalProps & {
-  // The tab the files are uploaded from; also the drop target's tab id.
+  // Tab khởi chạy tải file lên; cũng là id tab đích khi thả file.
   tabId: string;
   connectionId: string;
   profileName?: string;
-  // Fixed target bucket. Without it the user must choose one.
+  // Bucket đích cố định. Nếu không có giá trị này thì người dùng phải chọn bucket.
   bucket?: string;
   prefix?: string;
 };
 
 export type UploadPickerResult = { bucket: string; files: DroppedFile[] };
 
-// The list follows the window height but never gets smaller than the minimum.
+// Danh sách co giãn theo chiều cao cửa sổ nhưng không nhỏ hơn mức tối thiểu.
 const LIST_HEIGHT = 'max(17.5rem, 40vh)';
 
 type FileListProps = {
@@ -92,8 +92,8 @@ const FileList = memo(function FileList(props: FileListProps) {
 });
 
 /**
- * Lets the user add files (native dialog or drag and drop), tick the ones to upload and choose the target bucket.
- * Resolves the bucket and the ticked files, or null when canceled.
+ * Cho phép thêm file (qua hộp thoại hệ thống hoặc kéo thả), đánh dấu file cần tải lên và chọn bucket đích.
+ * Trả về bucket cùng các file đã đánh dấu, hoặc null nếu người dùng hủy.
  */
 export default createMantineModal<UploadPickerModalProps, UploadPickerResult | null>(props => {
   const {
@@ -110,8 +110,8 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
 
   const { t } = useTranslation('uploadPickerModal');
 
-  // Groups and ticks change together. The ref always holds the latest list, so overlapping updates (a drop while
-  // the native dialog is open, two drops in a row) merge into each other instead of overwriting.
+  // Nhóm và trạng thái đánh dấu thay đổi cùng nhau. Ref luôn giữ danh sách mới nhất để các cập nhật chồng lấp
+  // (thả file khi hộp thoại hệ thống đang mở, hoặc thả hai lần liên tiếp) được gộp thay vì ghi đè lẫn nhau.
   const [list, setList] = useState<PickerList>({ groups: [], selected: new Set() });
   const listRef = useRef(list);
   const { groups, selected } = list;
@@ -125,11 +125,11 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
     setList(next);
   }, []);
 
-  // Adds files from the dialog or a drop to the list.
+  // Thêm file từ hộp thoại hoặc thao tác thả vào danh sách.
   const onAddFiles = useCallback(
     (output: FilesDroppedOutput) => {
       const hasGroups = !!output.groups?.length;
-      // Nothing was added (e.g. the dialog was canceled) and there is nothing to warn about.
+      // Không có file nào được thêm (ví dụ người dùng hủy hộp thoại) nên không cần cảnh báo.
       if (!hasGroups && output.skipped === 0 && !output.overMaxTotal && !output.capped) return;
 
       const nextLimits = {
@@ -155,7 +155,7 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
     [updateList, t]
   );
 
-  // Every open tab listens; only the tab the files were dropped on handles them.
+  // Mọi tab đang mở đều lắng nghe; chỉ tab nơi file được thả mới xử lý sự kiện.
   useEffect(() => {
     const unsubscribe = Events.On('uploader:picker-files-dropped', e => {
       if (e.data?.tabId === tabId) onAddFiles(e.data);
@@ -217,7 +217,7 @@ export default createMantineModal<UploadPickerModalProps, UploadPickerResult | n
     setIsPicking(true);
     try {
       const output = await callIPC(PickFiles, []);
-      // Canceling the dialog is a success with no groups.
+      // Hủy hộp thoại vẫn được xem là thành công nhưng không có nhóm file nào.
       if (output) onAddFiles(output);
     } finally {
       setIsPicking(false);

@@ -2,7 +2,7 @@ import { fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
 import type { GridEdit } from '@/components/display/dataGrid/useGridEdit';
 
-/** Translated Copy items of the context menu, as the parents pass them to `DataGrid`. */
+/** Các mục Copy đã dịch của menu ngữ cảnh, giống dữ liệu component cha truyền vào `DataGrid`. */
 export const COPY = { copy: 'Copy', copyWithHeaders: 'Copy with headers' };
 
 export const EDIT_LABELS = {
@@ -14,7 +14,7 @@ export const EDIT_LABELS = {
   rowDeleted: 'Row to delete',
 };
 
-/** A `GridEdit` with spies for every callback. */
+/** `GridEdit` có spy cho từng callback. */
 export const makeGridEdit = (extra: Partial<GridEdit> = {}): GridEdit => ({
   newRows: [],
   edited: new Map(),
@@ -27,7 +27,7 @@ export const makeGridEdit = (extra: Partial<GridEdit> = {}): GridEdit => ({
   ...extra,
 });
 
-/** A click as the grid sees it: the selection starts on mouse down and a drag ends on mouse up. */
+/** Mô phỏng click theo cách grid xử lý: vùng chọn bắt đầu khi nhấn chuột và thao tác kéo kết thúc khi thả chuột. */
 export const pick = (el: Element, init: MouseEventInit = {}) => {
   fireEvent.mouseDown(el, init);
   fireEvent.mouseUp(el, init);

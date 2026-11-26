@@ -18,14 +18,14 @@ type UseFilesDroppedUploadParams = {
 };
 
 /**
- * Uploads files dropped on this tab (`uploader:files-dropped` event): shows limit warnings, lets the user
- * pick files when a limit is exceeded, then uploads into the current folder and refreshes the list.
+ * Tải lên các file được thả vào tab này (sự kiện `uploader:files-dropped`): cảnh báo khi vượt giới hạn, cho phép người dùng
+ * chọn file nếu vượt giới hạn, sau đó tải lên thư mục hiện tại và làm mới danh sách.
  */
 export function useFilesDroppedUpload(params: UseFilesDroppedUploadParams) {
   const { tabId, connectionId, profileName, bucket, prefix, onRefresh } = params;
 
-  // An upload can outlive this render (the user may open another folder meanwhile) or the
-  // view itself, so it refreshes through these refs: the list currently shown, if still mounted.
+  // Một lượt tải có thể kéo dài qua lần render này (người dùng có thể mở thư mục khác trong lúc chờ) hoặc qua cả vòng đời
+  // của view, nên chỉ làm mới qua các ref này: danh sách đang hiển thị nếu view vẫn được mount.
   const onRefreshRef = useRef(onRefresh);
   const isMountedRef = useRef(true);
   useEffect(() => {
@@ -33,7 +33,7 @@ export function useFilesDroppedUpload(params: UseFilesDroppedUploadParams) {
   }, [onRefresh]);
   useEffect(() => {
     isMountedRef.current = true;
-    // A hidden tab (Activity) is still alive: an upload that ends meanwhile must refresh its list.
+    // Tab bị ẩn (Activity) vẫn còn hoạt động: lượt tải hoàn tất trong lúc đó vẫn phải làm mới danh sách của tab.
     return onTabGone(tabId, () => {
       isMountedRef.current = false;
     });
@@ -62,9 +62,9 @@ export function useFilesDroppedUpload(params: UseFilesDroppedUploadParams) {
 
       if (!ensureUploadIdle()) return;
 
-      // A group over a limit needs the user to choose which files to upload.
+      // Nhóm vượt giới hạn cần người dùng chọn những file sẽ tải lên.
       if (groups.some(group => group.overMaxFiles || group.overLargeCount)) {
-        // undefined: the modal chunk failed to load (already toasted) or the user cancelled; do not upload.
+        // undefined nghĩa là không tải được phần modal (đã hiện toast) hoặc người dùng đã hủy; không tải file lên.
         const chosen = await showUploadLimitModal({
           groups,
           maxFilesPerFolder,
@@ -78,7 +78,7 @@ export function useFilesDroppedUpload(params: UseFilesDroppedUploadParams) {
         toast.warning(i18n.t('uploadLimitModal:cappedWarning'));
       }
 
-      // runUpload checks again: another tab may have started an upload while the modal was open.
+      // runUpload kiểm tra lại vì tab khác có thể đã bắt đầu tải file trong lúc modal mở.
       await runUpload({ tabId, connectionId, profileName, bucket, prefix, files }, async () => {
         if (isMountedRef.current) await onRefreshRef.current();
       });
@@ -88,7 +88,7 @@ export function useFilesDroppedUpload(params: UseFilesDroppedUploadParams) {
 
   useEffect(() => {
     const unsubscribe = Events.On('uploader:files-dropped', e => {
-      // Every open tab listens; only the tab the files were dropped on handles them.
+      // Mọi tab đang mở đều lắng nghe; chỉ tab nơi file được thả mới xử lý sự kiện.
       if (e.data?.tabId === tabId) {
         onFilesDropped(e.data);
       }

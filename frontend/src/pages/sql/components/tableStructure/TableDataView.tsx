@@ -21,8 +21,8 @@ type TableDataViewProps = {
 };
 
 /**
- * Rows of a table in an editable grid; the next page loads when the grid is scrolled near the end. Edits, new rows
- * and deleted rows stay pending (Rollback drops them); Commit is disabled until the backend can write them.
+ * Các hàng của bảng trong grid có thể chỉnh sửa; tải trang tiếp theo khi cuộn gần cuối. Thay đổi, hàng mới
+ * và hàng bị xóa vẫn ở trạng thái chờ (Rollback loại bỏ chúng); Commit bị tắt cho đến khi backend hỗ trợ ghi dữ liệu.
  */
 function TableDataView({ tabId, provider, profileId, schema, table }: TableDataViewProps) {
   const { t, i18n } = useTranslation('tableStructure');
@@ -36,7 +36,7 @@ function TableDataView({ tabId, provider, profileId, schema, table }: TableDataV
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const gridRef = useRef<DataGridHandle>(null);
 
-  // Closing the tab asks for confirmation while changes are pending.
+  // Khi còn thay đổi đang chờ, đóng tab sẽ yêu cầu xác nhận.
   const dirty = changedCount > 0;
   useEffect(() => {
     setTableDirty(tabId, dirty);
@@ -44,7 +44,7 @@ function TableDataView({ tabId, provider, profileId, schema, table }: TableDataV
   }, [tabId, dirty]);
 
   const newCount = edits.newRows.length;
-  // The delete button restores when every selected row is a deleted loaded row.
+  // Nút xóa sẽ khôi phục hàng nếu mọi hàng được chọn đều là hàng đã tải và đang bị xóa.
   const restore = isAllDeletedLoaded(selectedRows, newCount, edits.deleted);
 
   const labels = useMemo(
@@ -81,7 +81,7 @@ function TableDataView({ tabId, provider, profileId, schema, table }: TableDataV
     (e: ChangeEvent<HTMLInputElement>) => setFetchAllRows(e.currentTarget.checked),
     [setFetchAllRows]
   );
-  /** Reloads the first page; pending changes are dropped with it, after a confirmation. */
+  /** Tải lại trang đầu; sau khi xác nhận, các thay đổi đang chờ cũng bị xóa. */
   const onClickRefresh = useCallback(async () => {
     if (dirty && !(await ConfirmModal.show({ type: 'warning', confirmCode: 'C000014', params: { table } }))) return;
     rollback();

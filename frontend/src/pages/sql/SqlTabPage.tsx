@@ -5,15 +5,15 @@ import SqlTabLabel from '@/pages/sql/components/SqlTabLabel';
 import TableStructureDetail from '@/pages/sql/components/tableStructure/TableStructureDetail';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
 
-/** Content of a tab: the table structure for a TableStructure tab, the editor for a SQL tab. */
+/** Nội dung của tab: cấu trúc bảng với tab TableStructure, editor với tab SQL. */
 const TabDetail = memo(function TabDetail({ tabId }: { tabId: string }) {
-  // `undefined` once the tab was closed, until the strip unmounts it.
+  // Có giá trị `undefined` sau khi tab đóng cho đến khi dải tab unmount nó.
   const isTable = useSqlTabStore(s => (s.tabList[tabId] ? !!s.tabList[tabId].table : undefined));
   if (isTable === undefined) return null;
   return isTable ? <TableStructureDetail tabId={tabId} /> : <SqlTabDetail tabId={tabId} />;
 });
 
-/** SQL tab page. No Activity here: it would tear down effects and lose the EditorView, SqlTabDetail hides itself. */
+/** Trang tab SQL. Không dùng Activity ở đây vì nó sẽ gỡ effect và làm mất EditorView; SqlTabDetail tự ẩn nội dung. */
 function SqlTabPage() {
   const renderLabel = useCallback((tabId: string) => <SqlTabLabel tabId={tabId} />, []);
   const renderDetail = useCallback((tabId: string) => <TabDetail tabId={tabId} />, []);

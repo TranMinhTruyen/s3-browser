@@ -12,14 +12,14 @@ type TransferPanelProps = {
   cancelAllTooltip: string;
   closeLabel: string;
   ids: string[];
-  // Gap between two rows, in px.
+  // Khoảng cách giữa hai hàng, tính bằng px.
   gap: number;
   renderItem: (id: string) => ReactNode;
   onCancelAll: () => void;
   onClose: () => void;
 };
 
-/** Window body shared by the uploader and downloader: header with cancel-all / close, then the row list. */
+/** Phần thân cửa sổ dùng chung cho uploader và downloader: tiêu đề có nút hủy tất cả / đóng, bên dưới là danh sách hàng. */
 function TransferPanel(props: TransferPanelProps) {
   const { title, cancelAllTooltip, closeLabel, ids, gap, renderItem, onCancelAll, onClose } = props;
 

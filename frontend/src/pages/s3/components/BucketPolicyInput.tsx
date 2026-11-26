@@ -13,7 +13,7 @@ type BucketPolicyInputProps = {
   onChangePolicy: (policy: string) => void;
 };
 
-/** Picks a bucket's access as private / public read-only / custom policy JSON. */
+/** Chọn quyền truy cập của bucket: riêng tư / công khai chỉ đọc / policy JSON tùy chỉnh. */
 export default function BucketPolicyInput({
   mode,
   policy,

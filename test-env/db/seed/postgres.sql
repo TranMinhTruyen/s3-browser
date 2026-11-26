@@ -1,5 +1,5 @@
--- Sample data for PostgreSQL (database demo, created by the script), loaded by `sh scripts/test-env.sh seed`.
--- Same shape as mysql.sql; values are generated, deterministic and not real.
+-- Dữ liệu mẫu cho PostgreSQL (database demo được script tạo), nạp bằng `sh scripts/test-env.sh seed`.
+-- Cùng cấu trúc với mysql.sql; các giá trị được tạo có thể lặp lại và không phải dữ liệu thật.
 CREATE TABLE customers (
     id         int PRIMARY KEY
   , name       varchar(100) NOT NULL
@@ -71,7 +71,7 @@ SELECT i
      , timestamp '2025-06-01' + i * interval '3 hours'
 FROM generate_series(1, 2000) i;
 
--- 1 to 3 different products per order.
+-- Mỗi đơn hàng có từ 1 đến 3 sản phẩm khác nhau.
 INSERT INTO order_items
 SELECT o, p.id, 1 + (o + k) % 5, p.price
 FROM generate_series(1, 2000) o

@@ -5,10 +5,10 @@ import (
 	"time"
 )
 
-// accessTTL is how long a bucket access check stays valid; after it the bucket is checked again.
+// accessTTL là thời gian kết quả kiểm tra quyền truy cập bucket còn hiệu lực; sau đó bucket sẽ được kiểm tra lại.
 const accessTTL = 5 * time.Minute
 
-// AccessKind is the kind of access a check tells about.
+// AccessKind là loại quyền truy cập mà kết quả kiểm tra đề cập.
 type AccessKind int
 
 const (
@@ -27,11 +27,11 @@ type policyEntry struct {
 	at   time.Time
 }
 
-// AccessCache keeps the bucket access checks of one connection, per bucket name. Read, write and delete results have
-// their own time because a listing doesn't always check the write access. The zero value is ready to use.
+// AccessCache lưu kết quả kiểm tra quyền bucket cho một kết nối, theo tên bucket. Kết quả đọc, ghi và xóa có thời hạn
+// riêng vì thao tác liệt kê không phải lúc nào cũng kiểm tra quyền ghi. Giá trị zero có thể dùng ngay.
 //
-// Reset bumps a generation. A caller reads Generation before probing and passes it to Set / MarkAccount, which
-// ignore the result when a Reset happened meanwhile (it was made with the old credentials).
+// Reset tăng generation. Bên gọi đọc Generation trước khi thăm dò rồi truyền giá trị đó cho Set / MarkAccount;
+// các hàm này bỏ qua kết quả nếu Reset đã xảy ra trong lúc chờ (kết quả được tạo bằng thông tin xác thực cũ).
 type AccessCache struct {
 	mu         sync.Mutex
 	entries    [3]map[string]accessEntry
@@ -40,14 +40,14 @@ type AccessCache struct {
 	generation uint64
 }
 
-// Generation returns the current generation; take it before starting a probe.
+// Generation trả về generation hiện tại; lấy giá trị này trước khi bắt đầu thăm dò.
 func (a *AccessCache) Generation() uint64 {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return a.generation
 }
 
-// Get returns whether the access was denied at the latest check; ok is false when there is none or it expired.
+// Get cho biết lần kiểm tra gần nhất có xác nhận quyền truy cập bị từ chối hay không; ok là false nếu chưa có kết quả hoặc đã hết hạn.
 func (a *AccessCache) Get(kind AccessKind, bucket string) (denied, ok bool) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -55,7 +55,7 @@ func (a *AccessCache) Get(kind AccessKind, bucket string) (denied, ok bool) {
 	return e.denied, ok && time.Since(e.at) < accessTTL
 }
 
-// Set records the result of a check that got a sure answer from the server; gen is the Generation taken before it.
+// Set ghi nhận kết quả kiểm tra có phản hồi chắc chắn từ máy chủ; gen là Generation lấy trước khi kiểm tra.
 func (a *AccessCache) Set(kind AccessKind, bucket string, denied bool, gen uint64) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -68,7 +68,7 @@ func (a *AccessCache) Set(kind AccessKind, bucket string, denied bool, gen uint6
 	a.entries[kind][bucket] = accessEntry{denied: denied, at: time.Now()}
 }
 
-// GetPolicy returns the policy mode last read for the bucket; ok is false when there is none or it expired.
+// GetPolicy trả chế độ policy đọc được gần nhất của bucket; ok là false nếu chưa có kết quả hoặc đã hết hạn.
 func (a *AccessCache) GetPolicy(bucket string) (mode string, ok bool) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -76,7 +76,7 @@ func (a *AccessCache) GetPolicy(bucket string) (mode string, ok bool) {
 	return e.mode, ok && time.Since(e.at) < accessTTL
 }
 
-// SetPolicy records the policy mode read for the bucket; gen is the Generation taken before the read.
+// SetPolicy ghi nhận chế độ policy đọc được của bucket; gen là Generation lấy trước khi đọc.
 func (a *AccessCache) SetPolicy(bucket, mode string, gen uint64) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -89,15 +89,14 @@ func (a *AccessCache) SetPolicy(bucket, mode string, gen uint64) {
 	a.policies[bucket] = policyEntry{mode: mode, at: time.Now()}
 }
 
-// AccountFresh reports whether the MinIO AccountInfo was called recently enough (see MarkAccount) not to call it again.
+// AccountFresh cho biết MinIO AccountInfo đã được gọi đủ gần đây (xem MarkAccount) để không cần gọi lại hay chưa.
 func (a *AccessCache) AccountFresh() bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return time.Since(a.accountAt) < accessTTL
 }
 
-// MarkAccount records that the MinIO AccountInfo was just called, whether or not it succeeded; gen is the
-// Generation taken before the call.
+// MarkAccount ghi nhận MinIO AccountInfo vừa được gọi, bất kể thành công hay thất bại; gen là Generation lấy trước khi gọi.
 func (a *AccessCache) MarkAccount(gen uint64) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -106,7 +105,7 @@ func (a *AccessCache) MarkAccount(gen uint64) {
 	}
 }
 
-// Reset forgets every result, e.g. when the credentials changed.
+// Reset xóa mọi kết quả, ví dụ khi thông tin xác thực thay đổi.
 func (a *AccessCache) Reset() {
 	a.mu.Lock()
 	defer a.mu.Unlock()

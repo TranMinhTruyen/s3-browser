@@ -2,9 +2,9 @@ import '@testing-library/jest-dom/vitest';
 import { cleanup, configure } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
-// The real Wails runtime prints a "Browser Environment Detected" warning when loaded outside the desktop app, and no
-// test may reach the backend. Replace it with a light stand-in for everything the app and the generated bindings use;
-// a test that needs different behavior overrides it with its own `vi.mock('@wailsio/runtime', ...)`.
+// Runtime Wails thật in cảnh báo "Browser Environment Detected" khi được tải ngoài ứng dụng desktop, và test không được
+// gọi đến backend. Thay bằng bản giả lập nhẹ đáp ứng những gì ứng dụng và bindings được sinh tự động cần dùng;
+// test cần hành vi khác có thể ghi đè bằng `vi.mock('@wailsio/runtime', ...)` riêng.
 vi.mock('@wailsio/runtime', () => {
   class CancelError extends Error {
     constructor(message?: string, options?: ErrorOptions) {
@@ -13,7 +13,7 @@ vi.mock('@wailsio/runtime', () => {
     }
   }
 
-  // A promise that rejects with a CancelError once canceled (what `callIPC` relies on).
+  // Promise reject bằng CancelError khi bị hủy (đây là hành vi `callIPC` cần).
   class CancellablePromise<T> extends Promise<T> {
     static get [Symbol.species]() {
       return Promise;
@@ -60,12 +60,12 @@ vi.mock('@wailsio/runtime', () => {
   };
 });
 
-// The suite runs ~100 files in parallel; on a loaded machine the default 1s of findBy*/waitFor is too tight.
-// 2s was enough: the whole suite ran 3 times in a row with no timeout flake (4s was not needed).
-// This only raises the ceiling: a query that succeeds still returns at once.
+// Bộ test chạy song song khoảng 100 file; trên máy bận, timeout mặc định 1 giây của findBy*/waitFor quá ngắn.
+// 2 giây là đủ: toàn bộ bộ test đã chạy liên tiếp 3 lần mà không timeout ngẫu nhiên (không cần đến 4 giây).
+// Chỉ tăng giới hạn tối đa: truy vấn thành công vẫn trả kết quả ngay.
 configure({ asyncUtilTimeout: 2000 });
 
-// jsdom lacks these browser APIs used by Mantine.
+// jsdom chưa có các API trình duyệt mà Mantine sử dụng.
 class ResizeObserverStub {
   observe() {}
   unobserve() {}
@@ -87,7 +87,7 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 });
 
-// jsdom has no FontFaceSet; Mantine's autosize Textarea listens to it.
+// jsdom không có FontFaceSet; Textarea tự đổi kích thước của Mantine theo dõi API này.
 Object.defineProperty(document, 'fonts', {
   configurable: true,
   value: { addEventListener() {}, removeEventListener() {} },

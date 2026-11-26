@@ -22,7 +22,7 @@ fn row(cells: &[Option<&str>]) -> Vec<Option<String>> {
     cells.iter().map(|c| c.map(str::to_owned)).collect()
 }
 
-// ---- Limits ----
+// ---- Giới hạn ----
 
 #[test]
 fn limits_clamp_page_size_to_at_least_one() {
@@ -426,7 +426,7 @@ fn with_bench_timing_add_read_and_add_convert_accumulate_for_network_drivers() {
     assert_eq!(v["convertMs"], 7, "{v}");
 }
 
-// ---- hold với Cursor giả ----
+// ---- giữ với Cursor giả ----
 
 /// Cursor giả: trả lần lượt các kết quả cho trước, đếm số lần `next_page` và `abandon`.
 struct Fake {
@@ -592,7 +592,7 @@ async fn hold_wrong_cursor_id_is_cursor_not_found_and_cursor_stays_usable() {
     assert!(hold(1, cursor, &mut rx).await.is_none());
     assert_eq!(err_code(rw), CURSOR_NOT_FOUND);
     assert!(ok_rows(rr).1);
-    // Fetch sai cursor không chạm vào cursor thật.
+    // Gọi Fetch bằng cursor sai không chạm vào cursor thật.
     assert_eq!(c.calls.load(Ordering::SeqCst), 1);
     assert_eq!(c.abandoned.load(Ordering::SeqCst), 1);
 }

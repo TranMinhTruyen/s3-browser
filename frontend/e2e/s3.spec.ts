@@ -24,7 +24,7 @@ test.afterAll(() => dropBucket(BUCKET, Object.keys(OBJECTS)));
 const form = (key: string) => t(CONNECT, `form.label.${key}`);
 const profileCard = (page: Page) => page.locator('.mantine-Card-root', { hasText: PROFILE });
 
-/** Picks the profile in the active tab and connects. */
+/** Chọn hồ sơ trong tab đang hoạt động rồi kết nối. */
 async function connect(page: Page) {
   await switchMode(page, 's3');
   await hideToasts(page);

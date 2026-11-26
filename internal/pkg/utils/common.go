@@ -1,4 +1,4 @@
-// Package utils holds small helpers shared by the modules: ids, batched progress reporting and secret encryption.
+// Package utils chứa các hàm tiện ích nhỏ dùng chung giữa các module: id, báo tiến độ theo lô và mã hóa thông tin bí mật.
 package utils
 
 import (
@@ -9,19 +9,19 @@ import (
 	"github.com/google/uuid"
 )
 
-// GenerateUUID returns a UUID v7: time-ordered, so ids sort by creation time (used for keyset paging).
+// GenerateUUID trả về UUID v7: có thứ tự theo thời gian nên id được sắp xếp theo lúc tạo (dùng cho phân trang keyset).
 func GenerateUUID() string {
 	return uuid.Must(uuid.NewV7()).String()
 }
 
-// reportInterval is how often BatchReporter emits.
+// reportInterval là khoảng thời gian giữa các lần BatchReporter phát sự kiện.
 const reportInterval = 200 * time.Millisecond
 
-// BatchReporter throttles progress events for many concurrent jobs into one batch event.
+// BatchReporter gộp sự kiện tiến độ của nhiều job chạy đồng thời thành một sự kiện theo lô.
 //
-// Each job registers a read function with Track. While at least one job is tracked, a single
-// ticker goroutine calls emit every reportInterval with the progress of all jobs; it exits when
-// no job is left or the context ends. Callers update counters on every chunk and never emit themselves.
+// Mỗi job đăng ký hàm đọc bằng Track. Khi còn ít nhất một job được theo dõi, một goroutine ticker gọi emit mỗi
+// reportInterval để gửi tiến độ của mọi job; goroutine kết thúc khi không còn job hoặc context kết thúc.
+// Bên gọi cập nhật bộ đếm sau mỗi chunk và không tự phát sự kiện.
 type BatchReporter[T any] struct {
 	mu      sync.Mutex
 	jobs    map[string]func() (T, bool)
@@ -30,18 +30,18 @@ type BatchReporter[T any] struct {
 	emit    func(items []T)
 }
 
-// NewBatchReporter creates a reporter. ctx returns the context that stops the ticker (app shutdown);
-// emit sends one batch to the frontend.
+// NewBatchReporter tạo bộ báo cáo. ctx trả context dùng để dừng ticker (khi ứng dụng tắt);
+// emit gửi một lô đến frontend.
 func NewBatchReporter[T any](ctx func() context.Context, emit func(items []T)) *BatchReporter[T] {
 	return &BatchReporter[T]{jobs: make(map[string]func() (T, bool)), ctx: ctx, emit: emit}
 }
 
-// Track adds a job and starts the ticker if it is not running. read returns the current progress,
-// or false if there is nothing to report yet.
+// Track thêm job và khởi chạy ticker nếu ticker chưa chạy. read trả về tiến độ hiện tại
+// hoặc false nếu chưa có gì để báo cáo.
 //
-// The returned done() emits one last batch (so the UI shows the final value) and then removes the job.
-// Emitting is serialized with the ticker, so a final value is never overtaken by an older tick.
-// done is idempotent: calls after the first do nothing.
+// done() được trả về sẽ phát lô cuối cùng (để UI hiển thị giá trị kết thúc) rồi gỡ job.
+// Việc phát sự kiện được tuần tự hóa với ticker nên giá trị cuối không bị một tick cũ ghi đè.
+// done có tính idempotent: các lần gọi sau lần đầu không làm gì.
 func (r *BatchReporter[T]) Track(id string, read func() (T, bool)) (done func()) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -61,7 +61,7 @@ func (r *BatchReporter[T]) Track(id string, read func() (T, bool)) (done func())
 	}
 }
 
-// run emits a batch every reportInterval until no job is left or ctx ends.
+// run phát một lô mỗi reportInterval đến khi không còn job hoặc ctx kết thúc.
 func (r *BatchReporter[T]) run(ctx context.Context) {
 	t := time.NewTicker(reportInterval)
 	defer t.Stop()
@@ -85,7 +85,7 @@ func (r *BatchReporter[T]) run(ctx context.Context) {
 	}
 }
 
-// emitLocked emits the progress of all jobs, if any has something to report. The caller must hold mu.
+// emitLocked phát tiến độ của mọi job nếu có nội dung cần báo cáo. Bên gọi phải giữ mu.
 func (r *BatchReporter[T]) emitLocked() {
 	items := make([]T, 0, len(r.jobs))
 	for _, read := range r.jobs {

@@ -10,12 +10,13 @@ import { formatStringJson } from '@/common/utils/stringUtils';
 import UpdateProgress from '@/components/display/UpdateProgress';
 import i18n from '@/locales/i18n';
 
-/** One toast for the whole update flow; every state change updates it instead of stacking a new one. */
+/** Chỉ dùng một toast cho toàn bộ luồng cập nhật; mỗi lần đổi state sẽ cập nhật toast đó thay vì xếp thêm toast mới. */
 const TOAST_ID = 'app-update';
 
 /**
- * Mount once, in `AppUpdateToast` (it re-renders on every progress tick, so keep it out of `App`). Loads the update state, follows `update:state-changed` and keeps the toast in step:
- * a new version (Download button only when auto update is off), download progress, ready to install.
+ * Chỉ mount một lần trong `AppUpdateToast` (component render lại mỗi khi tiến độ đổi nên không đặt trong `App`). Tải state cập nhật,
+ * theo dõi `update:state-changed` và đồng bộ toast theo các trạng thái: có phiên bản mới (chỉ hiện nút Download khi tắt tự động cập nhật),
+ * tiến độ tải xuống và sẵn sàng cài đặt.
  */
 export function useAppUpdate() {
   const { t } = useTranslation('appUpdate');
@@ -37,7 +38,7 @@ export function useAppUpdate() {
   const onUpdateStateChanged = useCallback((next: UpdateStateOutput) => {
     const { state: previous, setState } = useUpdateStore.getState();
     setState(next);
-    // The download runs in the background, so its failure only arrives here (the user did not call it).
+    // Tải xuống chạy trong nền nên lỗi chỉ được báo về đây (người dùng không trực tiếp gọi thao tác tải).
     if (previous === 'downloading' && next.state === 'error' && next.errorCode) {
       toast.error(formatStringJson(i18n.t(`ipcMessage:update.${next.errorCode}`), { version: next.version }));
     }
@@ -45,7 +46,7 @@ export function useAppUpdate() {
 
   const onClickDownload = useCallback(() => void download(), [download]);
 
-  // Keep the toast: install may be canceled in the confirm modal.
+  // Giữ toast vì người dùng có thể hủy cài đặt trong modal xác nhận.
   const onClickInstall = useCallback(
     (event: MouseEvent<HTMLButtonElement>) => {
       event.preventDefault();

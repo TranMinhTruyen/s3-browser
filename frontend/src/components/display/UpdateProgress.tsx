@@ -7,7 +7,7 @@ type UpdateProgressProps = {
   total: number;
 };
 
-/** Download progress bar with "45% · 12.00 MiB / 30.00 MiB"; the bar is animated while the total is unknown (0). */
+/** Thanh tiến trình tải xuống dạng "45% · 12.00 MiB / 30.00 MiB"; thanh chạy animation khi chưa biết tổng dung lượng (0). */
 function UpdateProgress(props: UpdateProgressProps) {
   const { written, total } = props;
 

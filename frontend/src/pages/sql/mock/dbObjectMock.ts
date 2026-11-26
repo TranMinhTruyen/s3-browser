@@ -4,10 +4,10 @@ type DbSchema = SchemaTreeOutput['schemas'][number];
 type TableIndex = TableInfoOutput['indexes'][number];
 type TableForeignKey = TableInfoOutput['foreignKeys'][number];
 
-// TODO(sprint PostgreSQL backend): remove this file. The object tree, table structure and rows of a PostgreSQL
-// profile will come from the backend, like SQLite does through `utils/dbObjectSource.ts`.
+// TODO(sprint PostgreSQL backend): xóa file này. Backend Go sẽ đọc cây đối tượng, cấu trúc bảng và các hàng của hồ sơ PostgreSQL
+// sẽ lấy từ backend như SQLite hiện làm qua `utils/dbObjectSource.ts`.
 
-/** Rows per mock page, the same as the backend page size. */
+/** Số hàng mỗi trang mock, bằng kích thước trang của backend. */
 const MOCK_PAGE_SIZE = 10_000;
 
 type MockColumn = { name: string; type: string; pk?: boolean; nullable?: boolean };
@@ -53,7 +53,7 @@ const MOCK_TABLES: Record<string, MockTable> = {
       },
     ],
   },
-  // Many columns and many rows: to check the grid virtualizes both ways and loads more pages.
+  // Nhiều cột và nhiều hàng để kiểm tra grid ảo hóa cả hai chiều và tải thêm trang.
   'public.wide_events': {
     columns: Array.from({ length: 32 }, (_, i) =>
       i === 0
@@ -62,7 +62,7 @@ const MOCK_TABLES: Record<string, MockTable> = {
     ),
     rowCount: 25_000,
   },
-  // No primary key: covers the structure views and DDL of a table without one.
+  // Không có khóa chính: bao phủ các view cấu trúc và DDL của bảng không có khóa chính.
   'public.audit_log': {
     columns: [
       { name: 'actor', type: 'text' },
@@ -109,7 +109,7 @@ const MOCK_SCHEMAS: DbSchema[] = [
   { name: 'sales', tables: ['invoices'], views: [], indexes: [], triggers: [] },
 ];
 
-/** The schemas of the mock PostgreSQL database. */
+/** Các schema của database PostgreSQL giả lập. */
 export const getMockSchemas = (): DbSchema[] => MOCK_SCHEMAS;
 
 const cell = (column: MockColumn, row: number, index: number): string | null => {
@@ -137,7 +137,7 @@ const toDdl = (name: string, table: MockTable): string => {
   return `CREATE TABLE ${name} (\n${lines.join(',\n')}\n);`;
 };
 
-/** Structure of a mock table; null when the table is unknown. */
+/** Cấu trúc của bảng giả lập; trả về null nếu không biết bảng. */
 export const getMockTableInfo = (schema: string, table: string): TableInfoOutput | null => {
   const name = `${schema}.${table}`;
   const mock = MOCK_TABLES[name];
@@ -164,8 +164,8 @@ export const getMockTableInfo = (schema: string, table: string): TableInfoOutput
 };
 
 /**
- * One page of mock rows starting at `offset` (every remaining row when `all`), built on demand (a table can have
- * tens of thousands of rows).
+ * Một trang hàng giả lập bắt đầu từ `offset` (hoặc tất cả hàng còn lại nếu `all`), được tạo theo nhu cầu
+ * (một bảng có thể chứa hàng chục nghìn hàng).
  */
 export const getMockRows = (schema: string, table: string, offset: number, all = false) => {
   const mock = MOCK_TABLES[`${schema}.${table}`];

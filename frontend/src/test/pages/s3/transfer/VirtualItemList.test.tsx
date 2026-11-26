@@ -5,7 +5,7 @@ import { useSettingStore } from '@/common/stores/settingStore';
 import VirtualItemList from '@/pages/s3/transfer/VirtualItemList';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// The REAL virtualizer is used; jsdom has no layout, so give every element a 260px viewport.
+// Sử dụng virtualizer THẬT; jsdom không có layout nên gán viewport rộng 260px cho mọi phần tử.
 const sizes = [
   ['offsetHeight', 260],
   ['offsetWidth', 400],

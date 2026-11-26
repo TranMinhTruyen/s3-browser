@@ -3,18 +3,18 @@ import { ModalProps as MantineModalProps } from '@mantine/core';
 import { type ComponentType, createElement, type FC, useCallback, useLayoutEffect } from 'react';
 import { useModalStackStore } from '@/common/stores/modalStackStore';
 
-/** z-index of the bottom-most modal in the stack. */
+/** z-index của modal nằm dưới cùng trong stack. */
 const BASE_Z_INDEX = 200;
-/** z-index increment for each modal stacked above the previous one. */
+/** Mức tăng z-index của mỗi modal được xếp lên trên modal trước đó. */
 const STEP = 10;
 
 export type ModalProps = Omit<MantineModalProps, 'opened' | 'onClose'> & {};
 
 /**
- * A nice-modal component with strongly typed static helpers.
+ * Component nice-modal có các hàm static được định kiểu chặt chẽ.
  *
- * @typeParam P - the props passed to `show()`.
- * @typeParam R - the value the `show()` promise resolves with.
+ * @typeParam P - các props truyền vào `show()`.
+ * @typeParam R - giá trị promise của `show()` trả về.
  */
 export type ModalComponent<P, R> = FC<P & NiceModalHocProps> & {
   show: (...args: object extends P ? [props?: P] : [props: P]) => Promise<R>;
@@ -22,17 +22,17 @@ export type ModalComponent<P, R> = FC<P & NiceModalHocProps> & {
   remove: () => void;
 };
 
-/** A nice-modal handler whose `resolve` is typed with the modal's result. */
+/** Handler nice-modal có `resolve` được định kiểu theo kết quả của modal. */
 type ModalHandler<R> = Omit<NiceModalHandler, 'resolve'> & {
   resolve: (value: R) => void;
 };
 
 /**
- * Props received by a component passed to {@link createMantineModal}:
- * the modal's own props plus a `mantine` bag injected by the wrapper.
+ * Props mà component truyền vào {@link createMantineModal} nhận được:
+ * props riêng của modal cùng object `mantine` do wrapper thêm vào.
  *
- * - `mantine.props`   – spread directly onto Mantine's `<Modal>`.
- * - `mantine.handler` – the nice-modal handler, with `resolve` typed as `R`.
+ * - `mantine.props`   – được spread trực tiếp vào `<Modal>` của Mantine.
+ * - `mantine.handler` – handler nice-modal, với `resolve` có kiểu `R`.
  */
 export type WithMantineModal<P, R> = P & {
   mantine: {
@@ -49,25 +49,24 @@ export type WithMantineModal<P, R> = P & {
 };
 
 /**
- * Creates a nice-modal component that is already wired to the global modal stack
- * and to Mantine's `<Modal>` props (z-index, `opened`, guarded close, exit cleanup).
+ * Tạo component nice-modal đã kết nối với stack modal toàn cục và các props `<Modal>` của Mantine
+ * (z-index, `opened`, kiểm soát đóng, dọn dẹp sau khi thoát).
  *
- * What the wrapper does:
- * - Pushes the modal id onto the stack while visible and removes it when hidden or unmounted.
- * - Computes `zIndex` from the modal's position in the stack, so newer modals render on top.
- * - Allows Escape / click-outside to close only the topmost modal, so dismissing a dialog
- *   never closes the modal underneath it.
- * - Removes the modal from nice-modal's state after Mantine's exit transition finishes.
+ * Wrapper thực hiện các việc sau:
+ * - Thêm id modal vào stack khi hiển thị và gỡ khi ẩn hoặc unmount.
+ * - Tính `zIndex` theo vị trí modal trong stack để modal mới hơn nằm trên cùng.
+ * - Chỉ cho phép Escape / click bên ngoài đóng modal trên cùng, để đóng hộp thoại không làm đóng modal bên dưới.
+ * - Gỡ modal khỏi state của nice-modal sau khi Mantine chạy xong hiệu ứng thoát.
  *
- * @typeParam P - the props passed to `show()` (the `mantine` prop is injected, not passed by callers).
- * @typeParam R - the value the modal resolves with when confirmed.
- *   `show()` resolves `R | null`; `null` means the modal was dismissed (unless `cancelValue` is provided).
- * @param Comp - the modal body; receives `P` plus the injected `mantine` prop.
- * @param options.cancelValue - the value to resolve with when the user dismisses the modal
- *   (Escape, click outside, close button). Fixed at creation time; defaults to `null`.
+ * @typeParam P - các props truyền vào `show()` (caller không truyền `mantine`, wrapper tự thêm).
+ * @typeParam R - giá trị modal trả về khi xác nhận.
+ *   `show()` trả `R | null`; `null` nghĩa là modal bị đóng (trừ khi có `cancelValue`).
+ * @param Comp - phần nội dung modal; nhận `P` cùng prop `mantine` được thêm vào.
+ * @param options.cancelValue - giá trị trả về khi người dùng đóng modal
+ *   (Escape, click bên ngoài, nút đóng). Được cố định khi tạo và mặc định là `null`.
  *
  * @example
- * Without cancelValue → dismissing resolves `null`
+ * Không có cancelValue → đóng modal sẽ trả `null`.
  * import { Button, Group, Modal, Text } from '@mantine/core';
  *
  * type ConfirmDeleteProps = { taskName: string };
@@ -80,11 +79,11 @@ export type WithMantineModal<P, R> = P & {
  *     };
  *
  *     return (
- *       <Modal {...props} title="Delete task">
- *         <Text>Delete "{taskName}"?</Text>
+ *       <Modal {...props} title="Xóa tác vụ">
+ *         <Text>Xóa "{taskName}"?</Text>
  *         <Group justify="flex-end" mt="md">
- *           <Button variant="default" onClick={() => answer(false)}>Cancel</Button>
- *           <Button color="red" onClick={() => answer(true)}>Delete</Button>
+ *           <Button variant="default" onClick={() => answer(false)}>Hủy</Button>
+ *           <Button color="red" onClick={() => answer(true)}>Xóa</Button>
  *         </Group>
  *       </Modal>
  *     );
@@ -95,24 +94,24 @@ export type WithMantineModal<P, R> = P & {
  * if (confirmed) await deleteTask(task.id);
  *
  * @example
- * With cancelValue → dismissing resolves that value instead of `null`
+ * Có cancelValue → đóng modal sẽ trả giá trị đó thay vì `null`.
  * export const SelectModeModal = createMantineModal<object, 'edit' | 'view'>(
  *   ({ mantine: { props, handler } }) => (
- *     <Modal {...props} title="Open as">
- *       <Button onClick={() => { handler.resolve('edit'); handler.hide(); }}>Edit</Button>
+ *     <Modal {...props} title="Mở dưới dạng">
+ *       <Button onClick={() => { handler.resolve('edit'); handler.hide(); }}>Chỉnh sửa</Button>
  *     </Modal>
  *   ),
  *   { cancelValue: 'view' },
  * );
  *
- * Typed as 'edit' | 'view' | null, but never null at runtime because cancelValue is provided.
+ * Kiểu là 'edit' | 'view' | null, nhưng lúc chạy không thể là null vì đã cung cấp cancelValue.
  * const mode = await SelectModeModal.show();
  */
 export function createMantineModal<P extends object, R = unknown>(
   Comp: ComponentType<WithMantineModal<P, R>>,
   options?: { cancelValue?: R }
 ): ModalComponent<P, R | null> {
-  // Computed once at creation time, shared by every instance of this modal.
+  // Tính một lần khi tạo và dùng chung cho mọi instance của modal này.
   const cancelValue: R | null = options?.cancelValue ?? null;
 
   function MantineModalWrapper(props: P) {
@@ -124,10 +123,10 @@ export function createMantineModal<P extends object, R = unknown>(
     const index = useModalStackStore(s => s.stack.indexOf(modal.id));
     const isTopmost = useModalStackStore(s => s.stack.length > 0 && s.stack[s.stack.length - 1] === modal.id);
 
-    // Keep the global stack in sync with visibility: in the stack while visible,
-    // released when hidden or unmounted. The store keeps the stack position across
-    // effect re-runs (HMR / Fast Refresh, StrictMode).
-    // useLayoutEffect ensures z-index is correct before the browser paints the modal.
+    // Đồng bộ stack toàn cục với trạng thái hiển thị: thêm vào stack khi hiển thị,
+    // gỡ khi ẩn hoặc unmount. Store giữ nguyên vị trí trong stack qua các lần chạy lại effect
+    // (HMR / Fast Refresh, StrictMode).
+    // useLayoutEffect đảm bảo z-index chính xác trước khi trình duyệt vẽ modal.
     useLayoutEffect(() => {
       if (!modal.visible) return;
       const id = modal.id;
@@ -135,21 +134,21 @@ export function createMantineModal<P extends object, R = unknown>(
       return () => release(id);
     }, [modal.id, modal.visible, acquire, release]);
 
-    // Close only when this modal is topmost. Otherwise Escape / click-outside
-    // on a stacked dialog could also close a modal underneath it.
-    // `cancelValue` is a constant from the outer scope, so it is not a dependency.
+    // Chỉ đóng nếu modal này nằm trên cùng. Nếu không, Escape / click bên ngoài hộp thoại trong stack
+    // có thể đồng thời đóng cả modal bên dưới.
+    // `cancelValue` là hằng số từ scope bên ngoài nên không cần thêm vào dependency.
     const guardedClose = useCallback(() => {
       if (!isTopmost) return;
       modal.resolve(cancelValue);
       modal.hide();
     }, [isTopmost, modal]);
 
-    // Unmount only after Mantine's exit animation has finished, so the close transition is visible.
+    // Chỉ unmount sau khi Mantine chạy xong hiệu ứng thoát để người dùng nhìn thấy chuyển cảnh đóng.
     const handleExitTransitionEnd = useCallback(() => {
       modal.remove();
     }, [modal]);
 
-    // Not in the stack yet (e.g. first render before the layout effect) → fall back to the base z-index.
+    // Chưa có trong stack (ví dụ lần render đầu trước layout effect) → dùng z-index cơ sở.
     const zIndex = index === -1 ? BASE_Z_INDEX : BASE_Z_INDEX + index * STEP;
 
     return createElement(Comp, {

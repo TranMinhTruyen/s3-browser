@@ -17,7 +17,7 @@
   background-color: var(--mantine-primary-color-light);
 }
 
-/* Same width with or without a chevron, so the icons of a level line up. */
+/* Giữ nguyên chiều rộng dù có chevron hay không để biểu tượng ở cùng cấp thẳng hàng. */
 .chevron {
   display: flex;
   flex-shrink: 0;

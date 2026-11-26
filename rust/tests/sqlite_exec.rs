@@ -1,4 +1,4 @@
-//! N2: driver SQLite (open/close/execute/fetch/cancel).
+//! N2: trình điều khiển SQLite (mở/đóng/thực thi/lấy dữ liệu/hủy).
 
 mod common;
 
@@ -12,7 +12,7 @@ fn rows(st: &Value) -> &Vec<Value> {
     st["rows"].as_array().unwrap()
 }
 
-// ---------- open / close ----------
+// ---------- mở / đóng ----------
 
 #[test]
 fn open_existing_temp_file() {
@@ -107,7 +107,7 @@ fn close_with_open_cursor() {
     assert_eq!(err_code(&exec(c, "SELECT 1")), "connNotFound");
 }
 
-// ---------- paging ----------
+// ---------- phân trang ----------
 
 #[test]
 fn select_1201_rows_pages() {
@@ -170,7 +170,7 @@ fn page_size_zero_behaves_as_one() {
     assert_eq!(rows(&statements(&r)[0]).len(), 1);
 }
 
-// ---------- affected / DDL / multi ----------
+// ---------- số hàng bị ảnh hưởng / DDL / nhiều câu ----------
 
 #[test]
 fn rows_affected_and_ddl() {

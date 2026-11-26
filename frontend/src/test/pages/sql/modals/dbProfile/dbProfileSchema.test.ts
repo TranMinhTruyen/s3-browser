@@ -18,7 +18,7 @@ const pg = (extra: Partial<DbProfileForm> = {}): DbProfileForm => ({
   ...extra,
 });
 
-/** Map of field -> message for the issues of `values`. */
+/** Ánh xạ từ trường sang thông báo lỗi trong `values`. */
 const errors = (values: DbProfileForm, taken = false) => {
   const result = createDbProfileSchema(() => taken).safeParse(values);
   if (result.success) return {};

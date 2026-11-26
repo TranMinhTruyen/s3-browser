@@ -17,21 +17,21 @@ interface MasterDataState {
 }
 
 interface MasterDataAction {
-  /** Merges a whole `{ code: rows }` payload, keeping codes it does not carry. */
+  /** Gộp toàn bộ payload `{ code: rows }`, giữ nguyên các code không có trong payload. */
   setAll: (datas: MasterData) => void;
-  /** Fetches the given master codes from the backend and stores them. */
+  /** Lấy các mã dữ liệu gốc đã cho từ backend rồi lưu vào store. */
   load: (keys: MasterCode[]) => Promise<void>;
-  /** Fetches every known master code. */
+  /** Lấy tất cả mã dữ liệu gốc đã biết. */
   loadAll: () => Promise<void>;
   reset: () => boolean;
 
-  /** Region master data */
+  /** Dữ liệu gốc về region. */
   loadRegion: () => Promise<void>;
 }
 
 const SCOPE = 'MasterData';
 
-/** Master data (region lists, ...) loaded from the backend. */
+/** Dữ liệu gốc (danh sách region, ...) được tải từ backend. */
 export const useMasterDataStore = createAppStore<MasterDataState & MasterDataAction>(
   (set, get) => ({
     masterData: {},

@@ -1,12 +1,12 @@
 package bucket
 
-// CheckBucketAccessInput asks for the access flags of the given buckets of a connection.
+// CheckBucketAccessInput yêu cầu lấy cờ quyền truy cập của các bucket đã cho trong một kết nối.
 type CheckBucketAccessInput struct {
 	ConnectionId string   `json:"connectionId"`
 	ProfileName  string   `json:"profileName,omitempty"`
 	BucketNames  []string `json:"bucketNames"`
-	// CheckWrite also flags read-only buckets.
+	// CheckWrite cũng đánh dấu các bucket chỉ đọc.
 	CheckWrite bool `json:"checkWrite,omitempty"`
-	// WithPolicy also reads the policy mode (Bucket.PolicyMode) of the buckets not cached yet.
+	// WithPolicy cũng đọc chế độ policy (Bucket.PolicyMode) của các bucket chưa có trong cache.
 	WithPolicy bool `json:"withPolicy,omitempty"`
 }

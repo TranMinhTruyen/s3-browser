@@ -5,9 +5,9 @@ interface ModalStackState {
 }
 
 interface ModalStackAction {
-  /** Registers a visible modal. Keeps its existing position if it is already in the stack. */
+  /** Đăng ký modal đang hiển thị. Giữ nguyên vị trí nếu modal đã có trong stack. */
   acquire: (id: string) => void;
-  /** Releases a modal. It leaves the stack only if nothing re-acquires it in the same tick. */
+  /** Giải phóng modal. Chỉ xóa khỏi stack nếu trong cùng tick không có thao tác nào đăng ký lại. */
   release: (id: string) => void;
   reset: () => boolean;
 }
@@ -15,14 +15,14 @@ interface ModalStackAction {
 const SCOPE = 'modalStack';
 
 /**
- * Active acquisitions per modal id. Kept outside the state because it never drives rendering.
+ * Số lần đăng ký đang hoạt động theo id modal. Lưu ngoài state vì giá trị này không điều khiển render.
  *
- * Lives in this module (not in `modalUtils`) on purpose: when a modal or `modalUtils` is
- * hot-reloaded, the old effect cleanup and the new effect setup must share the same counter.
+ * Cố ý đặt trong module này (không đặt trong `modalUtils`): khi modal hoặc `modalUtils` được hot reload,
+ * cleanup của effect cũ và setup của effect mới phải dùng chung bộ đếm.
  */
 const refCounts = new Map<string, number>();
 
-/** Stack of visible modals (bottom to top); drives z-index and which modal Escape / click-outside can close. */
+/** Stack modal đang hiển thị (từ dưới lên trên); quyết định z-index và modal nào được đóng bằng Escape/click bên ngoài. */
 export const useModalStackStore = createAppStore<ModalStackState & ModalStackAction>(
   set => ({
     stack: [],

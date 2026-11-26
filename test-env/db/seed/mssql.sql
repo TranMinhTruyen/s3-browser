@@ -1,5 +1,5 @@
--- Sample data for SQL Server 2022 (database demo), loaded by `sh scripts/test-env.sh seed` through sqlcmd.
--- Same shape as mysql.sql; values are generated, deterministic and not real.
+-- Dữ liệu mẫu cho SQL Server 2022 (database demo), nạp bằng `sh scripts/test-env.sh seed` qua sqlcmd.
+-- Cùng cấu trúc với mysql.sql; các giá trị được tạo có thể lặp lại và không phải dữ liệu thật.
 CREATE DATABASE demo;
 GO
 USE demo;
@@ -49,7 +49,7 @@ CREATE TABLE events (
   , created_at DATETIMEOFFSET(0) NOT NULL
 );
 
--- Numbers 1..10000 (session temp table, kept across the GO batches below).
+-- Các số 1..10000 (bảng tạm của phiên, được giữ lại qua các batch GO bên dưới).
 CREATE TABLE #seq (i INT PRIMARY KEY);
 WITH d AS (SELECT v FROM (VALUES (0), (1), (2), (3), (4), (5), (6), (7), (8), (9)) t (v))
 INSERT INTO #seq
@@ -86,7 +86,7 @@ SELECT i
      , DATEADD(HOUR, i * 3, '2025-06-01')
 FROM #seq WHERE i <= 2000;
 
--- 1 to 3 different products per order.
+-- Mỗi đơn hàng có từ 1 đến 3 sản phẩm khác nhau.
 INSERT INTO order_items
 SELECT o.i, p.id, 1 + (o.i + k.i) % 5, p.price
 FROM #seq o
@@ -109,7 +109,7 @@ FROM #seq;
 DROP TABLE #seq;
 GO
 
--- CREATE VIEW must be the only statement of its batch.
+-- CREATE VIEW phải là câu lệnh duy nhất trong batch.
 CREATE VIEW v_order_summary AS
 SELECT o.id
      , c.name AS customer

@@ -24,7 +24,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/updater/providers/github"
 )
 
-// Values of UpdateStateOutput.State.
+// Các giá trị của UpdateStateOutput.State.
 const (
 	stateIdle        = "idle"
 	stateChecking    = "checking"
@@ -48,13 +48,13 @@ const (
 	cleanupDelay     = 30 * time.Second // lets the installer that relaunched the app exit and unlock its exe
 )
 
-// errBusy means a check, a download or a ready installer is in the way (or the feature is off), so nothing was done.
+// errBusy cho biết đang có thao tác kiểm tra, tải xuống hoặc bộ cài sẵn sàng (hoặc tính năng đang tắt), nên không có gì được thực hiện.
 var errBusy = errors.New("update is busy")
 
-// noAssetRe matches the provider error of a release without an installer for this machine.
+// noAssetRe khớp với lỗi provider khi bản phát hành không có bộ cài cho máy này.
 var noAssetRe = regexp.MustCompile(`release (\S+) has no asset for`)
 
-// updateError is a failure with the message code to show; version fills the {version} param.
+// updateError là lỗi kèm mã thông báo cần hiển thị; version được dùng cho tham số {version}.
 type updateError struct {
 	code    string
 	version string
@@ -64,8 +64,8 @@ type updateError struct {
 func (e *updateError) Error() string { return e.err.Error() }
 func (e *updateError) Unwrap() error { return e.err }
 
-// submoduleUpdateMng owns the update state. Every state change goes through mu, and only one check or
-// download runs at a time.
+// submoduleUpdateMng quản lý trạng thái cập nhật. Mọi thay đổi trạng thái đều đi qua mu; mỗi lần chỉ chạy một thao tác
+// kiểm tra hoặc tải xuống.
 type submoduleUpdateMng struct {
 	logger   *slog.Logger
 	app      *application.App
@@ -104,7 +104,7 @@ func newSubmoduleUpdateMng(app *application.App, logger *slog.Logger, version st
 		AssetMatcher:  matchInstaller,
 		HTTPClient:    &http.Client{Transport: transport, CheckRedirect: checkRedirect},
 	}
-	// Config.Prerelease is fixed at creation, so keep one provider per channel.
+	// Config.Prerelease được cố định khi khởi tạo nên cần một provider riêng cho mỗi kênh.
 	provider, err := github.New(cfg)
 	if err == nil {
 		cfg.Prerelease = true
@@ -114,15 +114,15 @@ func newSubmoduleUpdateMng(app *application.App, logger *slog.Logger, version st
 		m.logger.Error("create github provider failed", "error", err)
 	}
 	m.provider = provider
-	// Dev mode is always on so the update flow can be tested; it then installs into the dev exe folder.
+	// Chế độ dev luôn bật để có thể kiểm tra luồng cập nhật; bộ cài sẽ được đặt vào thư mục exe dành cho dev.
 	m.st.Supported = err == nil && version != "" && (devMode || installSupported())
 	m.logger.Info("update module ready", "version", version, "supported", m.st.Supported)
 	go m.cleanupDownloads()
 	return m
 }
 
-// cleanupDownloads deletes the installer left by the last update once the app has started again. A file still
-// locked stays until the next start; a download started meanwhile is left alone.
+// cleanupDownloads xóa bộ cài còn lại từ lần cập nhật trước khi ứng dụng khởi động lại. File đang bị khóa được giữ
+// đến lần khởi động sau; lượt tải xuống mới bắt đầu trong lúc này không bị ảnh hưởng.
 func (m *submoduleUpdateMng) cleanupDownloads() {
 	select {
 	case <-m.ctx.Done():
@@ -139,24 +139,24 @@ func (m *submoduleUpdateMng) cleanupDownloads() {
 	}
 }
 
-// downloadDir is the temp folder that holds the downloaded installer.
+// downloadDir là thư mục tạm chứa bộ cài đã tải xuống.
 func downloadDir() string {
 	return filepath.Join(os.TempDir(), "S3Browser-update")
 }
 
-// snapshot returns a copy of the current state.
+// snapshot trả về bản sao trạng thái hiện tại.
 func (m *submoduleUpdateMng) snapshot() models.UpdateStateOutput {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.st
 }
 
-// emit sends the state to the frontend.
+// emit gửi trạng thái đến frontend.
 func (m *submoduleUpdateMng) emit(st models.UpdateStateOutput) {
 	m.app.Event.Emit(EventStateChanged, st)
 }
 
-// update changes the state under the lock, then sends the new state.
+// update thay đổi trạng thái dưới khóa rồi gửi trạng thái mới.
 func (m *submoduleUpdateMng) update(change func(st *models.UpdateStateOutput)) {
 	m.mu.Lock()
 	change(&m.st)
@@ -165,7 +165,7 @@ func (m *submoduleUpdateMng) update(change func(st *models.UpdateStateOutput)) {
 	m.emit(st)
 }
 
-// fail puts the state in error with the code of err. A failed check also forgets the old release.
+// fail đặt trạng thái thành error với mã tương ứng của err. Nếu kiểm tra thất bại, hàm cũng xóa thông tin bản phát hành cũ.
 func (m *submoduleUpdateMng) fail(err *updateError, forgetRelease bool) {
 	m.logger.Warn("update failed", "code", err.code, "error", err.err)
 	m.mu.Lock()
@@ -177,7 +177,7 @@ func (m *submoduleUpdateMng) fail(err *updateError, forgetRelease bool) {
 	m.emit(st)
 }
 
-// setErrorLocked puts the state in error (mu must be held) and returns it. The version fills UPE006's param.
+// setErrorLocked đặt trạng thái thành error (mu phải đang được giữ) rồi trả về trạng thái đó. version điền tham số của UPE006.
 func (m *submoduleUpdateMng) setErrorLocked(err *updateError) models.UpdateStateOutput {
 	m.st.State, m.st.ErrorCode = stateError, err.code
 	if err.version != "" {
@@ -186,13 +186,13 @@ func (m *submoduleUpdateMng) setErrorLocked(err *updateError) models.UpdateState
 	return m.st
 }
 
-// check looks for a newer release. With auto update on, a new release starts downloading.
+// check tìm bản phát hành mới hơn. Nếu bật tự động cập nhật, bản mới sẽ bắt đầu được tải xuống.
 func (m *submoduleUpdateMng) check(ctx context.Context) error {
 	return m.runCheck(ctx, true)
 }
 
-// runCheck is check; when the channel changed during the fetch, the stale result is dropped and, if retry is set,
-// the check runs again once on the new channel.
+// runCheck thực hiện check; nếu kênh thay đổi trong lúc lấy dữ liệu, kết quả cũ bị bỏ và, nếu retry được bật,
+// hàm kiểm tra lại một lần theo kênh mới.
 func (m *submoduleUpdateMng) runCheck(ctx context.Context, retry bool) error {
 	m.mu.Lock()
 	switch m.st.State {
@@ -262,8 +262,8 @@ func (m *submoduleUpdateMng) runCheck(ctx context.Context, retry bool) error {
 	return nil
 }
 
-// fetchRelease asks GitHub for the release to install; nil means up to date. Beta on: only a newer pre-release.
-// Beta off: a newer stable, or the latest stable when the running build is a pre-release.
+// fetchRelease yêu cầu GitHub cung cấp bản phát hành để cài; nil nghĩa là đã cập nhật mới nhất. Bật Beta: chỉ lấy bản
+// thử nghiệm mới hơn. Tắt Beta: lấy bản ổn định mới hơn, hoặc bản ổn định mới nhất nếu bản đang chạy là thử nghiệm.
 func (m *submoduleUpdateMng) fetchRelease(ctx context.Context, beta bool) (*updater.Release, *updateError) {
 	ctx, cancel := context.WithTimeout(ctx, checkTimeout)
 	defer cancel()
@@ -272,7 +272,7 @@ func (m *submoduleUpdateMng) fetchRelease(ctx context.Context, beta bool) (*upda
 	case beta:
 		provider = m.betaProv
 	case strings.Contains(m.version, "-"):
-		// A pre-release build with beta off goes back to the latest stable, even an older one.
+		// Nếu tắt beta khi đang dùng bản thử nghiệm, quay về bản ổn định mới nhất, kể cả khi đó là bản cũ hơn.
 		current = "0.0.0"
 	}
 	rel, err := provider.Check(ctx, updater.CheckRequest{
@@ -286,7 +286,7 @@ func (m *submoduleUpdateMng) fetchRelease(ctx context.Context, beta bool) (*upda
 	case rel == nil || rel.Version == m.version:
 		return nil, nil
 	case beta && rel.Channel != "prerelease":
-		// Beta on only takes pre-releases; a newer stable on top of the list counts as up to date.
+		// Khi bật beta chỉ lấy bản thử nghiệm; bản ổn định mới hơn đứng đầu danh sách vẫn được xem là đã cập nhật.
 		return nil, nil
 	case rel.Artifact.Filename != installerName(rel.Version):
 		return nil, &updateError{code: UPE006, version: rel.Version, err: errors.New("no installer for this machine")}
@@ -294,7 +294,7 @@ func (m *submoduleUpdateMng) fetchRelease(ctx context.Context, beta bool) (*upda
 	return rel, nil
 }
 
-// checkError maps a provider failure to its message code.
+// checkError ánh xạ lỗi provider sang mã thông báo.
 func checkError(err error) *updateError {
 	msg := err.Error()
 	if found := noAssetRe.FindStringSubmatch(msg); found != nil {
@@ -309,8 +309,8 @@ func checkError(err error) *updateError {
 	return &updateError{code: UPE001, err: err}
 }
 
-// startDownload downloads the release found by the last check in the background. It does nothing unless the
-// state is available, or error after a failed download (retry). A release without a SHA-256 checksum is refused.
+// startDownload tải ngầm bản phát hành tìm được trong lần kiểm tra gần nhất. Hàm không làm gì trừ khi trạng thái là
+// available hoặc error sau lần tải thất bại (thử lại). Bản phát hành không có checksum SHA-256 sẽ bị từ chối.
 func (m *submoduleUpdateMng) startDownload() *updateError {
 	m.mu.Lock()
 	rel := m.rel
@@ -318,7 +318,7 @@ func (m *submoduleUpdateMng) startDownload() *updateError {
 		m.mu.Unlock()
 		return nil
 	}
-	// Validate and switch to downloading in one lock hold, so two downloads never start together.
+	// Kiểm tra hợp lệ và chuyển sang trạng thái downloading trong cùng một lần giữ khóa để không khởi chạy hai lượt tải cùng lúc.
 	if err := validateRelease(rel); err != nil {
 		m.logger.Warn("update failed", "code", err.code, "error", err.err)
 		st := m.setErrorLocked(err)
@@ -335,7 +335,7 @@ func (m *submoduleUpdateMng) startDownload() *updateError {
 	return nil
 }
 
-// validateRelease refuses a release without a SHA-256 checksum or with a download URL outside GitHub.
+// validateRelease từ chối bản phát hành không có checksum SHA-256 hoặc có URL tải xuống không thuộc GitHub.
 func validateRelease(rel *updater.Release) *updateError {
 	if v := rel.Verification; v == nil || v.DigestAlgo != "sha256" || len(v.Digest) != sha256.Size {
 		return &updateError{code: UPE004, err: errors.New("release has no sha256 checksum")}
@@ -346,7 +346,7 @@ func validateRelease(rel *updater.Release) *updateError {
 	return nil
 }
 
-// runDownload downloads and verifies the installer, then moves the state to ready or error.
+// runDownload tải và xác minh bộ cài, sau đó chuyển trạng thái thành ready hoặc error.
 func (m *submoduleUpdateMng) runDownload(rel *updater.Release) {
 	path, err := m.download(rel)
 	if m.ctx.Err() != nil {
@@ -362,7 +362,7 @@ func (m *submoduleUpdateMng) runDownload(rel *updater.Release) {
 	m.update(func(st *models.UpdateStateOutput) { st.State = stateReady })
 }
 
-// download writes the installer to the temp dir while hashing it, and deletes it unless the SHA-256 matches.
+// download ghi bộ cài vào thư mục tạm đồng thời tính hash, rồi xóa file nếu SHA-256 không khớp.
 func (m *submoduleUpdateMng) download(rel *updater.Release) (string, *updateError) {
 	dir := downloadDir()
 	_ = os.RemoveAll(dir) // an older installer is useless now
@@ -372,7 +372,7 @@ func (m *submoduleUpdateMng) download(rel *updater.Release) (string, *updateErro
 		return "", &updateError{code: UPE003, err: err}
 	}
 	hash := sha256.New()
-	// The HTTP client has no body timeout, so cancel the download when it stalls or runs too long.
+	// HTTP client không giới hạn thời gian chờ body nên hủy lượt tải nếu bị treo hoặc chạy quá lâu.
 	ctx, cancel := context.WithTimeout(m.ctx, downloadTimeout)
 	defer cancel()
 	idle := time.AfterFunc(downloadIdle, cancel)
@@ -395,7 +395,7 @@ func (m *submoduleUpdateMng) download(rel *updater.Release) (string, *updateErro
 	return path, nil
 }
 
-// onProgress records the bytes written and sends the state at most every progressInterval.
+// onProgress ghi nhận số byte đã ghi và gửi trạng thái tối đa mỗi progressInterval.
 func (m *submoduleUpdateMng) onProgress(written, total int64) {
 	m.mu.Lock()
 	m.st.Written = written
@@ -413,8 +413,8 @@ func (m *submoduleUpdateMng) onProgress(written, total int64) {
 	}
 }
 
-// install checks the installer against the checksum again (the temp dir is writable by other programs) and
-// runs it. The caller quits the app when it returns nil.
+// install kiểm tra lại checksum của bộ cài (vì chương trình khác có thể ghi vào thư mục tạm) rồi chạy bộ cài.
+// Bên gọi thoát ứng dụng nếu hàm trả nil.
 func (m *submoduleUpdateMng) install() *updateError {
 	m.mu.Lock()
 	ready, path, rel := m.st.State == stateReady, m.installer, m.rel
@@ -441,8 +441,8 @@ func (m *submoduleUpdateMng) install() *updateError {
 	return nil
 }
 
-// setAutoUpdate starts or stops the periodic check. Turning it on also downloads a release that is already
-// found; turning it off leaves a running download alone.
+// setAutoUpdate bật hoặc tắt kiểm tra định kỳ. Khi bật, hàm cũng tải xuống bản phát hành đã tìm thấy; khi tắt,
+// lượt tải đang chạy vẫn tiếp tục.
 func (m *submoduleUpdateMng) setAutoUpdate(enabled bool) {
 	m.mu.Lock()
 	if !m.st.Supported || enabled == m.autoUpdate {
@@ -469,8 +469,8 @@ func (m *submoduleUpdateMng) setAutoUpdate(enabled bool) {
 	go m.loop(loopCtx)
 }
 
-// setBeta switches between stable-only and stable + pre-release. A result found on the old channel is dropped
-// (back to idle) unless a download is running or ready.
+// setBeta chuyển giữa chỉ bản ổn định và cả bản ổn định lẫn thử nghiệm. Kết quả tìm trên kênh cũ bị xóa
+// (trở về idle), trừ khi đang tải xuống hoặc bộ cài đã sẵn sàng.
 func (m *submoduleUpdateMng) setBeta(enabled bool) {
 	m.mu.Lock()
 	if enabled == m.beta {
@@ -489,7 +489,7 @@ func (m *submoduleUpdateMng) setBeta(enabled bool) {
 	m.emit(st)
 }
 
-// loop checks 10 seconds after it starts, then every checkInterval, until ctx ends. Failures are only logged.
+// loop kiểm tra sau khi khởi chạy 10 giây, sau đó lặp lại mỗi checkInterval đến khi ctx kết thúc. Lỗi chỉ được ghi log.
 func (m *submoduleUpdateMng) loop(ctx context.Context) {
 	timer := time.NewTimer(firstCheckDelay)
 	defer timer.Stop()
@@ -506,17 +506,17 @@ func (m *submoduleUpdateMng) loop(ctx context.Context) {
 	}
 }
 
-// close stops the periodic check and the download.
+// close dừng kiểm tra định kỳ và lượt tải xuống.
 func (m *submoduleUpdateMng) close() {
 	m.cancel()
 }
 
-// installerName is the release asset of the installer for this machine.
+// installerName trả về tên asset bộ cài dành cho máy này trong bản phát hành.
 func installerName(version string) string {
 	return fmt.Sprintf("S3Browser-%s-windows-%s-installer.exe", version, runtime.GOARCH)
 }
 
-// matchInstaller picks the installer for this machine; the version in the name is checked after the match.
+// matchInstaller chọn bộ cài dành cho máy này; phiên bản trong tên được kiểm tra sau khi tìm thấy.
 func matchInstaller(_ updater.CheckRequest, assets []github.ReleaseAsset) int {
 	suffix := fmt.Sprintf("-windows-%s-installer.exe", runtime.GOARCH)
 	for i, a := range assets {
@@ -527,7 +527,7 @@ func matchInstaller(_ updater.CheckRequest, assets []github.ReleaseAsset) int {
 	return -1
 }
 
-// allowedURL accepts only https URLs on GitHub hosts.
+// allowedURL chỉ chấp nhận URL https trên máy chủ GitHub.
 func allowedURL(raw string) bool {
 	u, err := url.Parse(raw)
 	if err != nil || u.Scheme != "https" {
@@ -537,7 +537,7 @@ func allowedURL(raw string) bool {
 	return host == "api.github.com" || host == "github.com" || strings.HasSuffix(host, ".githubusercontent.com")
 }
 
-// checkRedirect keeps every hop of a request on GitHub hosts.
+// checkRedirect đảm bảo mọi bước chuyển hướng của yêu cầu đều nằm trên máy chủ GitHub.
 func checkRedirect(req *http.Request, via []*http.Request) error {
 	if len(via) >= maxRedirects {
 		return errors.New("stopped after too many redirects")
@@ -548,7 +548,7 @@ func checkRedirect(req *http.Request, via []*http.Request) error {
 	return nil
 }
 
-// releaseURL is the GitHub page of the release, or "" when the URL is not a GitHub one.
+// releaseURL trả về trang GitHub của bản phát hành hoặc "" nếu URL không thuộc GitHub.
 func releaseURL(rel *updater.Release) string {
 	if u, _ := rel.Metadata["github.release.htmlURL"].(string); allowedURL(u) {
 		return u
@@ -556,7 +556,7 @@ func releaseURL(rel *updater.Release) string {
 	return ""
 }
 
-// exeDir is the folder of the running exe, with symlinks resolved.
+// exeDir trả về thư mục của exe đang chạy sau khi phân giải symbolic link.
 func exeDir() (string, error) {
 	exe, err := os.Executable()
 	if err != nil {
@@ -568,8 +568,8 @@ func exeDir() (string, error) {
 	return filepath.Dir(exe), nil
 }
 
-// createFile makes the temp dir and a new file in it. On Windows the mode bits are ignored; the protection comes
-// from the per-user ACL of %TEMP%, and the later sha256 check in install covers other programs.
+// createFile tạo thư mục tạm và file mới bên trong. Trên Windows, các bit mode bị bỏ qua; quyền bảo vệ đến từ ACL
+// theo người dùng của %TEMP%, còn bước kiểm tra sha256 trong install giúp phát hiện thay đổi từ chương trình khác.
 func createFile(dir, path string) (*os.File, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
@@ -577,7 +577,7 @@ func createFile(dir, path string) (*os.File, error) {
 	return os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
 }
 
-// fileSum returns the SHA-256 of a file.
+// fileSum trả về SHA-256 của file.
 func fileSum(path string) ([]byte, error) {
 	file, err := os.Open(path)
 	if err != nil {

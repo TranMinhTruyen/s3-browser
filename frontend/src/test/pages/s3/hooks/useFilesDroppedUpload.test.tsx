@@ -141,7 +141,7 @@ describe('useFilesDroppedUpload', () => {
         capped: true,
         ...limits,
       });
-      // The modal replaces the capped warning.
+      // Hộp thoại thay thế cảnh báo đã đạt giới hạn.
       expect(toast.warning).not.toHaveBeenCalled();
       expect(vi.mocked(runUpload).mock.calls[0][0].files).toEqual(chosen);
     });

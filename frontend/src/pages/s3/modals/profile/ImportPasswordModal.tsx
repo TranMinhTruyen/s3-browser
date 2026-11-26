@@ -25,9 +25,9 @@ type ImportPasswordForm = {
 const MIN_PASSWORD_LENGTH = 8;
 
 /**
- * Asks for the password of an encrypted profile file and imports it (the password lives only in this form).
- * Resolves the imported profile, or null if canceled. A wrong password keeps the modal open to retry.
- * Load it through `showImportPasswordModal` (lazy chunk).
+ * Yêu cầu mật khẩu của file profile đã mã hóa rồi nhập profile (mật khẩu chỉ tồn tại trong form này).
+ * Trả về profile đã nhập hoặc null nếu hủy. Nhập sai mật khẩu thì giữ modal mở để thử lại.
+ * Tải qua `showImportPasswordModal` (lazy chunk).
  */
 export default createMantineModal<ImportPasswordModalProps, ConnectionProfile | null>(
   props => {
@@ -41,7 +41,7 @@ export default createMantineModal<ImportPasswordModalProps, ConnectionProfile | 
       validate: {
         password: value => {
           if (!value) return 'V000001';
-          // Count code points (not UTF-16 units) to match the backend, which counts runes.
+          // Đếm code point (không phải đơn vị UTF-16) để khớp với backend, nơi đếm rune.
           return [...value].length < MIN_PASSWORD_LENGTH ? `V000012:${MIN_PASSWORD_LENGTH}` : null;
         },
       },

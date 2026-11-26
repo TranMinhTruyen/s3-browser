@@ -34,7 +34,7 @@ async fn open_err(p: OpenParams) -> DbError {
     }
 }
 
-// ---- server PRELOGIN giả ----
+// ---- máy chủ PRELOGIN giả ----
 
 /// Đọc gói PRELOGIN của client, trả byte ENCRYPTION client xin. Gói TDS: 8 byte header (độ dài
 /// big-endian ở byte 2-3) rồi bảng option `token(1) offset(2) length(2)`... kết thúc bằng 0xFF.
@@ -107,7 +107,7 @@ fn closed_port() -> u16 {
         .port()
 }
 
-// ---- open: kiểm input ----
+// ---- mở: kiểm dữ liệu đầu vào ----
 
 #[tokio::test]
 async fn open_requires_host_and_username() {
@@ -146,7 +146,7 @@ async fn open_does_not_touch_the_network_when_input_is_invalid() {
     assert!(rx.try_recv().is_err(), "không được nối khi thiếu username");
 }
 
-// ---- open: thứ tự thử theo từng mode ----
+// ---- mở: thứ tự thử theo từng chế độ ----
 
 #[tokio::test]
 async fn each_tls_mode_tries_the_encryption_levels_in_libpq_order() {
@@ -310,7 +310,7 @@ fn verify_modes_without_ca_file_use_the_system_store_only() {
     assert!(format!("{:?}", tries[0]).contains("extra_cas: []"));
 }
 
-// ---- attempts: ánh xạ mode sang cấu hình tiberius ----
+// ---- attempts: ánh xạ chế độ sang cấu hình tiberius ----
 
 #[test]
 fn modes_map_to_encryption_level_and_trust() {

@@ -3,13 +3,13 @@ import { MouseEvent, memo, useCallback, useState } from 'react';
 
 type TruncatedTextProps = TextProps & {
   children?: string;
-  /** Tooltip content; defaults to the text itself. */
+  /** Nội dung tooltip; mặc định là chính văn bản đó. */
   label?: string;
-  /** Show the tooltip even when the text is not cut. */
+  /** Vẫn hiện tooltip kể cả khi văn bản chưa bị cắt. */
   alwaysTip?: boolean;
 };
 
-/** One-line text cut with an ellipsis. The cut is measured on hover only, so long lists pay nothing per render. */
+/** Văn bản một dòng được cắt bằng dấu ba chấm. Chỉ đo phần bị cắt khi rê chuột nên danh sách dài không tốn thêm mỗi lần render. */
 const TruncatedText = memo(function TruncatedText(props: TruncatedTextProps) {
   const { children, label = children, alwaysTip = false, ...rest } = props;
   const [opened, setOpened] = useState(false);

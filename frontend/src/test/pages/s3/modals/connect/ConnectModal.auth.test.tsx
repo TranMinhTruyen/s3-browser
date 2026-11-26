@@ -56,7 +56,7 @@ const profile = (extra: Partial<ConnectionProfileOutput> = {}) =>
 type Props = Parameters<typeof ConnectModal.show>[0];
 type User = ReturnType<typeof userEvent.setup>;
 
-/** Backend results by binding; the connect call succeeds. */
+/** Kết quả backend theo binding; lời gọi kết nối thành công. */
 function mockBackend(profiles: unknown[] = []) {
   callIPCMock.mockImplementation((async (binding: unknown, args: unknown) => {
     if (binding === ListAwsProfiles) return profiles;
@@ -99,7 +99,7 @@ async function chooseRegion(user: User) {
   await user.click(await screen.findByText('Tokyo'));
 }
 
-/** Options of the authentication method Select (the region list also has hidden options). */
+/** Các lựa chọn của Select phương thức xác thực (danh sách region cũng có những mục đang ẩn). */
 const authOptions = () => {
   const listbox = document.getElementById(field('Authentication method').getAttribute('aria-controls')!)!;
   return within(listbox)
@@ -384,7 +384,7 @@ describe('ConnectModal authentication methods', () => {
       await user.click(button('Connect'));
 
       expect(await screen.findByText('Role ARN is not valid')).toBeInTheDocument();
-      // One pass shows every error, so the user does not have to press Connect twice.
+      // Một lượt kiểm tra hiển thị mọi lỗi để người dùng không phải nhấn Kết nối hai lần.
       expect(screen.getByText('Duration (seconds) is required')).toBeInTheDocument();
       expect(screen.getByText('MFA code is required')).toBeInTheDocument();
       expect(connectCalls()).toHaveLength(0);
@@ -748,7 +748,7 @@ describe('ConnectModal anonymous, MinIO STS and LDAP', () => {
     mockBackend();
   });
 
-  /** Switches to MinIO with an endpoint and region, then to the given method. */
+  /** Chuyển sang MinIO với endpoint và region, rồi chọn phương thức đã cho. */
   async function setupMinio(user: User, method: string) {
     await user.click(screen.getByText('MinIO'));
     await waitFor(() => expect(checkbox('Path style')).toBeChecked());
@@ -1002,7 +1002,7 @@ describe('ConnectModal OIDC, client certificate and CA file', () => {
     mockBackend();
   });
 
-  /** Switches to MinIO with an endpoint and region, then to the given method. */
+  /** Chuyển sang MinIO với endpoint và region, sau đó chọn phương thức được chỉ định. */
   async function setupMinio(user: User, method: string) {
     await user.click(screen.getByText('MinIO'));
     await waitFor(() => expect(checkbox('Path style')).toBeChecked());

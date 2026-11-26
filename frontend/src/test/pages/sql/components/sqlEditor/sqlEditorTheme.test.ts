@@ -5,7 +5,7 @@ type Rule = Record<string, string>;
 type Spec = Record<string, Rule>;
 type HighlightSpec = { tag: unknown; color?: string; fontWeight?: string; fontStyle?: string };
 
-// Capture the raw specs: CodeMirror compiles them into opaque style modules.
+// Lưu lại các khai báo thô: CodeMirror biên dịch chúng thành module style không thể đọc trực tiếp.
 const captured = vi.hoisted(() => ({ theme: undefined as unknown, highlight: undefined as unknown }));
 
 vi.mock('@codemirror/view', async importOriginal => {
@@ -64,7 +64,7 @@ describe('sqlEditorTheme', () => {
     const colorProps = ['color', 'backgroundColor', 'borderColor', 'borderLeftColor'];
     for (const rule of Object.values(themeSpec())) {
       for (const prop of colorProps) {
-        // `inherit` is a CSS keyword (the completion label takes the selected row's color), not a hard-coded color.
+        // `inherit` là từ khóa CSS (nhãn gợi ý lấy màu của hàng đang chọn), không phải màu được ghi cứng.
         if (rule[prop]) expect(rule[prop]).toMatch(/^(var\(|light-dark\(|inherit$)/);
       }
     }

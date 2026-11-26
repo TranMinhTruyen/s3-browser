@@ -13,7 +13,7 @@ import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
 import { pgProfile, sqliteProfile, toProfileMap } from '@/test/_helpers/dbProfiles';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// jsdom has no layout, so render every row. Sizes come from `estimateSize(index)` like the real virtualizer.
+// jsdom không có layout nên render mọi hàng. Kích thước lấy từ `estimateSize(index)` như virtualizer thật.
 const virtual = vi.hoisted(() => ({ sizes: [] as number[] }));
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: (options: {
@@ -60,7 +60,7 @@ const schema = {
   triggers: [{ name: 'trg_users', table: 'users' }],
 };
 
-/** What GetSchemaTree answers; the other bindings succeed. */
+/** Kết quả GetSchemaTree; các binding khác đều thành công. */
 const answer = { schemas: [schema] as unknown };
 const schemaCalls = () => callIPCMock.mock.calls.filter(c => c[0] === GetSchemaTree);
 
@@ -398,7 +398,7 @@ describe('DbProfiles object tree', () => {
         act(() => useSqlTabStore.getState().openTableTab('s1', 'main', 'users'));
         return useSqlTabStore.getState().activeTab;
       };
-      /** The SQL tab shows `s1`, a second tab of `s1` exists, the first tab is selected and the tree is closed. */
+      /** Tab SQL hiển thị `s1`, đã có tab thứ hai của `s1`, tab đầu đang được chọn và cây đã đóng. */
       const closedTreeWithTwoTabs = async (second: () => string) => {
         renderWithProviders(<DbProfiles />);
         const first = Object.keys(tabs())[0];
@@ -489,7 +489,7 @@ describe('DbProfiles object tree', () => {
 
         await act(async () => finish({ schemas: [schema] }));
 
-        // main, Tables, Views, Indexes, Triggers
+        // mục chính, Bảng, View, Chỉ mục, Trigger
         expect(virtual.sizes).toEqual([first, node, node, node, node, node, second]);
         expect(virtual.sizes.every(Number.isInteger)).toBe(true);
         const second2 = screen.getByText('Second SQLite').closest<HTMLElement>('.mantine-Card-root')!.parentElement!;

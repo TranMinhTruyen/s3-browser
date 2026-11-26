@@ -13,7 +13,7 @@ const firstPage = { columns: ['id'], rows: [['1'], ['2']], done: false, cursorId
 const mount = (table = 'users') =>
   renderHook(({ t }) => useTableRows('tab-1', 'sqlite', 'p1', 'main', t), { initialProps: { t: table } });
 
-/** A call that settles when the test says so. */
+/** Lời gọi chỉ hoàn tất khi test yêu cầu. */
 const deferred = <T,>() => {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>(r => {
@@ -199,7 +199,7 @@ describe('useTableRows', () => {
 
     rerender(next);
     expect(result.current).toMatchObject({ rows: [], loading: true, loadingMore: false, hasMore: false });
-    // The first page of the new table has not arrived: loadMore does nothing.
+    // Trang đầu của bảng mới chưa về nên loadMore không làm gì.
     await act(() => result.current.loadMore());
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
@@ -384,7 +384,7 @@ describe('useTableRows', () => {
       const { result } = await ready();
       act(() => result.current.setFetchAllRows(true));
       act(() => result.current.setFetchAllRows(false));
-      // Cursor is gone, so ticking again reads nothing and the old settle must not touch state.
+      // Con trỏ đã bị xóa nên đánh dấu lại cũng không đọc được gì; kết quả cũ hoàn tất không được cập nhật state.
       act(() => result.current.setFetchAllRows(true));
       expect(fetchMock).toHaveBeenCalledTimes(1);
       await act(async () => first.resolve({ rows: [['x']], done: true }));

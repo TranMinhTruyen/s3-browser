@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef } from 'react';
 
 /**
- * Returns a getter for an AbortSignal that aborts when the component unmounts, to cancel pending IPC calls.
- * The controller is created in the effect (not during render) so a StrictMode remount gets a fresh one.
+ * Trả về hàm lấy AbortSignal; signal sẽ bị hủy khi component unmount để hủy các lệnh IPC đang chờ.
+ * Controller được tạo trong effect (không phải lúc render) để lần mount lại của StrictMode nhận controller mới.
  */
 export function useUnmountSignal() {
   const controllerRef = useRef<AbortController | null>(null);

@@ -1,7 +1,7 @@
 //go:build !portable
 
-// Package portable decides where the app keeps its data: next to the exe (portable build, tag "portable") or in
-// the user config dir. Two files with opposite build tags provide the same API; this one is the default build.
+// Package portable xác định nơi lưu dữ liệu ứng dụng: cạnh exe (bản portable, tag "portable") hoặc trong thư mục cấu hình
+// của người dùng. Hai file có build tag đối lập cung cấp cùng API; file này dùng cho bản dựng mặc định.
 package portable
 
 import (
@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 )
 
-// Enabled reports whether the binary was built with the "portable" tag.
+// Enabled cho biết binary có được build với tag "portable" hay không.
 const Enabled = false
 
-// DataDir returns <user config dir>/<appName> and creates it when missing.
+// DataDir trả về <thư mục cấu hình người dùng>/<appName> và tạo thư mục nếu chưa tồn tại.
 func DataDir(appName string) (string, error) {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
@@ -25,7 +25,7 @@ func DataDir(appName string) (string, error) {
 	return dataDir, nil
 }
 
-// WebView2Dir returns an empty string so Wails uses the WebView2 installed on the system.
+// WebView2Dir trả về chuỗi rỗng để Wails dùng WebView2 đã cài trên hệ thống.
 func WebView2Dir() (string, error) {
 	return "", nil
 }

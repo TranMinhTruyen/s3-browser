@@ -254,7 +254,7 @@ fn mssql_scale_above_seven_is_seven() {
     assert_eq!(time_ticks(1, 255), "00:00:00.0000001");
 }
 
-// ---- timestamp ----
+// ---- dấu thời gian ----
 
 #[test]
 fn timestamp_boundary_values() {

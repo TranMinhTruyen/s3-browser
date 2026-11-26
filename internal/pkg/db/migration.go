@@ -22,27 +22,27 @@ import (
 var schemasFS embed.FS
 
 const (
-	// backupTimeLayout is the suffix of <db>.bak-<suffix> (UTC, so DST changes keep the order): fixed width, so names
-	// sort by time. Stage 1 wrote local time; the two only differ by the offset, so old names still sort first.
+	// backupTimeLayout là hậu tố của <db>.bak-<suffix> (UTC để giữ đúng thứ tự khi đổi giờ mùa hè): độ dài cố định
+	// giúp tên file sắp xếp theo thời gian. Giai đoạn 1 ghi giờ địa phương; hai định dạng chỉ khác độ lệch múi giờ nên tên cũ vẫn đứng trước.
 	backupTimeLayout = "20060102-150405.000"
 
-	// backupsToKeep is how many <db>.bak-* files stay after a new backup.
+	// backupsToKeep là số file <db>.bak-* được giữ lại sau khi tạo bản sao lưu mới.
 	backupsToKeep = 3
 )
 
 var (
-	// backupSuffixPattern matches the suffix of the backups of this app (the second-only layout of
-	// sprint 11 stage 1 too).
+	// backupSuffixPattern khớp hậu tố của các bản sao lưu do ứng dụng này tạo (bao gồm cả định dạng chỉ có giây
+	// của giai đoạn 1 sprint 11).
 	backupSuffixPattern = regexp.MustCompile(`^\d{8}-\d{6}(\.\d{3})?$`)
 
-	// ErrBackupFailed means the backup before migrating failed: the database was not touched.
+	// ErrBackupFailed cho biết tạo bản sao lưu trước khi migration thất bại: cơ sở dữ liệu chưa bị thay đổi.
 	ErrBackupFailed = errors.New("backup before migration failed")
 
-	// ErrMigrateFailed means a migration failed and was rolled back; the error text names the backup file.
+	// ErrMigrateFailed cho biết migration thất bại và đã được rollback; nội dung lỗi cho biết tên file sao lưu.
 	ErrMigrateFailed = errors.New("run migrations failed")
 )
 
-// gooseSlogLogger routes goose output to slog.
+// gooseSlogLogger chuyển đầu ra của goose sang slog.
 type gooseSlogLogger struct{}
 
 func (gooseSlogLogger) Printf(format string, v ...interface{}) {
@@ -53,7 +53,7 @@ func (gooseSlogLogger) Fatalf(format string, v ...interface{}) {
 	slog.Error("goose: " + fmt.Sprintf(format, v...))
 }
 
-// RunMigrations applies the embedded schemas/*.sql migrations and logs when the version changes.
+// RunMigrations áp dụng các migration schemas/*.sql được nhúng và ghi log khi phiên bản thay đổi.
 func RunMigrations(ctx context.Context, sqlDB *sql.DB) error {
 	goose.SetBaseFS(schemasFS)
 	goose.SetLogger(gooseSlogLogger{})
@@ -73,7 +73,7 @@ func RunMigrations(ctx context.Context, sqlDB *sql.DB) error {
 	}
 
 	if err := goose.UpContext(ctx, sqlDB, "schemas"); err != nil {
-		// goose already rolled the failed migration back; the backup is the user's way out.
+		// goose đã rollback migration thất bại; bản sao lưu là phương án khôi phục cho người dùng.
 		slog.Error("migration failed, database rolled back", "backup", backupPath, "error", err)
 		return fmt.Errorf("%w (backup: %q): %w", ErrMigrateFailed, backupPath, err)
 	}
@@ -89,15 +89,15 @@ func RunMigrations(ctx context.Context, sqlDB *sql.DB) error {
 	return nil
 }
 
-// backupBeforeMigrate writes <db>.bak-<yyyyMMdd-HHmmss> when migrations newer than version are pending
-// and the database already holds data (version > 0). It returns "" when no backup was needed.
-// VACUUM INTO gives a consistent copy even while the WAL holds unflushed pages.
+// backupBeforeMigrate tạo <db>.bak-<yyyyMMdd-HHmmss> nếu còn migration mới hơn version cần chạy
+// và cơ sở dữ liệu đã có dữ liệu (version > 0). Trả về "" nếu không cần sao lưu.
+// VACUUM INTO tạo bản sao nhất quán kể cả khi WAL còn các trang chưa flush.
 func backupBeforeMigrate(ctx context.Context, sqlDB *sql.DB, version int64) (string, error) {
 	if version == 0 {
 		return "", nil
 	}
 	pending, err := goose.CollectMigrations("schemas", version, math.MaxInt64)
-	// goose reports "no migration files" when none is newer than version, i.e. nothing is pending.
+	// goose báo "no migration files" nếu không có migration nào mới hơn version, tức là không còn việc cần làm.
 	if errors.Is(err, goose.ErrNoMigrationFiles) || (err == nil && len(pending) == 0) {
 		return "", nil
 	}
@@ -111,7 +111,7 @@ func backupBeforeMigrate(ctx context.Context, sqlDB *sql.DB, version int64) (str
 		return "", fmt.Errorf("locate db file for backup: %w", err)
 	}
 
-	// Milliseconds keep two backups made in the same second from clashing (VACUUM INTO fails on an existing file).
+	// Thêm mili giây để hai bản sao lưu tạo trong cùng một giây không trùng tên (VACUUM INTO thất bại nếu file đã tồn tại).
 	backupPath := dbPath + ".bak-" + time.Now().UTC().Format(backupTimeLayout)
 	if _, err := sqlDB.ExecContext(ctx, "VACUUM INTO ?", backupPath); err != nil {
 		return "", fmt.Errorf("backup db before migrate: %w", err)
@@ -121,10 +121,10 @@ func backupBeforeMigrate(ctx context.Context, sqlDB *sql.DB, version int64) (str
 	return backupPath, nil
 }
 
-// pruneBackups deletes the oldest <dbPath>.bak-<timestamp> files, keeping the newest keep. "Oldest" is by file
-// modification time, not by name, because older versions named backups in local time and newer ones in UTC. Only
-// names this app writes are matched, so other files (e.g. an old <dbPath>.bak) are never touched. A failure is only
-// logged: leftover backups are harmless.
+// pruneBackups xóa các file <dbPath>.bak-<timestamp> cũ nhất và giữ lại keep file mới nhất. Xác định "cũ nhất" theo
+// thời gian sửa file, không theo tên, vì phiên bản cũ đặt tên theo giờ địa phương còn phiên bản mới dùng UTC.
+// Chỉ khớp tên do ứng dụng tạo nên không đụng đến file khác (ví dụ <dbPath>.bak cũ). Nếu thất bại thì chỉ ghi log;
+// các bản sao lưu dư không gây hại.
 func pruneBackups(dbPath string, keep int) {
 	dir, prefix := filepath.Dir(dbPath), filepath.Base(dbPath)+".bak-"
 	entries, err := os.ReadDir(dir)

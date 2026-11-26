@@ -1,5 +1,5 @@
-// Package models re-exports the input/output models of every domain under one import path,
-// so modules and handlers only import "S3Browser/models".
+// Package models tái xuất các model đầu vào/đầu ra của mọi miền dưới một import path,
+// để module và handler chỉ cần import "S3Browser/models".
 package models
 
 import (
@@ -13,229 +13,235 @@ import (
 )
 
 type (
-	// Message re-exports common.Message.
+	// Message tái xuất common.Message.
 	Message = common.Message
-	// Output re-exports common.Output.
+	// Output tái xuất common.Output.
 	Output[T any] = common.Output[T]
 )
 
 type (
-	// Bucket re-exports bucket.Bucket.
+	// Bucket tái xuất bucket.Bucket.
 	Bucket = bucket.Bucket
-	// ObjectItem re-exports bucket.ObjectItem.
+	// ObjectItem tái xuất bucket.ObjectItem.
 	ObjectItem = bucket.ObjectItem
-	// UploadObj re-exports bucket.UploadObj.
+	// UploadObj tái xuất bucket.UploadObj.
 	UploadObj = bucket.UploadObj
-	// DroppedFile re-exports bucket.DroppedFile.
+	// DroppedFile tái xuất bucket.DroppedFile.
 	DroppedFile = bucket.DroppedFile
-	// DroppedGroup re-exports bucket.DroppedGroup.
+	// DroppedGroup tái xuất bucket.DroppedGroup.
 	DroppedGroup = bucket.DroppedGroup
-	// CredentialExpiringOutput re-exports bucket.CredentialExpiringOutput.
+	// CredentialExpiringOutput tái xuất bucket.CredentialExpiringOutput.
 	CredentialExpiringOutput = bucket.CredentialExpiringOutput
-	// OidcLoginOutput re-exports bucket.OidcLoginOutput.
+	// OidcLoginOutput tái xuất bucket.OidcLoginOutput.
 	OidcLoginOutput = bucket.OidcLoginOutput
-	// ConnectOutput re-exports bucket.ConnectOutput.
+	// ConnectOutput tái xuất bucket.ConnectOutput.
 	ConnectOutput = bucket.ConnectOutput
-	// ListBucketInput re-exports bucket.ListBucketInput.
+	// ListBucketInput tái xuất bucket.ListBucketInput.
 	ListBucketInput = bucket.ListBucketInput
-	// ListBucketOutput re-exports bucket.ListBucketOutput.
+	// ListBucketOutput tái xuất bucket.ListBucketOutput.
 	ListBucketOutput = bucket.ListBucketOutput
-	// CheckBucketAccessInput re-exports bucket.CheckBucketAccessInput.
+	// CheckBucketAccessInput tái xuất bucket.CheckBucketAccessInput.
 	CheckBucketAccessInput = bucket.CheckBucketAccessInput
-	// CheckBucketAccessOutput re-exports bucket.CheckBucketAccessOutput.
+	// CheckBucketAccessOutput tái xuất bucket.CheckBucketAccessOutput.
 	CheckBucketAccessOutput = bucket.CheckBucketAccessOutput
-	// ListObjectInput re-exports bucket.ListObjectInput.
+	// ListObjectInput tái xuất bucket.ListObjectInput.
 	ListObjectInput = bucket.ListObjectInput
-	// ListObjectOutput re-exports bucket.ListObjectOutput.
+	// ListObjectOutput tái xuất bucket.ListObjectOutput.
 	ListObjectOutput = bucket.ListObjectOutput
-	// SearchObjectInput re-exports bucket.SearchObjectInput.
+	// SearchObjectInput tái xuất bucket.SearchObjectInput.
 	SearchObjectInput = bucket.SearchObjectInput
-	// SearchObjectOutput re-exports bucket.SearchObjectOutput.
+	// SearchObjectOutput tái xuất bucket.SearchObjectOutput.
 	SearchObjectOutput = bucket.SearchObjectOutput
-	// SearchBucketInput re-exports bucket.SearchBucketInput.
+	// SearchBucketInput tái xuất bucket.SearchBucketInput.
 	SearchBucketInput = bucket.SearchBucketInput
-	// SearchBucketOutput re-exports bucket.SearchBucketOutput.
+	// SearchBucketOutput tái xuất bucket.SearchBucketOutput.
 	SearchBucketOutput = bucket.SearchBucketOutput
-	// ObjectDetailInput re-exports bucket.ObjectDetailInput.
+	// ObjectDetailInput tái xuất bucket.ObjectDetailInput.
 	ObjectDetailInput = bucket.ObjectDetailInput
-	// ObjectDetailOutput re-exports bucket.ObjectDetailOutput.
+	// ObjectDetailOutput tái xuất bucket.ObjectDetailOutput.
 	ObjectDetailOutput = bucket.ObjectDetailOutput
-	// DownloadProgressBatchOutput re-exports bucket.DownloadProgressBatchOutput.
+	// DownloadProgressBatchOutput tái xuất bucket.DownloadProgressBatchOutput.
 	DownloadProgressBatchOutput = bucket.DownloadProgressBatchOutput
-	// DownloadProgressOutput re-exports bucket.DownloadProgressOutput.
+	// DownloadProgressOutput tái xuất bucket.DownloadProgressOutput.
 	DownloadProgressOutput = bucket.DownloadProgressOutput
-	// DownloadObjInput re-exports bucket.DownloadObjInput.
+	// DownloadObjInput tái xuất bucket.DownloadObjInput.
 	DownloadObjInput = bucket.DownloadObjInput
-	// UploadObjInput re-exports bucket.UploadObjInput.
+	// UploadObjInput tái xuất bucket.UploadObjInput.
 	UploadObjInput = bucket.UploadObjInput
-	// DownloadHistoryItem re-exports bucket.DownloadHistoryItem.
+	// DownloadHistoryItem tái xuất bucket.DownloadHistoryItem.
 	DownloadHistoryItem = bucket.DownloadHistoryItem
-	// DownloadHistoryInput re-exports bucket.DownloadHistoryInput.
+	// DownloadHistoryInput tái xuất bucket.DownloadHistoryInput.
 	DownloadHistoryInput = bucket.DownloadHistoryInput
-	// DownloadHistoryOutput re-exports bucket.DownloadHistoryOutput.
+	// DownloadHistoryOutput tái xuất bucket.DownloadHistoryOutput.
 	DownloadHistoryOutput = bucket.DownloadHistoryOutput
-	// DeleteFailure re-exports bucket.DeleteFailure.
+	// DeleteFailure tái xuất bucket.DeleteFailure.
 	DeleteFailure = bucket.DeleteFailure
-	// DeleteObjOutput re-exports bucket.DeleteObjOutput.
+	// DeleteObjOutput tái xuất bucket.DeleteObjOutput.
 	DeleteObjOutput = bucket.DeleteObjOutput
-	// DeleteObjInput re-exports bucket.DeleteObjInput.
+	// DeleteObjInput tái xuất bucket.DeleteObjInput.
 	DeleteObjInput = bucket.DeleteObjInput
-	// DeletePrefixInput re-exports bucket.DeletePrefixInput.
+	// DeletePrefixInput tái xuất bucket.DeletePrefixInput.
 	DeletePrefixInput = bucket.DeletePrefixInput
-	// DeletePrefixOutput re-exports bucket.DeletePrefixOutput.
+	// DeletePrefixOutput tái xuất bucket.DeletePrefixOutput.
 	DeletePrefixOutput = bucket.DeletePrefixOutput
-	// UploadProgressBatchOutput re-exports bucket.UploadProgressBatchOutput.
+	// UploadProgressBatchOutput tái xuất bucket.UploadProgressBatchOutput.
 	UploadProgressBatchOutput = bucket.UploadProgressBatchOutput
-	// UploadProgressOutput re-exports bucket.UploadProgressOutput.
+	// UploadProgressOutput tái xuất bucket.UploadProgressOutput.
 	UploadProgressOutput = bucket.UploadProgressOutput
-	// FilesDroppedOutput re-exports bucket.FilesDroppedOutput.
+	// FilesDroppedOutput tái xuất bucket.FilesDroppedOutput.
 	FilesDroppedOutput = bucket.FilesDroppedOutput
-	// UploadStartedOutput re-exports bucket.UploadStartedOutput.
+	// UploadStartedOutput tái xuất bucket.UploadStartedOutput.
 	UploadStartedOutput = bucket.UploadStartedOutput
-	// UploadFinishedOutput re-exports bucket.UploadFinishedOutput.
+	// UploadFinishedOutput tái xuất bucket.UploadFinishedOutput.
 	UploadFinishedOutput = bucket.UploadFinishedOutput
-	// UploadStatus re-exports bucket.UploadStatus.
+	// UploadStatus tái xuất bucket.UploadStatus.
 	UploadStatus = bucket.UploadStatus
-	// CreateBucketInput re-exports bucket.CreateBucketInput.
+	// CreateBucketInput tái xuất bucket.CreateBucketInput.
 	CreateBucketInput = bucket.CreateBucketInput
-	// BucketPolicyInput re-exports bucket.BucketPolicyInput.
+	// BucketPolicyInput tái xuất bucket.BucketPolicyInput.
 	BucketPolicyInput = bucket.BucketPolicyInput
-	// BucketPolicyOutput re-exports bucket.BucketPolicyOutput.
+	// BucketPolicyOutput tái xuất bucket.BucketPolicyOutput.
 	BucketPolicyOutput = bucket.BucketPolicyOutput
-	// PutBucketPolicyInput re-exports bucket.PutBucketPolicyInput.
+	// PutBucketPolicyInput tái xuất bucket.PutBucketPolicyInput.
 	PutBucketPolicyInput = bucket.PutBucketPolicyInput
-	// BucketDetailInput re-exports bucket.BucketDetailInput.
+	// BucketDetailInput tái xuất bucket.BucketDetailInput.
 	BucketDetailInput = bucket.BucketDetailInput
-	// BucketDetailOutput re-exports bucket.BucketDetailOutput.
+	// BucketDetailOutput tái xuất bucket.BucketDetailOutput.
 	BucketDetailOutput = bucket.BucketDetailOutput
-	// DeleteBucketInput re-exports bucket.DeleteBucketInput.
+	// DeleteBucketInput tái xuất bucket.DeleteBucketInput.
 	DeleteBucketInput = bucket.DeleteBucketInput
-	// DeleteBucketInfoOutput re-exports bucket.DeleteBucketInfoOutput.
+	// DeleteBucketInfoOutput tái xuất bucket.DeleteBucketInfoOutput.
 	DeleteBucketInfoOutput = bucket.DeleteBucketInfoOutput
-	// DeleteBucketOutput re-exports bucket.DeleteBucketOutput.
+	// DeleteBucketOutput tái xuất bucket.DeleteBucketOutput.
 	DeleteBucketOutput = bucket.DeleteBucketOutput
 )
 
 const (
-	// UploadStatusSuccess re-exports bucket.UploadStatusSuccess.
-	// UploadStatusSuccess re-exports bucket.UploadStatusSuccess.
+	// UploadStatusSuccess tái xuất bucket.UploadStatusSuccess.
+	// UploadStatusSuccess tái xuất bucket.UploadStatusSuccess.
 	UploadStatusSuccess = bucket.UploadStatusSuccess
-	// UploadStatusError re-exports bucket.UploadStatusError.
-	// UploadStatusError re-exports bucket.UploadStatusError.
+	// UploadStatusError tái xuất bucket.UploadStatusError.
+	// UploadStatusError tái xuất bucket.UploadStatusError.
 	UploadStatusError = bucket.UploadStatusError
-	// UploadStatusCanceled re-exports bucket.UploadStatusCanceled.
-	// UploadStatusCanceled re-exports bucket.UploadStatusCanceled.
+	// UploadStatusCanceled tái xuất bucket.UploadStatusCanceled.
+	// UploadStatusCanceled tái xuất bucket.UploadStatusCanceled.
 	UploadStatusCanceled = bucket.UploadStatusCanceled
 )
 
 type (
-	// MasterOutput re-exports master.MasterOutput.
+	// MasterOutput tái xuất master.MasterOutput.
 	MasterOutput = master.MasterOutput
-	// GetMasterDataOutput re-exports master.GetMasterDataOutput.
+	// GetMasterDataOutput tái xuất master.GetMasterDataOutput.
 	GetMasterDataOutput = master.GetMasterDataOutput
-	// RegionOutput re-exports master.RegionOutput.
+	// RegionOutput tái xuất master.RegionOutput.
 	RegionOutput = master.RegionOutput
 )
 
 type (
-	// ConnectionProfileInput re-exports profile.ConnectionProfileInput.
+	// ConnectionProfileInput tái xuất profile.ConnectionProfileInput.
 	ConnectionProfileInput = profile.ConnectionProfileInput
-	// ConnectionProfileOutput re-exports profile.ConnectionProfileOutput.
+	// ConnectionProfileOutput tái xuất profile.ConnectionProfileOutput.
 	ConnectionProfileOutput = profile.ConnectionProfileOutput
-	// GetAllConnectionProfileOutput re-exports profile.GetAllConnectionProfileOutput.
+	// GetAllConnectionProfileOutput tái xuất profile.GetAllConnectionProfileOutput.
 	GetAllConnectionProfileOutput = profile.GetAllConnectionProfileOutput
-	// ExportProfileInput re-exports profile.ExportProfileInput.
+	// ExportProfileInput tái xuất profile.ExportProfileInput.
 	ExportProfileInput = profile.ExportProfileInput
-	// ImportProfileInput re-exports profile.ImportProfileInput.
+	// ImportProfileInput tái xuất profile.ImportProfileInput.
 	ImportProfileInput = profile.ImportProfileInput
-	// ImportFileOutput re-exports profile.ImportFileOutput.
+	// ImportFileOutput tái xuất profile.ImportFileOutput.
 	ImportFileOutput = profile.ImportFileOutput
-	// AuthConfig re-exports profile.AuthConfig.
+	// AuthConfig tái xuất profile.AuthConfig.
 	AuthConfig = profile.AuthConfig
-	// AuthSecret re-exports profile.AuthSecret.
+	// AuthSecret tái xuất profile.AuthSecret.
 	AuthSecret = profile.AuthSecret
-	// AwsProfileOutput re-exports profile.AwsProfileOutput.
+	// AwsProfileOutput tái xuất profile.AwsProfileOutput.
 	AwsProfileOutput = profile.AwsProfileOutput
 )
 
 type (
-	// DbProfileConfig re-exports db.DbProfileConfig.
+	// DbProfileConfig tái xuất db.DbProfileConfig.
 	DbProfileConfig = db.DbProfileConfig
-	// DbProfileInput re-exports db.DbProfileInput.
+	// DbProfileInput tái xuất db.DbProfileInput.
 	DbProfileInput = db.DbProfileInput
-	// DbProfileRefInput re-exports db.DbProfileRefInput.
+	// DbProfileRefInput tái xuất db.DbProfileRefInput.
 	DbProfileRefInput = db.DbProfileRefInput
-	// DbProfileOutput re-exports db.DbProfileOutput.
+	// DbProfileOutput tái xuất db.DbProfileOutput.
 	DbProfileOutput = db.DbProfileOutput
-	// GetAllDbProfileOutput re-exports db.GetAllDbProfileOutput.
+	// GetAllDbProfileOutput tái xuất db.GetAllDbProfileOutput.
 	GetAllDbProfileOutput = db.GetAllDbProfileOutput
-	// TableInfoInput re-exports db.TableInfoInput.
+	// TableInfoInput tái xuất db.TableInfoInput.
 	TableInfoInput = db.TableInfoInput
-	// ExecuteSqlInput re-exports db.ExecuteSqlInput.
+	// ExecuteSqlInput tái xuất db.ExecuteSqlInput.
 	ExecuteSqlInput = db.ExecuteSqlInput
-	// OpenTableRowsInput re-exports db.OpenTableRowsInput.
+	// OpenTableRowsInput tái xuất db.OpenTableRowsInput.
 	OpenTableRowsInput = db.OpenTableRowsInput
-	// FetchRowsInput re-exports db.FetchRowsInput.
+	// FetchRowsInput tái xuất db.FetchRowsInput.
 	FetchRowsInput = db.FetchRowsInput
-	// CloseDbTabInput re-exports db.CloseDbTabInput.
+	// CloseDbTabInput tái xuất db.CloseDbTabInput.
 	CloseDbTabInput = db.CloseDbTabInput
-	// DbColumn re-exports db.DbColumn.
+	// DbColumn tái xuất db.DbColumn.
 	DbColumn = db.DbColumn
-	// StatementError re-exports db.StatementError.
+	// StatementError tái xuất db.StatementError.
 	StatementError = db.StatementError
-	// StatementResult re-exports db.StatementResult.
+	// StatementResult tái xuất db.StatementResult.
 	StatementResult = db.StatementResult
-	// ExecuteSqlOutput re-exports db.ExecuteSqlOutput.
+	// ExecuteSqlOutput tái xuất db.ExecuteSqlOutput.
 	ExecuteSqlOutput = db.ExecuteSqlOutput
-	// FetchRowsOutput re-exports db.FetchRowsOutput.
+	// FetchRowsOutput tái xuất db.FetchRowsOutput.
 	FetchRowsOutput = db.FetchRowsOutput
-	// DbObject re-exports db.DbObject.
+	// DbObject tái xuất db.DbObject.
 	DbObject = db.DbObject
-	// DbSchema re-exports db.DbSchema.
+	// DbSchema tái xuất db.DbSchema.
 	DbSchema = db.DbSchema
-	// SchemaTreeOutput re-exports db.SchemaTreeOutput.
+	// SchemaTreeOutput tái xuất db.SchemaTreeOutput.
 	SchemaTreeOutput = db.SchemaTreeOutput
-	// TableColumn re-exports db.TableColumn.
+	// TableColumn tái xuất db.TableColumn.
 	TableColumn = db.TableColumn
-	// TableIndex re-exports db.TableIndex.
+	// TableIndex tái xuất db.TableIndex.
 	TableIndex = db.TableIndex
-	// TableConstraint re-exports db.TableConstraint.
+	// TableConstraint tái xuất db.TableConstraint.
 	TableConstraint = db.TableConstraint
-	// TableForeignKey re-exports db.TableForeignKey.
+	// TableForeignKey tái xuất db.TableForeignKey.
 	TableForeignKey = db.TableForeignKey
-	// TableInfoOutput re-exports db.TableInfoOutput.
+	// TableInfoOutput tái xuất db.TableInfoOutput.
 	TableInfoOutput = db.TableInfoOutput
 )
 
-// common functions
+// Các hàm dùng chung.
 var (
-	// NewMessage re-exports common.NewMessage.
+	// NewMessage tái xuất common.NewMessage.
 	NewMessage = common.NewMessage
-	// NewParamsMessage re-exports common.NewParamsMessage.
+	// NewParamsMessage tái xuất common.NewParamsMessage.
 	NewParamsMessage = common.NewParamsMessage
 )
 
-// NewOutput wraps common.NewOutput because a generic function cannot be aliased with a var.
+// NewOutput bọc common.NewOutput vì không thể alias hàm generic bằng var.
 func NewOutput[T any]() Output[T] {
 	return common.NewOutput[T]()
 }
 
 type (
-	// AppSettings re-exports setting.AppSettings.
+	// AppSettings tái xuất setting.AppSettings.
 	AppSettings = setting.AppSettings
-	// SaveSettingInput re-exports setting.SaveSettingInput.
+	// SaveSettingInput tái xuất setting.SaveSettingInput.
 	SaveSettingInput = setting.SaveSettingInput
-	// SettingsOutput re-exports setting.SettingsOutput.
+	// SettingsOutput tái xuất setting.SettingsOutput.
 	SettingsOutput = setting.SettingsOutput
-	// TabItem re-exports setting.TabItem.
+	// TabItem tái xuất setting.TabItem.
 	TabItem = setting.TabItem
-	// TabState re-exports setting.TabState.
+	// TabState tái xuất setting.TabState.
 	TabState = setting.TabState
-	// SaveTabStateInput re-exports setting.SaveTabStateInput.
+	// SaveTabStateInput tái xuất setting.SaveTabStateInput.
 	SaveTabStateInput = setting.SaveTabStateInput
+	// SqlTabTable tái xuất setting.SqlTabTable.
+	SqlTabTable = setting.SqlTabTable
+	// SqlTabItem tái xuất setting.SqlTabItem.
+	SqlTabItem = setting.SqlTabItem
+	// SaveSqlTabStateInput tái xuất setting.SaveSqlTabStateInput.
+	SaveSqlTabStateInput = setting.SaveSqlTabStateInput
 )
 
 type (
-	// UpdateStateOutput re-exports update.UpdateStateOutput.
+	// UpdateStateOutput tái xuất update.UpdateStateOutput.
 	UpdateStateOutput = update.UpdateStateOutput
 )

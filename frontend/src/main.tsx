@@ -12,7 +12,7 @@ import { settingColorSchemeManager } from '@/common/utils/settingUtils';
 import MotionProvider from '@/components/providers/MotionProvider';
 import { loadStartupData } from '@/pages/s3/utils/startup';
 
-// Settings and tabs are ready before the first render; App loads the profiles afterwards and clears deleted ones.
+// Settings và tab đã sẵn sàng trước lần render đầu; sau đó App tải profile và xóa các profile đã bị xóa.
 await loadStartupData();
 
 createRoot(document.getElementById('root')!).render(

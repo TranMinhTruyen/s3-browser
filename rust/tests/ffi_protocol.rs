@@ -1,4 +1,4 @@
-//! N1: protocol, dispatch, FFI, registry.
+//! N1: giao thức, điều phối, FFI, bộ đăng ký.
 
 mod common;
 
@@ -47,7 +47,7 @@ fn missing_or_wrong_params_is_invalid_request() {
     // thiếu params
     let r = call_raw(br#"{"id":1,"method":"execute"}"#);
     assert_eq!(err_code(&r), "invalidRequest");
-    // params null
+    // params là null
     let r = call_raw(br#"{"id":1,"method":"execute","params":null}"#);
     assert_eq!(err_code(&r), "invalidRequest");
     // thiếu field

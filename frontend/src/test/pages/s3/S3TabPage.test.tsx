@@ -17,11 +17,11 @@ const dnd = vi.hoisted(() => ({
   sensors: [] as any[],
 }));
 
-// Like the real TabDetail, the mock is memoized.
+// Giống TabDetail thật, mock này được memo hóa.
 vi.mock('@/pages/s3/components/TabDetail', () => ({
   default: memo(({ tabId }: { tabId: string }) => {
     detailRenders.bump();
-    // Local state: proves a hidden tab keeps its instance instead of being mounted again.
+    // State cục bộ chứng minh tab bị ẩn vẫn giữ instance thay vì mount lại.
     const [instance] = useState(() => detailRenders.created++);
     return (
       <div data-testid={`detail-${tabId}`} data-instance={instance}>
@@ -332,10 +332,10 @@ describe('S3TabPage', () => {
 
       it('picks the slot with the highest ratio when several reach the threshold', () => {
         renderWithProviders(<S3TabPage />);
-        // x covers 90% of slot a and 100% of slot b (and c is not covered at all).
+        // x phủ 90% vị trí a và 100% vị trí b (không phủ vị trí c).
         const result = detect({ left: 10, right: 110 }, { a: rect(0), b: rect(10, 100), c: rect(500) });
         expect(result).toEqual([{ id: 'b' }]);
-        // A later slot with a lower ratio does not replace the best one.
+        // Vị trí phía sau có tỷ lệ phủ thấp hơn không thay thế vị trí tốt nhất.
         expect(detect({ left: 10, right: 110 }, { b: rect(10, 100), a: rect(0) })).toEqual([{ id: 'b' }]);
       });
 
@@ -381,7 +381,7 @@ describe('S3TabPage', () => {
     it('scrolls the real active tab, not a tab that is still exiting', () => {
       const { container } = renderWithProviders(<S3TabPage />);
       const viewport = screen.getByRole('tab').closest('div[style*="overflow"]')!;
-      // A closing tab stays in the DOM (data-active, data-exiting) before the real active tab.
+      // Tab đang đóng vẫn còn trong DOM (data-active, data-exiting) trước tab đang thực sự hoạt động.
       const ghost = screen.getByRole('tab').cloneNode(true) as HTMLElement;
       ghost.setAttribute('data-exiting', '');
       viewport.prepend(ghost);
@@ -412,11 +412,11 @@ describe('S3TabPage', () => {
       renderWithProviders(<S3TabPage />);
       expect(screen.getAllByText('tab detail')).toHaveLength(1);
 
-      // Adding a tab activates it, so both tabs are visited.
+      // Thêm tab sẽ kích hoạt nó nên cả hai tab đều đã được mở.
       await userEvent.click(screen.getByRole('button', { name: 'Add tab' }));
       expect(screen.getAllByText('tab detail')).toHaveLength(2);
 
-      // Going back to the first tab keeps the second one mounted.
+      // Quay lại tab đầu tiên vẫn giữ tab thứ hai đã mount.
       await userEvent.click(screen.getAllByRole('tab')[0]);
       expect(screen.getAllByText('tab detail')).toHaveLength(2);
     });
@@ -424,7 +424,7 @@ describe('S3TabPage', () => {
     it('does not mount the detail of a tab that was never active', () => {
       renderWithProviders(<S3TabPage />);
       const [a] = tabIds();
-      // Add a tab, then switch back before the new one is ever rendered as active.
+      // Thêm tab rồi chuyển lại trước khi tab mới được render ở trạng thái hoạt động.
       act(() => {
         useTabListStore.getState().addTab();
         useTabListStore.getState().setActiveTab(a);

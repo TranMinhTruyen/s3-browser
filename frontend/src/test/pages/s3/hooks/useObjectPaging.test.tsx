@@ -157,7 +157,7 @@ describe('useObjectPaging', () => {
       expect(mockIPC().mock.calls[1][1]).toEqual([
         expect.objectContaining({ nextCursor: 'c1', limit: NEXT_PAGE_SIZE }),
       ]);
-      // A folder listing never overlaps, so nothing is filtered.
+      // Danh sách thư mục không bao giờ trùng lặp, nên không có mục nào bị lọc.
       expect(keysOf(result)).toEqual(['a', 'b', 'b', 'c']);
       expect(result.current.nextCursor).toBe('c2');
       expect(result.current.isLoadingMore).toBe(false);

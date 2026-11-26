@@ -13,16 +13,16 @@ type AwsProfileComboboxProps = Omit<
   ComponentProps<typeof Combobox>,
   'data' | 'label' | 'searchPlaceholder' | 'emptyText'
 > & {
-  /** Only list SSO profiles. */
+  /** Chỉ liệt kê profile SSO. */
   ssoOnly?: boolean;
-  /** Custom AWS CLI files; empty means the standard ones. The list reloads when they change. */
+  /** Các file AWS CLI tùy chỉnh; để trống nghĩa là dùng file tiêu chuẩn. Danh sách tải lại khi giá trị này đổi. */
   configFile?: string;
   credentialsFile?: string;
 };
 
 /**
- * Dropdown of the profiles found in the AWS CLI config files. Warns when the selected profile runs a
- * `credential_process` command (it only runs on connect, never while listing).
+ * Danh sách thả xuống gồm các profile tìm thấy trong file cấu hình AWS CLI. Cảnh báo nếu profile được chọn chạy lệnh
+ * `credential_process` (lệnh chỉ chạy lúc kết nối, không chạy khi liệt kê).
  */
 function AwsProfileCombobox(props: AwsProfileComboboxProps) {
   const { ssoOnly, configFile = '', credentialsFile = '', value, defaultValue, onChange, ...rest } = props;
@@ -45,7 +45,7 @@ function AwsProfileCombobox(props: AwsProfileComboboxProps) {
 
   const data = useMemo(() => {
     const names = profiles.filter(p => !ssoOnly || p.isSso).map(p => p.name);
-    // Keep a saved profile that is no longer in the files visible, so the field does not look empty.
+    // Vẫn hiển thị profile đã lưu nhưng không còn trong các file để trường không trông như đang trống.
     if (current && !names.includes(current)) names.unshift(current);
     return names.map(name => ({ name, value: name }));
   }, [profiles, ssoOnly, current]);

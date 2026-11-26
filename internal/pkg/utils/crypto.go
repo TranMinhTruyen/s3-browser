@@ -21,17 +21,17 @@ const (
 	keyringUser    = "db-encryption-key"
 )
 
-// ErrInvalidCiphertext is returned by Decrypt for any malformed or tampered input.
+// ErrInvalidCiphertext được Decrypt trả về nếu đầu vào sai định dạng hoặc đã bị sửa đổi.
 var ErrInvalidCiphertext = errors.New("ciphertext invalid")
 
-// KeyManager encrypts and decrypts secrets with AES-256-GCM.
-// The key lives in the OS keyring, or in <data dir>/key in portable mode where there is no keyring on the host.
+// KeyManager mã hóa và giải mã thông tin bí mật bằng AES-256-GCM.
+// Khóa được lưu trong keyring của hệ điều hành hoặc trong <thư mục dữ liệu>/key ở chế độ portable nếu máy không có keyring.
 type KeyManager struct {
 	key []byte
 }
 
-// NewKeyManager loads the encryption key from the keyring, or from <data dir>/key in portable mode.
-// A new key is generated and stored when none exists.
+// NewKeyManager tải khóa mã hóa từ keyring hoặc từ <thư mục dữ liệu>/key ở chế độ portable.
+// Nếu chưa có khóa, hàm tạo khóa mới rồi lưu lại.
 func NewKeyManager(appName string) (*KeyManager, error) {
 	keyB64, err := readKey(appName)
 	if err != nil {
@@ -56,7 +56,7 @@ func NewKeyManager(appName string) (*KeyManager, error) {
 	return &KeyManager{key: key}, nil
 }
 
-// readKey returns keyring.ErrNotFound when no key has been stored yet.
+// readKey trả keyring.ErrNotFound nếu chưa có khóa nào được lưu.
 func readKey(appName string) (string, error) {
 	if !portable.Enabled {
 		return keyring.Get(keyringService, keyringUser)
@@ -73,7 +73,7 @@ func readKey(appName string) (string, error) {
 	return strings.TrimSpace(string(data)), err
 }
 
-// writeKey stores the base64 key in the keyring, or in the key file (mode 0600) in portable mode.
+// writeKey lưu khóa base64 vào keyring hoặc vào file khóa (mode 0600) ở chế độ portable.
 func writeKey(appName, keyB64 string) error {
 	if !portable.Enabled {
 		return keyring.Set(keyringService, keyringUser, keyB64)
@@ -86,7 +86,7 @@ func writeKey(appName, keyB64 string) error {
 	return os.WriteFile(path, []byte(keyB64), 0o600)
 }
 
-// keyFilePath is only used in portable mode.
+// keyFilePath chỉ được dùng ở chế độ portable.
 func keyFilePath(appName string) (string, error) {
 	dir, err := portable.DataDir(appName)
 	if err != nil {
@@ -95,7 +95,7 @@ func keyFilePath(appName string) (string, error) {
 	return filepath.Join(dir, "key"), nil
 }
 
-// Encrypt returns base64(nonce || ciphertext) with a fresh random nonce, so equal inputs give different outputs.
+// Encrypt trả về base64(nonce || ciphertext) với nonce ngẫu nhiên mới, nhờ đó cùng đầu vào vẫn cho đầu ra khác nhau.
 func (km *KeyManager) Encrypt(plaintext string) (string, error) {
 	block, err := aes.NewCipher(km.key)
 	if err != nil {
@@ -115,8 +115,8 @@ func (km *KeyManager) Encrypt(plaintext string) (string, error) {
 	return base64.StdEncoding.EncodeToString(sealed), nil
 }
 
-// Decrypt reverses Encrypt. Every failure maps to ErrInvalidCiphertext so callers cannot tell apart bad base64,
-// short input and failed authentication.
+// Decrypt thực hiện ngược lại Encrypt. Mọi lỗi đều được ánh xạ thành ErrInvalidCiphertext để bên gọi không phân biệt
+// được base64 sai, đầu vào quá ngắn hay xác thực thất bại.
 func (km *KeyManager) Decrypt(encoded string) (string, error) {
 	data, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {

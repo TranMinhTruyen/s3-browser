@@ -302,7 +302,7 @@ fn driver_name_and_defaults() {
     assert_eq!(CONNECT_TIMEOUT, Duration::from_secs(10));
 }
 
-// ---- budget ----
+// ---- ngân sách ----
 
 #[test]
 fn budget_splits_the_connect_timeout_evenly() {
@@ -532,7 +532,7 @@ fn transport_failures_are_not_answered() {
     assert!(!f.answered && !f.resp3_unsupported);
 }
 
-// ---- open: kiểm đầu vào (không cần server) ----
+// ---- mở: kiểm đầu vào (không cần máy chủ) ----
 
 #[tokio::test]
 async fn open_requires_a_host() {
@@ -595,7 +595,7 @@ async fn open_to_a_closed_port_fails_without_the_password() {
     assert!(started.elapsed() < Duration::from_secs(8));
 }
 
-// ---- open: với server giả ----
+// ---- mở: với máy chủ giả ----
 
 #[tokio::test]
 async fn open_sends_hello_with_the_account_selects_the_database_and_pings() {

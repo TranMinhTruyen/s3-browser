@@ -11,7 +11,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// executeParams are the params of the native "execute" method.
+// executeParams là tham số của phương thức native "execute".
 type executeParams struct {
 	ConnId       uint64 `json:"connId"`
 	Sql          string `json:"sql"`
@@ -19,7 +19,7 @@ type executeParams struct {
 	MaxPageBytes int    `json:"maxPageBytes"`
 }
 
-// fetchParams are the params of the native "fetch" method.
+// fetchParams là tham số của phương thức native "fetch".
 type fetchParams struct {
 	ConnId       uint64 `json:"connId"`
 	CursorId     uint64 `json:"cursorId"`
@@ -27,7 +27,7 @@ type fetchParams struct {
 	MaxPageBytes int    `json:"maxPageBytes"`
 }
 
-// tableRowsParams are the params of the native "tableRows" method.
+// tableRowsParams là tham số của phương thức native "tableRows".
 type tableRowsParams struct {
 	ConnId       uint64 `json:"connId"`
 	Schema       string `json:"schema"`
@@ -36,8 +36,8 @@ type tableRowsParams struct {
 	MaxPageBytes int    `json:"maxPageBytes"`
 }
 
-// submoduleQueryMng runs queries and pages through their results on the connection of a tab. Rows are only
-// forwarded: the module neither keeps nor logs SQL or data.
+// submoduleQueryMng chạy truy vấn và phân trang kết quả trên kết nối của tab. Các hàng chỉ được chuyển tiếp:
+// module không lưu hay ghi log câu SQL hoặc dữ liệu.
 type submoduleQueryMng struct {
 	logger *slog.Logger
 	app    *application.App
@@ -45,7 +45,7 @@ type submoduleQueryMng struct {
 	conns  *submoduleConnMng
 }
 
-// newSubmoduleQueryMng creates the query runner.
+// newSubmoduleQueryMng tạo bộ chạy truy vấn.
 func newSubmoduleQueryMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -55,12 +55,12 @@ func newSubmoduleQueryMng(
 	return &submoduleQueryMng{logger: logger.With("submodules", "query"), app: app, native: native, conns: conns}
 }
 
-// statementErrorKey is how a failed statement shows in the result JSON. Cell and SQL text cannot contain it
-// (their quotes are escaped), so a result without it has no failed statement; a false match only costs a decode.
+// statementErrorKey đánh dấu câu lệnh lỗi trong JSON kết quả. Cell và câu SQL không thể chứa chuỗi này
+// (dấu ngoặc kép được escape), nên kết quả không có chuỗi này nghĩa là không có câu lệnh lỗi; nếu khớp nhầm thì chỉ tốn thêm một lần decode.
 var statementErrorKey = []byte(`"error":`)
 
-// tabFail ends a failed call that needed the connection of a tab: a profile that is not connected is DBE014,
-// anything else is a native failure. errTabClosed (tab closed while opening) is a silent Result=false.
+// tabFail kết thúc lời gọi thất bại cần kết nối của tab: hồ sơ chưa kết nối trả DBE014, lỗi khác là lỗi native.
+// errTabClosed (tab đóng trong lúc mở kết nối) trả Result=false mà không gửi thông báo.
 func tabFail[T any](
 	ctx context.Context,
 	m *submoduleQueryMng,
@@ -78,7 +78,7 @@ func tabFail[T any](
 	return failCall(ctx, output, err, queryTimeout, params)
 }
 
-// execute runs the SQL of the tab. A statement error comes back inside the statement as a DBE006 error.
+// execute chạy câu SQL của tab. Lỗi câu lệnh được trả về bên trong kết quả câu lệnh dưới dạng DBE006.
 func (m *submoduleQueryMng) execute(
 	ctx context.Context,
 	input models.ExecuteSqlInput,
@@ -102,7 +102,7 @@ func (m *submoduleQueryMng) execute(
 		return failCall(ctx, output, err, queryTimeout, nil)
 	}
 
-	// Rows are forwarded as they are; only a failed statement needs its code mapped, which means decoding.
+	// Chuyển tiếp nguyên trạng các hàng; chỉ cần decode để ánh xạ mã lỗi của câu lệnh thất bại.
 	if !bytes.Contains(raw, statementErrorKey) {
 		output.Body = output.Body.WithRaw(raw)
 		return output
@@ -123,7 +123,7 @@ func (m *submoduleQueryMng) execute(
 	return output
 }
 
-// openTableRows reads the first page of the rows of a table.
+// openTableRows đọc trang đầu tiên của các hàng trong bảng.
 func (m *submoduleQueryMng) openTableRows(
 	ctx context.Context,
 	input models.OpenTableRowsInput,
@@ -151,7 +151,7 @@ func (m *submoduleQueryMng) openTableRows(
 	return output
 }
 
-// fetchRows loads the next page of the cursor of the tab; DBE004 if the tab has no connection.
+// fetchRows tải trang tiếp theo của cursor thuộc tab; trả DBE004 nếu tab chưa có kết nối.
 func (m *submoduleQueryMng) fetchRows(
 	ctx context.Context,
 	input models.FetchRowsInput,

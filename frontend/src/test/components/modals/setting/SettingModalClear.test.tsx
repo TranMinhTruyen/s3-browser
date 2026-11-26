@@ -7,7 +7,7 @@ import { useSettingStore } from '@/common/stores/settingStore';
 import SettingModal from '@/components/modals/setting/SettingModal';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// The real Select never emits null (allowDeselect is off), so a stub drives that guard directly.
+// Select thật không bao giờ phát ra null (allowDeselect đang tắt), nên dùng stub để kiểm tra trực tiếp điều kiện bảo vệ này.
 vi.mock('@/components/inputs/SelectInput', () => ({
   default: ({ label, onChange }: { label: string; onChange: (value: string | null) => void }) => (
     <button type="button" onClick={() => onChange(null)}>

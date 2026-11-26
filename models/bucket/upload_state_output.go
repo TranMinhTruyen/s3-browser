@@ -1,28 +1,28 @@
 package bucket
 
-// UploadStatus is how an upload ended.
+// UploadStatus mô tả trạng thái kết thúc của một lượt tải lên.
 type UploadStatus string
 
-// Possible UploadStatus values.
+// Các giá trị UploadStatus có thể có.
 const (
 	UploadStatusSuccess  UploadStatus = "success"
 	UploadStatusError    UploadStatus = "error"
 	UploadStatusCanceled UploadStatus = "canceled"
 )
 
-// UploadStartedOutput is the payload of the event sent before a file starts uploading.
+// UploadStartedOutput là payload của sự kiện gửi trước khi bắt đầu tải file lên.
 type UploadStartedOutput struct {
 	UploadId string `json:"uploadId"`
-	// FileName is the base name of the local file.
+	// FileName là tên cơ sở của file trên máy.
 	FileName string `json:"fileName"`
-	// Key is the real S3 key (after the rename for a taken key).
+	// Key là key S3 thực tế (sau khi đổi tên nếu key đã được dùng).
 	Key    string `json:"key"`
 	Bucket string `json:"bucket"`
-	// Total is the file size in bytes (0 if it couldn't be read).
+	// Total là kích thước file tính bằng byte (0 nếu không đọc được).
 	Total int64 `json:"total"`
 }
 
-// UploadFinishedOutput is the payload of the event sent when a file's upload ends.
+// UploadFinishedOutput là payload của sự kiện gửi khi kết thúc tải file lên.
 type UploadFinishedOutput struct {
 	UploadId string       `json:"uploadId"`
 	Status   UploadStatus `json:"status"`

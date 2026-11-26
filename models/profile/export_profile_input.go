@@ -1,7 +1,7 @@
 package profile
 
-// ExportProfileInput selects the profile to export. With IncludeSecret the saved secrets go into the file,
-// encrypted with Password (at least 8 characters). Password is never stored or logged.
+// ExportProfileInput chọn hồ sơ cần xuất. Nếu bật IncludeSecret, các secret đã lưu sẽ được mã hóa bằng Password
+// (ít nhất 8 ký tự) rồi ghi vào file. Password không bao giờ được lưu hoặc ghi log.
 type ExportProfileInput struct {
 	Id            string `json:"id"`
 	IncludeSecret bool   `json:"includeSecret"`

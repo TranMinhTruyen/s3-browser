@@ -15,11 +15,11 @@ import {
 } from '@/common/cnst/settingConst';
 import i18n, { loadLanguage } from '@/locales/i18n';
 
-/** Returns `value` when it is one of `list`, otherwise `fallback`. */
+/** Trả về `value` nếu nó nằm trong `list`, nếu không thì trả về `fallback`. */
 const pick = <T extends string>(list: readonly T[], value: unknown, fallback: T): T =>
   list.includes(value as T) ? (value as T) : fallback;
 
-/** Replaces unknown values (bad file, old version) with the defaults so the UI never gets an invalid key. */
+/** Thay các giá trị không xác định (file lỗi, phiên bản cũ) bằng mặc định để UI không nhận key không hợp lệ. */
 export function normalizeSettings(raw?: Partial<Record<keyof AppSettingValues, unknown>> | null): AppSettingValues {
   return {
     theme: pick<ThemeKey>(THEMES, raw?.theme, DEFAULT_SETTINGS.theme),
@@ -32,18 +32,18 @@ export function normalizeSettings(raw?: Partial<Record<keyof AppSettingValues, u
   };
 }
 
-/** True when any setting differs between the two values. */
+/** Trả về true nếu có thiết lập nào khác nhau giữa hai giá trị. */
 export const isSettingDirty = (draft: AppSettingValues, applied: AppSettingValues): boolean =>
   (Object.keys(DEFAULT_SETTINGS) as (keyof AppSettingValues)[]).some(key => draft[key] !== applied[key]);
 
-/** True when the update switches (auto update, beta channel) differ between the two values. */
+/** Trả về true nếu các tùy chọn cập nhật (tự động cập nhật, kênh beta) khác nhau giữa hai giá trị. */
 export const isUpdateOptionsChanged = (a: AppSettingValues, b: AppSettingValues): boolean =>
   a.autoUpdate !== b.autoUpdate || a.betaUpdate !== b.betaUpdate;
 
 let onSchemeChange: ((scheme: MantineColorScheme) => void) | null = null;
 let currentScheme: MantineColorScheme = DEFAULT_SETTINGS.theme;
 
-/** In-memory scheme manager: settings.json is the only source of truth, nothing goes to localStorage. */
+/** Bộ quản lý giao diện trong bộ nhớ: settings.json là nguồn dữ liệu duy nhất, không lưu gì vào localStorage. */
 export const settingColorSchemeManager: MantineColorSchemeManager = {
   get: () => currentScheme,
   set: value => {
@@ -60,7 +60,7 @@ export const settingColorSchemeManager: MantineColorSchemeManager = {
   },
 };
 
-/** Resolves `auto` with the OS preference and writes the scheme on <html>, the same attribute Mantine uses. */
+/** Giải quyết giá trị `auto` theo tùy chọn của hệ điều hành và ghi scheme lên <html> bằng thuộc tính Mantine sử dụng. */
 function setSchemeAttribute(theme: ThemeKey): void {
   const dark = theme === 'auto' ? window.matchMedia('(prefers-color-scheme: dark)').matches : theme === 'dark';
   document.documentElement.setAttribute('data-mantine-color-scheme', dark ? 'dark' : 'light');
@@ -69,10 +69,10 @@ function setSchemeAttribute(theme: ThemeKey): void {
 let languageRequest = 0;
 
 /**
- * Applies theme, font and language to the running app (used for load, preview and revert).
- * The scheme attribute is also set directly, so it is right before React mounts (no light flash on a dark OS).
- * Theme and font apply at once; the language switches after its bundle is loaded (the old one stays meanwhile).
- * Resolves when the language is settled; a newer call supersedes an older one still loading.
+ * Áp dụng giao diện, phông chữ và ngôn ngữ cho ứng dụng đang chạy (dùng khi tải, xem trước và hoàn tác).
+ * Thuộc tính scheme cũng được đặt trực tiếp ngay trước khi React mount (tránh lóe nền sáng trên hệ điều hành dùng giao diện tối).
+ * Giao diện và phông chữ được áp dụng ngay; ngôn ngữ đổi sau khi tải xong bundle (trong lúc đó vẫn giữ ngôn ngữ cũ).
+ * Hoàn tất khi đã ổn định ngôn ngữ; lời gọi mới sẽ thay thế lời gọi cũ vẫn đang tải.
  */
 export async function applySettings(settings: AppSettingValues): Promise<void> {
   currentScheme = settings.theme;
@@ -81,12 +81,12 @@ export async function applySettings(settings: AppSettingValues): Promise<void> {
 
   const family = getFontFamily(settings.font, settings.language);
   const style = document.documentElement.style;
-  // A font change restyles the whole page: write it only when the family (incl. CJK fallback) really changed.
+  // Đổi phông chữ sẽ định kiểu lại toàn trang: chỉ ghi khi họ phông (kể cả phông dự phòng CJK) thực sự thay đổi.
   if (style.getPropertyValue('--mantine-font-family') !== family) {
     style.setProperty('--mantine-font-family', family);
     style.setProperty('--mantine-font-family-headings', family);
   }
-  // The root font-size scales every rem value; same rule as the font: write only when it changed.
+  // Cỡ chữ gốc làm co giãn mọi giá trị rem; áp dụng quy tắc như với phông chữ: chỉ ghi khi có thay đổi.
   const fontSize = `${UI_SIZE_FONT_PX[settings.size]}px`;
   if (style.fontSize !== fontSize) {
     style.fontSize = fontSize;

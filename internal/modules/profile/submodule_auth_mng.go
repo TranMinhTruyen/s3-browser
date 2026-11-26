@@ -13,22 +13,22 @@ import (
 	"strings"
 )
 
-// Range of the OIDC callback port (0 means the default).
+// Khoảng cổng callback OIDC (0 nghĩa là dùng cổng mặc định).
 const (
 	minCallbackPort = 1024
 	maxCallbackPort = 65535
 )
 
-// errInvalidAuthConfig marks a stored auth_config that cannot be parsed (PFE009).
+// errInvalidAuthConfig đánh dấu auth_config đã lưu nhưng không phân tích được (PFE009).
 var errInvalidAuthConfig = errors.New("auth config invalid")
 
-// plainSecrets is every secret of a profile in plain text. It only lives in memory, never in a log or output.
+// plainSecrets chứa mọi secret của hồ sơ ở dạng văn bản thuần. Chỉ giữ trong bộ nhớ, không ghi log hay đưa vào đầu ra.
 type plainSecrets struct {
 	secretKey string
 	models.AuthSecret
 }
 
-// names lists the secrets that hold a value, as reported to the frontend in SavedSecrets.
+// names liệt kê các secret có giá trị để báo cho frontend trong SavedSecrets.
 func (s plainSecrets) names() []string {
 	names := make([]string, 0, 4)
 	for _, f := range []struct{ name, value string }{
@@ -44,7 +44,7 @@ func (s plainSecrets) names() []string {
 	return names
 }
 
-// fillEmpty copies the secrets of old into the empty ones of s: an empty input means "keep what is stored".
+// fillEmpty chép secret từ old vào các trường rỗng của s: input để trống nghĩa là "giữ nguyên giá trị đã lưu".
 func (s plainSecrets) fillEmpty(old plainSecrets) plainSecrets {
 	s.secretKey = cmp.Or(s.secretKey, old.secretKey)
 	s.SessionToken = cmp.Or(s.SessionToken, old.SessionToken)
@@ -53,7 +53,7 @@ func (s plainSecrets) fillEmpty(old plainSecrets) plainSecrets {
 	return s
 }
 
-// authColumns are the auth related columns of a profile row, ready to store.
+// authColumns chứa các cột xác thực của một hàng hồ sơ, đã sẵn sàng để lưu.
 type authColumns struct {
 	authType    string
 	accessKey   sql.NullString
@@ -63,20 +63,20 @@ type authColumns struct {
 	autoConnect bool
 }
 
-// submoduleAuthMng validates the authentication settings of a profile and seals/opens its secrets.
+// submoduleAuthMng kiểm tra cấu hình xác thực của hồ sơ và mã hóa/giải mã các secret.
 type submoduleAuthMng struct {
 	km *utils.KeyManager
 }
 
-// newSubmoduleAuthMng creates the auth submodule.
+// newSubmoduleAuthMng tạo submodule xác thực.
 func newSubmoduleAuthMng(km *utils.KeyManager) *submoduleAuthMng {
 	return &submoduleAuthMng{km: km}
 }
 
-// prepare validates input and builds the auth columns to store; a non-nil message means it was rejected.
-// stored is the current row on update (nil on create). Secrets are stored only with SavePassword (otherwise
-// all stored secrets are cleared), and an empty input secret keeps the stored one when the authType is unchanged.
-// allowMissingCertKey (import only) accepts a minioCert profile without certificate or key file.
+// prepare kiểm tra input và tạo các cột xác thực để lưu; nếu message khác nil thì dữ liệu bị từ chối.
+// stored là hàng hiện tại khi cập nhật (nil khi tạo mới). Chỉ lưu secret nếu bật SavePassword (nếu không,
+// xóa mọi secret đã lưu); secret để trống trong input sẽ giữ giá trị cũ nếu authType không đổi.
+// allowMissingCertKey (chỉ dùng khi nhập) chấp nhận hồ sơ minioCert không có file chứng chỉ hoặc khóa.
 func (m *submoduleAuthMng) prepare(
 	input models.ConnectionProfileInput,
 	stored *sqlc.ConnectionProfile,
@@ -94,7 +94,7 @@ func (m *submoduleAuthMng) prepare(
 	}
 
 	if input.AuthType == cnst.AuthAnonymous {
-		// An anonymous client can't list buckets, so the ones to browse must be entered.
+			// Client ẩn danh không thể liệt kê bucket nên người dùng phải nhập bucket cần duyệt.
 		input.AuthConfig.Buckets = input.AuthConfig.BucketNames()
 		if len(input.AuthConfig.Buckets) == 0 {
 			return authColumns{}, errMessage(PFE009, errors.New("anonymous access needs at least one bucket"))
@@ -147,8 +147,8 @@ func (m *submoduleAuthMng) prepare(
 	return cols, nil
 }
 
-// validateAuthConfig checks the fields the OIDC and certificate methods cannot connect without.
-// With allowMissingCertKey a minioCert profile may lack the certificate and key file.
+// validateAuthConfig kiểm tra các trường bắt buộc để kết nối bằng OIDC hoặc chứng chỉ.
+// Khi bật allowMissingCertKey, hồ sơ minioCert có thể thiếu file chứng chỉ và khóa.
 func validateAuthConfig(input models.ConnectionProfileInput, allowMissingCertKey bool) error {
 	cfg := input.AuthConfig
 	switch input.AuthType {
@@ -173,7 +173,7 @@ func validateAuthConfig(input models.ConnectionProfileInput, allowMissingCertKey
 	return nil
 }
 
-// seal encrypts v; an empty v is stored as NULL.
+// seal mã hóa v; nếu v rỗng thì lưu thành NULL.
 func (m *submoduleAuthMng) seal(v string) (sql.NullString, error) {
 	if v == "" {
 		return sql.NullString{}, nil
@@ -182,7 +182,7 @@ func (m *submoduleAuthMng) seal(v string) (sql.NullString, error) {
 	return sql.NullString{String: cipher, Valid: err == nil}, err
 }
 
-// open decrypts the secrets stored in p.
+// open giải mã các secret đã lưu trong p.
 func (m *submoduleAuthMng) open(p sqlc.ConnectionProfile) (plainSecrets, error) {
 	var secrets plainSecrets
 	var err error
@@ -204,7 +204,7 @@ func (m *submoduleAuthMng) open(p sqlc.ConnectionProfile) (plainSecrets, error) 
 	return secrets, nil
 }
 
-// parseAuthConfig reads the auth_config JSON of p; an empty column gives an empty config.
+// parseAuthConfig đọc JSON auth_config của p; cột rỗng tạo cấu hình rỗng.
 func parseAuthConfig(p sqlc.ConnectionProfile) (models.AuthConfig, error) {
 	var cfg models.AuthConfig
 	if p.AuthConfig.String == "" {
@@ -216,14 +216,14 @@ func parseAuthConfig(p sqlc.ConnectionProfile) (models.AuthConfig, error) {
 	return cfg, nil
 }
 
-// errMessage builds the error message of code with err as its detail.
+// errMessage tạo thông báo lỗi theo code, dùng err làm nội dung chi tiết.
 func errMessage(code string, err error) *models.Message {
 	msg := models.NewMessage(cnst.MessageTypeError, cnst.Profile, code, err.Error())
 	return &msg
 }
 
-// usesKeys reports whether the method signs with an access key and secret key: static, MinIO AssumeRole, and
-// AWS AssumeRole whose source is not a CLI profile.
+// usesKeys cho biết phương thức có ký bằng access key và secret key hay không: static, MinIO AssumeRole và
+// AWS AssumeRole có nguồn không phải hồ sơ CLI.
 func usesKeys(input models.ConnectionProfileInput) bool {
 	switch input.AuthType {
 	case "", cnst.AuthStatic, cnst.AuthMinioAssumeRole:
@@ -234,7 +234,7 @@ func usesKeys(input models.ConnectionProfileInput) bool {
 	return false
 }
 
-// keepNeeded zeroes the secrets the method doesn't use, so switching method never keeps a stale secret.
+// keepNeeded xóa các secret mà phương thức không dùng để khi đổi phương thức không giữ lại secret cũ.
 func keepNeeded(s plainSecrets, input models.ConnectionProfileInput) plainSecrets {
 	keys := usesKeys(input)
 	if !keys {

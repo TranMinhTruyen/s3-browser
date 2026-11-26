@@ -1,6 +1,6 @@
 import type { ConnectionProfileInput } from '@wails/S3Browser/models';
 
-/** Every authentication method the backend knows. */
+/** Tất cả phương thức xác thực mà backend hỗ trợ. */
 export const AUTH_TYPES = [
   'static',
   'sharedProfile',
@@ -22,11 +22,11 @@ export const DEFAULT_AUTH_TYPE: AuthType = 'static';
 
 type AuthMethod = {
   providers: Provider[];
-  /** False hides the method from the Select until its fields exist (set true in the phase that adds them). */
+  /** false sẽ ẩn phương thức khỏi Select cho đến khi có các trường tương ứng (đặt true ở giai đoạn bổ sung trường). */
   enabled: boolean;
-  /** Whether a profile of this method may connect on startup (assumeRole with MFA is locked separately). */
+  /** Profile dùng phương thức này có được phép tự kết nối khi khởi động không (assumeRole kèm MFA được khóa riêng). */
   autoConnect: boolean;
-  /** Region may stay empty (the AWS config or the SDK supplies it). */
+  /** Có thể để trống Region (cấu hình AWS hoặc SDK sẽ tự cung cấp). */
   optionalRegion: boolean;
 };
 
@@ -50,14 +50,14 @@ export const AUTH_METHODS: Record<AuthType, AuthMethod> = {
   minioCert: method(['minio'], true),
 };
 
-/** Methods offered by the Select for a provider. */
+/** Các phương thức Select cung cấp cho một provider. */
 export const getAuthMethods = (provider: string): AuthType[] =>
   AUTH_TYPES.filter(type => AUTH_METHODS[type].enabled && AUTH_METHODS[type].providers.includes(provider as Provider));
 
-/** Whether the method is offered for the provider. */
+/** Phương thức này có được cung cấp cho provider hay không. */
 export const isAuthTypeValid = (provider: string, authType: string): boolean =>
   getAuthMethods(provider).includes(authType as AuthType);
 
-/** Region may be empty for this provider and method. */
+/** Có thể để trống Region với provider và phương thức này hay không. */
 export const isRegionOptional = (provider: string, authType: AuthType): boolean =>
   provider === 'aws' && AUTH_METHODS[authType]?.optionalRegion === true;

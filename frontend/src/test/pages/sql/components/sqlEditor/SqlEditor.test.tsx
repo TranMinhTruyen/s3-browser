@@ -123,7 +123,7 @@ describe('SqlEditor', () => {
     });
   });
 
-  // Runs the keymap directly (no DOM listener), so the bindings stay covered while the DOM-level tests below fail.
+  // Chạy trực tiếp keymap (không qua listener DOM) để vẫn kiểm tra các phím tắt khi test DOM bên dưới thất bại.
   describe('keymap bindings', () => {
     it.each([
       ['Ctrl-E', 'e', 'onExecute'],
@@ -158,8 +158,8 @@ describe('SqlEditor', () => {
     });
   });
 
-  // Real DOM keydown on the editor. The React capture handler (onKeyDownCapture) calls preventDefault first, and
-  // CodeMirror ignores events that are already default-prevented, so these currently fail (reported as a bug).
+  // Gửi keydown thật vào DOM của editor. Handler capture của React (onKeyDownCapture) gọi preventDefault trước,
+  // CodeMirror bỏ qua event đã bị preventDefault nên hiện các test này thất bại (đã ghi nhận là lỗi).
   describe('shortcuts through the DOM', () => {
     it.each([
       ['Ctrl-E runs onExecute', 'e', 'onExecute'],

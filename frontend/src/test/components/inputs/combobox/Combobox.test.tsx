@@ -160,7 +160,7 @@ describe('Combobox', () => {
     });
 
     it('focuses the search box when the dropdown opens', async () => {
-      // jsdom cannot focus inside the display:none transition wrapper, so assert the focus() call target.
+      // jsdom không thể focus bên trong wrapper chuyển cảnh display:none, nên kiểm tra phần tử được gọi focus().
       const focus = vi.spyOn(HTMLInputElement.prototype, 'focus');
       renderWithProviders(<Combobox label="Pick" data={data} searchPlaceholder="Find" />);
       await open();

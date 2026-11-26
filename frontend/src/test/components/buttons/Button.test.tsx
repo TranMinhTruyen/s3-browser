@@ -105,8 +105,8 @@ describe('Button', () => {
       renderWithProviders(<Button>Long label</Button>);
       const user = userEvent.setup();
 
-      // Real timers on purpose: with fake timers RTL's asyncWrapper (setTimeout 0) hangs user-event, and the
-      // tooltip is not enabled until React re-renders after the hover. findBy* waits for the 300ms openDelay.
+      // Cố ý dùng timer thật: với fake timer, asyncWrapper (setTimeout 0) của RTL khiến user-event bị treo,
+      // và tooltip chỉ bật sau khi React render lại vì hover. findBy* chờ openDelay 300ms.
       await user.hover(screen.getByRole('button', { name: 'Long label' }));
 
       expect(await screen.findByRole('tooltip')).toHaveTextContent('Long label');

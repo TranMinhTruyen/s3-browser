@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-# Project root = parent of the folder holding this script (setup/),
-# so the script works no matter which directory you run it from.
+# Thư mục gốc dự án là thư mục cha của nơi chứa script này (setup/),
+# nhờ đó có thể chạy script từ bất kỳ thư mục nào.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
@@ -28,13 +28,13 @@ go mod tidy
 echo
 echo "==> Update complete. Please review go.mod/go.sum manually."
 
-# Rust native library (rust/).
-# `cargo update` only moves Cargo.lock within the semver ranges of Cargo.toml,
-# so pinned crates (e.g. libsqlite3-sys matching sqlx) stay compatible.
-# Newer incompatible versions are only reported ("available: ..."): bump them
-# in Cargo.toml by hand, since they may need code changes.
+# Thư viện native Rust (rust/).
+# `cargo update` chỉ cập nhật Cargo.lock trong phạm vi phiên bản semver của Cargo.toml,
+# nhờ đó các crate đã ghim phiên bản (ví dụ libsqlite3-sys tương thích với sqlx) vẫn tương thích.
+# Các phiên bản mới hơn nhưng không tương thích chỉ được báo ("available: ..."): tự tăng phiên bản
+# trong Cargo.toml vì có thể cần thay đổi code.
 if [ -f "$PROJECT_ROOT/rust/Cargo.toml" ]; then
-  # rustup installs cargo here, but it is not always on PATH (e.g. Git Bash).
+  # rustup cài cargo tại đây nhưng đường dẫn này không phải lúc nào cũng có trong PATH (ví dụ Git Bash).
   export PATH="$HOME/.cargo/bin:$PATH"
   if ! command -v cargo >/dev/null 2>&1; then
     echo "ERROR: cargo not found. Install Rust first: https://rustup.rs"
@@ -70,8 +70,8 @@ cd "$PROJECT_ROOT"
 
 echo
 echo "==> Regenerating TypeScript IPC bindings..."
-# The Wails runtime version moves with go.mod, so bindings must be regenerated.
-# -tags=wailsgen is required: without it result models in models/db become `any`.
+# Phiên bản runtime Wails thay đổi cùng go.mod nên cần sinh lại bindings.
+# Bắt buộc dùng -tags=wailsgen: nếu không, các model kết quả trong models/db sẽ thành `any`.
 go tool wails3 generate bindings -f "-tags=wailsgen" -clean=true -ts
 
 echo

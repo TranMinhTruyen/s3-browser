@@ -20,23 +20,23 @@ import ActionIcon from '@/components/buttons/ActionIcon';
 import TruncatedText from '@/components/display/TruncatedText';
 import CheckBoxInput from '@/components/inputs/CheckBoxInput';
 
-/** A group header or a file of a group, as shown in the upload file lists. */
+/** Tiêu đề nhóm hoặc một file trong nhóm như hiển thị ở danh sách file tải lên. */
 export type UploadRow = { kind: 'group'; index: number; group: DroppedGroup } | { kind: 'file'; file: DroppedFile };
 
-/** How many files / large files of a group are currently ticked. */
+/** Số file / file lớn trong nhóm hiện được đánh dấu. */
 export type GroupStat = { selected: number; selectedLarge: number };
 
-// Row height in px at the medium size; scaled with the interface size.
+// Chiều cao hàng theo px ở cỡ trung bình; được co giãn theo cỡ giao diện.
 const ROW_HEIGHT = 36;
 
-// Last path segment; paths use "\" on Windows and "/" elsewhere.
+// Đoạn cuối của đường dẫn; Windows dùng "\", các hệ điều hành khác dùng "/".
 const baseName = (path: string) => path.split(/[\\/]/).pop() || path;
 
-// Interface scale, read once by VirtualRowList so the rows do not each subscribe to the setting store.
+// Tỷ lệ giao diện, chỉ đọc một lần trong VirtualRowList để từng hàng không phải đăng ký theo dõi setting store.
 const RowScaleContext = createContext(1);
 
-// Absolute position of a row inside the virtual list. Memoized by the rows, so `memo` keeps working
-// (a fresh style object on every render would defeat it).
+// Vị trí tuyệt đối của hàng trong danh sách ảo. Các hàng được ghi nhớ để `memo` tiếp tục có tác dụng
+// (tạo object style mới ở mỗi lần render sẽ làm mất tác dụng đó).
 const useRowStyle = (top: number): CSSProperties => {
   const scale = useContext(RowScaleContext);
   return useMemo(
@@ -54,18 +54,18 @@ const useRowStyle = (top: number): CSSProperties => {
 
 type GroupRowProps = {
   group: DroppedGroup;
-  // Offset of the row inside the virtual list.
+  // Độ lệch của hàng trong danh sách ảo.
   top: number;
   rootLabel: string;
-  // Counter texts; a counter is hidden when its text is not set.
+  // Nội dung bộ đếm; bộ đếm bị ẩn khi chưa có nội dung.
   largeText?: string;
   countText?: string;
-  // Over the limit: the counter is highlighted.
+  // Vượt giới hạn: làm nổi bật bộ đếm.
   largeOver?: boolean;
   countOver?: boolean;
 };
 
-/** A group (folder) header line with its optional large-file and file counters. */
+/** Dòng tiêu đề nhóm (thư mục), có thể kèm bộ đếm file lớn và tổng số file. */
 export const GroupRow = memo(function GroupRow(props: GroupRowProps) {
   const { group, top, rootLabel, largeText, countText, largeOver, countOver } = props;
   const style = useRowStyle(top);
@@ -103,18 +103,18 @@ export const GroupRow = memo(function GroupRow(props: GroupRowProps) {
 type FileRowProps = {
   file: DroppedFile;
   checked: boolean;
-  // Offset of the row inside the virtual list.
+  // Độ lệch của hàng trong danh sách ảo.
   top: number;
   largeLabel: string;
-  // Which path is shown as the tooltip of the file name.
+  // Đường dẫn được hiển thị dưới dạng tooltip cho tên file.
   titleBy: 'path' | 'relKey';
   onToggleFile: (path: string, checked: boolean) => void;
-  // Shows a remove button when set (needs removeLabel for its tooltip).
+  // Hiện nút xóa khi được thiết lập (cần removeLabel để làm tooltip).
   onRemoveFile?: (path: string) => void;
   removeLabel?: string;
 };
 
-/** One file line: checkbox with name, large badge, size and an optional remove button. */
+/** Dòng của một file: checkbox, tên, nhãn file lớn, dung lượng và nút xóa tùy chọn. */
 export const FileRow = memo(function FileRow(props: FileRowProps) {
   const { file, checked, top, largeLabel, titleBy, onToggleFile, onRemoveFile, removeLabel } = props;
   const style = useRowStyle(top);
@@ -157,20 +157,20 @@ export const FileRow = memo(function FileRow(props: FileRowProps) {
 
 type VirtualRowListProps = {
   rows: UploadRow[];
-  // Scroll area height (CSS value).
+  // Chiều cao vùng cuộn (giá trị CSS).
   height: string | number;
-  // Renders one row; `top` is its offset inside the virtual list.
+  // Render một hàng; `top` là độ lệch của hàng trong danh sách ảo.
   renderRow: (row: UploadRow, key: string | number | bigint, top: number) => ReactNode;
 };
 
-/** Virtualized scroll list of group/file rows; the caller decides how each row is drawn. */
+/** Danh sách cuộn ảo gồm các hàng nhóm/file; nơi gọi quyết định cách vẽ từng hàng. */
 export const VirtualRowList = memo(function VirtualRowList(props: VirtualRowListProps) {
   const { rows, height, renderRow } = props;
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const scale = useUiScale();
 
-  // React Compiler is disabled, so this compiler-only lint does not apply.
+  // React Compiler đang tắt nên quy tắc lint chỉ dành cho compiler này không áp dụng.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -195,5 +195,5 @@ export const VirtualRowList = memo(function VirtualRowList(props: VirtualRowList
   );
 });
 
-/** Height of `count` rows in px at the medium size, for lists that shrink to their content. */
+/** Chiều cao theo px của `count` hàng ở cỡ trung bình, dùng cho danh sách co theo nội dung. */
 export const rowsHeight = (count: number) => count * ROW_HEIGHT;

@@ -2,8 +2,8 @@ package profile
 
 import "time"
 
-// ConnectionProfileOutput is a saved connection profile with its live connection state.
-// It never carries a secret: SavedSecrets only names the secrets that are stored
+// ConnectionProfileOutput là hồ sơ kết nối đã lưu cùng trạng thái kết nối hiện tại.
+// Không bao giờ chứa secret: SavedSecrets chỉ liệt kê tên các secret đang được lưu
 // ("secretKey", "sessionToken", "ldapPassword", "keyPassword").
 type ConnectionProfileOutput struct {
 	ID           string     `json:"id"`

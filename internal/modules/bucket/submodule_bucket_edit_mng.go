@@ -15,20 +15,20 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// defaultBucketRegion is the region AWS creates a bucket in without a LocationConstraint.
+// defaultBucketRegion là region AWS dùng để tạo bucket nếu không có LocationConstraint.
 const defaultBucketRegion = "us-east-1"
 
-// createPolicyRetries is how many times setting the policy of a new bucket is retried on NoSuchBucket.
+// createPolicyRetries là số lần thử lại khi đặt policy cho bucket mới mà nhận lỗi NoSuchBucket.
 const createPolicyRetries = 3
 
-// submoduleBucketEditMng creates buckets and reads or changes their policy and details.
+// submoduleBucketEditMng tạo bucket, đọc hoặc thay đổi policy và thông tin chi tiết của bucket.
 type submoduleBucketEditMng struct {
 	logger *slog.Logger
 	app    *application.App
 	global *global.Module
 }
 
-// newSubmoduleBucketEditMng builds the bucket edit submodule on the shared connection store.
+// newSubmoduleBucketEditMng tạo submodule chỉnh sửa bucket trên kho kết nối dùng chung.
 func newSubmoduleBucketEditMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -41,13 +41,13 @@ func newSubmoduleBucketEditMng(
 	}
 }
 
-// isRealAws reports whether the connection talks to AWS itself, not MinIO or a custom endpoint.
+// isRealAws cho biết kết nối đang làm việc trực tiếp với AWS, không phải MinIO hay endpoint tùy chỉnh.
 func isRealAws(conn *global.S3Conn) bool {
 	return conn.Provider != cnst.ProviderMinio && !conn.CustomEndpoint
 }
 
-// createBucket creates input.Bucket (30s timeout). Any failure, including a wrong region, is reported as is:
-// nothing is retried and no half-made state is left.
+// createBucket tạo input.Bucket (timeout 30 giây). Mọi lỗi, kể cả sai region, đều được báo nguyên trạng:
+// không thử lại và không để lại trạng thái tạo dở.
 func (m *submoduleBucketEditMng) createBucket(
 	ctx context.Context,
 	input models.CreateBucketInput,
@@ -95,7 +95,7 @@ func (m *submoduleBucketEditMng) createBucket(
 		return *output.AddMessage(bucketMessage(cnst.MessageTypeSuccess, S3S007, input.Bucket, ""))
 	}
 
-	// The bucket exists from here on: a failed policy is a warning and the call still succeeds.
+	// Từ đây bucket đã tồn tại: nếu đặt policy thất bại thì chỉ cảnh báo và lời gọi vẫn thành công.
 	err := applyPolicyAfterCreate(ctx, conn, input.Bucket, mode, input.Policy, optFns)
 	switch {
 	case err == nil:
@@ -113,8 +113,8 @@ func (m *submoduleBucketEditMng) createBucket(
 	return *output.AddMessage(bucketMessage(cnst.MessageTypeWarn, code, input.Bucket, UnwrapAwsError(err)))
 }
 
-// applyPolicyAfterCreate sets the policy of a new bucket. Real AWS can answer NoSuchBucket for a moment after the
-// bucket is created, so that answer is retried up to createPolicyRetries times, one second apart.
+// applyPolicyAfterCreate đặt policy cho bucket mới. AWS thật có thể trả NoSuchBucket trong thời gian ngắn sau khi tạo,
+// vì vậy thử lại lỗi này tối đa createPolicyRetries lần, mỗi lần cách nhau một giây.
 func applyPolicyAfterCreate(
 	ctx context.Context,
 	conn *global.S3Conn,
@@ -134,20 +134,20 @@ func applyPolicyAfterCreate(
 	}
 }
 
-// bucketMessage is a message of the bucket module with the bucket param.
+// bucketMessage tạo thông báo của module bucket, có tham số bucket.
 func bucketMessage(messageType, code, bucket, errorDetail string) models.Message {
 	return models.NewParamsMessage(messageType, cnst.Bucket, code, errorDetail, map[string]any{
 		"bucket": bucket,
 	})
 }
 
-// anonymousEditMessage is the S3E054 message.
+// anonymousEditMessage tạo thông báo S3E054.
 func anonymousEditMessage() models.Message {
 	return models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E054, "")
 }
 
-// bucketEditCode maps an error of creating or changing a bucket to a message code: AccessDenied gives S3E052,
-// a taken name S3E050, an invalid name S3E051, anything else fallbackCode.
+// bucketEditCode ánh xạ lỗi tạo hoặc thay đổi bucket sang mã thông báo: AccessDenied dùng S3E052,
+// tên đã được dùng dùng S3E050, tên không hợp lệ dùng S3E051, các lỗi khác dùng fallbackCode.
 func bucketEditCode(err error, fallbackCode string) string {
 	switch detail := UnwrapAwsError(err); {
 	case detail == "AccessDenied" || statusCode(err) == http.StatusForbidden:
@@ -160,8 +160,8 @@ func bucketEditCode(err error, fallbackCode string) string {
 	return fallbackCode
 }
 
-// bucketEditFailed ends a failed create or change of a bucket with the message of bucketEditCode and the AWS
-// error code as detail.
+// bucketEditFailed kết thúc thao tác tạo hoặc thay đổi bucket thất bại bằng thông báo từ bucketEditCode
+// và mã lỗi AWS làm nội dung chi tiết.
 func bucketEditFailed[T any](
 	ctx context.Context,
 	output models.Output[T],

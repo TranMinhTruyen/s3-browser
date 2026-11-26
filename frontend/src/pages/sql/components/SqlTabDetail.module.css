@@ -1,4 +1,4 @@
-/* Border lines above and below the drag strip (inset shadow: no change to the strip size or the thumb position). */
+/* Kẻ viền trên và dưới dải kéo bằng inset shadow (không đổi kích thước dải hoặc vị trí nút trượt). */
 .handle {
   box-shadow:
     inset 0 1px 0 var(--mantine-color-default-border),

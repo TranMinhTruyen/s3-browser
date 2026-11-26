@@ -5,8 +5,8 @@ import { useUploaderStore } from '@/common/stores/uploaderStore';
 import UploaderWindow from '@/pages/s3/transfer/uploader/UploaderWindow';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// Regression: the REAL virtualizer is used (not mocked). Affix mounts its Portal one render late, so a scroll
-// element held in a plain ref was still null and the list stayed empty.
+// Test hồi quy: sử dụng virtualizer THẬT (không mock). Affix mount Portal trễ một lần render nên phần tử cuộn lưu
+// trong ref thường vẫn null và danh sách bị trống.
 vi.mock('@wailsio/runtime', async importOriginal => {
   const actual = await importOriginal<typeof import('@wailsio/runtime')>();
   return { ...actual, Events: { ...actual.Events, On: vi.fn() } };
@@ -32,7 +32,7 @@ describe('UploaderWindow with the real virtualizer', () => {
       handlers[name] = cb;
       return vi.fn();
     }) as never);
-    // jsdom has no layout: give elements a viewport so the virtualizer renders rows.
+    // jsdom không có layout: gán viewport cho các phần tử để virtualizer render hàng.
     for (const [prop, value] of sizes) {
       Object.defineProperty(HTMLElement.prototype, prop, { configurable: true, value });
     }

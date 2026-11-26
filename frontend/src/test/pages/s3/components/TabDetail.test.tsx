@@ -37,7 +37,7 @@ const h = vi.hoisted(() => ({
   menu: vi.fn(),
 }));
 
-// The two list views are tested on their own: here they are stubs exposing their ref and callbacks.
+// Hai view danh sách được test riêng; ở đây dùng stub để lộ ref và callback của chúng.
 vi.mock('@/pages/s3/bucket/BucketListView', () => ({
   default: function BucketListViewStub({
     tabId,
@@ -137,7 +137,7 @@ const setProfile = (patch: Partial<ConnectionProfileOutput> = {}) =>
 const tab = () => useTabListStore.getState().tabList[TAB];
 const btn = (name: string) => screen.getByRole('button', { name });
 
-// The profile combobox has no accessible name (no label), so it is found by its listbox popup.
+// Combobox profile không có tên trợ năng (không có nhãn), nên tìm nó qua popup listbox.
 const profilePicker = () => screen.getAllByRole('button').find(b => b.getAttribute('aria-haspopup') === 'listbox')!;
 
 function setup() {
@@ -645,7 +645,7 @@ describe('TabDetail', () => {
     it('names an empty folder crumb "/"', () => {
       setTab({ currentView: 'objectList', bucket: 'b', prefix: 'a//' });
       setup();
-      // The empty-named folder is the last crumb "/" (the other two are separators).
+      // Thư mục tên rỗng là crumb cuối cùng "/" (hai mục còn lại là dấu phân cách).
       expect(screen.getAllByText('/')).toHaveLength(3);
       expect([...document.querySelectorAll<HTMLElement>('[data-prefix]')].map(c => c.dataset.prefix)).toEqual([
         '',
@@ -817,14 +817,14 @@ describe('TabDetail', () => {
       it('clears the selection on clear only when a keyword is applied', async () => {
         objectTab({ selectionItem: { k: true } });
         const user = setup();
-        // Empty Enter with no keyword: selection stays.
+        // Enter khi ô trống và không có từ khóa: giữ nguyên vùng chọn.
         await user.type(searchBox(), '{Enter}');
         expect(tab().selectionItem).toEqual({ k: true });
-        // Text typed but never applied, then cleared: selection stays.
+        // Đã nhập nhưng chưa áp dụng từ khóa rồi xóa đi: giữ nguyên vùng chọn.
         await user.type(searchBox(), 'foo');
         await user.click(btn('Clear search'));
         expect(tab().selectionItem).toEqual({ k: true });
-        // Applied keyword, then cleared: selection is cleared.
+        // Đã áp dụng từ khóa rồi xóa đi: xóa vùng chọn.
         await user.type(searchBox(), 'foo{Enter}');
         act(() => useTabListStore.getState().addSelectItem(TAB, ['k2']));
         expect(tab().selectionItem).toEqual({ k2: true });
@@ -857,7 +857,7 @@ describe('TabDetail', () => {
         setProfile({ isConnected: false });
         objectTab();
         setup();
-        // Disconnected tabs fall back to the bucket list: its search box is shown but disabled.
+        // Tab đã ngắt kết nối quay về danh sách bucket: ô tìm kiếm vẫn hiện nhưng bị vô hiệu hóa.
         expect(screen.queryByPlaceholderText('Search by key')).not.toBeInTheDocument();
         expect(screen.getByPlaceholderText('Search by name')).toBeDisabled();
       });
@@ -1129,7 +1129,7 @@ describe('TabDetail', () => {
   });
 
   describe('scroll position when the tab is hidden (Activity)', () => {
-    // jsdom has no layout: back scrollTop with a variable and let the test play the browser (display none resets it).
+    // jsdom không có layout: lưu scrollTop vào biến và để test mô phỏng trình duyệt (display none sẽ đặt lại vị trí cuộn).
     const scroller = () => {
       const el = document.querySelector<HTMLElement>(`[data-tab-id="${TAB}"]`)!;
       const box = { top: 0, writes: [] as number[] };

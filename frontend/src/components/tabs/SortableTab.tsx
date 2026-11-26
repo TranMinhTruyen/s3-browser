@@ -10,21 +10,21 @@ import { TAB_HEIGHT, TAB_WIDTH } from './tabConst';
 
 type SortableTabProps = {
   tabId: string;
-  /** Must be referentially stable so the memo of this tab holds. */
+  /** Phải giữ ổn định tham chiếu để memo của tab hoạt động. */
   renderLabel: (tabId: string) => ReactNode;
   closable: boolean;
-  /** Drag-reorder is on (at least 2 tabs): grab cursor, hint tooltip, pointer and keyboard drag. */
+  /** Bật kéo để sắp xếp (có ít nhất 2 tab): con trỏ nắm, tooltip gợi ý và thao tác kéo bằng chuột/bàn phím. */
   sortable: boolean;
   onClickClose: (tabId: string, e: React.MouseEvent) => void;
-  /** Ctrl+Shift+Left/Right: move the tab one slot (-1 left, 1 right). */
+  /** Ctrl+Shift+Left/Right: di chuyển tab sang một vị trí (-1 sang trái, 1 sang phải). */
   onMoveTab: (tabId: string, offset: -1 | 1) => void;
 };
 
 /**
- * One tab, draggable when `sortable`. Two nested elements keep transforms apart:
- * the outer one belongs to dnd-kit (position), the inner `m.div` to motion (enter, exit).
- * Must be rendered inside `AnimatePresence`: on close the tab fades and collapses its width so siblings slide over
- * (fade only when the user prefers reduced motion). Space/Enter select the tab; Ctrl+Shift+Left/Right reorders it.
+ * Một tab, có thể kéo khi `sortable`. Hai phần tử lồng nhau tách riêng các hiệu ứng transform:
+ * phần tử ngoài thuộc về dnd-kit (vị trí), `m.div` bên trong thuộc về motion (hiện, ẩn).
+ * Phải render bên trong `AnimatePresence`: khi đóng, tab mờ dần và thu hẹp để các tab bên cạnh trượt vào
+ * (chỉ mờ dần nếu người dùng không bật chế độ giảm chuyển động). Space/Enter chọn tab; Ctrl+Shift+Left/Right sắp xếp lại.
  */
 function SortableTab({ tabId, renderLabel, closable, sortable, onClickClose, onMoveTab }: SortableTabProps) {
   const { t } = useTranslation('common');
@@ -33,16 +33,16 @@ function SortableTab({ tabId, renderLabel, closable, sortable, onClickClose, onM
     disabled: !sortable,
   });
   const reducedMotion = useReducedMotion();
-  // False while the tab plays its exit animation (still in the DOM, still data-active).
+  // False khi tab đang chạy animation thoát (vẫn ở DOM và vẫn có data-active).
   const isPresent = useIsPresent();
-  // Tabs.Tab owns role and tabIndex, and aria-pressed is invalid for role="tab"; keep only the other aria hints.
+  // Tabs.Tab quản lý role và tabIndex; aria-pressed không hợp lệ với role="tab", nên chỉ giữ các gợi ý aria khác.
   const { role: _role, tabIndex: _tabIndex, 'aria-pressed': _pressed, ...ariaAttributes } = attributes;
 
   const onClickCloseButton = useCallback((e: React.MouseEvent) => onClickClose(tabId, e), [onClickClose, tabId]);
 
-  // Keyboard reorder, attached in the capture phase: stopPropagation here keeps the event from Mantine's own
-  // bubble-phase onKeyDown, which would also select the neighbouring tab. Focus is kept on the moved tab because
-  // the reorder may re-insert its DOM node and drop focus.
+  // Sắp xếp bằng bàn phím, đăng ký ở pha capture: stopPropagation ngăn onKeyDown pha bubble của Mantine chạy,
+  // nếu không nó sẽ chọn cả tab bên cạnh. Giữ tiêu điểm ở tab được di chuyển vì thao tác sắp xếp có thể chèn lại
+  // node DOM và làm mất tiêu điểm.
   const onKeyDownTab = useCallback(
     (e: React.KeyboardEvent<HTMLElement>) => {
       if (!sortable || !e.ctrlKey || !e.shiftKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
@@ -62,7 +62,7 @@ function SortableTab({ tabId, renderLabel, closable, sortable, onClickClose, onM
       style={{
         transform: CSS.Translate.toString(transform),
         transition,
-        // The DragOverlay shows the dragged tab; the original only holds its slot.
+        // DragOverlay hiển thị tab đang kéo; tab gốc chỉ giữ vị trí của nó.
         visibility: isDragging ? 'hidden' : undefined,
         position: 'relative',
         flexShrink: 0,

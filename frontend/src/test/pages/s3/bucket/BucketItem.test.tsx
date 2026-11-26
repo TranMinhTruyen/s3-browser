@@ -131,7 +131,7 @@ describe('BucketItem inaccessible click', () => {
 });
 
 describe('BucketItem menu', () => {
-  // jsdom has no layout, so Mantine marks the dropdown as clipped (display: none): query it with hidden: true.
+  // jsdom không có layout, nên Mantine đánh dấu dropdown bị cắt (display: none); truy vấn với hidden: true.
   const moreActions = () => screen.getByRole('button', { name: 'More actions' });
 
   it('does not mount the menu until the button is clicked', () => {

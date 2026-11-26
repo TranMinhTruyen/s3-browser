@@ -1,9 +1,9 @@
-// Package profile holds the input/output models of the connection profile module.
+// Package profile chứa các model đầu vào/đầu ra của module hồ sơ kết nối.
 package profile
 
-// ConnectionProfileInput is the form data to create or update a connection profile.
-// Version is used for optimistic locking on update. Empty secrets on update keep the stored ones.
-// MfaCode and OidcSessionId are used for one connect only and are never stored.
+// ConnectionProfileInput là dữ liệu biểu mẫu để tạo hoặc cập nhật hồ sơ kết nối.
+// Version dùng cho khóa lạc quan khi cập nhật. Secret để trống khi cập nhật sẽ giữ các giá trị đã lưu.
+// MfaCode và OidcSessionId chỉ được dùng cho một lần kết nối và không bao giờ được lưu.
 type ConnectionProfileInput struct {
 	Id            string     `json:"id,omitempty"`
 	Name          string     `json:"name,omitempty"`

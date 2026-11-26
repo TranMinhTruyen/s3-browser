@@ -3,7 +3,7 @@ import FieldInput from '@/components/inputs/FieldInput';
 import type { AuthFieldsProps } from '@/pages/s3/modals/connect/connectSchema';
 import AuthDurationField from '@/pages/s3/modals/connect/fields/AuthDurationField';
 
-/** MinIO LDAP: user name, password and optional session duration. */
+/** MinIO LDAP: tên người dùng, mật khẩu và thời hạn phiên tùy chọn. */
 function AuthLdapFields({ form, savedSecrets, secretRequired }: AuthFieldsProps) {
   const { t } = useTranslation('connectModal');
 

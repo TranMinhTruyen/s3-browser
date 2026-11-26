@@ -6,13 +6,13 @@ import (
 	"S3Browser/models"
 )
 
-// SettingHandler is the Wails service for app settings.
+// SettingHandler là service Wails quản lý cài đặt ứng dụng.
 type SettingHandler struct {
 	setting *setting.Module
 	update  *update.Module
 }
 
-// NewSettingHandler creates the setting handler.
+// NewSettingHandler tạo handler cài đặt.
 func NewSettingHandler(setting *setting.Module, update *update.Module) *SettingHandler {
 	return &SettingHandler{
 		setting: setting,
@@ -20,12 +20,12 @@ func NewSettingHandler(setting *setting.Module, update *update.Module) *SettingH
 	}
 }
 
-// GetSettings returns the saved settings.
+// GetSettings trả về các cài đặt đã lưu.
 func (h *SettingHandler) GetSettings() models.Output[models.SettingsOutput] {
 	return h.setting.GetSettings()
 }
 
-// SaveSettings saves the settings, applies launch on startup, the update channel and the periodic update check.
+// SaveSettings lưu cài đặt rồi áp dụng tùy chọn khởi chạy cùng hệ thống, kênh cập nhật và kiểm tra cập nhật định kỳ.
 func (h *SettingHandler) SaveSettings(input models.SaveSettingInput) models.Output[models.SettingsOutput] {
 	output := h.setting.SaveSettings(input)
 	if output.Result {
@@ -35,17 +35,22 @@ func (h *SettingHandler) SaveSettings(input models.SaveSettingInput) models.Outp
 	return output
 }
 
-// SetLaunchOnStartup writes only launch on startup (used by Apply); the output holds the value actually kept.
+// SetLaunchOnStartup chỉ ghi tùy chọn khởi chạy cùng hệ thống (được dùng bởi Apply); đầu ra chứa giá trị thực tế được giữ lại.
 func (h *SettingHandler) SetLaunchOnStartup(enabled bool) models.Output[models.SettingsOutput] {
 	return h.setting.SetLaunchOnStartup(enabled)
 }
 
-// GetTabState returns the remembered tabs.
+// GetTabState trả về các tab đã ghi nhớ.
 func (h *SettingHandler) GetTabState() models.Output[models.TabState] {
 	return h.setting.GetTabState()
 }
 
-// SaveTabState saves the tab order, active tab and profile of each tab.
+// SaveTabState lưu thứ tự tab, tab đang hoạt động và hồ sơ của từng tab.
 func (h *SettingHandler) SaveTabState(input models.SaveTabStateInput) models.Output[models.TabState] {
 	return h.setting.SaveTabState(input)
+}
+
+// SaveSqlTabState lưu thứ tự tab SQL, tab đang hoạt động và nội dung từng tab.
+func (h *SettingHandler) SaveSqlTabState(input models.SaveSqlTabStateInput) models.Output[models.TabState] {
+	return h.setting.SaveSqlTabState(input)
 }

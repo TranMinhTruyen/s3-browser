@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SqlTabPage from '@/pages/sql/SqlTabPage';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
 
-// The strip is replaced by a stub that renders the detail of any tab id, so the page's own switch is tested alone.
+// Thay strip bằng stub hiển thị chi tiết của mọi tab id, để chỉ kiểm tra logic chuyển tab của trang.
 const strip = vi.hoisted(() => ({ ids: [] as string[] }));
 vi.mock('@/components/tabs/TabStrip', () => ({
   default: ({ renderDetail }: { renderDetail: (tabId: string) => React.ReactNode }) => (

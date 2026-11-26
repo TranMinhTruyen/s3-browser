@@ -34,7 +34,7 @@ fn message(resp: &Value) -> &str {
     resp["error"]["message"].as_str().unwrap()
 }
 
-// ---- open: driver lạ / thiếu host / chưa cài ----
+// ---- mở: trình điều khiển lạ / thiếu host / chưa cài ----
 
 #[test]
 fn unknown_driver_names_are_invalid_request() {
@@ -395,7 +395,7 @@ fn bad_port_values_are_invalid_request() {
     }
 }
 
-// ---- open SQLite: JSON cũ vẫn chạy, field mạng bị bỏ qua ----
+// ---- mở SQLite: JSON cũ vẫn chạy, các trường mạng bị bỏ qua ----
 
 #[test]
 fn old_sqlite_open_json_still_opens_and_runs() {
@@ -479,7 +479,7 @@ fn bench_timing_fields_follow_the_feature_flag() {
     }
 }
 
-// ---- actor giả của một driver mạng ----
+// ---- actor giả lập của một trình điều khiển mạng ----
 
 /// `Interrupt` giả: đếm số lần bị gọi và đánh thức actor đang chờ (như `sqlite3_interrupt`
 /// làm câu SQL đang chạy dừng lại).
@@ -660,7 +660,7 @@ fn schema_methods_on_unknown_connection_are_conn_not_found() {
     assert_eq!(err_code(&r), "connNotFound");
 }
 
-// ---- hợp đồng huỷ qua FFI với driver mạng giả ----
+// ---- hợp đồng hủy qua FFI với trình điều khiển mạng giả ----
 
 #[test]
 fn cancel_of_a_running_request_returns_cancelled_and_interrupts_once() {

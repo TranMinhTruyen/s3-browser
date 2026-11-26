@@ -8,19 +8,19 @@ type TabBreadcrumbProps = {
   prefix: string;
 };
 
-/** Path of the current folder: the bucket, then one crumb per folder; every crumb but the last is a link. */
+/** Đường dẫn thư mục hiện tại: bucket rồi đến từng crumb cho mỗi thư mục; mọi crumb trừ crumb cuối đều là liên kết. */
 function TabBreadcrumb(props: TabBreadcrumbProps) {
   const { tabId, bucket, prefix } = props;
 
   const changePrefix = useTabListStore(s => s.changePrefix);
 
-  // One crumb per folder in the prefix, each pointing to that folder's own prefix.
+  // Mỗi thư mục trong tiền tố có một crumb trỏ đến chính tiền tố của thư mục đó.
   const crumbs = useMemo(() => {
     const parts = prefix ? prefix.slice(0, -1).split('/') : [];
     return parts.map((name, i) => ({ name: name || '/', prefix: parts.slice(0, i + 1).join('/') + '/' }));
   }, [prefix]);
 
-  // The crumb's folder prefix is stored in data-prefix ("" is the bucket root).
+  // Tiền tố thư mục của crumb được lưu trong data-prefix ("" nghĩa là thư mục gốc bucket).
   const onClickBreadcrumb = useCallback(
     (e: MouseEvent<HTMLElement>) => {
       changePrefix(tabId, e.currentTarget.dataset.prefix ?? '');

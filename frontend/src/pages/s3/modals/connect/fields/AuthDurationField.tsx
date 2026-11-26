@@ -3,11 +3,11 @@ import FieldInput from '@/components/inputs/FieldInput';
 import type { AuthFieldsProps } from '@/pages/s3/modals/connect/connectSchema';
 
 type AuthDurationFieldProps = Pick<AuthFieldsProps, 'form'> & {
-  /** Required for `assumeRole`; optional (empty = server default) for the MinIO methods. */
+  /** Bắt buộc với `assumeRole`; tùy chọn (để trống = mặc định máy chủ) với các phương thức MinIO. */
   required?: boolean;
 };
 
-/** Session duration in seconds (STS allows 900 to 43200). */
+/** Thời lượng phiên tính bằng giây (STS chấp nhận từ 900 đến 43200). */
 function AuthDurationField({ form, required }: AuthDurationFieldProps) {
   const { t } = useTranslation('connectModal');
 

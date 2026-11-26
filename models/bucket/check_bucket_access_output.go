@@ -1,6 +1,6 @@
 package bucket
 
-// CheckBucketAccessOutput holds the access flags (Name, Inaccessible, ReadOnly, AccessPending) of the asked buckets.
+// CheckBucketAccessOutput chứa các cờ quyền truy cập (Name, Inaccessible, ReadOnly, AccessPending) của những bucket được yêu cầu.
 type CheckBucketAccessOutput struct {
 	BucketList []Bucket `json:"bucketList,omitempty"`
 }

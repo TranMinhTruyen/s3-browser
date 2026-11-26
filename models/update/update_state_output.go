@@ -1,21 +1,21 @@
-// Package update holds the models of the app self-update module.
+// Package update chứa các model của module tự cập nhật ứng dụng.
 package update
 
-// UpdateStateOutput is the state of the self-update, returned by the update calls and sent with the
-// update:state-changed event.
+// UpdateStateOutput là trạng thái tự cập nhật, được trả về từ các lời gọi update và gửi qua sự kiện
+// update:state-changed.
 type UpdateStateOutput struct {
-	// Supported is false for dev, portable, non-NSIS builds and other OS: the frontend hides the feature.
+	// Supported là false với bản dev, portable, không dùng NSIS và hệ điều hành khác; frontend sẽ ẩn tính năng.
 	Supported bool `json:"supported"`
-	// State is idle, checking, upToDate, available, downloading, ready or error.
+	// State là idle, checking, upToDate, available, downloading, ready hoặc error.
 	State          string `json:"state"`
 	CurrentVersion string `json:"currentVersion"`
-	// Version is the new release, set from available on.
+	// Version là phiên bản mới, được đặt từ trạng thái available trở đi.
 	Version string `json:"version,omitempty"`
-	// ReleaseUrl is the GitHub page of the new release.
+	// ReleaseUrl là trang GitHub của bản phát hành mới.
 	ReleaseUrl string `json:"releaseUrl,omitempty"`
-	// Written and Total are the bytes downloaded and the installer size while downloading.
+	// Written và Total lần lượt là số byte đã tải và kích thước bộ cài trong khi tải xuống.
 	Written int64 `json:"written"`
 	Total   int64 `json:"total"`
-	// ErrorCode is the message code (UPE...) of the failure when State is error.
+	// ErrorCode là mã thông báo lỗi (UPE...) khi State là error.
 	ErrorCode string `json:"errorCode,omitempty"`
 }

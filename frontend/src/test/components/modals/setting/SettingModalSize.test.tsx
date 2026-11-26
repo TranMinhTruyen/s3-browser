@@ -7,8 +7,8 @@ import { applySettings } from '@/common/utils/settingUtils';
 import SettingModal from '@/components/modals/setting/SettingModal';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// Mantine's slider measures its track with getBoundingClientRect (all zeros in jsdom), so mouse dragging cannot be
-// simulated. This stub shows the props SettingModal passes and calls onChange (drag) / onChangeEnd (release) directly.
+// Slider của Mantine đo track bằng getBoundingClientRect (jsdom luôn trả về 0) nên không thể mô phỏng kéo chuột.
+// Stub này hiển thị các prop SettingModal truyền vào và gọi trực tiếp onChange (kéo) / onChangeEnd (thả).
 vi.mock('@/components/inputs/SliderInput', () => ({
   default: ({
     value,

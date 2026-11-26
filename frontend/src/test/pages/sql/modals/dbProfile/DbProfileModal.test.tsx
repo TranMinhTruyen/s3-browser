@@ -58,7 +58,7 @@ const sampleSqlite = (extra: Partial<DbProfile> = {}) =>
   sqliteProfile('sqlite-1', { name: 'Sample', config: { filePath: 'C:/data/sample.db', readOnly: false }, ...extra });
 const SEEDED = 2;
 
-/** Puts the profiles in the store, like the backend load does. */
+/** Đưa các profile vào store giống như thao tác tải từ backend. */
 const seed = (...profiles: DbProfile[]) => useDbProfileStore.setState({ dbProfiles: toProfileMap(...profiles) });
 
 const flush = () => act(async () => {});
@@ -85,7 +85,7 @@ const title = (name: string) => screen.queryByRole('heading', { name });
 const saved = () => Object.values(useDbProfileStore.getState().dbProfiles);
 
 async function fillPostgres(user: ReturnType<typeof userEvent.setup>) {
-  // Paste instead of per-key typing: keeps the case well under the 5s timeout when coverage slows the run.
+  // Dán thay vì nhập từng ký tự để test không vượt timeout 5 giây khi chạy chậm do coverage.
   for (const [label, value] of [
     [/^Host/, 'db.local'],
     [/^Database/, 'app'],

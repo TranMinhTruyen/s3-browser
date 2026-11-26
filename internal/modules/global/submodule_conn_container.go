@@ -10,32 +10,32 @@ import (
 	"github.com/minio/madmin-go/v4"
 )
 
-// CredInfo tells what the app may expect from the credentials of a connection.
+// CredInfo mô tả thông tin ứng dụng có thể dựa vào đối với thông tin xác thực của kết nối.
 type CredInfo struct {
-	// Refreshable is false when the user must act before Expiry (new MFA code, `aws sso login`, OIDC login),
-	// so the app warns before it. For sso the SDK still renews the role credentials; Expiry is the login token's.
+	// Refreshable là false khi người dùng phải thao tác trước Expiry (nhập mã MFA mới, chạy `aws sso login`, đăng nhập OIDC),
+	// vì vậy ứng dụng sẽ cảnh báo trước thời điểm đó. Với sso, SDK vẫn tự gia hạn thông tin xác thực của role; Expiry là hạn của token đăng nhập.
 	Refreshable bool
-	// Expiry returns when the credentials expire; false if they don't or it isn't known. It never blocks.
-	// Nil for anonymous connections.
+	// Expiry trả về thời điểm thông tin xác thực hết hạn; false nếu chúng không hết hạn hoặc chưa xác định được thời điểm.
+	// Hàm không chặn. Giá trị nil dùng cho kết nối ẩn danh.
 	Expiry func() (time.Time, bool)
 }
 
-// AnonymousBucket is a bucket the user entered for an anonymous connection.
+// AnonymousBucket là bucket do người dùng nhập cho kết nối ẩn danh.
 type AnonymousBucket struct {
 	Name string
-	// Accessible is the result of the latest HeadBucket check that got an answer from the server.
+	// Accessible là kết quả lần kiểm tra HeadBucket gần nhất nhận được phản hồi từ máy chủ.
 	Accessible bool
 }
 
-// S3Conn bundles the clients of one connected profile. Transport is kept so the idle
-// HTTP connections can be closed when the connection is dropped.
+// S3Conn chứa các client của một hồ sơ đã kết nối. Transport được giữ lại để đóng các kết nối
+// HTTP đang nhàn rỗi khi ngắt kết nối.
 type S3Conn struct {
 	ProfileName string
 	Provider    string
 	AuthType    string
-	// AwsProfile is the AWS CLI profile name (sharedProfile, sso, assumeRole); "default" when none is set.
+	// AwsProfile là tên hồ sơ AWS CLI (sharedProfile, sso, assumeRole); dùng "default" nếu chưa đặt.
 	AwsProfile string
-	// CustomEndpoint is true when the profile sets an endpoint, i.e. the server is not AWS itself.
+	// CustomEndpoint là true nếu hồ sơ chỉ định endpoint, tức máy chủ không phải AWS.
 	CustomEndpoint bool
 
 	Client  *s3.Client
@@ -45,15 +45,15 @@ type S3Conn struct {
 
 	Transport *http.Transport
 
-	// Creds is what Client signs with; nil for anonymous connections.
+	// Creds là thông tin Client dùng để ký yêu cầu; nil với kết nối ẩn danh.
 	Creds    *SwapCreds
 	CredInfo CredInfo
 
-	// Access caches the bucket access checks. Reset it when the credentials change.
+	// Access lưu tạm kết quả kiểm tra quyền truy cập bucket. Xóa cache khi thông tin xác thực thay đổi.
 	Access AccessCache
 
-	// anonymousBuckets are the buckets of an anonymous connection (the API can't list them). The list is fixed
-	// after the connection is built; only the Accessible flags change, under anonymousMu.
+	// anonymousBuckets là danh sách bucket của kết nối ẩn danh (API không thể liệt kê chúng). Danh sách được cố định
+	// sau khi tạo kết nối; chỉ các cờ Accessible thay đổi và được bảo vệ bởi anonymousMu.
 	anonymousMu      sync.RWMutex
 	anonymousBuckets []AnonymousBucket
 
@@ -62,7 +62,7 @@ type S3Conn struct {
 	closed      bool
 }
 
-// SetAnonymousBuckets sets the buckets of an anonymous connection. Call it before the connection is shared.
+// SetAnonymousBuckets đặt danh sách bucket cho kết nối ẩn danh. Gọi hàm trước khi chia sẻ kết nối.
 func (c *S3Conn) SetAnonymousBuckets(names []string) {
 	c.anonymousMu.Lock()
 	defer c.anonymousMu.Unlock()
@@ -72,22 +72,22 @@ func (c *S3Conn) SetAnonymousBuckets(names []string) {
 	}
 }
 
-// AnonymousBuckets returns a copy of the buckets of an anonymous connection.
+// AnonymousBuckets trả về bản sao danh sách bucket của kết nối ẩn danh.
 func (c *S3Conn) AnonymousBuckets() []AnonymousBucket {
 	c.anonymousMu.RLock()
 	defer c.anonymousMu.RUnlock()
 	return slices.Clone(c.anonymousBuckets)
 }
 
-// SetAnonymousAccessible records the check result of the i-th bucket of AnonymousBuckets.
+// SetAnonymousAccessible ghi nhận kết quả kiểm tra của bucket thứ i trong AnonymousBuckets.
 func (c *S3Conn) SetAnonymousAccessible(i int, accessible bool) {
 	c.anonymousMu.Lock()
 	defer c.anonymousMu.Unlock()
 	c.anonymousBuckets[i].Accessible = accessible
 }
 
-// SetExpiryTimer keeps the timer that warns before the credentials expire, replacing (and stopping) the previous
-// one. On a closed connection the timer is stopped at once.
+// SetExpiryTimer lưu bộ hẹn giờ cảnh báo trước khi thông tin xác thực hết hạn, đồng thời thay thế (và dừng) bộ hẹn giờ cũ.
+// Nếu kết nối đã đóng, bộ hẹn giờ sẽ dừng ngay.
 func (c *S3Conn) SetExpiryTimer(t *time.Timer) {
 	c.expiryMu.Lock()
 	defer c.expiryMu.Unlock()
@@ -100,7 +100,7 @@ func (c *S3Conn) SetExpiryTimer(t *time.Timer) {
 	}
 }
 
-// Close stops the expiry timer and closes the idle HTTP connections. Call it outside of the registry lock.
+// Close dừng bộ hẹn giờ hết hạn và đóng các kết nối HTTP đang nhàn rỗi. Gọi hàm bên ngoài khóa registry.
 func (c *S3Conn) Close() {
 	c.expiryMu.Lock()
 	c.closed = true
@@ -114,7 +114,7 @@ func (c *S3Conn) Close() {
 	}
 }
 
-// ExpiresIn returns the time left when the credentials can't be renewed automatically and expire within window.
+// ExpiresIn trả về thời gian còn lại nếu thông tin xác thực không thể tự gia hạn và sẽ hết hạn trong khoảng window.
 func (c *S3Conn) ExpiresIn(window time.Duration) (time.Duration, bool) {
 	if c == nil || c.CredInfo.Refreshable || c.CredInfo.Expiry == nil {
 		return 0, false
@@ -124,7 +124,7 @@ func (c *S3Conn) ExpiresIn(window time.Duration) (time.Duration, bool) {
 	return left, ok && left > 0 && left < window
 }
 
-// GetConnContainer returns the connection registered under the given id.
+// GetConnContainer trả về kết nối được đăng ký với id đã cho.
 func (m *Module) GetConnContainer(id string) (*S3Conn, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -132,7 +132,7 @@ func (m *Module) GetConnContainer(id string) (*S3Conn, bool) {
 	return conn, ok
 }
 
-// HasConn reports whether a connection is registered under the given id.
+// HasConn cho biết có kết nối nào được đăng ký với id đã cho hay không.
 func (m *Module) HasConn(id string) bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -140,9 +140,8 @@ func (m *Module) HasConn(id string) bool {
 	return ok
 }
 
-// RemoveConn unregisters the connection under the given id and returns it. Remove* functions
-// never close it themselves: closing does network I/O, so the caller does it after the
-// lock is released.
+// RemoveConn hủy đăng ký rồi trả về kết nối mang id đã cho. Các hàm Remove* không tự đóng kết nối:
+// thao tác đóng có I/O mạng nên bên gọi chỉ thực hiện sau khi nhả khóa.
 func (m *Module) RemoveConn(id string) (*S3Conn, bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -153,8 +152,8 @@ func (m *Module) RemoveConn(id string) (*S3Conn, bool) {
 	return conn, ok
 }
 
-// ReplaceConn registers the connection under the given id and returns the previous one, in the
-// same lock, so the caller can close it outside of the lock. old is nil if there was none.
+// ReplaceConn đăng ký kết nối với id đã cho và trả về kết nối trước đó trong cùng một lần khóa,
+// để bên gọi có thể đóng kết nối cũ bên ngoài khóa. old là nil nếu chưa có kết nối nào.
 func (m *Module) ReplaceConn(id string, conn *S3Conn) (old *S3Conn) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -163,9 +162,9 @@ func (m *Module) ReplaceConn(id string, conn *S3Conn) (old *S3Conn) {
 	return old
 }
 
-// AcquireConn returns the connection under the given id and counts one running transfer
-// (upload or download) on it, in the same lock, so RemoveConnIfIdle can't miss it.
-// The caller must call release exactly once when the transfer ends.
+// AcquireConn trả về kết nối mang id đã cho và tăng số lượt truyền dữ liệu đang chạy (tải lên hoặc tải xuống)
+// ngay trong cùng một lần khóa, để RemoveConnIfIdle không bỏ sót lượt truyền. Bên gọi phải gọi release đúng một lần
+// khi lượt truyền kết thúc.
 func (m *Module) AcquireConn(id string) (conn *S3Conn, release func(), ok bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -179,7 +178,7 @@ func (m *Module) AcquireConn(id string) (conn *S3Conn, release func(), ok bool) 
 	return conn, func() { once.Do(func() { m.releaseTransfer(id) }) }, true
 }
 
-// releaseTransfer drops one running transfer from the counter of the given connection id.
+// releaseTransfer giảm bộ đếm một lượt truyền đang chạy của kết nối mang id đã cho.
 func (m *Module) releaseTransfer(id string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -190,9 +189,8 @@ func (m *Module) releaseTransfer(id string) {
 	m.transfers[id]--
 }
 
-// RemoveConnIfIdle unregisters the connection under the given id unless a transfer is
-// running on it; then busy is true and nothing is removed. The returned connection must be
-// closed by the caller outside of the lock.
+// RemoveConnIfIdle hủy đăng ký kết nối mang id đã cho, trừ khi kết nối đang có lượt truyền dữ liệu;
+// trong trường hợp đó busy là true và kết nối không bị gỡ. Bên gọi phải đóng kết nối trả về bên ngoài khóa.
 func (m *Module) RemoveConnIfIdle(id string) (conn *S3Conn, removed, busy bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -206,8 +204,7 @@ func (m *Module) RemoveConnIfIdle(id string) (conn *S3Conn, removed, busy bool) 
 	return conn, removed, false
 }
 
-// RemoveAllConn unregisters every connection and returns them so the caller can close
-// them outside of the lock.
+// RemoveAllConn hủy đăng ký mọi kết nối và trả về chúng để bên gọi đóng bên ngoài khóa.
 func (m *Module) RemoveAllConn() []*S3Conn {
 	m.mu.Lock()
 	defer m.mu.Unlock()

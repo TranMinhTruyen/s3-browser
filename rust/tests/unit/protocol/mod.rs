@@ -231,7 +231,7 @@ fn debug_probe_detects_debug_types() {
     assert!(Probe::<String>(PhantomData).is_debug());
 }
 
-// ---- Response ----
+// ---- Phản hồi ----
 
 #[test]
 fn error_response_has_stable_shape() {

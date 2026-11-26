@@ -1,9 +1,9 @@
-# This file contains the configuration for this project.
-# When you update `info` or `fileAssociations`, run `wails3 task common:update:build-assets` to update the assets.
-# Note that this will overwrite any changes you have made to the assets.
+# File này chứa cấu hình của dự án.
+# Khi cập nhật `info` hoặc `fileAssociations`, chạy `wails3 task common:update:build-assets` để cập nhật các asset.
+# Lưu ý thao tác này sẽ ghi đè mọi thay đổi đã thực hiện trên các asset.
 version: '3'
 
-# This information is used to generate the build assets.
+# Các thông tin này được dùng để tạo asset build.
 info:
   companyName: "minh-truyen" # The name of the company
   productName: "S3 Browser" # The name of the application
@@ -13,7 +13,7 @@ info:
   comments: "S3Browser" # Comments
   version: "1.1.0-beta.19" # The application version
 
-# Dev mode configuration
+# Cấu hình chế độ phát triển
 dev_mode:
   root_path: .
   log_level: warn
@@ -43,8 +43,8 @@ dev_mode:
     - cmd: wails3 task run
       type: primary
 
-# File Associations
+# Liên kết loại file
 fileAssociations:
 
-# Other data
+# Dữ liệu khác
 other:

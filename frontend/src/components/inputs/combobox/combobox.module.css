@@ -1,4 +1,4 @@
-/* Shared look of the select dropdowns (Combobox, BucketPicker) in light and dark themes. */
+/* Giao diện dùng chung cho danh sách select (Combobox, BucketPicker) ở theme sáng và tối. */
 .dropdown {
   background-color: light-dark(var(--mantine-color-white), var(--mantine-color-dark-7));
   border: 1px solid light-dark(var(--mantine-color-gray-4), var(--mantine-color-dark-3));
@@ -10,19 +10,19 @@
   border-bottom: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
 }
 
-/* Hovered / keyboard-highlighted option. */
+/* Lựa chọn đang được rê chuột / tô sáng bằng bàn phím. */
 .option[data-combobox-selected] {
   background-color: light-dark(var(--mantine-color-gray-2), var(--mantine-color-dark-5));
   color: inherit;
 }
 
-/* Chosen option: tinted with the primary color so it differs from the hover state. */
+/* Lựa chọn đã chọn: phủ màu chính để phân biệt với trạng thái rê chuột. */
 .option[data-combobox-active] {
   background-color: var(--mantine-primary-color-light);
   font-weight: 600;
 }
 
-/* Chosen option that is also hovered. */
+/* Lựa chọn đã chọn đồng thời đang được rê chuột. */
 .option[data-combobox-active][data-combobox-selected] {
   background-color: var(--mantine-primary-color-light-hover);
 }

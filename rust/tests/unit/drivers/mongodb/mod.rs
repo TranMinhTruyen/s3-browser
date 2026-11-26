@@ -48,7 +48,7 @@ fn command_error(code: i32, name: &str, message: &str) -> MongoError {
     ErrorKind::Command(c).into()
 }
 
-// ---- budget ----
+// ---- ngân sách ----
 
 #[test]
 fn budget_splits_the_connect_timeout_evenly() {
@@ -68,7 +68,7 @@ fn budget_with_an_absurd_number_of_tries_does_not_panic() {
     assert_eq!(budget(usize::MAX), CONNECT_TIMEOUT);
 }
 
-// ---- attempts: địa chỉ, tài khoản ----
+// ---- lượt thử: địa chỉ, tài khoản ----
 
 #[test]
 fn attempts_use_the_default_port_when_none_is_given() {
@@ -134,7 +134,7 @@ fn attempts_accept_a_username_without_a_password() {
     assert_eq!(c.password, None);
 }
 
-// ---- attempts: kế hoạch TLS cho từng mode ----
+// ---- lượt thử: kế hoạch TLS cho từng chế độ ----
 
 #[test]
 fn tls_plan_per_mode_follows_libpq_order() {
@@ -288,7 +288,7 @@ fn other_errors_use_the_crate_display_text() {
     assert_eq!(error_text(&e), e.kind.to_string());
 }
 
-// ---- open / connect_any ----
+// ---- mở / connect_any ----
 
 #[tokio::test]
 async fn open_requires_a_host() {

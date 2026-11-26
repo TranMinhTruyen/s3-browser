@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-// Error codes of the native library (protocol.rs).
+// Mã lỗi của thư viện native (protocol.rs).
 const (
 	codeInvalidRequest = "invalidRequest"
 	codeOpenFailed     = "openFailed"
@@ -27,18 +27,11 @@ const (
 	codeCancelled      = "cancelled"
 )
 
-// cancelRetry is how often a canceled call repeats s3b_cancel until it returns: the first cancel can arrive
-// before the library has registered the request, and is then ignored.
+// cancelRetry là số lần một lời gọi đã hủy thử lại s3b_cancel trước khi trả về: lần hủy đầu tiên có thể đến
+// trước khi thư viện đăng ký yêu cầu nên bị bỏ qua.
 const cancelRetry = 100 * time.Millisecond
 
-// nativeCaller is the s3b_db library: call blocks until the response JSON is ready, cancel interrupts the
-// running request id.
-type nativeCaller interface {
-	call(req []byte) ([]byte, error)
-	cancel(id uint64)
-}
-
-// nativeError is an error answered by the native library.
+// nativeError là lỗi do thư viện native trả về.
 type nativeError struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
@@ -48,13 +41,13 @@ func (e *nativeError) Error() string {
 	return e.Code + ": " + e.Message
 }
 
-// loadError means the native library could not be loaded or called (DBE009).
+// loadError cho biết không thể nạp hoặc gọi thư viện native (DBE009).
 type loadError struct{ err error }
 
 func (e *loadError) Error() string { return e.err.Error() }
 func (e *loadError) Unwrap() error { return e.err }
 
-// submoduleNativeMng calls the native library. It is loaded by the first call, and a failed load is retried.
+// submoduleNativeMng gọi thư viện native. Thư viện được nạp ở lần gọi đầu tiên; nếu nạp thất bại thì sẽ thử lại.
 type submoduleNativeMng struct {
 	logger *slog.Logger
 	load   func() (nativeCaller, error)
@@ -64,12 +57,12 @@ type submoduleNativeMng struct {
 	caller nativeCaller
 }
 
-// newSubmoduleNativeMng creates the caller; load returns the library on first use.
+// newSubmoduleNativeMng tạo bộ gọi; load trả về thư viện ở lần sử dụng đầu tiên.
 func newSubmoduleNativeMng(logger *slog.Logger, load func() (nativeCaller, error)) *submoduleNativeMng {
 	return &submoduleNativeMng{logger: logger.With("submodules", "native"), load: load}
 }
 
-// get returns the loaded library, loading it if needed.
+// get trả về thư viện đã nạp hoặc nạp thư viện nếu cần.
 func (m *submoduleNativeMng) get() (nativeCaller, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -85,7 +78,7 @@ func (m *submoduleNativeMng) get() (nativeCaller, error) {
 	return m.caller, nil
 }
 
-// loaded reports whether the library is loaded, without loading it.
+// loaded cho biết thư viện đã được nạp hay chưa mà không tự nạp thư viện.
 func (m *submoduleNativeMng) loaded() bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -93,18 +86,18 @@ func (m *submoduleNativeMng) loaded() bool {
 	return m.caller != nil
 }
 
-// response is the envelope of a native response when it is not the expected success shape.
+// response là cấu trúc bao ngoài của phản hồi native khi phản hồi không có dạng thành công như mong đợi.
 type response struct {
 	Ok     bool            `json:"ok"`
 	Result json.RawMessage `json:"result"`
 	Error  *nativeError    `json:"error"`
 }
 
-// okPrefix starts every success response (ok_response in protocol/mod.rs), so the result is the bytes after it
-// up to the closing brace. Taking them without parsing keeps a big page from being scanned again.
+// okPrefix mở đầu mọi phản hồi thành công (ok_response trong protocol/mod.rs), vì vậy kết quả là các byte sau tiền tố
+// đến trước dấu ngoặc đóng. Tách trực tiếp mà không phân tích lại giúp tránh quét lần nữa một trang dữ liệu lớn.
 var okPrefix = []byte(`{"ok":true,"result":`)
 
-// callNative sends one request and decodes the result into T.
+// callNative gửi một yêu cầu rồi giải mã kết quả thành T.
 func callNative[T any](ctx context.Context, m *submoduleNativeMng, method string, params any) (T, error) {
 	var res T
 
@@ -121,8 +114,8 @@ func callNative[T any](ctx context.Context, m *submoduleNativeMng, method string
 	return res, nil
 }
 
-// callNativeRaw sends one request and returns the JSON of the result as the library wrote it. When ctx ends
-// first it asks the library to cancel; the library then answers "cancelled" and the error carries that code.
+// callNativeRaw gửi một yêu cầu rồi trả về JSON kết quả nguyên trạng do thư viện tạo. Nếu ctx kết thúc trước,
+// hàm yêu cầu thư viện hủy; thư viện sau đó trả lời "cancelled" và lỗi sẽ chứa mã tương ứng.
 func callNativeRaw(ctx context.Context, m *submoduleNativeMng, method string, params any) (json.RawMessage, error) {
 	caller, err := m.get()
 	if err != nil {
@@ -184,9 +177,9 @@ func callNativeRaw(ctx context.Context, m *submoduleNativeMng, method string, pa
 	return resp.Result, nil
 }
 
-// withCallContext derives the context of one Wails call. The call context only ends when the frontend cancels
-// the call, so it also stops on appCtx (app shutdown) and after timeout
-// (timeout <= 0: no deadline). The returned cancel must be deferred.
+// withCallContext tạo context dẫn xuất cho một lời gọi Wails. Context của lời gọi chỉ kết thúc khi frontend hủy,
+// vì vậy hàm cũng dừng theo appCtx (ứng dụng tắt) hoặc khi hết timeout
+// (timeout <= 0: không đặt thời hạn). Phải defer hàm cancel được trả về.
 func withCallContext(ctx, appCtx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	var cancel context.CancelFunc
 	if timeout > 0 {
@@ -202,14 +195,14 @@ func withCallContext(ctx, appCtx context.Context, timeout time.Duration) (contex
 	}
 }
 
-// isCallCanceled reports whether the frontend canceled the call; nobody waits for the result then. A timeout
-// is not a cancel and is still reported.
+// isCallCanceled cho biết frontend có hủy lời gọi hay không; khi đó không còn bên nào chờ kết quả. Timeout
+// không được xem là thao tác hủy và vẫn phải được báo.
 func isCallCanceled(ctx context.Context) bool {
 	return errors.Is(ctx.Err(), context.Canceled)
 }
 
-// logCallFailure logs a failed call: a call the frontend canceled is expected, so it is only a debug line;
-// a timeout and every other failure stay errors. attrs are key-value pairs.
+// logCallFailure ghi log lời gọi thất bại: việc frontend hủy là bình thường nên chỉ ghi ở mức debug;
+// timeout và mọi lỗi khác vẫn ghi ở mức error. attrs là các cặp key-value.
 func logCallFailure(ctx context.Context, logger *slog.Logger, msg string, err error, attrs ...any) {
 	attrs = append(attrs, "error", err)
 	if isCallCanceled(ctx) {
@@ -219,7 +212,7 @@ func logCallFailure(ctx context.Context, logger *slog.Logger, msg string, err er
 	logger.Error(msg, attrs...)
 }
 
-// timeoutText formats a timeout for the DBE015 message: 5m, 30s.
+// timeoutText định dạng thời gian chờ cho thông báo DBE015: 5m, 30s.
 func timeoutText(d time.Duration) string {
 	if d%time.Minute == 0 {
 		return fmt.Sprintf("%dm", int(d/time.Minute))
@@ -227,7 +220,7 @@ func timeoutText(d time.Duration) string {
 	return d.String()
 }
 
-// errorCodeMessage maps a native error code to its message code; SQL errors are DBE006.
+// errorCodeMessage ánh xạ mã lỗi native sang mã thông báo; lỗi SQL dùng DBE006.
 func errorCodeMessage(code string) string {
 	switch code {
 	case codeInvalidRequest:
@@ -248,8 +241,8 @@ func errorCodeMessage(code string) string {
 	return DBE008
 }
 
-// failCall ends a failed native call. A call the frontend canceled returns silently; a timeout is DBE015;
-// params fill the message ({path}, {name}) and timeout is the limit of the call.
+// failCall kết thúc lời gọi native thất bại. Nếu frontend đã hủy thì dừng im lặng; timeout dùng DBE015;
+// params điền thông tin vào thông báo ({path}, {name}), timeout là giới hạn thời gian của lời gọi.
 func failCall[T any](
 	ctx context.Context,
 	output models.Output[T],

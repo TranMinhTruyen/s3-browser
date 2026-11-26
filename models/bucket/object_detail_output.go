@@ -1,11 +1,11 @@
 package bucket
 
-// ObjectDetailOutput is the head information of one object.
+// ObjectDetailOutput chứa thông tin HeadObject của một object.
 type ObjectDetailOutput struct {
 	Key         string `json:"key"`
 	ContentType string `json:"contentType"`
-	// StorageClass is empty when the provider doesn't return it (S3 omits it for STANDARD).
+	// StorageClass rỗng nếu provider không trả về (S3 bỏ qua trường này với STANDARD).
 	StorageClass string `json:"storageClass"`
-	// Metadata is the user metadata (x-amz-meta-*), keys are lower case. Never nil.
+	// Metadata là metadata do người dùng đặt (x-amz-meta-*), key ở dạng chữ thường. Không bao giờ nil.
 	Metadata map[string]string `json:"metadata"`
 }

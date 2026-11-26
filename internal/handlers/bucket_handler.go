@@ -8,19 +8,19 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// BucketHandler is the Wails service for connections, buckets, objects, uploads and downloads.
+// BucketHandler là service Wails xử lý kết nối, bucket, object, tải lên và tải xuống.
 type BucketHandler struct {
 	bucket *bucket.Module
 }
 
-// NewBucketHandler creates the bucket handler.
+// NewBucketHandler tạo handler bucket.
 func NewBucketHandler(bucket *bucket.Module) *BucketHandler {
 	return &BucketHandler{
 		bucket: bucket,
 	}
 }
 
-// ConnectS3 tests the connection when isTestConn is set, otherwise connects and keeps it open.
+// ConnectS3 kiểm tra kết nối nếu bật isTestConn; nếu không thì kết nối và giữ kết nối mở.
 func (h *BucketHandler) ConnectS3(
 	ctx context.Context,
 	input models.ConnectionProfileInput,
@@ -33,7 +33,7 @@ func (h *BucketHandler) ConnectS3(
 	return h.bucket.Connect(ctx, input, isExistingProfile)
 }
 
-// ConnectS3ByProfile connects using a saved profile.
+// ConnectS3ByProfile kết nối bằng hồ sơ đã lưu.
 func (h *BucketHandler) ConnectS3ByProfile(
 	ctx context.Context,
 	connectionId string,
@@ -41,7 +41,7 @@ func (h *BucketHandler) ConnectS3ByProfile(
 	return h.bucket.ConnectByProfile(ctx, connectionId)
 }
 
-// ReauthConnection renews the credentials of a live connection (new MFA code) without dropping it.
+// ReauthConnection gia hạn thông tin xác thực của kết nối đang hoạt động (bằng mã MFA mới) mà không ngắt kết nối.
 func (h *BucketHandler) ReauthConnection(
 	ctx context.Context,
 	connectionId string,
@@ -50,7 +50,7 @@ func (h *BucketHandler) ReauthConnection(
 	return h.bucket.ReauthConnection(ctx, connectionId, input)
 }
 
-// LoginMinioOidc signs in with OpenID Connect in the system browser and returns the session id for the connect.
+// LoginMinioOidc đăng nhập bằng OpenID Connect trong trình duyệt hệ thống và trả id phiên để dùng khi kết nối.
 func (h *BucketHandler) LoginMinioOidc(
 	ctx context.Context,
 	cfg models.AuthConfig,
@@ -58,27 +58,27 @@ func (h *BucketHandler) LoginMinioOidc(
 	return h.bucket.LoginMinioOidc(ctx, cfg)
 }
 
-// ChooseAuthFile opens the file dialog for a certificate, key or CA file (kind: cert, key, ca).
+// ChooseAuthFile mở hộp thoại chọn file chứng chỉ, khóa hoặc CA (kind: cert, key, ca).
 func (h *BucketHandler) ChooseAuthFile(kind string) models.Output[string] {
 	return h.bucket.ChooseAuthFile(kind)
 }
 
-// ListAwsProfiles lists the profiles of the AWS CLI config files; empty paths mean the standard files.
+// ListAwsProfiles liệt kê hồ sơ trong các file cấu hình AWS CLI; đường dẫn rỗng nghĩa là dùng file mặc định.
 func (h *BucketHandler) ListAwsProfiles(configFile, credentialsFile string) models.Output[[]models.AwsProfileOutput] {
 	return h.bucket.ListAwsProfiles(configFile, credentialsFile)
 }
 
-// DisconnectAll closes every connection.
+// DisconnectAll đóng mọi kết nối.
 func (h *BucketHandler) DisconnectAll() {
 	h.bucket.DisconnectAll()
 }
 
-// Disconnect closes one connection.
+// Disconnect đóng một kết nối.
 func (h *BucketHandler) Disconnect(connectionId string) models.Output[bool] {
 	return h.bucket.Disconnect(connectionId)
 }
 
-// GetListBucket lists the buckets of a connection.
+// GetListBucket liệt kê bucket của một kết nối.
 func (h *BucketHandler) GetListBucket(
 	ctx context.Context,
 	input models.ListBucketInput,
@@ -86,7 +86,7 @@ func (h *BucketHandler) GetListBucket(
 	return h.bucket.GetListBucket(ctx, input)
 }
 
-// CheckBucketAccess returns the access flags of the given buckets.
+// CheckBucketAccess trả về các cờ quyền truy cập của những bucket đã cho.
 func (h *BucketHandler) CheckBucketAccess(
 	ctx context.Context,
 	input models.CheckBucketAccessInput,
@@ -94,12 +94,12 @@ func (h *BucketHandler) CheckBucketAccess(
 	return h.bucket.CheckBucketAccess(ctx, input)
 }
 
-// CreateBucket creates a bucket.
+// CreateBucket tạo bucket.
 func (h *BucketHandler) CreateBucket(ctx context.Context, input models.CreateBucketInput) models.Output[any] {
 	return h.bucket.CreateBucket(ctx, input)
 }
 
-// GetBucketPolicy returns the access mode and policy of a bucket.
+// GetBucketPolicy trả về chế độ truy cập và policy của bucket.
 func (h *BucketHandler) GetBucketPolicy(
 	ctx context.Context,
 	input models.BucketPolicyInput,
@@ -107,7 +107,7 @@ func (h *BucketHandler) GetBucketPolicy(
 	return h.bucket.GetBucketPolicy(ctx, input)
 }
 
-// PutBucketPolicy sets the access mode of a bucket.
+// PutBucketPolicy đặt chế độ truy cập của bucket.
 func (h *BucketHandler) PutBucketPolicy(
 	ctx context.Context,
 	input models.PutBucketPolicyInput,
@@ -115,7 +115,7 @@ func (h *BucketHandler) PutBucketPolicy(
 	return h.bucket.PutBucketPolicy(ctx, input)
 }
 
-// GetBucketDetail returns the read-only detail of a bucket.
+// GetBucketDetail trả về thông tin chỉ đọc của bucket.
 func (h *BucketHandler) GetBucketDetail(
 	ctx context.Context,
 	input models.BucketDetailInput,
@@ -123,7 +123,7 @@ func (h *BucketHandler) GetBucketDetail(
 	return h.bucket.GetBucketDetail(ctx, input)
 }
 
-// GetBucketDeleteInfo returns whether a bucket is empty, its versioning and Object Lock.
+// GetBucketDeleteInfo trả về trạng thái rỗng, versioning và Object Lock của bucket.
 func (h *BucketHandler) GetBucketDeleteInfo(
 	ctx context.Context,
 	input models.DeleteBucketInput,
@@ -131,7 +131,7 @@ func (h *BucketHandler) GetBucketDeleteInfo(
 	return h.bucket.GetBucketDeleteInfo(ctx, input)
 }
 
-// DeleteBucket deletes a bucket with everything in it.
+// DeleteBucket xóa bucket cùng mọi nội dung bên trong.
 func (h *BucketHandler) DeleteBucket(
 	ctx context.Context,
 	input models.DeleteBucketInput,
@@ -139,7 +139,7 @@ func (h *BucketHandler) DeleteBucket(
 	return h.bucket.DeleteBucket(ctx, input)
 }
 
-// GetListObject lists one page of objects under a prefix.
+// GetListObject liệt kê một trang object dưới prefix.
 func (h *BucketHandler) GetListObject(
 	ctx context.Context,
 	input models.ListObjectInput,
@@ -147,7 +147,7 @@ func (h *BucketHandler) GetListObject(
 	return h.bucket.GetListObject(ctx, input)
 }
 
-// SearchObject searches objects of a bucket by keyword.
+// SearchObject tìm object trong bucket theo từ khóa.
 func (h *BucketHandler) SearchObject(
 	ctx context.Context,
 	input models.SearchObjectInput,
@@ -155,7 +155,7 @@ func (h *BucketHandler) SearchObject(
 	return h.bucket.SearchObject(ctx, input)
 }
 
-// SearchBucket searches buckets by keyword.
+// SearchBucket tìm bucket theo từ khóa.
 func (h *BucketHandler) SearchBucket(
 	ctx context.Context,
 	input models.SearchBucketInput,
@@ -163,7 +163,7 @@ func (h *BucketHandler) SearchBucket(
 	return h.bucket.SearchBucket(ctx, input)
 }
 
-// GetObjectDetail returns the metadata of one object.
+// GetObjectDetail trả về metadata của một object.
 func (h *BucketHandler) GetObjectDetail(
 	ctx context.Context,
 	input models.ObjectDetailInput,
@@ -171,32 +171,32 @@ func (h *BucketHandler) GetObjectDetail(
 	return h.bucket.GetObjectDetail(ctx, input)
 }
 
-// DownloadObject starts downloading objects.
+// DownloadObject bắt đầu tải object xuống.
 func (h *BucketHandler) DownloadObject(input models.DownloadObjInput) models.Output[any] {
 	return h.bucket.DownloadObject(input)
 }
 
-// CancelDownloadOne cancels one running download.
+// CancelDownloadOne hủy một lượt tải xuống đang chạy.
 func (h *BucketHandler) CancelDownloadOne(id string) models.Output[any] {
 	return h.bucket.CancelDownloadOne(id)
 }
 
-// CancelAllDownloads cancels every running download.
+// CancelAllDownloads hủy mọi lượt tải xuống đang chạy.
 func (h *BucketHandler) CancelAllDownloads() models.Output[any] {
 	return h.bucket.CancelAllDownloads()
 }
 
-// CancelUploadOne cancels one running upload.
+// CancelUploadOne hủy một lượt tải lên đang chạy.
 func (h *BucketHandler) CancelUploadOne(id string) models.Output[any] {
 	return h.bucket.CancelUploadOne(id)
 }
 
-// CancelAllUploads cancels every running upload.
+// CancelAllUploads hủy mọi lượt tải lên đang chạy.
 func (h *BucketHandler) CancelAllUploads() models.Output[any] {
 	return h.bucket.CancelAllUploads()
 }
 
-// DeleteObject deletes the given objects.
+// DeleteObject xóa các object đã cho.
 func (h *BucketHandler) DeleteObject(
 	ctx context.Context,
 	input models.DeleteObjInput,
@@ -204,7 +204,7 @@ func (h *BucketHandler) DeleteObject(
 	return h.bucket.DeleteObject(ctx, input)
 }
 
-// DeletePrefix deletes every object under a prefix.
+// DeletePrefix xóa mọi object dưới prefix.
 func (h *BucketHandler) DeletePrefix(
 	ctx context.Context,
 	input models.DeletePrefixInput,
@@ -212,30 +212,30 @@ func (h *BucketHandler) DeletePrefix(
 	return h.bucket.DeletePrefix(ctx, input)
 }
 
-// GetDownloadHistory returns the download history.
+// GetDownloadHistory trả về lịch sử tải xuống.
 func (h *BucketHandler) GetDownloadHistory(
 	input models.DownloadHistoryInput,
 ) models.Output[models.DownloadHistoryOutput] {
 	return h.bucket.GetDownloadHistory(input)
 }
 
-// OpenDownloadDest opens a downloaded file in the file manager.
+// OpenDownloadDest mở file đã tải xuống trong trình quản lý file.
 func (h *BucketHandler) OpenDownloadDest(fileName, path string) models.Output[any] {
 	return h.bucket.OpenDownloadDest(fileName, path)
 }
 
-// UploadObject starts uploading files.
+// UploadObject bắt đầu tải file lên.
 func (h *BucketHandler) UploadObject(input models.UploadObjInput) models.Output[any] {
 	return h.bucket.UploadObject(input)
 }
 
-// PickFiles opens the native dialog to choose files to upload and returns them as groups.
+// PickFiles mở hộp thoại của hệ điều hành để chọn file tải lên rồi trả về các nhóm file.
 func (h *BucketHandler) PickFiles(ctx context.Context) models.Output[models.FilesDroppedOutput] {
 	return h.bucket.PickFiles(ctx)
 }
 
-// FilesDropped is the main window's WindowFilesDropped listener, not a frontend API:
-// wails:ignore keeps it out of the generated bindings.
+// FilesDropped là listener WindowFilesDropped của cửa sổ chính, không phải API frontend:
+// wails:ignore ngăn hàm này xuất hiện trong binding được sinh tự động.
 //
 //wails:ignore
 func (h *BucketHandler) FilesDropped(event *application.WindowEvent) {

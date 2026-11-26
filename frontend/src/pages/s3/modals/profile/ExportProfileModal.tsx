@@ -28,9 +28,9 @@ type ExportProfileForm = {
 const MIN_PASSWORD_LENGTH = 8;
 
 /**
- * Exports one profile to a JSON file chosen in the native save dialog; secrets are optional and encrypted with
- * the password typed here (kept only in this form). Resolves true once the file is written, false if canceled.
- * Canceling the save dialog keeps the modal open. Load it through `showExportProfileModal` (lazy chunk).
+ * Xuất một profile ra file JSON được chọn trong hộp thoại lưu của hệ thống; có thể xuất kèm thông tin bí mật được mã hóa
+ * bằng mật khẩu nhập tại đây (chỉ lưu trong form này). Trả về true khi ghi file xong, false nếu hủy.
+ * Hủy hộp thoại lưu sẽ giữ modal mở. Tải qua `showExportProfileModal` (lazy chunk).
  */
 export default createMantineModal<ExportProfileModalProps, boolean>(
   props => {
@@ -46,7 +46,7 @@ export default createMantineModal<ExportProfileModalProps, boolean>(
         password: (value, values) => {
           if (!values.includeSecret) return null;
           if (!value) return 'V000001';
-          // Count code points (not UTF-16 units) to match the backend, which counts runes.
+          // Đếm code point (không phải đơn vị UTF-16) để khớp với backend, nơi đếm rune.
           return [...value].length < MIN_PASSWORD_LENGTH ? `V000012:${MIN_PASSWORD_LENGTH}` : null;
         },
         confirmPassword: (value, values) => (values.includeSecret && value !== values.password ? 'V000011' : null),
@@ -55,7 +55,7 @@ export default createMantineModal<ExportProfileModalProps, boolean>(
 
     const onSubmitExport = useCallback(
       async ({ includeSecret, password }: ExportProfileForm) => {
-        // Saved secrets are not exported unless ticked: confirm first; canceling keeps this modal open.
+        // Không xuất thông tin bí mật đã lưu trừ khi được đánh dấu: hỏi xác nhận trước; hủy sẽ giữ modal mở.
         if (hasSecret && !includeSecret) {
           const confirmed = await ConfirmModal.show({
             type: 'warning',
@@ -69,7 +69,7 @@ export default createMantineModal<ExportProfileModalProps, boolean>(
           [{ id: profile.id, includeSecret, password: includeSecret ? password : undefined }],
           { signal: getSignal() }
         );
-        // Empty path = the save dialog was canceled, null = failed: keep the modal open in both cases.
+        // Đường dẫn rỗng nghĩa là đã hủy hộp thoại lưu, null nghĩa là thất bại: cả hai trường hợp đều giữ modal mở.
         if (!path) return;
         resolve(true);
         hide();

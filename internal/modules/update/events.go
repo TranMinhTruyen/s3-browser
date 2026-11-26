@@ -6,15 +6,14 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// Event names emitted to the frontend, in the form domain:kebab-name.
+// Tên sự kiện gửi đến frontend, theo định dạng domain:kebab-name.
 const (
-	// Emitted when the update state changes, and every 200 ms while the installer downloads; payload is
-	// UpdateStateOutput
+	// Phát khi trạng thái cập nhật thay đổi và mỗi 200 ms trong lúc tải bộ cài; payload là UpdateStateOutput.
 	EventStateChanged = "update:state-changed"
 )
 
-// RegisterEvent must be called directly from init so the binding generator can
-// emit the TypeScript payload type for Events.On / Events.Emit on the frontend.
+// Phải gọi RegisterEvent trực tiếp từ init để bộ sinh binding tạo kiểu payload TypeScript
+// cho Events.On / Events.Emit ở frontend.
 func init() {
 	application.RegisterEvent[models.UpdateStateOutput](EventStateChanged)
 }

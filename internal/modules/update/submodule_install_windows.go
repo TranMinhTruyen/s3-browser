@@ -9,8 +9,8 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// installSupported reports whether this exe came from the NSIS installer: the installer writes uninstall.exe
-// next to the app, and a portable or unpacked build has none.
+// installSupported cho biết exe này có được cài bằng NSIS hay không: bộ cài đặt uninstall.exe cạnh ứng dụng,
+// còn bản portable hoặc bản giải nén không có file này.
 func installSupported() bool {
 	if portable.Enabled || (runtime.GOARCH != "amd64" && runtime.GOARCH != "arm64") {
 		return false
@@ -23,8 +23,8 @@ func installSupported() bool {
 	return err == nil
 }
 
-// launchInstaller runs the installer silently through ShellExecute so Windows shows the UAC prompt itself.
-// /relaunch makes the installer start the app again, /D (must be last, no quotes) keeps the install folder.
+// launchInstaller chạy ngầm bộ cài qua ShellExecute để Windows tự hiển thị hộp thoại UAC.
+// /relaunch yêu cầu bộ cài khởi chạy lại ứng dụng; /D (phải là tham số cuối, không có dấu ngoặc kép) giữ nguyên thư mục cài đặt.
 func launchInstaller(installer, installDir string) error {
 	verb, err := windows.UTF16PtrFromString("open")
 	if err != nil {

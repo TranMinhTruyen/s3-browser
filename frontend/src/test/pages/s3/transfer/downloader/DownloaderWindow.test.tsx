@@ -12,7 +12,7 @@ vi.mock('@wailsio/runtime', async importOriginal => {
   const actual = await importOriginal<typeof import('@wailsio/runtime')>();
   return { ...actual, Events: { ...actual.Events, On: vi.fn() } };
 });
-// jsdom has no layout: report a fixed size for the measured element.
+// jsdom không có layout: trả về kích thước cố định cho phần tử cần đo.
 vi.mock('@mantine/hooks', async importOriginal => ({
   ...(await importOriginal<typeof import('@mantine/hooks')>()),
   useElementSize: () => ({ ref: { current: null }, width: 300, height: 120 }),
@@ -24,7 +24,7 @@ vi.mock('@wails/S3Browser/internal/handlers/buckethandler', () => ({
 vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: vi.fn() }));
 
 const callIPCMock = vi.mocked(callIPC);
-// The REAL virtualizer is used; jsdom has no layout, so give every element a viewport.
+// Sử dụng virtualizer THẬT; jsdom không có layout nên gán viewport cho mọi phần tử.
 const sizes = [
   ['offsetHeight', 260],
   ['offsetWidth', 400],

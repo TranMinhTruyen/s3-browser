@@ -26,7 +26,7 @@ describe('onTabGone', () => {
     activeTab,
     tabList: Object.fromEntries(ids.map(id => [id, tabState])),
   });
-  // Counts the subscriptions still alive on the store.
+  // Đếm số subscription còn hoạt động trên store.
   const trackSubscriptions = () => {
     const original = useTabListStore.subscribe;
     const live = { count: 0 };

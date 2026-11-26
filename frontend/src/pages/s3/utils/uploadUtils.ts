@@ -5,7 +5,7 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import i18n from '@/locales/i18n';
 import { useTabListStore } from '@/pages/s3/stores/tabListStore';
 
-/** A local file to upload and its object key relative to the target prefix. */
+/** File cục bộ cần tải lên và object key của nó tính tương đối với tiền tố đích. */
 type UploadFile = { path: string; relKey: string };
 
 export type RunUploadParams = {
@@ -17,7 +17,7 @@ export type RunUploadParams = {
   files: UploadFile[];
 };
 
-/** True when no upload is running; otherwise warns the user (only one upload runs at a time). */
+/** Trả về true nếu không có lượt tải lên nào đang chạy; nếu không thì cảnh báo người dùng (mỗi lần chỉ chạy một lượt). */
 export function ensureUploadIdle(): boolean {
   if (useTabListStore.getState().uploadingTabId === null) return true;
   toast.warning(i18n.t('ipcMessage:bucket.S3W005'));
@@ -25,8 +25,8 @@ export function ensureUploadIdle(): boolean {
 }
 
 /**
- * Uploads the files and marks the tab as uploading meanwhile. `onDone` runs after the upload (e.g. a refresh),
- * while the tab is still marked. Does nothing when another upload is running.
+ * Tải các file lên và đánh dấu tab đang tải trong lúc xử lý. `onDone` chạy sau khi tải xong (ví dụ để làm mới),
+ * khi tab vẫn còn được đánh dấu. Không làm gì nếu một lượt tải khác đang chạy.
  */
 export async function runUpload(params: RunUploadParams, onDone?: () => Promise<void> | void): Promise<void> {
   const { tabId, connectionId, profileName, bucket, prefix, files } = params;
@@ -35,7 +35,7 @@ export async function runUpload(params: RunUploadParams, onDone?: () => Promise<
   const { setUploadingTab } = useTabListStore.getState();
   setUploadingTab(tabId);
   try {
-    // The backend sends one success / canceled / error message per file, shown by callIPC.
+    // Backend gửi một thông báo thành công / đã hủy / lỗi cho mỗi file; callIPC sẽ hiển thị chúng.
     await callIPC(UploadObject, [
       { connectionId, profileName, bucket, prefix, objList: files.map(({ path, relKey }) => ({ path, relKey })) },
     ]);
@@ -45,21 +45,21 @@ export async function runUpload(params: RunUploadParams, onDone?: () => Promise<
   }
 }
 
-/** Limits applied while building the upload picker list. */
+/** Các giới hạn áp dụng khi tạo danh sách chọn file để tải lên. */
 export type PickerLimits = { maxFilesPerFolder: number; largeFileMaxCount: number; maxTotalFiles: number };
 
 export type PickerList = { groups: DroppedGroup[]; selected: ReadonlySet<string> };
 
 export type MergeResult = PickerList & {
-  // Files were left out because the list reached maxTotalFiles.
+  // Một số file bị bỏ qua vì danh sách đã đạt maxTotalFiles.
   overTotal: boolean;
-  // New files were added unticked because their group is full.
+  // File mới được thêm nhưng không đánh dấu vì nhóm của chúng đã đủ số lượng.
   autoUnselected: boolean;
 };
 
 /**
- * Adds the incoming groups to the list: files already listed (same path) are skipped, groups with the same name
- * are merged, the list is capped at maxTotalFiles, and new files are ticked in order until their group is full.
+ * Thêm các nhóm mới vào danh sách: bỏ qua file đã có (trùng đường dẫn), gộp nhóm trùng tên,
+ * giới hạn danh sách ở maxTotalFiles và lần lượt đánh dấu file mới cho đến khi nhóm đạt giới hạn.
  */
 export function mergePickedFiles(prev: PickerList, incoming: DroppedGroup[], limits: PickerLimits): MergeResult {
   const { maxFilesPerFolder, largeFileMaxCount, maxTotalFiles } = limits;
@@ -83,7 +83,7 @@ export function mergePickedFiles(prev: PickerList, incoming: DroppedGroup[], lim
         continue;
       }
       known.add(file.path);
-      // Lists in filesByGroup are copies, so pushing does not mutate the input.
+      // Các danh sách trong filesByGroup là bản sao nên thao tác push không sửa dữ liệu đầu vào.
       let groupFiles = filesByGroup.get(group.name);
       if (!groupFiles) {
         groupFiles = [];
@@ -116,7 +116,7 @@ export function mergePickedFiles(prev: PickerList, incoming: DroppedGroup[], lim
   return { groups, selected, overTotal, autoUnselected };
 }
 
-/** Removes the files with the given paths from the list and the ticks; groups left empty are dropped. */
+/** Xóa các file có đường dẫn đã cho khỏi danh sách và trạng thái đánh dấu; loại bỏ nhóm không còn file. */
 export function removePickedFiles(prev: PickerList, paths: readonly string[]): PickerList {
   const removed = new Set(paths);
   const selected = new Set([...prev.selected].filter(path => !removed.has(path)));

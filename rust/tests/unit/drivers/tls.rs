@@ -559,7 +559,7 @@ fn system_roots_are_loaded_once_and_not_empty() {
     assert!(Arc::ptr_eq(&roots(None).unwrap(), &roots(None).unwrap()));
 }
 
-// ---- cache ----
+// ---- bộ nhớ đệm ----
 
 #[test]
 fn cache_returns_same_config_for_same_mode_and_ca_file() {

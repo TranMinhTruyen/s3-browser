@@ -2,14 +2,14 @@ package cnst
 
 import "slices"
 
-// Storage providers a profile can connect to.
+// Các nhà cung cấp lưu trữ mà hồ sơ có thể kết nối.
 const (
 	ProviderAWS   = "aws"
 	ProviderMinio = "minio"
 )
 
-// Authentication methods (connection_profiles.auth_type). Keep in sync with the CHECK in the
-// 000002_auth_methods.sql migration and with frontend authMethods.ts.
+// Các phương thức xác thực (connection_profiles.auth_type). Đồng bộ danh sách này với CHECK trong migration
+// 000002_auth_methods.sql và frontend authMethods.ts.
 const (
 	AuthStatic          = "static"
 	AuthSharedProfile   = "sharedProfile"
@@ -23,7 +23,7 @@ const (
 	AuthMinioCert       = "minioCert"
 )
 
-// authMethodsByProvider lists the methods each provider accepts.
+// authMethodsByProvider liệt kê các phương thức được từng provider chấp nhận.
 var authMethodsByProvider = map[string][]string{
 	ProviderAWS: {
 		AuthStatic, AuthSharedProfile, AuthAssumeRole, AuthSSO, AuthDefaultChain, AuthAnonymous,
@@ -33,13 +33,13 @@ var authMethodsByProvider = map[string][]string{
 	},
 }
 
-// IsAuthTypeValid reports whether provider supports authType.
+// IsAuthTypeValid cho biết provider có hỗ trợ authType hay không.
 func IsAuthTypeValid(provider, authType string) bool {
 	return slices.Contains(authMethodsByProvider[provider], authType)
 }
 
-// IsAutoConnectAllowed reports whether a profile can connect without user action: OIDC needs a browser
-// login, and an AssumeRole profile with an MFA serial needs a fresh MFA code on every connect.
+// IsAutoConnectAllowed cho biết hồ sơ có thể tự kết nối mà không cần người dùng thao tác hay không: OIDC cần đăng nhập
+// bằng trình duyệt; hồ sơ AssumeRole có MFA serial cần mã MFA mới ở mỗi lần kết nối.
 func IsAutoConnectAllowed(authType, mfaSerial string) bool {
 	switch authType {
 	case AuthMinioOidc:

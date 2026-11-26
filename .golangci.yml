@@ -16,8 +16,8 @@ linters:
       line-length: 120
       tab-width: 4
     staticcheck:
-      # v2 merged gosimple + stylecheck into staticcheck.
-      # v1 only ran SA* (staticcheck) and S1* (gosimple), so keep ST*/QF* off.
+      # Phiên bản v2 gộp gosimple và stylecheck vào staticcheck.
+      # Phiên bản v1 chỉ chạy SA* (staticcheck) và S1* (gosimple), nên giữ ST*/QF* ở trạng thái tắt.
       checks:
         - all
         - -ST*

@@ -15,7 +15,7 @@ vi.mock('@/pages/sql/components/tableStructure/TableDataView', () => ({
     <div data-testid="data-view">{`${props.tabId}|${props.provider}|${props.profileId}|${props.schema}|${props.table}`}</div>
   ),
 }));
-// jsdom has no layout, so the virtualized grid is replaced by a stub that shows what it was given.
+// jsdom không có layout nên thay grid ảo bằng stub hiển thị dữ liệu được truyền vào.
 vi.mock('@/components/display/dataGrid/DataGrid', () => ({
   default: (props: {
     columns: string[];
@@ -59,7 +59,7 @@ const openTable = (profileId = 's1') => {
 const renderDetail = (id = openTable()) => renderWithProviders(<TableStructureDetail tabId={id} />);
 
 const selectTab = (name: string) => userEvent.click(screen.getByRole('tab', { name }));
-/** The panel of a sub tab (they all stay mounted, so each one is found by its tab). */
+/** Panel của một tab con (mọi panel đều được mount nên tìm từng panel theo tab tương ứng). */
 const panelOf = (name: string) =>
   document.getElementById(screen.getByRole('tab', { name }).getAttribute('aria-controls')!)!;
 

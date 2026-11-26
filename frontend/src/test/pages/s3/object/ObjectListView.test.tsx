@@ -24,13 +24,13 @@ import ObjectListView, { ObjectListViewRef } from '@/pages/s3/object/ObjectListV
 import { useTabListStore } from '@/pages/s3/stores/tabListStore';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// jsdom has no layout, so the real virtualizer would render no row: render every row instead.
-// `endIndex` is the last row the user "sees"; null means the end of the list.
+// jsdom không có layout nên virtualizer thật sẽ không render hàng nào: thay bằng cách render tất cả hàng.
+// `endIndex` là hàng cuối người dùng "nhìn thấy"; null nghĩa là cuối danh sách.
 const virtual = vi.hoisted(() => ({
   endIndex: null as number | null,
   scrollElement: null as unknown,
   estimate: null as number | null,
-  // Height of the viewport; null means the virtualizer has not measured it yet.
+  // Chiều cao viewport; null nghĩa là virtualizer chưa đo.
   scrollHeight: null as number | null,
   gap: 0,
   scrollMargin: 0,
@@ -53,7 +53,7 @@ vi.mock('@tanstack/react-virtual', () => ({
     scrollMargin: number;
   }) => ({
     measure: () => virtual.measure(),
-    // The real virtualizer asks for these itself; record them so a test can check what it would get.
+    // Virtualizer thật tự yêu cầu các giá trị này; ghi lại để test kiểm tra kết quả nó sẽ nhận.
     getVirtualItems: () => {
       virtual.scrollElement = getScrollElement();
       virtual.estimate = estimateSize();
@@ -132,14 +132,14 @@ const tab = () => useTabListStore.getState().tabList[TAB_ID];
 describe('ObjectListView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // The user keeps every file ticked.
+    // Người dùng giữ trạng thái đánh dấu cho mọi file.
     showConfirmMock.mockImplementation((async ({ files }: { files: { key: string }[] }) =>
       files.map(f => f.key)) as never);
     virtual.endIndex = null;
     virtual.scrollHeight = null;
     useSettingStore.setState({ draft: { ...DEFAULT_SETTINGS } });
-    // Mimics the real callIPC: an Output ({ result, ... }) runs resolveAction/rejectAction and yields its body;
-    // any other resolved value is treated as the body itself.
+    // Mô phỏng callIPC thật: Output ({ result, ... }) chạy resolveAction/rejectAction rồi trả về body;
+    // giá trị được resolve khác sẽ được xem chính là body.
     callIPCMock.mockImplementation((async (
       binding: (...a: unknown[]) => Promise<unknown>,
       args: unknown[],
@@ -149,7 +149,7 @@ describe('ObjectListView', () => {
       try {
         out = await binding(...args);
       } catch {
-        // Exception: the real callIPC toasts and calls rejectAction(undefined).
+        // Ngoại lệ: callIPC thật sẽ hiện toast và gọi rejectAction(undefined).
         options.rejectAction?.(undefined);
         return null;
       }
@@ -253,7 +253,7 @@ describe('ObjectListView', () => {
   });
 
   describe('prefetching the next page', () => {
-    // 6 rows: the last index is 5. The threshold index is 5 - max(2, ceil(2 * height / (88 + 8))).
+    // Có 6 hàng nên index cuối là 5. Ngưỡng index bằng 5 - max(2, ceil(2 * height / (88 + 8))).
     const many = Array.from({ length: 6 }, (_, i) => new ObjectItem({ key: `f${i}`, name: `f${i}` }));
 
     it.each([
@@ -301,7 +301,7 @@ describe('ObjectListView', () => {
       await waitFor(() => expect(listMock).toHaveBeenCalledTimes(2));
       expect(document.querySelector('.mantine-Loader-root')).toBeInTheDocument();
 
-      // Something else re-renders the list while the page is pending.
+      // Một tác nhân khác render lại danh sách trong khi trang đang chờ.
       setKeyword(undefined);
       await act(async () => {});
 
@@ -983,7 +983,7 @@ describe('ObjectListView', () => {
       expect(document.querySelector('.mantine-Loader-root')).not.toBeInTheDocument();
     });
 
-    // The old cursor still sits in state for one render after the source changes, with the list near its end.
+    // Con trỏ cũ vẫn còn trong state thêm một lần render sau khi nguồn đổi, trong khi danh sách gần cuối.
     const many = Array.from({ length: 6 }, (_, i) => new ObjectItem({ key: `f${i}`, name: `f${i}` }));
     const searchCursors = () => searchMock.mock.calls.map(c => (c[0] as { nextCursor: string }).nextCursor);
     const listCursors = () => listMock.mock.calls.map(c => (c[0] as { nextCursor: string }).nextCursor);
@@ -1332,7 +1332,7 @@ describe('ObjectListView', () => {
         },
       };
     };
-    // Captures the signal of the first request and never answers it.
+    // Lưu signal của yêu cầu đầu tiên và không trả lời yêu cầu đó.
     const hangAndCapture = () => {
       const captured: { signal?: AbortSignal } = {};
       callIPCMock.mockImplementation(((_b: unknown, _a: unknown, options: { signal?: AbortSignal }) => {

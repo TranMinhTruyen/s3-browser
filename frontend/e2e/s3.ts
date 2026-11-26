@@ -1,5 +1,5 @@
-// Minimal S3 client (SigV4, path style, only node:crypto) for seeding and checking the test bucket.
-// Endpoint and keys come from the environment only; nothing is stored in the repo.
+// Client S3 tối giản (SigV4, path style, chỉ dùng node:crypto) để tạo dữ liệu ban đầu và kiểm tra bucket kiểm thử.
+// Endpoint và key chỉ lấy từ biến môi trường; không lưu gì trong repo.
 import { createHash, createHmac } from 'node:crypto';
 
 export const s3Env = {
@@ -13,7 +13,7 @@ export const hasS3 = Boolean(s3Env.endpoint && s3Env.accessKey && s3Env.secretKe
 const sha256 = (data: string | Buffer) => createHash('sha256').update(data).digest('hex');
 const hmac = (key: string | Buffer, data: string) => createHmac('sha256', key).update(data).digest();
 
-/** Sends a signed request and returns the HTTP status. */
+/** Gửi yêu cầu đã ký và trả về mã trạng thái HTTP. */
 export async function s3(method: 'PUT' | 'DELETE' | 'HEAD', path: string, body = Buffer.alloc(0)) {
   const url = new URL(s3Env.endpoint);
   const canonicalPath = path
@@ -50,7 +50,7 @@ export async function s3(method: 'PUT' | 'DELETE' | 'HEAD', path: string, body =
   return res.status;
 }
 
-/** Creates the bucket and puts every object (key → text content). */
+/** Tạo bucket và ghi từng object (key → nội dung văn bản). */
 export async function seedBucket(bucket: string, objects: Record<string, string>) {
   const status = await s3('PUT', `/${bucket}`);
   if (status >= 300) throw new Error(`Create bucket ${bucket} -> ${status}`);
@@ -60,7 +60,7 @@ export async function seedBucket(bucket: string, objects: Record<string, string>
   }
 }
 
-/** Deletes the given objects (missing ones are fine) and then the bucket. */
+/** Xóa các object đã cho (object không tồn tại cũng không sao), sau đó xóa bucket. */
 export async function dropBucket(bucket: string, keys: string[]) {
   for (const key of keys) await s3('DELETE', `/${bucket}/${key}`);
   await s3('DELETE', `/${bucket}`);

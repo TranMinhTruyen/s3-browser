@@ -1,24 +1,24 @@
 .root {
-  /* Own compositing layer snaps the badge origin to whole pixels, so border and glyph rounding stay in step at fractional positions */
+  /* Layer compositing riêng căn gốc badge vào pixel nguyên để đường viền và ký tự được làm tròn đồng bộ ở vị trí lẻ */
   will-change: transform;
 }
 
 .label {
-  /* Trim the line box to cap height so uppercase text centers exactly; symmetric padding keeps accents/descenders inside the label's overflow clip */
+  /* Thu line box về chiều cao chữ hoa để căn giữa chính xác; padding đối xứng giữ dấu và nét xuống trong vùng cắt của nhãn */
   text-box: trim-both cap alphabetic;
   padding-block: 0.35em;
 }
 
-/* Measured at DPR 1, 1.25 and 1.5: at 1.25dppx the border rounds down to a device pixel, so snapping is worse there; enable only at 1 and 1.5 */
+/* Đo ở DPR 1, 1.25 và 1.5: tại 1.25dppx viền bị làm tròn xuống pixel thiết bị nên căn pixel còn tệ hơn; chỉ bật ở 1 và 1.5 */
 @media (resolution: 1dppx), (resolution: 1.5dppx) {
-  /* xs–md: put the cap top on a whole pixel so an odd leftover pixel goes below the text, not above */
+  /* xs–md: đặt đỉnh chữ hoa lên pixel nguyên để pixel lẻ còn dư nằm dưới chữ thay vì phía trên */
   .snap {
     align-items: start;
-    /* 2px = 2 × the 0.0625rem border, which Chromium rounds to 1 device px at these resolutions */
+    /* 2px = 2 × viền 0.0625rem; Chromium làm tròn thành 1 pixel thiết bị ở các độ phân giải này */
     padding-top: round(nearest, calc((var(--badge-height) - 2px - 1cap) / 2), 1px);
   }
 
-  /* Cancel the label's clip padding so the cap top sits exactly at the root's padding edge */
+  /* Bù lại padding cắt của nhãn để đỉnh chữ hoa nằm đúng mép padding của phần tử gốc */
   .snap .label {
     margin-top: -0.35em;
   }

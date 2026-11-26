@@ -3,11 +3,11 @@ import { ReactNode } from 'react';
 
 type ComboboxOptionsProps = {
   children: ReactNode;
-  // Height before the list starts scrolling.
+  // Chiều cao trước khi danh sách bắt đầu cuộn.
   maxHeight?: number;
 };
 
-/** `Combobox.Options` with the same thin scrollbar as Mantine `Select` instead of the native one. */
+/** `Combobox.Options` dùng thanh cuộn mảnh như Mantine `Select` thay cho thanh cuộn mặc định của hệ thống. */
 function ComboboxOptions({ children, maxHeight = 250 }: ComboboxOptionsProps) {
   return (
     <Combobox.Options>

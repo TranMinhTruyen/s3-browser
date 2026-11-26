@@ -1,20 +1,20 @@
-# Test and dev environment of S3Browser in one file: every S3 server and every database the app supports.
+# Môi trường test và phát triển của S3Browser trong một file: mọi máy chủ S3 và database ứng dụng hỗ trợ.
 #   S3:  minio + openldap + minio-init (Access key, Anonymous, STS, LDAP)      test-profiles.txt mục 1
-#        floci + floci-init (AWS emulator with IAM checks)                      test-profiles.txt mục 2
-#        keycloak + minio-tls + minio-tls-init (OIDC, Certificate/mTLS, CA)     test-profiles.txt mục 3
-#   DB:  mysql, mariadb, postgres, mssql, mongo, redis (Rust drivers: tests, benchmark, SQL mode)
+#        floci + floci-init (trình giả lập AWS có kiểm tra IAM)                test-profiles.txt mục 2
+#        keycloak + minio-tls + minio-tls-init (OIDC, Certificate/mTLS, CA)    test-profiles.txt mục 3
+#   DB:  mysql, mariadb, postgres, mssql, mongo, redis (driver Rust: test, benchmark, chế độ SQL)
 #
-# Run in this folder (README.txt):
-#   sh scripts/test-env.sh up                       everything in one command (certificates if missing + step 2)
-# or step by step:
-#   1) sh scripts/test-env.sh certs                 TLS certificates in certs/ (needs openssl), once
-#   2) docker compose up -d --wait                  everything (first pull ~7 GB; SQL Server needs >= 2 GB RAM free)
-#      docker compose up -d --wait minio-init       only some services: name them, dependencies start too
-#   Stop, keep data:     docker compose stop
-#   Remove everything:   docker compose down -v
-# Ports can be changed with environment variables (README.txt mục 4); DB values also live in db/db.env and the
-# defaults below must stay equal to it (the Rust tests and the benchmark read db/db.env).
-# Images of the databases have pinned patch tags so benchmark numbers stay comparable.
+# Chạy trong thư mục này (README.txt):
+#   sh scripts/test-env.sh up                       chạy mọi thứ bằng một lệnh (tạo chứng chỉ nếu thiếu rồi làm bước 2)
+# hoặc chạy từng bước:
+#   1) sh scripts/test-env.sh certs                 tạo chứng chỉ TLS trong certs/ (cần openssl), chỉ cần làm một lần
+#   2) docker compose up -d --wait                  chạy mọi thứ (lần đầu tải khoảng 7 GB; SQL Server cần trống >= 2 GB RAM)
+#      docker compose up -d --wait minio-init       chỉ chạy một số service: chỉ định service cần chạy, dependency cũng được khởi động
+#   Dừng và giữ dữ liệu:       docker compose stop
+#   Xóa toàn bộ:               docker compose down -v
+# Có thể đổi cổng bằng biến môi trường (README.txt mục 4); giá trị DB cũng có trong db/db.env và các giá trị mặc định
+# bên dưới phải khớp (test Rust và benchmark đọc db/db.env).
+# Tag phiên bản patch của image database được ghim để số liệu benchmark có thể so sánh.
 
 name: s3b-test
 
@@ -35,7 +35,7 @@ services:
     volumes:
       - minio-data:/data
     healthcheck:
-      # mc's default "local" alias points at :9000, so point it at the API port.
+      # Alias "local" mặc định của mc trỏ tới :9000 nên chuyển nó sang cổng API.
       test: ["CMD-SHELL", "MC_HOST_local=http://localhost:10000 mc ready local"]
       interval: 3s
       timeout: 5s
@@ -45,7 +45,7 @@ services:
   openldap:
     image: osixia/openldap:1.5.0
     container_name: s3b-test-openldap
-    # --copy-service lets the container load the mounted LDIF on its first start.
+    # --copy-service cho phép container nạp LDIF được mount trong lần khởi động đầu tiên.
     command: --copy-service
     ports:
       - "${LDAP_PORT:-10389}:389"
@@ -59,9 +59,9 @@ services:
       - ldap-config:/etc/ldap/slapd.d
     restart: unless-stopped
 
-  # One-shot: enables LDAP on MinIO, attaches policies, creates access keys and anonymous buckets.
+  # Chạy một lần: bật LDAP trên MinIO, gắn policy, tạo access key và bucket ẩn danh.
   minio-init:
-    # The server image already ships mc, so no extra image is needed.
+    # Image máy chủ đã có sẵn mc nên không cần image bổ sung.
     image: *minio-image
     container_name: s3b-test-minio-init
     depends_on:
@@ -77,7 +77,7 @@ services:
       - ./scripts/test-env.sh:/scripts/test-env.sh:ro
     restart: "no"
 
-  # ---------------------------------------------------------------- S3: Floci (AWS emulator)
+  # ---------------------------------------------------------------- S3: Floci (trình giả lập AWS)
   floci:
     image: floci/floci:latest
     container_name: s3b-test-floci
@@ -85,7 +85,7 @@ services:
       - "${FLOCI_PORT:-4566}:4566"
     environment:
       FLOCI_STORAGE_MODE: hybrid
-      # Check access keys and IAM policies like real AWS. Admin key: test / test.
+      # Kiểm tra access key và policy IAM như AWS thật. Admin key: test / test.
       FLOCI_SERVICES_IAM_ENFORCEMENT_ENABLED: "true"
       FLOCI_AUTH_VALIDATE_SIGNATURES: "true"
       FLOCI_SERVICES_S3_ENFORCE_AUTH: "true"
@@ -93,7 +93,7 @@ services:
       - floci-data:/app/data
     restart: unless-stopped
 
-  # One-shot: creates IAM users, roles, policies, buckets and the AWS CLI profile files in ./generated.
+  # Chạy một lần: tạo user, role, policy IAM, bucket và file profile AWS CLI trong ./generated.
   floci-init:
     image: amazon/aws-cli:2.15.41
     container_name: s3b-test-floci-init
@@ -104,7 +104,7 @@ services:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       AWS_PAGER: ""
-      # Port written into endpoint_url of the generated profiles (as seen from the host).
+      # Cổng ghi vào endpoint_url của profile được tạo (theo góc nhìn từ máy chủ).
       FLOCI_PORT: "${FLOCI_PORT:-4566}"
     volumes:
       - ./scripts/test-env.sh:/scripts/test-env.sh:ro
@@ -121,8 +121,8 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: "KeycloakAdmin#2026"
-      # http on localhost only. The issuer in the tokens is always this URL (the one typed in S3Browser),
-      # while MinIO reaches Keycloak inside the Docker network by its container name.
+      # Chỉ dùng http trên localhost. Issuer trong token luôn là URL này (URL nhập vào S3Browser),
+      # còn MinIO truy cập Keycloak bên trong mạng Docker bằng tên container.
       KC_HOSTNAME: "http://localhost:${KEYCLOAK_PORT:-8180}"
       KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
       KC_HTTP_ENABLED: "true"
@@ -130,7 +130,7 @@ services:
     volumes:
       - ./keycloak/s3browser-realm.json:/opt/keycloak/data/import/s3browser-realm.json:ro
     healthcheck:
-      # The image has no curl: ask the management port (9000) with bash's /dev/tcp.
+      # Image không có curl: kiểm tra cổng quản lý (9000) bằng /dev/tcp của bash.
       test:
         - CMD-SHELL
         - >-
@@ -147,7 +147,7 @@ services:
     image: *minio-image
     container_name: s3b-test-minio-tls
     command: server --address :10000 --console-address :10001 --certs-dir /certs /data
-    # MinIO reads the OpenID configuration once at start, so Keycloak must be ready first.
+    # MinIO chỉ đọc cấu hình OpenID khi khởi động nên Keycloak phải sẵn sàng trước.
     depends_on:
       keycloak:
         condition: service_healthy
@@ -157,13 +157,13 @@ services:
     environment:
       MINIO_ROOT_USER: admin
       MINIO_ROOT_PASSWORD: "MinioRoot#2026"
-      # OIDC (identity_openid): the JWT is checked against the keys of this Keycloak realm.
-      # The policy name comes from the "policy" claim (see keycloak/s3browser-realm.json).
+      # OIDC (identity_openid): JWT được kiểm tra bằng các key của realm Keycloak này.
+      # Tên policy lấy từ claim "policy" (xem keycloak/s3browser-realm.json).
       MINIO_IDENTITY_OPENID_CONFIG_URL: "http://s3b-test-keycloak:8080/realms/s3browser/.well-known/openid-configuration"
       MINIO_IDENTITY_OPENID_CLIENT_ID: s3browser
       MINIO_IDENTITY_OPENID_CLAIM_NAME: policy
       MINIO_IDENTITY_OPENID_SCOPES: openid
-      # Certificate (identity_tls): the CN of the client certificate is the policy name.
+      # Certificate (identity_tls): CN của chứng chỉ client được dùng làm tên policy.
       MINIO_IDENTITY_TLS_ENABLE: "on"
     volumes:
       - minio-tls-data:/data
@@ -175,7 +175,7 @@ services:
       retries: 30
     restart: unless-stopped
 
-  # One-shot: creates the bucket the OIDC and Certificate profiles browse.
+  # Chạy một lần: tạo bucket để các profile OIDC và Certificate duyệt.
   minio-tls-init:
     image: *minio-image
     container_name: s3b-test-minio-tls-init
@@ -190,7 +190,7 @@ services:
       - ./scripts/test-env.sh:/scripts/test-env.sh:ro
     restart: "no"
 
-  # ---------------------------------------------------------------- Databases (TLS optional on every server)
+  # ---------------------------------------------------------------- Database (TLS tùy chọn trên mọi máy chủ)
   mysql:
     image: mysql:8.4.13
     container_name: s3b-test-mysql
@@ -206,7 +206,7 @@ services:
       - ./certs/db/server.key:/certs/server.key:ro
       - ./certs/ca.pem:/certs/ca.pem:ro
     healthcheck:
-      # -h 127.0.0.1 so the init-time server (socket only) does not count as healthy.
+      # Dùng -h 127.0.0.1 để máy chủ trong giai đoạn khởi tạo (chỉ mở socket) không bị xem là healthy.
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
       interval: 3s
       timeout: 5s
@@ -237,8 +237,8 @@ services:
   postgres:
     image: postgres:17.12
     container_name: s3b-test-postgres
-    # PostgreSQL refuses a key that is not 0600 and owned by postgres, and bind mounts from Windows
-    # cannot give that: copy the key into the container first, then run the normal entrypoint.
+    # PostgreSQL từ chối key không có quyền 0600 hoặc không thuộc postgres; bind mount từ Windows
+    # không đáp ứng được nên sao chép key vào container trước rồi chạy entrypoint thông thường.
     entrypoint:
       - sh
       - -c
@@ -290,7 +290,7 @@ services:
   mongo:
     image: mongo:8.0.38
     container_name: s3b-test-mongo
-    # allowTLS: accepts both plain and TLS connections.
+    # allowTLS: chấp nhận cả kết nối thường lẫn TLS.
     command: ["mongod", "--tlsMode", "allowTLS", "--tlsCertificateKeyFile", "/certs/server.pem", "--tlsCAFile", "/certs/ca.pem", "--tlsAllowConnectionsWithoutCertificates"]
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
@@ -302,7 +302,7 @@ services:
       - ./certs/db/server.pem:/certs/server.pem:ro
       - ./certs/ca.pem:/certs/ca.pem:ro
     healthcheck:
-      # The init-time mongod listens on localhost only, so check through the container address.
+      # mongod trong giai đoạn khởi tạo chỉ lắng nghe localhost nên cần kiểm tra qua địa chỉ container.
       test: ["CMD-SHELL", "mongosh --quiet --host $$(hostname -i | cut -d' ' -f1) -u root -p $$MONGO_INITDB_ROOT_PASSWORD --authenticationDatabase admin --eval 'db.adminCommand(\"ping\").ok' | grep -q 1"]
       interval: 3s
       timeout: 10s
@@ -313,7 +313,7 @@ services:
   redis:
     image: redis:7.4.12
     container_name: s3b-test-redis
-    # Plain port 6379 and TLS port 6380 side by side; DEBUG command is on for the tests only.
+    # Cổng thường 6379 và cổng TLS 6380 chạy song song; chỉ bật lệnh DEBUG để phục vụ test.
     command:
       - redis-server
       - --requirepass
@@ -351,7 +351,7 @@ services:
       retries: 40
     restart: unless-stopped
 
-  # Waits for the one-shot init containers: `up --wait` alone fails on a container that has exited, even with code 0.
+  # Chờ các container khởi tạo một lần kết thúc: chỉ `up --wait` sẽ báo lỗi với container đã thoát, kể cả mã thoát 0.
   ready:
     image: redis:7.4.12
     container_name: s3b-test-ready

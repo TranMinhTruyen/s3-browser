@@ -14,7 +14,7 @@ vi.mock('@/pages/sql/utils/dbObjectSource', () => ({
   openTableRows: vi.fn(),
   fetchTableRows: vi.fn(),
 }));
-// TableDataView is NOT mocked here: its useTableRows effect must survive switching sub tabs.
+// Không mock TableDataView ở đây vì effect useTableRows phải tiếp tục tồn tại khi chuyển tab con.
 vi.mock('@/components/display/dataGrid/DataGrid', () => ({
   default: (props: { columns: string[]; rows: (string | null)[][] }) => (
     <div data-testid="grid">
@@ -55,7 +55,7 @@ describe('TableStructureDetail with the real Data view', () => {
     const dataPanel = document.getElementById(
       screen.getByRole('tab', { name: 'Data' }).getAttribute('aria-controls')!
     )!;
-    // The hidden Data panel stays in the DOM (display: none) with its rows.
+    // Panel Data bị ẩn vẫn giữ trong DOM (display: none) cùng các hàng đã tải.
     expect(dataPanel).toHaveStyle({ display: 'none' });
     expect(dataPanel).toHaveTextContent('id');
 

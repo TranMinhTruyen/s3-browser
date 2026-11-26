@@ -1,10 +1,10 @@
 /*
- * Rounded pill tabs with a small gap around them: inactive tabs have a default border so they stand out,
- * hover is a soft tint, the active tab uses the primary "light" variant like buttons.
- * Scoped under .wrapper to outrank Mantine's outline-variant rules. Shared by S3 and SQL tabs.
+ * Tab dạng viên thuốc bo tròn, có khoảng cách nhỏ: tab chưa chọn có viền mặc định để dễ nhận biết,
+ * khi rê chuột phủ màu nhẹ, tab đang chọn dùng biến thể "light" của màu chính như các nút.
+ * Giới hạn trong .wrapper để ưu tiên hơn quy tắc outline-variant của Mantine. Dùng chung cho tab S3 và SQL.
  */
 .wrapper .tab {
-  /* No vertical margin (the tab page spaces the strip) and none left of the first tab: lines up with the tab detail. */
+  /* Không có lề dọc (trang tab tự tạo khoảng cách cho dải tab) và không có lề trái ở tab đầu để thẳng hàng với phần chi tiết. */
   margin: 0 0.125rem;
   border: 1px solid var(--mantine-color-default-border);
   border-radius: var(--mantine-radius-md);
@@ -16,7 +16,7 @@
   margin-left: 0;
 }
 
-/* Mantine's 1px corner pieces of the outline active tab. */
+/* Các mảnh góc 1px của tab đang chọn dạng outline trong Mantine. */
 .wrapper .tab::before,
 .wrapper .tab::after {
   display: none;
@@ -27,17 +27,17 @@
 }
 
 /*
- * Close button: at the 14/18px root the rem sizes are fractional px and the icon looks off-center. Round the box and
- * icon to even px (see ActionIcon.module.css). Do not pass size/iconSize to CloseButton: Mantine would write
- * inline --cb-size/--cb-icon-size that beat any class. Doubled class beats Mantine's single-class rule.
- * Box/icon: 22/16px at 16px root, 20/14px at 14px, 24/18px at 18px; the gap around the icon is always 3px.
+ * Nút đóng: khi cỡ gốc là 14/18px, kích thước rem thành số px lẻ nên biểu tượng trông lệch tâm. Làm tròn hộp và
+ * biểu tượng về số px chẵn (xem ActionIcon.module.css). Không truyền size/iconSize cho CloseButton vì Mantine sẽ ghi
+ * --cb-size/--cb-icon-size inline, khiến các class không ghi đè được. Class lặp có độ ưu tiên cao hơn quy tắc một class của Mantine.
+ * Hộp/biểu tượng: 22/16px khi cỡ gốc 16px, 20/14px khi 14px, 24/18px khi 18px; khoảng cách quanh biểu tượng luôn là 3px.
  */
 .close.close {
   --cb-size: round(nearest, 1.375rem, 2px);
   --cb-icon-size: round(nearest, 1rem, 2px);
 }
 
-/* Same 1px border width as inactive tabs so switching tabs never shifts the layout. */
+/* Dùng cùng độ dày viền 1px với tab chưa chọn để đổi tab không làm xê dịch bố cục. */
 .wrapper .tab[data-active] {
   border-color: transparent;
   background-color: var(--mantine-primary-color-light);

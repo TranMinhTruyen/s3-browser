@@ -12,8 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
-// getObjectDetail reads the content type, storage class and user metadata of one object
-// with HeadObject. ctx is the call context: it is canceled when the frontend cancels the call.
+// getObjectDetail đọc content type, storage class và metadata do người dùng đặt của một object bằng HeadObject.
+// ctx là context của lời gọi; frontend sẽ hủy context khi người dùng hủy lời gọi.
 func (m *submoduleObjMng) getObjectDetail(
 	ctx context.Context,
 	input models.ObjectDetailInput,
@@ -23,7 +23,7 @@ func (m *submoduleObjMng) getObjectDetail(
 
 	output := models.NewOutput[models.ObjectDetailOutput]()
 
-	// An empty key or a folder ("a/") is not an object, so there is nothing to head.
+	// Key rỗng hoặc tên thư mục ("a/") không phải object nên không có gì để gọi HeadObject.
 	if input.Key == "" || strings.HasSuffix(input.Key, "/") {
 		return output.ThrowError(
 			models.NewParamsMessage(cnst.MessageTypeError, cnst.Bucket, S3E025, "", map[string]any{
@@ -43,7 +43,7 @@ func (m *submoduleObjMng) getObjectDetail(
 	})
 	if err != nil {
 		if isCallCanceled(ctx) {
-			// Canceled by the frontend: fail silently, nobody waits for the result.
+			// Frontend đã hủy: dừng im lặng vì không còn bên nào chờ kết quả.
 			return output.ThrowError()
 		}
 
@@ -56,7 +56,7 @@ func (m *submoduleObjMng) getObjectDetail(
 		)
 	}
 
-	// Copy the metadata so the result doesn't share memory with the SDK response.
+	// Sao chép metadata để kết quả không dùng chung bộ nhớ với phản hồi từ SDK.
 	metadata := make(map[string]string, len(head.Metadata))
 	maps.Copy(metadata, head.Metadata)
 

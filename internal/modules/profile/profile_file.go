@@ -13,26 +13,26 @@ const (
 	profileFileVersion = 1
 )
 
-// errInvalidProfileFile marks a file that is not a profile file (PFE012).
+// errInvalidProfileFile đánh dấu file không phải file hồ sơ (PFE012).
 var errInvalidProfileFile = errors.New("not a profile file")
 
-// unsupportedVersionError marks a profile file of another format version (PFE013).
+// unsupportedVersionError đánh dấu file hồ sơ dùng phiên bản định dạng khác (PFE013).
 type unsupportedVersionError struct{ version int }
 
 func (e unsupportedVersionError) Error() string {
 	return fmt.Sprintf("profile file version %d is not supported", e.version)
 }
 
-// secretAAD returns the additional authenticated data of the sealed secrets: the format name and the provider,
-// endpoint and authType of the profile, as JSON so the fields cannot run into each other. Editing one of them in
-// the file makes the secrets impossible to open (PFE014); other fields (name, color...) can still change.
+// secretAAD trả về dữ liệu xác thực bổ sung của secret đã mã hóa: tên định dạng và provider, endpoint, authType
+// của hồ sơ dưới dạng JSON để các trường không bị nối lẫn nhau. Nếu sửa một trường trong file thì không thể giải mã
+// secret (PFE014); các trường khác (name, color...) vẫn có thể thay đổi.
 func secretAAD(p *fileProfile) []byte {
 	aad, _ := json.Marshal([]string{profileFileFormat, p.Provider, p.Endpoint, p.AuthType})
 	return aad
 }
 
-// profileFile is the content of an exported profile file (version 1). It has no id, timestamps or DB version.
-// Version is the format version, not the optimistic-lock one.
+// profileFile chứa nội dung file hồ sơ đã xuất (phiên bản 1). Không có id, dấu thời gian hay phiên bản DB.
+// Version là phiên bản định dạng, không phải phiên bản khóa lạc quan.
 type profileFile struct {
 	Format  string                `json:"format"`
 	Version int                   `json:"version"`
@@ -40,7 +40,7 @@ type profileFile struct {
 	Secret  *utils.PasswordSealed `json:"secret,omitempty"`
 }
 
-// fileProfile is the profile part of a profile file.
+// fileProfile là phần hồ sơ trong file hồ sơ.
 type fileProfile struct {
 	Name        string            `json:"name"`
 	Color       string            `json:"color,omitempty"`
@@ -54,13 +54,13 @@ type fileProfile struct {
 	AuthConfig  models.AuthConfig `json:"authConfig"`
 }
 
-// fileSecret is the plaintext sealed into profileFile.Secret.
+// fileSecret là secret dạng văn bản thuần được mã hóa vào profileFile.Secret.
 type fileSecret struct {
 	SecretKey string `json:"secretKey,omitempty"`
 	models.AuthSecret
 }
 
-// parseProfileFile reads and checks the format and version of a profile file. The error never carries file content.
+// parseProfileFile đọc và kiểm tra định dạng, phiên bản của file hồ sơ. Lỗi không bao giờ chứa nội dung file.
 func parseProfileFile(data []byte) (profileFile, error) {
 	var f profileFile
 	if err := json.Unmarshal(data, &f); err != nil || f.Format != profileFileFormat {

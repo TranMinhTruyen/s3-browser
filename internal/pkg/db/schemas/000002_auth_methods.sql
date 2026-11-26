@@ -1,5 +1,5 @@
 -- internal/pkg/db/schemas/000002_auth_methods.sql
--- SQLite cannot drop NOT NULL with ALTER, so connection_profiles is rebuilt (goose runs this in one transaction).
+-- SQLite không thể bỏ NOT NULL bằng ALTER nên tạo lại bảng connection_profiles (goose chạy trong một giao dịch).
 -- +goose Up
 CREATE TABLE connection_profiles_new(
     id TEXT PRIMARY KEY

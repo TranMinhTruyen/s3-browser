@@ -15,17 +15,17 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// submoduleObjMng lists, deletes and reads the detail of objects.
+// submoduleObjMng liệt kê, xóa và đọc thông tin chi tiết của object.
 type submoduleObjMng struct {
 	logger *slog.Logger
 	app    *application.App
 	global *global.Module
 }
 
-// deleteConcurrency limits the single-key deletes running at once (fallback without DeleteObjects).
+	// deleteConcurrency giới hạn số thao tác xóa một key chạy đồng thời (phương án dự phòng khi không có DeleteObjects).
 const deleteConcurrency = 6
 
-// newSubmoduleObjMng builds the object submodule on the shared connection store.
+// newSubmoduleObjMng tạo submodule object trên kho kết nối dùng chung.
 func newSubmoduleObjMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -38,8 +38,8 @@ func newSubmoduleObjMng(
 	}
 }
 
-// listObject lists the objects under input.Prefix.
-// ctx is the call context: it is canceled when the frontend cancels the call.
+// listObject liệt kê các object dưới input.Prefix.
+// ctx là context của lời gọi; frontend sẽ hủy context khi người dùng hủy lời gọi.
 func (m *submoduleObjMng) listObject(
 	ctx context.Context,
 	input models.ListObjectInput,
@@ -71,7 +71,7 @@ func (m *submoduleObjMng) listObject(
 	if err != nil {
 		if statusCode(err) == http.StatusForbidden {
 			output.Body.AccessDenied = true
-			// Only the bucket root: a sub-prefix may be blocked by a prefix policy alone.
+			// Chỉ áp dụng ở gốc bucket: policy cho riêng prefix có thể chặn sub-prefix.
 			if input.Prefix == "" {
 				s3Conn.Access.Set(global.AccessRead, input.Bucket, true, s3Conn.Access.Generation())
 			}
@@ -88,8 +88,8 @@ func (m *submoduleObjMng) listObject(
 		NextCursor: objects.NextContinuationToken,
 	}
 
-	// With Delimiter "/", S3 groups the keys below each sub-folder into CommonPrefixes.
-	// List them first, as folders.
+	// Với Delimiter "/", S3 gom key dưới mỗi thư mục con vào CommonPrefixes.
+	// Liệt kê chúng trước dưới dạng thư mục.
 	for _, p := range objects.CommonPrefixes {
 		key := aws.ToString(p.Prefix)
 		if key == "" {
@@ -102,7 +102,7 @@ func (m *submoduleObjMng) listObject(
 		})
 	}
 
-	// S3-compatible providers may omit optional fields, so read them via aws.ToX instead of dereferencing.
+	// Provider tương thích S3 có thể bỏ qua trường tùy chọn nên đọc chúng qua aws.ToX thay vì giải tham chiếu trực tiếp.
 	for _, o := range objects.Contents {
 		key := aws.ToString(o.Key)
 
@@ -123,8 +123,8 @@ func (m *submoduleObjMng) listObject(
 	return output
 }
 
-// deleteObject deletes input.Objects in batches of deleteBatchSize. A key that is already gone counts as
-// deleted. A key that fails is listed in the body and doesn't make Result false.
+// deleteObject xóa input.Objects theo từng lô có kích thước deleteBatchSize. Key đã bị xóa được tính là đã xóa thành công.
+// Key xóa thất bại được liệt kê trong body nhưng không làm Result thành false.
 func (m *submoduleObjMng) deleteObject(
 	ctx context.Context,
 	input models.DeleteObjInput,
@@ -153,13 +153,13 @@ func (m *submoduleObjMng) deleteObject(
 		if err := d.deleteBatch(ctx, input.Objects[start:end]); err != nil {
 			if isCallCanceled(ctx) {
 				m.logger.Info("delete object canceled", "bucket", input.Bucket, "deleted", d.deleted)
-				// Canceled by the frontend: fail silently, nobody waits for the result.
+				// Frontend đã hủy: dừng im lặng vì không còn bên nào chờ kết quả.
 				return output.ThrowError()
 			}
 			if d.deleted == 0 && isCredentialsExpired(err) {
 				return output.ThrowError(expiredMessage(input.ProfileName, err))
 			}
-			// Timeout: the keys not tried yet are failures.
+			// Timeout: các key chưa được thử sẽ được tính là thất bại.
 			for _, k := range input.Objects[start:] {
 				d.fail(k, UnwrapAwsError(err))
 			}

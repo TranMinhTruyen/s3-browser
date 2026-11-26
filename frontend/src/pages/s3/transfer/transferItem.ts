@@ -1,2 +1,2 @@
-/** Height of one transfer row in px, shared by DownloaderItem / UploaderItem and their VirtualItemList. */
+/** Chiều cao một hàng truyền tải tính bằng px, dùng chung cho DownloaderItem / UploaderItem và VirtualItemList. */
 export const ITEM_HEIGHT = 80;

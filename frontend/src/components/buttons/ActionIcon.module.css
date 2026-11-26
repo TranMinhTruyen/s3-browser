@@ -1,9 +1,9 @@
 /*
- * The interface size makes rem sizes fractional px (14px root: 1.75rem = 24.5px, 1.5rem = 21px). The button box and
- * its icon then snap to the pixel grid differently and the icon looks off-center by up to 0.4px. Round both to even
- * px so the gap around the icon is a whole number. At the default size every value is already even: no change.
- * The doubled class beats Mantine's own single-class rule whatever the stylesheet order.
- * `attr()` reads the icon size lucide writes on the svg; where it is unsupported the declaration is dropped.
+ * Cỡ giao diện có thể khiến rem thành số px lẻ (gốc 14px: 1.75rem = 24.5px, 1.5rem = 21px). Khi đó hộp nút và
+ * biểu tượng được căn lưới pixel khác nhau, khiến biểu tượng lệch tâm đến 0.4px. Làm tròn cả hai về số px chẵn
+ * để khoảng cách quanh biểu tượng là số nguyên. Ở cỡ mặc định, mọi giá trị vốn đã chẵn nên không đổi.
+ * Class lặp có độ ưu tiên cao hơn quy tắc một class của Mantine, bất kể thứ tự stylesheet.
+ * `attr()` đọc kích thước biểu tượng lucide ghi trên svg; nếu không hỗ trợ thì khai báo sẽ bị bỏ qua.
  */
 .root.root {
   width: round(nearest, var(--ai-size), 2px);

@@ -3,10 +3,10 @@ import { MouseEvent, useCallback, useState } from 'react';
 const noop = () => {};
 
 /**
- * Tracks the loading state of a button-like element whose `onClick` may be async.
- * An explicit `loading` prop wins; otherwise the state follows the Promise returned by `onClick`.
+ * Theo dõi trạng thái tải của phần tử dạng nút có `onClick` bất đồng bộ.
+ * Nếu có prop `loading` tường minh thì ưu tiên prop đó; nếu không, state dựa trên Promise do `onClick` trả về.
  *
- * @returns `isLoading` and a click handler that wraps `onClick`.
+ * @returns `isLoading` và hàm xử lý click bao quanh `onClick`.
  */
 export function useAutoLoading(
   onClick: ((event: MouseEvent<HTMLButtonElement>) => unknown) | undefined,
@@ -18,11 +18,11 @@ export function useAutoLoading(
     (event: MouseEvent<HTMLButtonElement>) => {
       const result = onClick?.(event) as Promise<unknown> | undefined;
 
-      // Synchronous handler: nothing to track.
+      // Handler đồng bộ: không có gì cần theo dõi.
       if (typeof result?.then !== 'function') return;
 
       setAutoLoading(true);
-      // Errors are swallowed here on purpose: the handler reports them to the user itself (callIPC / toast).
+      // Cố ý bỏ qua lỗi ở đây: handler tự thông báo cho người dùng (callIPC / toast).
       result.finally(() => setAutoLoading(false)).catch(noop);
     },
     [onClick]

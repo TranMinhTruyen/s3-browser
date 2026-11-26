@@ -20,15 +20,15 @@ import (
 )
 
 const (
-	// minExportPasswordLen is the shortest password accepted to protect the secrets of an export (in characters).
+	// minExportPasswordLen là độ dài mật khẩu ngắn nhất được chấp nhận để bảo vệ secret khi xuất hồ sơ (tính bằng ký tự).
 	minExportPasswordLen = 8
-	// maxImportFileSize is the largest profile file read on import, in bytes.
+	// maxImportFileSize là kích thước tối đa của file hồ sơ được đọc khi nhập (tính bằng byte).
 	maxImportFileSize = 1 << 20
-	// maxProfileNameLen is the longest profile name, in characters.
+	// maxProfileNameLen là độ dài tối đa của tên hồ sơ (tính bằng ký tự).
 	maxProfileNameLen = 100
 )
 
-// submoduleFileMng exports profiles to, and imports them from, JSON files.
+// submoduleFileMng xuất hồ sơ ra và nhập hồ sơ từ file JSON.
 type submoduleFileMng struct {
 	logger *slog.Logger
 	app    *application.App
@@ -36,7 +36,7 @@ type submoduleFileMng struct {
 	auth   *submoduleAuthMng
 }
 
-// newSubmoduleFileMng creates the profile file submodule.
+// newSubmoduleFileMng tạo submodule quản lý file hồ sơ.
 func newSubmoduleFileMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -46,13 +46,13 @@ func newSubmoduleFileMng(
 	return &submoduleFileMng{logger: logger.With("submodules", "profile_file"), app: app, q: q, auth: auth}
 }
 
-// exportAction asks for the file in a native save dialog, then writes the profile there.
+// exportAction mở hộp thoại lưu của hệ điều hành để chọn file, sau đó ghi hồ sơ vào đó.
 func (m *submoduleFileMng) exportAction(input models.ExportProfileInput) models.Output[string] {
 	return m.exportTo(input, m.chooseSavePath)
 }
 
-// exportTo exports the profile to the path returned by choosePath(suggested file name). An empty path or a
-// cancelled dialog ends silently with an empty body. Password and secrets are never logged or put in a message.
+// exportTo xuất hồ sơ vào đường dẫn choosePath trả về (kèm tên file gợi ý). Nếu đường dẫn rỗng hoặc hộp thoại bị hủy,
+// hàm kết thúc im lặng với body rỗng. Mật khẩu và secret không bao giờ được ghi log hoặc đưa vào thông báo.
 func (m *submoduleFileMng) exportTo(
 	input models.ExportProfileInput,
 	choosePath func(filename string) (string, error),
@@ -108,19 +108,19 @@ func (m *submoduleFileMng) exportTo(
 	return output
 }
 
-// chooseSavePath opens the native save dialog; the path is empty when the user cancels.
+// chooseSavePath mở hộp thoại lưu của hệ điều hành; đường dẫn rỗng nếu người dùng hủy.
 func (m *submoduleFileMng) chooseSavePath(filename string) (string, error) {
 	dialog := m.app.Dialog.SaveFile().SetFilename(filename)
 	dialog.AddFilter("JSON files", "*.json")
-	// The app has one window; attach to it so the dialog is modal (Current may be nil).
+	// Ứng dụng chỉ có một cửa sổ; gắn hộp thoại vào cửa sổ này để hộp thoại ở chế độ modal (Current có thể là nil).
 	if window := m.app.Window.Current(); window != nil {
 		dialog.AttachToWindow(window)
 	}
 	return dialog.PromptForSingleSelection()
 }
 
-// buildProfileFile builds the JSON of a profile file. The secrets go in only when there are any, sealed with
-// password; the file never holds a secret in plaintext.
+// buildProfileFile tạo JSON cho file hồ sơ. Chỉ thêm secret nếu có, sau khi mã hóa bằng password;
+// file không bao giờ chứa secret ở dạng văn bản thuần.
 func buildProfileFile(
 	row sqlc.ConnectionProfile,
 	config models.AuthConfig,
@@ -159,9 +159,8 @@ func buildProfileFile(
 	return json.MarshalIndent(file, "", "  ")
 }
 
-// safeFileName turns a profile name into a snake_case ASCII file name (e.g. "Kết nối thử" -> "ket_noi_thu").
-// Letters that have no ASCII form are dropped and Windows device names get a "_" suffix; it never returns
-// an empty name.
+// safeFileName chuyển tên hồ sơ thành tên file ASCII dạng snake_case (ví dụ "Kết nối thử" -> "ket_noi_thu").
+// Chữ không có dạng ASCII bị bỏ qua; tên thiết bị Windows được thêm hậu tố "_". Hàm không bao giờ trả tên rỗng.
 func safeFileName(name string) string {
 	var sb strings.Builder
 	lastSep := true // true at the start so no leading "_"
@@ -174,7 +173,7 @@ func safeFileName(name string) string {
 			sb.WriteRune(r)
 			lastSep = false
 		case r > unicode.MaxASCII && (unicode.IsLetter(r) || unicode.IsMark(r)):
-			// no ASCII form: drop
+			// Không có dạng ASCII: bỏ qua.
 		case !lastSep:
 			sb.WriteByte('_')
 			lastSep = true
@@ -190,22 +189,22 @@ func safeFileName(name string) string {
 	return result
 }
 
-// importedProfile is a profile file ready to be created as a new profile.
+// importedProfile là file hồ sơ đã sẵn sàng để tạo thành hồ sơ mới.
 type importedProfile struct {
 	input models.ConnectionProfileInput
-	// clearedFields names the file paths that do not exist here and were emptied.
+	// clearedFields chứa tên các đường dẫn file không tồn tại trên máy này và đã bị xóa.
 	clearedFields []string
-	// allowMissingCertKey is set when the certificate or key file of a minioCert profile was just cleared.
+	// allowMissingCertKey được bật nếu file chứng chỉ hoặc khóa của hồ sơ minioCert vừa bị xóa.
 	allowMissingCertKey bool
 }
 
-// chooseImportAction asks for a profile file in a native open dialog and checks it. Cancelling gives an empty body.
+// chooseImportAction mở hộp thoại của hệ điều hành để chọn và kiểm tra file hồ sơ. Hủy thao tác sẽ trả body rỗng.
 func (m *submoduleFileMng) chooseImportAction() models.Output[models.ImportFileOutput] {
 	output := models.NewOutput[models.ImportFileOutput]()
 
 	dialog := m.app.Dialog.OpenFile().CanChooseFiles(true).CanChooseDirectories(false)
 	dialog.AddFilter("JSON files", "*.json")
-	// The app has one window; attach to it so the dialog is modal (Current may be nil).
+	// Ứng dụng chỉ có một cửa sổ; gắn hộp thoại vào cửa sổ này để hộp thoại ở chế độ modal (Current có thể là nil).
 	if window := m.app.Window.Current(); window != nil {
 		dialog.AttachToWindow(window)
 	}
@@ -228,8 +227,8 @@ func (m *submoduleFileMng) chooseImportAction() models.Output[models.ImportFileO
 	return output
 }
 
-// importAction reads and checks the profile file again, opens its secrets with the password and builds the
-// input to create. Secrets and the password are never logged or put in a message.
+// importAction đọc và kiểm tra lại file hồ sơ, giải mã secret bằng mật khẩu rồi tạo dữ liệu đầu vào để lưu.
+// Secret và mật khẩu không bao giờ được ghi log hoặc đưa vào thông báo.
 func (m *submoduleFileMng) importAction(input models.ImportProfileInput) (importedProfile, *models.Message) {
 	file, failure := m.readFile(input.Path)
 	if failure != nil {
@@ -290,7 +289,7 @@ func (m *submoduleFileMng) importAction(input models.ImportProfileInput) (import
 	}, nil
 }
 
-// readFile reads a profile file of at most maxImportFileSize bytes and checks its format and version.
+// readFile đọc file hồ sơ có kích thước tối đa maxImportFileSize byte rồi kiểm tra định dạng và phiên bản.
 func (m *submoduleFileMng) readFile(path string) (profileFile, *models.Message) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -322,8 +321,8 @@ func (m *submoduleFileMng) readFile(path string) (profileFile, *models.Message) 
 	return file, nil
 }
 
-// uniqueName returns name, or name + " (n)" with the smallest n >= 2 that is not in taken. The name is cut by
-// characters so the result is at most maxProfileNameLen long.
+// uniqueName trả name hoặc name + " (n)" với n nhỏ nhất từ 2 không có trong taken. Tên được cắt theo ký tự
+// để kết quả không dài quá maxProfileNameLen.
 func uniqueName(name string, taken map[string]struct{}) string {
 	if _, ok := taken[name]; !ok {
 		return name
@@ -338,13 +337,13 @@ func uniqueName(name string, taken map[string]struct{}) string {
 	}
 }
 
-// isTaken reports whether name is in taken.
+// isTaken cho biết name có nằm trong taken hay không.
 func isTaken(taken map[string]struct{}, name string) bool {
 	_, ok := taken[name]
 	return ok
 }
 
-// clearMissingPaths empties the file paths of cfg that do not exist on this computer and returns their names.
+// clearMissingPaths xóa các đường dẫn file trong cfg không tồn tại trên máy này rồi trả về tên các trường đó.
 func clearMissingPaths(cfg *models.AuthConfig) []string {
 	var cleared []string
 	for _, f := range []struct {
@@ -374,8 +373,8 @@ func clearMissingPaths(cfg *models.AuthConfig) []string {
 	return cleared
 }
 
-// isUnsafePath reports whether path may reach another host or a device. Only relative paths and plain drive
-// paths (X:\...) are safe: UNC (\\host\share, //host/share), \\?\, \\.\ and NT \??\ forms are never stat-ed.
+// isUnsafePath cho biết path có thể trỏ đến máy khác hoặc thiết bị hay không. Chỉ đường dẫn tương đối và đường dẫn ổ đĩa
+// thông thường (X:\...) được xem là an toàn: không bao giờ stat đường dẫn UNC (\\host\share, //host/share), \\?\, \\.\ hoặc dạng NT \??\.
 func isUnsafePath(path string) bool {
 	isSep := func(c byte) bool { return c == '\\' || c == '/' }
 	if len(path) >= 2 && isSep(path[0]) && isSep(path[1]) ||
@@ -386,7 +385,7 @@ func isUnsafePath(path string) bool {
 	return vol != "" && (len(vol) != 2 || vol[1] != ':')
 }
 
-// expandHome replaces a leading "~" with the user's home directory, as the AWS credential loader does.
+// expandHome thay dấu "~" ở đầu bằng thư mục home của người dùng, giống bộ nạp thông tin xác thực AWS.
 func expandHome(path string) string {
 	if path == "~" || strings.HasPrefix(path, "~/") || strings.HasPrefix(path, `~\`) {
 		if home, err := os.UserHomeDir(); err == nil {

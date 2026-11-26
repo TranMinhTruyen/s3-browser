@@ -7,27 +7,27 @@ import { buildTabState } from '@/pages/s3/utils/tabState';
 
 type KeySet = Record<string, true>;
 
-/** State of one tab: profile, current view, folder, selection and detail drawer. */
+/** Trạng thái của một tab: hồ sơ, chế độ xem, thư mục, lựa chọn và drawer chi tiết. */
 interface TabDetail {
   profileId?: string | null;
   currentView: 'bucketList' | 'objectList';
-  // Bucket shown in the object list. Unset while in the bucket list.
+  // Bucket đang hiển thị trong danh sách object. Không đặt khi đang ở danh sách bucket.
   bucket?: string;
-  // Folder shown in the object list, e.g. "photos/2026/". Empty is the bucket root.
+  // Thư mục đang hiển thị trong danh sách object, ví dụ "photos/2026/". Rỗng nghĩa là gốc bucket.
   prefix: string;
-  // Keys as a set (key -> true): O(1) lookup per row.
+  // Các key được lưu dưới dạng set (key -> true): tra cứu mỗi hàng trong O(1).
   selectionItem: KeySet;
   deletingItems: KeySet;
-  // Object shown in the detail drawer. Unset when the drawer is closed.
+  // Object đang hiển thị trong drawer chi tiết. Không đặt khi drawer đóng.
   detailItem?: ObjectItem;
-  // Bucket shown in the bucket detail drawer. Unset when the drawer is closed.
+  // Bucket đang hiển thị trong drawer chi tiết. Không đặt khi drawer đóng.
   detailBucket?: Bucket;
 }
 
 interface TabListState {
   activeTab: string;
   tabList: Record<string, TabDetail>;
-  // Tab whose upload is running. Only one upload runs at a time, across all tabs.
+  // Tab đang chạy lượt tải lên. Chỉ một lượt tải lên chạy tại một thời điểm trên mọi tab.
   uploadingTabId: string | null;
 }
 
@@ -36,14 +36,14 @@ interface TabListAction {
   addTab: () => void;
   updateTab: (tabId: string, patch: Partial<TabDetail>) => void;
   closeTab: (tabId: string) => void;
-  // Move a tab to the position of `overId`. Does not change the active tab.
+  // Di chuyển tab đến vị trí của `overId`. Không đổi tab đang hoạt động.
   moveTab: (activeId: string, overId: string) => void;
 
-  // `bucket` is the bucket to open when switching to the object list.
+  // `bucket` là bucket cần mở khi chuyển sang danh sách object.
   changeCurrentView: (tabId: string, currentView: 'bucketList' | 'objectList', bucket?: string) => void;
   changePrefix: (tabId: string, prefix: string) => void;
   resetViewByProfile: (profileId: string) => void;
-  // For a deleted profile: tabs using it go back to the bucket list with no profile.
+  // Khi xóa hồ sơ: các tab đang dùng hồ sơ đó quay về danh sách bucket và bỏ hồ sơ.
   clearProfile: (profileId: string) => void;
 
   addSelectItem: (tabId: string, items: string[]) => void;
@@ -54,17 +54,17 @@ interface TabListAction {
   closeDetail: (tabId: string) => void;
   openBucketDetail: (tabId: string, bucket: Bucket) => void;
   closeBucketDetail: (tabId: string) => void;
-  // After the policy of a bucket was saved: keeps its open detail drawer in sync.
+  // Sau khi lưu policy của bucket: đồng bộ drawer chi tiết đang mở.
   setBucketDetailPolicyMode: (tabId: string, bucket: string, mode: string) => void;
-  // For a deleted bucket: tabs of the profile inside it go back to the bucket list, its detail drawer closes.
+  // Khi xóa bucket: các tab của hồ sơ đang ở bucket đó quay về danh sách bucket và drawer chi tiết đóng lại.
   removeBucket: (profileId: string, bucket: string) => void;
 
   setDeleting: (tabId: string, items: string[], deleting: boolean) => void;
   setUploadingTab: (tabId: string | null) => void;
 
-  // Tab order, active tab and profile of each tab, in the shape saved to disk.
+  // Thứ tự tab, tab đang hoạt động và hồ sơ của từng tab, theo cấu trúc được lưu xuống đĩa.
   serializeTabs: () => TabState;
-  // Rebuilds the tabs from the saved layout. Empty or invalid layout keeps the current tabs.
+  // Tạo lại tab từ bố cục đã lưu. Bố cục rỗng hoặc không hợp lệ sẽ giữ nguyên các tab hiện tại.
   restoreTabs: (saved: TabState) => void;
 
   reset: () => void;
@@ -73,7 +73,7 @@ interface TabListAction {
 const SCOPE = 'tabList';
 const initialId = createUUID();
 
-/** Back to the bucket list root: no bucket, folder, selection or detail. Call inside an immer `set`. */
+/** Quay về gốc danh sách bucket: không có bucket, thư mục, lựa chọn hoặc chi tiết. Gọi bên trong `set` của immer. */
 const resetTabView = (tab: TabDetail) => {
   tab.currentView = 'bucketList';
   tab.bucket = undefined;
@@ -83,12 +83,12 @@ const resetTabView = (tab: TabDetail) => {
   tab.detailBucket = undefined;
 };
 
-/** A tab with no profile, showing the bucket list. */
+/** Tab chưa có hồ sơ, đang hiển thị danh sách bucket. */
 const newTab = (): TabDetail => ({ currentView: 'bucketList', prefix: '', selectionItem: {}, deletingItems: {} });
 
-/** Open tabs, the active one and which tab is uploading. */
+/** Các tab đang mở, tab hoạt động và tab đang tải lên. */
 export const useTabListStore = createAppStore<TabListState & TabListAction>((set, get) => {
-  // Edits one tab inside an immer `set`; does nothing when the tab is gone.
+  // Chỉnh sửa một tab bên trong `set` của immer; không làm gì nếu tab không còn tồn tại.
   const editTab = (action: keyof TabListAction, tabId: string, edit: (tab: TabDetail) => void) =>
     set(
       state => {
@@ -158,13 +158,13 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>((set
       if (from < 0 || to < 0 || from === to) return;
 
       keys.splice(to, 0, ...keys.splice(from, 1));
-      // Rebuild the object: key order is the tab order.
+      // Tạo lại object: thứ tự key cũng là thứ tự tab.
       set({ tabList: Object.fromEntries(keys.map(k => [k, tabList[k]])) }, undefined, `${SCOPE}/moveTab`);
     },
 
     changeCurrentView: (tabId: string, currentView: 'bucketList' | 'objectList', bucket?: string) => {
       editTab('changeCurrentView', tabId, tab => {
-        // Opening or leaving a bucket always starts from its root.
+        // Mở hoặc rời bucket luôn bắt đầu từ thư mục gốc.
         resetTabView(tab);
         tab.currentView = currentView;
         if (currentView === 'objectList') tab.bucket = bucket;
@@ -174,7 +174,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>((set
     changePrefix: (tabId: string, prefix: string) => {
       editTab('changePrefix', tabId, tab => {
         tab.prefix = prefix;
-        // Selected keys belong to the previous folder and are no longer visible.
+        // Các key đã chọn thuộc thư mục trước và không còn hiển thị.
         tab.selectionItem = {};
         tab.detailItem = undefined;
       });
@@ -257,7 +257,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>((set
 
     setBucketDetailPolicyMode: (tabId: string, bucket: string, mode: string) => {
       editTab('setBucketDetailPolicyMode', tabId, tab => {
-        // Bucket is a class instance (not drafted by immer): replace it so subscribers see a new reference.
+        // Bucket là instance của class (immer không tạo draft): thay thế nó để subscriber nhận được tham chiếu mới.
         if (tab.detailBucket?.name === bucket) tab.detailBucket = new Bucket({ ...tab.detailBucket, policyMode: mode });
       });
     },
@@ -309,7 +309,7 @@ export const useTabListStore = createAppStore<TabListState & TabListAction>((set
       set({ tabList, activeTab }, undefined, `${SCOPE}/restoreTabs`);
     },
 
-    // uploadingTabId is kept: an upload already sent to the backend keeps running.
+    // Giữ uploadingTabId: lượt tải đã gửi đến backend vẫn tiếp tục chạy.
     reset: () => {
       invalidateLoads(SCOPE);
       const id = createUUID();

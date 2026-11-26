@@ -14,7 +14,7 @@ vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn(), invalidateLoads: v
 const callIPCMock = vi.mocked(callIPC);
 const flush = () => act(async () => {});
 
-/** A sign-in the test settles by hand. */
+/** Phiên đăng nhập mà test tự quyết định thời điểm hoàn tất. */
 const pendingLogin = () => {
   let settle!: (output: unknown) => void;
   const promise = new Promise(resolve => {
@@ -172,13 +172,13 @@ describe('AuthOidcFields', () => {
     const signal = (callIPCMock.mock.calls[0][2] as { signal: AbortSignal }).signal;
     expect(signal.aborted).toBe(false);
 
-    // The user must be able to press it while the sign-in is pending.
+    // Người dùng vẫn phải nhấn được nút này trong khi đăng nhập đang chờ.
     const cancel = screen.getByRole('button', { name: 'Cancel sign-in' });
     expect(cancel).toBeEnabled();
     await click(cancel);
 
     expect(signal.aborted).toBe(true);
-    // The aborted call is still pending, yet Cancel resets the status at once.
+    // Lời gọi đã hủy vẫn còn chờ, nhưng Cancel phải đặt lại trạng thái ngay lập tức.
     expect(screen.getByText('Not signed in')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
   });
@@ -323,7 +323,7 @@ describe('AuthOidcFields', () => {
   });
 
   it('signs in a second time after a canceled one', async () => {
-    // Like the real callIPC: a canceled call settles with null.
+    // Giống callIPC thật: lời gọi bị hủy kết thúc với giá trị null.
     callIPCMock.mockImplementationOnce(
       ((_b: unknown, _a: unknown, o: { signal: AbortSignal }) =>
         new Promise(resolve => o.signal.addEventListener('abort', () => resolve(null)))) as never

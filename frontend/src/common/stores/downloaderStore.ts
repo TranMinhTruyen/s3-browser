@@ -2,15 +2,15 @@ import { DownloadHistoryItem, DownloadProgressOutput } from '@wails/S3Browser/mo
 import { createAppStore } from '@/common/stores/createStore';
 import { invalidateLoads } from '@/common/utils/ipcUtils';
 
-/** Download history row merged with its live progress. */
+/** Một dòng lịch sử tải xuống được gộp với tiến độ trực tiếp. */
 type DownloadItem = DownloadHistoryItem & DownloadProgressOutput;
 
 interface DownloaderState {
   downloadItems: Record<string, DownloadItem>;
-  /** Ids of items with status DOWNLOADING, kept in sync by `upsertDownloadItems`. */
+  /** Id các mục có trạng thái DOWNLOADING, được `upsertDownloadItems` đồng bộ. */
   downloadingIds: string[];
   windowVisible: boolean;
-  /** Measured size of the visible downloader (window or button); 0 when not rendered. */
+  /** Kích thước đã đo của downloader đang hiển thị (cửa sổ hoặc nút); bằng 0 nếu chưa render. */
   windowSize: { width: number; height: number };
 }
 
@@ -25,7 +25,7 @@ interface DownloaderAction {
 
 const SCOPE = 'downloader';
 
-/** Download progress items and the downloader window state. */
+/** Các mục tiến độ tải xuống và state cửa sổ downloader. */
 export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAction>(
   (set, get) => ({
     downloadItems: {},
@@ -81,7 +81,7 @@ export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAct
           for (const input of items) {
             const item = state.downloadItems[input.downloadId];
             if (!item) continue;
-            // Assign only on change so an unchanged batch keeps the same state.
+            // Chỉ gán khi có thay đổi để batch không đổi giữ nguyên state.
             if (item.downloaded !== input.downloaded) item.downloaded = input.downloaded;
             if (item.total !== input.total) item.total = input.total;
           }
@@ -108,5 +108,5 @@ export const useDownloaderStore = createAppStore<DownloaderState & DownloaderAct
   SCOPE
 );
 
-/** Ids of downloads in progress (same reference until the list changes). */
+/** Id các lượt tải xuống đang chạy (giữ nguyên tham chiếu cho đến khi danh sách đổi). */
 export const selectDownloadingIds = (s: DownloaderState) => s.downloadingIds;

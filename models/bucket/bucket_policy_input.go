@@ -1,6 +1,6 @@
 package bucket
 
-// BucketPolicyInput identifies the bucket whose policy is requested.
+// BucketPolicyInput chỉ định bucket cần lấy policy.
 type BucketPolicyInput struct {
 	ConnectionId string `json:"connectionId"`
 	ProfileName  string `json:"profileName,omitempty"`

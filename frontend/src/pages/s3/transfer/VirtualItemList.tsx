@@ -7,24 +7,24 @@ const LIST_MAX_HEIGHT = '16.25rem';
 
 type VirtualItemListProps = {
   ids: string[];
-  // Gap between two items and item height, in px at the medium size; scaled with the interface size.
+  // Khoảng cách giữa hai mục và chiều cao mục, tính bằng px ở cỡ trung bình; co giãn theo cỡ giao diện.
   gap: number;
   itemHeight: number;
   renderItem: (id: string) => ReactNode;
 };
 
-/** Virtualized, scrollable list of transfer items shared by the uploader and downloader windows. */
+/** Danh sách mục truyền file có thể cuộn và ảo hóa, dùng chung cho cửa sổ tải lên và tải xuống. */
 function VirtualItemList(props: VirtualItemListProps) {
   const { ids, gap, itemHeight, renderItem } = props;
 
-  // State, not a ref: Affix renders through a Portal that mounts one render late, so a ref would still be null
-  // when the virtualizer reads it and nothing would re-render it, leaving the list empty.
+  // Dùng state thay vì ref: Affix render qua Portal và mount chậm một lần render, nên ref vẫn null
+  // khi virtualizer đọc; do không có lần render lại, danh sách sẽ trống.
   const [listElement, setListElement] = useState<HTMLDivElement | null>(null);
   const scale = useUiScale();
   const scaledGap = gap * scale;
   const scaledHeight = itemHeight * scale;
 
-  // React Compiler is disabled, so this compiler-only lint does not apply.
+  // React Compiler đang tắt nên quy tắc lint chỉ dành cho compiler này không áp dụng.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
     count: ids.length,

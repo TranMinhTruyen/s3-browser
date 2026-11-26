@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-// DownloadHistoryItem is one finished or running download.
+// DownloadHistoryItem là một lượt tải xuống đã hoàn tất hoặc đang chạy.
 type DownloadHistoryItem struct {
 	ID        string    `json:"id"`
 	FileName  string    `json:"fileName,omitempty"`
@@ -15,7 +15,7 @@ type DownloadHistoryItem struct {
 	Version   int64     `json:"version,omitempty"`
 }
 
-// DownloadHistoryOutput is one page of the download history; AfterID is the cursor of the next page.
+// DownloadHistoryOutput là một trang lịch sử tải xuống; AfterID là cursor của trang tiếp theo.
 type DownloadHistoryOutput struct {
 	DownloadHistoryList []DownloadHistoryItem `json:"downloadHistoryList,omitempty"`
 	AfterID             string                `json:"afterID"`

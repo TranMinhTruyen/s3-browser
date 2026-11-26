@@ -17,7 +17,7 @@ const flush = () => act(async () => {});
 const region = (name: string, value1: string) => ({ name, value1 }) as never;
 
 type Options = { signal?: AbortSignal; resolveAction?: () => void };
-// What callIPC does on success: runs resolveAction and returns the body.
+// Hành vi của callIPC khi thành công: chạy resolveAction rồi trả về body.
 const succeed = async (_fn: unknown, _args: unknown, options?: Options) => {
   options?.resolveAction?.();
   return {} as never;

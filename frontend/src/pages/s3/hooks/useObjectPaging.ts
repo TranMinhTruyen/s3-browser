@@ -5,7 +5,7 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import { useTabListStore } from '@/pages/s3/stores/tabListStore';
 import { onTabGone } from '@/pages/s3/utils/tabUtils';
 
-// Objects fetched per page: a small first page shows up fast, later pages are big to keep scrolling smooth.
+// Số đối tượng tải mỗi trang: trang đầu nhỏ để hiển thị nhanh, các trang sau lớn hơn để cuộn mượt.
 export const FIRST_PAGE_SIZE = 200;
 export const NEXT_PAGE_SIZE = 1000;
 
@@ -15,16 +15,16 @@ type UseObjectPagingParams = {
   profileName?: string;
   bucket?: string;
   prefix: string;
-  // Applied search keyword; empty means the normal folder listing.
+  // Từ khóa tìm kiếm đang áp dụng; để trống nghĩa là liệt kê thư mục bình thường.
   keyword: string;
-  // Identifies the list (connection, bucket, prefix, keyword) the cursor belongs to.
+  // Định danh danh sách (kết nối, bucket, tiền tố, từ khóa) mà con trỏ thuộc về.
   listKey: string;
   scrollRef: RefObject<HTMLElement | null>;
 };
 
 /**
- * Cursor-based paging of an object list (folder listing or search) with request cancellation.
- * Loads the first page whenever the list source changes and aborts the running request on unmount.
+ * Phân trang danh sách đối tượng bằng con trỏ (liệt kê thư mục hoặc tìm kiếm), có thể hủy yêu cầu.
+ * Tải trang đầu mỗi khi nguồn danh sách thay đổi và hủy yêu cầu đang chạy khi component bị gỡ.
  */
 export function useObjectPaging(params: UseObjectPagingParams) {
   const { tabId, connectionId, profileName, bucket, prefix, keyword, listKey, scrollRef } = params;
@@ -33,15 +33,15 @@ export function useObjectPaging(params: UseObjectPagingParams) {
   const [nextCursor, setNextCursor] = useState('');
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
-  // The list the cursor belongs to. Right after the source changes, nextCursor still holds the old list's
-  // cursor until the new first page lands, and sending it to the new source would break the request.
+  // Danh sách mà con trỏ thuộc về. Ngay sau khi nguồn thay đổi, nextCursor vẫn giữ con trỏ của danh sách cũ
+  // cho đến khi trang đầu mới được tải xong; gửi nó sang nguồn mới sẽ làm yêu cầu thất bại.
   const [cursorKey, setCursorKey] = useState('');
   const [isLoadingFirst, setIsLoadingFirst] = useState(false);
-  // True once the first page of the current list has loaded, so an empty search result can be told from loading.
+  // Bật sau khi tải xong trang đầu của danh sách hiện tại, để phân biệt kết quả tìm kiếm rỗng với trạng thái đang tải.
   const [isLoaded, setIsLoaded] = useState(false);
   const changeCurrentView = useTabListStore(s => s.changeCurrentView);
   const requestCtrl = useRef<AbortController>(null);
-  // The loadFirstPage the list was last loaded for: showing a hidden tab again must not reload it.
+  // loadFirstPage mà danh sách được tải lần gần nhất: hiện lại tab đang ẩn không cần tải lại.
   const loadedFor = useRef<unknown>(null);
 
   const startRequest = useCallback(() => {
@@ -51,7 +51,7 @@ export function useObjectPaging(params: UseObjectPagingParams) {
     return ctrl;
   }, []);
 
-  // Lists the folder, or searches it when a keyword is applied. Both return the same shape.
+  // Liệt kê thư mục hoặc tìm kiếm trong đó khi có từ khóa. Cả hai đều trả về cùng một cấu trúc dữ liệu.
   const handleGetListObject = useCallback(
     (cursor: string, signal?: AbortSignal, onAccessDenied?: () => void) => {
       const limit = cursor ? NEXT_PAGE_SIZE : FIRST_PAGE_SIZE;
@@ -78,8 +78,8 @@ export function useObjectPaging(params: UseObjectPagingParams) {
     setLoadMoreError(false);
     setIsLoaded(false);
     setIsLoadingFirst(true);
-    // Aborting cancels the request on the Go side too, not only the state update.
-    // Access denied: go back to the bucket list instead of staying in an unreadable bucket.
+    // Hủy ở đây cũng hủy yêu cầu phía Go, không chỉ ngăn cập nhật state.
+    // Nếu bị từ chối truy cập, quay lại danh sách bucket thay vì ở lại bucket không thể đọc.
     const output = await handleGetListObject('', ctrl.signal, () => changeCurrentView(tabId, 'bucketList'));
     if (ctrl.signal.aborted) return;
     if (output) {
@@ -99,13 +99,13 @@ export function useObjectPaging(params: UseObjectPagingParams) {
     if (ctrl.signal.aborted) return;
     if (output) {
       setObjectDatas(prev => {
-        // A search cursor can overlap the previous page, so drop keys already shown. A folder listing cannot.
+        // Con trỏ tìm kiếm có thể trùng với trang trước, nên loại các key đã hiển thị. Khi liệt kê thư mục thì không.
         const seen = new Set(keyword ? prev.map(item => item.key) : []);
         const added = keyword ? output.objectList.filter(item => !seen.has(item.key)) : output.objectList;
-        // Nothing new: keep the same array so the list does not re-render.
+        // Không có mục mới: giữ nguyên mảng để danh sách không phải render lại.
         return added.length > 0 ? [...prev, ...added] : prev;
       });
-      // A cursor equal to the one just sent would make auto-load repeat forever: treat it as the end.
+      // Nếu con trỏ giống con trỏ vừa gửi, tự tải tiếp sẽ lặp vô hạn; xem đây là trang cuối.
       setNextCursor(output.nextCursor === nextCursor ? '' : (output.nextCursor ?? ''));
     } else {
       setLoadMoreError(true);
@@ -113,22 +113,22 @@ export function useObjectPaging(params: UseObjectPagingParams) {
     setIsLoadingMore(false);
   }, [nextCursor, keyword, handleGetListObject, startRequest]);
 
-  // Also runs when the prefix or keyword changes, because loadFirstPage depends on them.
+  // Cũng chạy khi tiền tố hoặc từ khóa thay đổi, vì loadFirstPage phụ thuộc vào chúng.
   useEffect(() => {
     if (!connectionId || !bucket) {
-      // Disconnected: reconnecting to the same source must load the list again.
+      // Khi ngắt kết nối, kết nối lại cùng nguồn vẫn phải tải lại danh sách.
       loadedFor.current = null;
       return;
     }
     if (loadedFor.current === loadFirstPage) return;
     loadedFor.current = loadFirstPage;
-    // oxlint-disable-next-line react/set-state-in-effect -- reset the list before the new source loads
+    // oxlint-disable-next-line react/set-state-in-effect -- đặt lại danh sách trước khi tải nguồn dữ liệu mới
     setObjectDatas([]);
     scrollRef.current?.scrollTo({ top: 0 });
     loadFirstPage();
   }, [connectionId, bucket, loadFirstPage, scrollRef]);
 
-  // Cancel any running request when the view unmounts. A hidden tab (Activity) keeps its request and list.
+  // Hủy yêu cầu đang chạy khi view bị gỡ. Tab bị ẩn (Activity) vẫn giữ yêu cầu và danh sách.
   useEffect(
     () =>
       onTabGone(tabId, () => {
@@ -144,7 +144,7 @@ export function useObjectPaging(params: UseObjectPagingParams) {
     scrollRef.current?.scrollTo({ top: 0 });
   }, [scrollRef, loadFirstPage]);
 
-  // Retry after a failed page, or continue a search that found nothing yet.
+  // Thử lại sau khi tải trang thất bại hoặc tiếp tục tìm kiếm khi chưa tìm thấy kết quả.
   const onClickLoadMore = useCallback(() => {
     setLoadMoreError(false);
     return loadNextPage();

@@ -2,8 +2,9 @@ package profile
 
 import "strings"
 
-// AuthConfig is the non-secret, per-method part of a profile, stored as JSON in connection_profiles.auth_config.
-// One flat struct serves every authType, so the generated TS binding stays simple; unused fields stay empty.
+// AuthConfig là phần cấu hình không bí mật theo từng phương thức của hồ sơ, được lưu dưới dạng JSON trong
+// connection_profiles.auth_config. Một struct phẳng dùng cho mọi authType để binding TS sinh ra luôn đơn giản;
+// các trường không dùng sẽ để trống.
 type AuthConfig struct {
 	ProfileName     string   `json:"profileName,omitempty"`     // sharedProfile, sso, assumeRole (sourceType=profile)
 	ConfigFile      string   `json:"configFile,omitempty"`      // sharedProfile, sso: optional ~/.aws/config path
@@ -27,7 +28,7 @@ type AuthConfig struct {
 	Buckets         []string `json:"buckets,omitempty"`         // anonymous
 }
 
-// BucketNames returns the anonymous bucket names without blanks and duplicates, in the entered order.
+// BucketNames trả về tên bucket ẩn danh theo thứ tự đã nhập, loại bỏ mục rỗng và trùng lặp.
 func (c AuthConfig) BucketNames() []string {
 	names := make([]string, 0, len(c.Buckets))
 	seen := make(map[string]struct{}, len(c.Buckets))

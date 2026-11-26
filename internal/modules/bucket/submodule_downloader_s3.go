@@ -13,11 +13,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 )
 
-// download saves the object to dest with the transfer manager, which fetches the object's
-// parts in parallel, retries a part whose body read fails, sends If-Match with the ETag of
-// the first part (so a file never mixes old and new content) and validates checksums.
-// Its progress is reported through tracker under id.
-// On failure or cancellation, no file is left at dest.
+// download lưu object vào dest bằng transfer manager, công cụ lấy các part song song, thử lại nếu đọc body của một part
+// thất bại, gửi If-Match kèm ETag của part đầu tiên (để file không trộn nội dung cũ và mới) và kiểm tra checksum.
+// Tiến độ được báo qua tracker theo id.
+// Nếu thất bại hoặc bị hủy, không để lại file tại dest.
 func download(
 	ctx context.Context,
 	tm *transfermanager.Client,
@@ -25,18 +24,18 @@ func download(
 	id string,
 	tracker *utils.BatchReporter[models.DownloadProgressOutput],
 ) (int64, error) {
-	// Step 1: write to a temporary ".part" file and rename it at the end, so dest never ends
-	// up incomplete. Any failure or cancel removes the .part file.
+	// Bước 1: ghi vào file tạm ".part" rồi đổi tên khi hoàn tất để dest không bao giờ chứa file chưa tải xong.
+	// Nếu thất bại hoặc bị hủy, xóa file .part.
 	part := dest + ".part"
 	f, err := os.Create(part)
 	if err != nil {
 		return 0, err
 	}
 	defer func() {
-		// if already closed at the end of the function, this just returns an ignored error
+		// Nếu file đã đóng ở cuối hàm thì thao tác này chỉ trả về lỗi sẽ bị bỏ qua.
 		_ = f.Close()
 		if err != nil {
-			// failed or canceled: delete the temporary file
+			// Thất bại hoặc bị hủy: xóa file tạm.
 			_ = os.Remove(part)
 		}
 	}()
@@ -44,8 +43,8 @@ func download(
 	w := &countingWriterAt{w: f}
 	var total atomic.Int64
 	total.Store(-1)
-	// The tracker samples the counter on a shared ticker instead of emitting an event per write,
-	// which would flood the frontend; done() emits the final value when the download returns.
+	// Tracker đọc bộ đếm theo ticker dùng chung thay vì phát sự kiện sau mỗi lần ghi để tránh làm frontend quá tải;
+	// done() phát giá trị cuối cùng khi lượt tải xuống kết thúc.
 	done := tracker.Track(id, func() (models.DownloadProgressOutput, bool) {
 		t := total.Load()
 		if t < 0 { // size not known yet
@@ -55,7 +54,7 @@ func download(
 	})
 	defer done()
 
-	// Step 2: download the parts in parallel into the temporary file.
+	// Bước 2: tải các part song song vào file tạm.
 	out, err := tm.DownloadObject(ctx, &transfermanager.DownloadObjectInput{
 		Bucket:   &bucket,
 		Key:      &key,
@@ -70,7 +69,7 @@ func download(
 		return 0, err
 	}
 
-	// Step 3: the file must be closed before renaming (Windows can't rename an open file).
+	// Bước 3: phải đóng file trước khi đổi tên (Windows không thể đổi tên file đang mở).
 	if err = f.Close(); err != nil {
 		return 0, err
 	}
@@ -82,24 +81,23 @@ func download(
 	return aws.ToInt64(out.ContentLength), nil
 }
 
-// countingWriterAt writes to w and adds the number of written bytes to n (used for progress).
+// countingWriterAt ghi vào w và cộng số byte đã ghi vào n (dùng để báo tiến độ).
 type countingWriterAt struct {
 	w io.WriterAt
 	n atomic.Int64
 }
 
-// WriteAt implements io.WriterAt and counts the bytes written.
+// WriteAt triển khai io.WriterAt và đếm số byte đã ghi.
 func (c *countingWriterAt) WriteAt(p []byte, off int64) (int, error) {
 	n, err := c.w.WriteAt(p, off)
 	c.n.Add(int64(n))
 	return n, err
 }
 
-// onTransferStart is a transfer manager listener that receives the object size
-// once the first response arrives.
+// onTransferStart là listener của transfer manager, nhận kích thước object khi có phản hồi đầu tiên.
 type onTransferStart func(size int64)
 
-// OnObjectTransferStart implements the transfer manager listener and passes on the size.
+// OnObjectTransferStart triển khai listener của transfer manager và chuyển tiếp kích thước object.
 func (f onTransferStart) OnObjectTransferStart(_ context.Context, e *transfermanager.ObjectTransferStartEvent) {
 	f(e.TotalBytes)
 }

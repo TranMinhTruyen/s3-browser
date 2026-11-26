@@ -2,22 +2,22 @@ package bucket
 
 import "time"
 
-// ObjectItem is an object or a folder (common prefix) of a bucket.
+// ObjectItem là object hoặc thư mục (common prefix) trong bucket.
 type ObjectItem struct {
 	Key          string    `json:"key"`
 	Name         string    `json:"name"`
 	Size         int64     `json:"size"`
 	LastModified time.Time `json:"lastModified"`
 	ETag         string    `json:"etag"`
-	// IsFolder marks a common prefix (e.g. "photos/2026/"), not a real object.
-	// Only Key and Name are set for a folder.
+	// IsFolder đánh dấu common prefix (ví dụ "photos/2026/"), không phải object thật.
+	// Với thư mục, chỉ đặt Key và Name.
 	IsFolder bool `json:"isFolder"`
 }
 
-// ListObjectOutput is one page of objects; NextCursor is nil on the last page.
+// ListObjectOutput là một trang object; NextCursor là nil ở trang cuối.
 type ListObjectOutput struct {
 	ObjectList []ObjectItem `json:"objectList"`
 	NextCursor *string      `json:"nextCursor,omitempty"`
-	// AccessDenied is set when the server answered 403, so the frontend can go back to the bucket list.
+	// Bật AccessDenied khi máy chủ trả 403 để frontend có thể quay lại danh sách bucket.
 	AccessDenied bool `json:"accessDenied,omitempty"`
 }

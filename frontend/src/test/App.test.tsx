@@ -135,7 +135,7 @@ describe('App', () => {
     it('survives mount -> unmount -> mount (StrictMode): reloads, ignores the first load and keeps the list', async () => {
       addTab('keep', 'p1');
       addTab('drop', 'gone');
-      // The first load finishes after the second one: its stale result must be dropped.
+      // Lượt tải đầu tiên hoàn tất sau lượt thứ hai nên phải loại bỏ kết quả lỗi thời của nó.
       let finishFirst!: (v: unknown) => void;
       vi.mocked(GetAllConnectionProfile)
         .mockReturnValueOnce(new Promise(resolve => (finishFirst = resolve)) as never)

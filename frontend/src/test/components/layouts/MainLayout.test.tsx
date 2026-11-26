@@ -123,7 +123,7 @@ describe('MainLayout', () => {
     expect(rt.toggleMaximise).not.toHaveBeenCalled();
   });
 
-  // lazyWorkspaces is module-level state: this test leaves SQL cached as loaded, so it must run before any other SQL test.
+  // lazyWorkspaces là trạng thái cấp module: kiểm thử này để SQL trong cache ở trạng thái đã tải, nên phải chạy trước các kiểm thử SQL khác.
   it('shows a toast when the SQL chunk fails, then loads it when SQL is selected again', async () => {
     sql.fail = true;
     renderLayout();

@@ -93,7 +93,7 @@ pub fn error_response(err: &DbError) -> Vec<u8> {
     })
 }
 
-// ---- Params ----
+// ---- Tham số ----
 
 /// Chế độ TLS của `open` cho driver mạng (theo `sslmode` của libpq); SQLite bỏ qua.
 /// `kebab-case` biến `VerifyCa` thành `"verify-ca"` trong JSON; giá trị lạ làm parse lỗi
@@ -211,7 +211,7 @@ pub struct TableRowsParams {
     pub max_page_bytes: usize,
 }
 
-// ---- Result ----
+// ---- Kết quả ----
 
 /// Kết quả `open`: id connection để dùng cho các request sau.
 #[derive(Serialize)]

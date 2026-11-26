@@ -10,7 +10,7 @@ import { useMasterDataStore } from '@/pages/s3/stores/masterDataStore';
 import { useProfileStore } from '@/pages/s3/stores/profileStore';
 import { normalizeTabProfilesFromDisk } from '@/pages/s3/utils/tabPersistence';
 
-// Sonner sizes toasts in px: width, padding and text follow the interface size (default 356px / 16px / 13px).
+// Sonner đặt kích thước toast theo px: chiều rộng, padding và chữ co giãn theo cỡ giao diện (mặc định 356px / 16px / 13px).
 const TOASTER_STYLE = { '--width': '22.25rem' } as CSSProperties;
 const TOAST_OPTIONS = { style: { fontSize: 'var(--mantine-font-size-sm)', padding: '1rem' } };
 
@@ -29,8 +29,8 @@ function App() {
     };
   }, [loadAll, reset]);
 
-  // Profiles are loaded once, here. The IPC is async, so a load error toast always fires after every effect
-  // (including the Toaster's) has mounted. Under StrictMode the first load is dropped by the cleanup reset.
+  // Profile chỉ tải một lần tại đây. IPC chạy bất đồng bộ nên toast lỗi tải luôn xuất hiện sau khi mọi effect
+  // (kể cả effect của Toaster) đã mount. Trong StrictMode, cleanup reset sẽ loại bỏ lượt tải đầu tiên.
   useEffect(() => {
     void normalizeTabProfilesFromDisk();
     return () => {
@@ -45,7 +45,7 @@ function App() {
         position={'top-center'}
         richColors={true}
         closeButton={true}
-        duration={10000}
+        duration={5000}
         style={TOASTER_STYLE}
         toastOptions={TOAST_OPTIONS}
       />

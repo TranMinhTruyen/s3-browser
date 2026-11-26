@@ -1,13 +1,13 @@
 package bucket
 
-// BucketPolicyOutput is the access state of a bucket.
+// BucketPolicyOutput là trạng thái truy cập của một bucket.
 type BucketPolicyOutput struct {
-	// Mode is "private" (no policy), "public" (read-only public policy) or "custom".
+	// Mode là "private" (không có policy), "public" (policy công khai chỉ đọc) hoặc "custom".
 	Mode string `json:"mode"`
-	// Policy is the policy JSON, empty when private.
+	// Policy là JSON policy, rỗng nếu ở chế độ private.
 	Policy string `json:"policy"`
-	// PublicBlocked is true when Block Public Access forbids a public policy (real AWS only).
+	// PublicBlocked là true nếu Block Public Access cấm policy công khai (chỉ có trên AWS thật).
 	PublicBlocked bool `json:"publicBlocked"`
-	// EditDenied is true when the account is known not to be allowed to change the policy.
+	// EditDenied là true nếu tài khoản được xác định là không có quyền thay đổi policy.
 	EditDenied bool `json:"editDenied"`
 }

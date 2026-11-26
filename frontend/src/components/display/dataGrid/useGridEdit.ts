@@ -10,10 +10,10 @@ import {
 } from 'react';
 import { type Cell, cellOf, type GridSelection } from '@/components/display/dataGrid/useGridSelection';
 
-/** A cell being edited: `base` is its value before the edit (null = NULL), `start` the text the input opens with. */
+/** Ô đang được chỉnh sửa: `base` là giá trị trước khi sửa (null = NULL), `start` là nội dung ban đầu của input. */
 type Editing = Cell & { base: string | null; start: string };
 
-/** Translated texts of the editable grid. */
+/** Các nội dung đã dịch của grid có thể chỉnh sửa. */
 type GridEditLabels = {
   setNull: string;
   deleteRows: string;
@@ -24,49 +24,49 @@ type GridEditLabels = {
 };
 
 /**
- * Turns on editing in `DataGrid`. Rows are numbered by the grid: the `newRows` first, then `rows`
- * (a loaded row `i` is grid row `newRows.length + i`). The grid never changes data itself, it reports through the
- * callbacks; `onSetCell` receives the value as text, `null` meaning SQL NULL.
+ * Bật chỉnh sửa trong `DataGrid`. Grid đánh số hàng: `newRows` trước, sau đó đến `rows`
+ * (hàng đã tải có chỉ số `i` tương ứng hàng grid `newRows.length + i`). Grid không tự sửa dữ liệu mà báo qua callback;
+ * `onSetCell` nhận giá trị dạng text, trong đó `null` nghĩa là SQL NULL.
  */
 export type GridEdit = {
   newRows: (string | null)[][];
-  /** Loaded row index -> (column index -> edited value). */
+  /** Chỉ số hàng đã tải -> (chỉ số cột -> giá trị đã sửa). */
   edited: ReadonlyMap<number, ReadonlyMap<number, string | null>>;
-  /** Loaded row indexes marked as deleted; they cannot be edited. */
+  /** Chỉ số các hàng đã tải được đánh dấu đã xóa; không thể chỉnh sửa chúng. */
   deleted: ReadonlySet<number>;
   labels: GridEditLabels;
   onSetCell: (row: number, col: number, value: string | null) => void;
-  /** Sets the same value in every cell of `rows` x `cols` in one update (Ctrl+0, Delete, menu); skips deleted rows. */
+  /** Đặt cùng một giá trị cho mọi ô trong `rows` x `cols` bằng một lần cập nhật (Ctrl+0, Delete, menu); bỏ qua hàng đã xóa. */
   onSetCells: (rows: number[], cols: number[], value: string | null) => void;
-  /** Called for the delete menu item: deletes the rows, or restores them when they are all deleted. */
+  /** Được gọi cho mục xóa trong menu: xóa các hàng hoặc khôi phục nếu tất cả đều đã bị xóa. */
   onToggleDeleteRows: (rows: number[]) => void;
-  /** Selected grid rows, ascending (the row of the active cell unless whole rows are selected). Must be stable. */
+  /** Các hàng grid được chọn, theo thứ tự tăng dần (hàng của ô đang hoạt động nếu không chọn nguyên hàng). Phải ổn định. */
   onSelectionChange: (rows: number[]) => void;
 };
 
 type Args = {
   edit?: GridEdit;
-  /** Number of grid rows (new rows + loaded rows). */
+  /** Số hàng trong grid (hàng mới + hàng đã tải). */
   count: number;
   columnCount: number;
   getValue: (row: number, col: number) => string | null;
   scrollRef: RefObject<HTMLDivElement | null>;
-  /** Set to the cell being edited so the virtualizers keep it mounted when it scrolls out of view. */
+  /** Đặt thành ô đang sửa để virtualizer giữ ô được mount khi cuộn ra ngoài vùng hiển thị. */
   pinnedRef: RefObject<Cell | null>;
   selection: GridSelection;
 };
 
-/** Every grid row is a loaded row marked as deleted (so the delete action restores them instead). */
+/** Mọi hàng grid đều là hàng đã tải và được đánh dấu xóa (nên thao tác xóa sẽ khôi phục chúng). */
 export const isAllDeletedLoaded = (gridRows: readonly number[], newCount: number, deleted: ReadonlySet<number>) =>
   gridRows.length > 0 && gridRows.every(row => row >= newCount && deleted.has(row - newCount));
 
-/** In-place editing, fill actions (NULL, empty) and the edit items of the context menu of the editable `DataGrid`. */
+/** Chỉnh sửa tại chỗ, thao tác điền giá trị (NULL, rỗng) và các mục chỉnh sửa trong menu ngữ cảnh của `DataGrid`. */
 export function useGridEdit({ edit, count, columnCount, getValue, scrollRef, pinnedRef, selection }: Args) {
   const [editing, setEditing] = useState<Editing | null>(null);
   const editingRef = useRef<Editing | null>(null);
-  // Enter/Esc/Tab close the editor, and removing the focused input may also fire a blur: only the first counts.
+  // Enter/Esc/Tab đóng editor; xóa input đang focus cũng có thể phát blur nên chỉ xử lý sự kiện đầu tiên.
   const closed = useRef(true);
-  // The user typed into the input (or opened it with a typed key): an empty text is then '' and not NULL.
+  // Người dùng đã nhập vào input (hoặc mở input bằng phím ký tự): lúc này nội dung rỗng là '' chứ không phải NULL.
   const touched = useRef(false);
 
   const newCount = edit?.newRows.length ?? 0;
@@ -102,7 +102,7 @@ export function useGridEdit({ edit, count, columnCount, getValue, scrollRef, pin
     [isDeleted, getValue, pinnedRef, setCursor]
   );
 
-  /** Saves `text` (when it differs from the old value) and closes the editor; `step` moves the cell, +-1 for Tab. */
+  /** Lưu `text` nếu khác giá trị cũ rồi đóng editor; `step` di chuyển ô, +-1 khi dùng Tab. */
   const closeEdit = useCallback(
     (text: string | null, step: number, refocus: boolean) => {
       const current = editingRef.current;
@@ -111,7 +111,7 @@ export function useGridEdit({ edit, count, columnCount, getValue, scrollRef, pin
       editingRef.current = null;
       pinnedRef.current = null;
       setEditing(null);
-      // A NULL cell opened and closed untouched stays NULL; once typed in, an empty text is ''.
+      // Ô NULL được mở rồi đóng mà không sửa vẫn là NULL; nếu đã nhập thì nội dung rỗng là ''.
       const changed = current.base === null ? touched.current || text !== '' : text !== current.base;
       if (text !== null && changed) onSetCell?.(current.row, current.col, text);
       if (refocus) scrollRef.current?.focus({ preventScroll: true });
@@ -123,7 +123,7 @@ export function useGridEdit({ edit, count, columnCount, getValue, scrollRef, pin
     [onSetCell, scrollRef, columnCount, count, moveTo, pinnedRef]
   );
 
-  /** Sets every selected cell (cell range, columns or rows) to `value` in one update. */
+  /** Đặt mọi ô được chọn (vùng ô, cột hoặc hàng) thành `value` bằng một lần cập nhật. */
   const fillSelection = useCallback(
     (value: string | null) => {
       const target = getTarget();
@@ -132,7 +132,7 @@ export function useGridEdit({ edit, count, columnCount, getValue, scrollRef, pin
     [getTarget, onSetCells]
   );
 
-  // A new row is selected and opened for editing; fewer new rows (deleted or rolled back) shift the row numbers.
+  // Hàng mới được chọn và mở để chỉnh sửa; khi số hàng mới giảm (xóa hoặc rollback), chỉ số hàng sẽ dịch chuyển.
   const previousNew = useRef(newCount);
   useEffect(() => {
     const previous = previousNew.current;
@@ -148,7 +148,7 @@ export function useGridEdit({ edit, count, columnCount, getValue, scrollRef, pin
     }
   }, [newCount, scrollRef, startEdit, clear]);
 
-  /** Keys that edit: F2, Ctrl+0 (NULL), Delete (empty), typing. Runs after the selection took the keys it handles. */
+  /** Các phím chỉnh sửa: F2, Ctrl+0 (NULL), Delete (rỗng), nhập ký tự. Chạy sau khi bộ chọn xử lý các phím của nó. */
   const onKeyDownGrid = useCallback(
     (e: KeyboardEvent<HTMLDivElement>) => {
       if (!edit || e.target !== e.currentTarget || !cursor) return;
@@ -163,10 +163,10 @@ export function useGridEdit({ edit, count, columnCount, getValue, scrollRef, pin
         e.preventDefault();
         fillSelection('');
       } else if (key === 'Process') {
-        // IME composition (ja, zh): open the input empty without cancelling the key, so the IME types into it.
+        // Soạn thảo bằng IME (ja, zh): mở input rỗng mà không hủy phím để IME nhập vào input.
         startEdit(cursor.row, cursor.col, '');
       } else if (key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        // Without this the key would also be typed into the input that opens now.
+        // Nếu thiếu thao tác này, phím sẽ đồng thời được nhập vào input vừa mở.
         e.preventDefault();
         startEdit(cursor.row, cursor.col, key);
       }
@@ -212,7 +212,7 @@ export function useGridEdit({ edit, count, columnCount, getValue, scrollRef, pin
     [closeEdit]
   );
 
-  // Focus with the caret at the end; stable so it only runs when the input mounts.
+  // Focus input và đặt caret ở cuối; giữ ổn định để chỉ chạy khi input mount.
   const editorRef = useCallback((el: HTMLInputElement | null) => {
     if (!el) return;
     el.focus();

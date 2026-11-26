@@ -12,7 +12,7 @@ import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 const h = vi.hoisted(() => ({ visibleRows: Number.POSITIVE_INFINITY }));
 
-// jsdom has no layout, so the real virtualizer would render no row: render the first `visibleRows` rows instead.
+// jsdom không có layout nên virtualizer thật sẽ không render hàng nào: thay bằng cách render `visibleRows` hàng đầu.
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: ({
     count,
@@ -227,7 +227,7 @@ describe('UploadPickerModal', () => {
       await flush();
       const subscribed = handlers().length;
       await drop(output([group('', [file('a.txt')])]));
-      // Adding files does not resubscribe: the handler reads the latest list from a ref.
+      // Thêm file không đăng ký listener lại: handler đọc danh sách mới nhất từ ref.
       expect(handlers()).toHaveLength(subscribed);
       expect(unsubscribe).not.toHaveBeenCalled();
       view.unmount();
@@ -346,7 +346,7 @@ describe('UploadPickerModal', () => {
       vi.mocked(callIPC).mockRejectedValue(new Error('boom'));
       const { user } = open();
       await flush();
-      // The modal does not catch the rejection, so it surfaces as an unhandled rejection of the click handler.
+      // Modal không bắt rejection nên lỗi được phát ra dưới dạng unhandled rejection của click handler.
       const onRejection = vi.fn();
       const nodeProcess = (
         globalThis as unknown as {
@@ -518,7 +518,7 @@ describe('UploadPickerModal', () => {
   });
 
   describe('remove files', () => {
-    // Row = the Group that holds the checkbox and the remove button.
+    // Hàng = Group chứa checkbox và nút xóa.
     const removeBtn = (name: string) => {
       const row = screen.getByRole('checkbox', { name }).closest('[style*="translateY"]') as HTMLElement;
       return within(row).getByRole('button', { name: 'Remove file' });
@@ -664,7 +664,7 @@ describe('UploadPickerModal', () => {
       await flush();
       const files = Array.from({ length: 100 }, (_, i) => file(`g/f${i}.txt`));
       await drop(output([group('g', files)], { maxFilesPerFolder: 100, maxTotalFiles: 1000 }));
-      // 1 group header row + 3 file rows.
+      // 1 hàng tiêu đề nhóm + 3 hàng file.
       expect(screen.getAllByRole('checkbox')).toHaveLength(3);
       expect(uploadBtn(100)).toBeEnabled();
     });

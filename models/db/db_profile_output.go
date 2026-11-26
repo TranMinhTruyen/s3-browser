@@ -1,6 +1,6 @@
 package db
 
-// DbProfileOutput is a saved database profile. The secret is never returned, only whether one is stored.
+// DbProfileOutput là hồ sơ cơ sở dữ liệu đã lưu. Không bao giờ trả secret, chỉ cho biết secret có được lưu hay không.
 type DbProfileOutput struct {
 	Id        string          `json:"id"`
 	Name      string          `json:"name"`
@@ -10,7 +10,7 @@ type DbProfileOutput struct {
 	HasSecret bool            `json:"hasSecret"`
 }
 
-// GetAllDbProfileOutput lists the saved database profiles, oldest first.
+// GetAllDbProfileOutput liệt kê hồ sơ cơ sở dữ liệu đã lưu theo thứ tự từ cũ đến mới.
 type GetAllDbProfileOutput struct {
 	DbProfiles []DbProfileOutput `json:"dbProfiles"`
 }

@@ -3,18 +3,18 @@ import { ReactNode } from 'react';
 import classes from '@/components/inputs/SliderInput.module.css';
 
 type SliderInputProps = Omit<SliderProps, 'label'> & {
-  /** Field label above the slider (the thumb tooltip label is always off; use `thumbLabel` for screen readers). */
+  /** Nhãn trường nằm trên thanh trượt (tooltip của nút trượt luôn tắt; dùng `thumbLabel` cho trình đọc màn hình). */
   label?: ReactNode;
 };
 
-/** Thin wrapper over Mantine `Slider`: field label like other inputs, no floating label on the thumb. */
+/** Lớp bọc mỏng quanh `Slider` của Mantine: nhãn trường như các input khác, không hiện nhãn nổi trên nút trượt. */
 function SliderInput({ label, classNames, thumbLabel, ...props }: SliderInputProps) {
-  // Only the object form is merged; the function form of `classNames` is not used by callers.
+  // Chỉ gộp dạng object; nơi gọi không dùng dạng hàm của `classNames`.
   const extra = typeof classNames === 'object' ? classNames : undefined;
   const slider = (
     <Slider
       {...props}
-      // The thumb is the role="slider" element: name it after the field label unless the caller gave one.
+      // Nút trượt là phần tử role="slider": đặt tên theo nhãn trường trừ khi nơi gọi đã truyền tên riêng.
       thumbLabel={thumbLabel ?? (typeof label === 'string' ? label : undefined)}
       classNames={{
         ...extra,

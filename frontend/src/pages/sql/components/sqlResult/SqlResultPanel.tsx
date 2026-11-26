@@ -12,12 +12,12 @@ const MESSAGES_TAB = 'messages';
 
 type ResultGridProps = {
   statement: StatementResult;
-  /** Only the last statement of a run has a cursor, so only it can load more rows. */
+  /** Chỉ câu lệnh cuối của một lượt chạy có con trỏ nên chỉ câu đó mới tải thêm hàng được. */
   loadingMore: boolean;
   onLoadMore: () => void;
 };
 
-/** Rows of one SELECT, with a note when only its first rows were kept or more are being loaded. */
+/** Các hàng của một SELECT, kèm ghi chú nếu chỉ giữ lại các hàng đầu hoặc đang tải thêm. */
 const ResultGrid = memo(function ResultGrid({ statement, loadingMore, onLoadMore }: ResultGridProps) {
   const { t, i18n } = useTranslation('sqlTab');
   const secondsFormat = useMemo(
@@ -27,7 +27,7 @@ const ResultGrid = memo(function ResultGrid({ statement, loadingMore, onLoadMore
   const columns = useMemo(() => statement.columns.map(column => column.name), [statement.columns]);
   const hasMore = canLoadMore(statement);
   const copyLabels = useMemo(() => ({ copy: t('result.copy'), copyWithHeaders: t('result.copyWithHeaders') }), [t]);
-  // "+" while the cursor still has rows to read, like the Messages tab.
+  // Hiện "+" khi con trỏ vẫn còn hàng để đọc, tương tự tab Messages.
   const rowsText = t('message.rowsReturned', { n: `${statement.rows.length}${hasMore ? '+' : ''}` });
   const summary = `${rowsText} · ${t('message.elapsed', { seconds: secondsFormat.format(statement.elapsedMs / 1000) })}`;
   const gridRef = useRef<DataGridHandle>(null);
@@ -80,8 +80,8 @@ type SqlResultPanelProps = {
 };
 
 /**
- * Results of the last run: a tab per SELECT (Result 1..n) and a Messages tab. Give it a `key` per run so the
- * selected tab starts again at the last result (or Messages when the run failed or returned no rows).
+ * Kết quả của lượt chạy gần nhất: mỗi SELECT có một tab (Result 1..n) và có thêm tab Messages. Đặt `key` riêng cho từng lượt
+ * để tab được chọn trở về kết quả cuối (hoặc Messages nếu lượt chạy thất bại hay không trả về hàng nào).
  */
 function SqlResultPanel(props: SqlResultPanelProps) {
   const { statements, cancelled, running, loadingMore, onLoadMore } = props;
@@ -113,7 +113,7 @@ function SqlResultPanel(props: SqlResultPanelProps) {
   }
 
   return (
-    // display-none, not Activity: Activity tears down the effects of a hidden panel (DataGrid would re-run them)
+    // Dùng display-none, không dùng Activity: Activity gỡ effect của panel bị ẩn (DataGrid sẽ chạy lại chúng).
     <Tabs
       value={tab}
       onChange={onChangeTab}

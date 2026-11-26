@@ -2,22 +2,22 @@ import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { EditorView } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 
-// Colors only come from Mantine theme variables so the editor follows the light/dark theme.
+// Chỉ lấy màu từ biến theme của Mantine để editor theo chế độ sáng/tối.
 const color = (light: string, dark: string) =>
   `light-dark(var(--mantine-color-${light}), var(--mantine-color-${dark}))`;
 
-// Font follows the Settings font (--mantine-font-family): overrides CodeMirror's default monospace.
+// Phông chữ theo thiết lập (--mantine-font-family), ghi đè phông monospace mặc định của CodeMirror.
 const FONT = { fontFamily: 'var(--mantine-font-family)', fontSize: 'var(--mantine-font-size-sm)' };
 
 const editorTheme = EditorView.theme({
-  // `&.cm-editor`, not `&`: the tooltip container appended to <body> also gets the theme class,
-  // and `height: 100%` on it would double the page height (window scrollbar).
+  // Dùng `&.cm-editor`, không dùng `&`: container tooltip được gắn vào <body> cũng nhận class theme,
+  // và `height: 100%` trên container đó sẽ làm chiều cao trang tăng gấp đôi (xuất hiện thanh cuộn cửa sổ).
   '&.cm-editor': {
     height: '100%',
     color: 'var(--mantine-color-text)',
     backgroundColor: 'var(--mantine-color-body)',
   },
-  // Visible focus ring drawn inside the editor so the tab frame (overflow hidden) does not clip it.
+  // Vẽ viền focus bên trong editor để khung tab (overflow hidden) không cắt mất.
   '&.cm-focused': { outline: '2px solid var(--mantine-primary-color-filled)', outlineOffset: '-2px' },
   '.cm-scroller': { ...FONT, overflow: 'auto' },
   '.cm-content': { ...FONT, caretColor: 'var(--mantine-color-text)' },
@@ -27,7 +27,7 @@ const editorTheme = EditorView.theme({
     backgroundColor: 'var(--mantine-color-body)',
     borderRight: '1px solid var(--mantine-color-default-border)',
   },
-  // Translucent so the selection layer (drawn under the line content) stays visible on the active line.
+  // Dùng màu bán trong suốt để lớp vùng chọn (vẽ bên dưới nội dung dòng) vẫn nhìn thấy trên dòng đang hoạt động.
   '.cm-activeLine': {
     backgroundColor:
       'light-dark(color-mix(in srgb, var(--mantine-color-gray-5) 12%, transparent), ' +
@@ -40,7 +40,7 @@ const editorTheme = EditorView.theme({
     backgroundColor: color('blue-2', 'blue-9'),
   },
   '.cm-matchingBracket': { backgroundColor: color('gray-3', 'dark-3') },
-  // Autocomplete popup.
+  // Popup gợi ý tự động.
   '.cm-tooltip': {
     ...FONT,
     color: 'var(--mantine-color-text)',
@@ -70,5 +70,5 @@ const highlightStyle = HighlightStyle.define([
   { tag: [tags.typeName, tags.standard(tags.name)], color: color('blue-7', 'blue-3') },
 ]);
 
-/** Extensions for the SQL editor look: theme (colors, font) and syntax highlighting. */
+/** Các extension định dạng SQL editor: theme (màu sắc, phông chữ) và tô sáng cú pháp. */
 export const sqlEditorTheme = [editorTheme, syntaxHighlighting(highlightStyle)];

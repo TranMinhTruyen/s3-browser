@@ -4,7 +4,7 @@ import type { AuthFieldsProps } from '@/pages/s3/modals/connect/connectSchema';
 import AuthDurationField from '@/pages/s3/modals/connect/fields/AuthDurationField';
 import AuthStaticFields from '@/pages/s3/modals/connect/fields/AuthStaticFields';
 
-/** MinIO STS AssumeRole: the access/secret key that asks for temporary credentials, duration and inline policy. */
+/** MinIO STS AssumeRole: access key/secret key dùng để yêu cầu thông tin xác thực tạm thời, thời hạn và policy nhúng. */
 function AuthMinioStsFields(props: AuthFieldsProps) {
   const { form } = props;
   const { t } = useTranslation('connectModal');

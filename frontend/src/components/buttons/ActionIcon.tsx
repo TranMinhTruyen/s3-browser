@@ -9,17 +9,17 @@ import { useAutoLoading } from '@/common/hooks/useAutoLoading';
 import classes from '@/components/buttons/ActionIcon.module.css';
 
 interface ActionIconProps extends MActionIconProps, ElementProps<'button', keyof MActionIconProps> {
-  /** Translated text shown on hover; also the default `aria-label`. */
+  /** Văn bản đã dịch hiển thị khi rê chuột; đồng thời là `aria-label` mặc định. */
   tooltip: string;
 }
 
 /**
- * Mantine action icon that always has a tooltip, and shows a loader and disables itself while an async `onClick`
- * is pending. An explicit `loading` prop wins. Defaults: size `lg`, variant `light`.
- * The button is always wrapped in a span (the tooltip target, since browsers send no hover events to a disabled
- * button), so toggling disabled/loading never remounts it. Margin props (`m`, `mx`, `ml`, ...) and `style` apply to
- * that span, the real layout item; every other prop (including `ref` and `className`) goes to the Mantine button.
- * The tooltip is hidden while the button is `aria-expanded` (e.g. a `Menu.Target`) to avoid covering the dropdown.
+ * Biểu tượng thao tác của Mantine luôn có tooltip, đồng thời hiện trạng thái tải và tự vô hiệu hóa khi `onClick` bất đồng bộ
+ * đang chờ. Prop `loading` tường minh được ưu tiên. Mặc định: size `lg`, variant `light`.
+ * Nút luôn được bọc trong span (đích của tooltip vì trình duyệt không gửi sự kiện rê chuột đến nút bị vô hiệu hóa),
+ * nhờ đó đổi disabled/loading không mount lại nút. Các prop lề (`m`, `mx`, `ml`, ...) và `style` áp dụng cho span,
+ * phần tử bố cục thực tế; các prop khác (kể cả `ref` và `className`) được chuyển cho nút Mantine.
+ * Ẩn tooltip khi nút có `aria-expanded` (ví dụ `Menu.Target`) để không che danh sách thả xuống.
  */
 function ActionIcon(props: ActionIconProps) {
   const {

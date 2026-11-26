@@ -4,21 +4,21 @@ includes:
   common: ../Taskfile.yml
 
 vars:
-  # Signing configuration - edit these values for your project
+  # Cấu hình ký ứng dụng - chỉnh các giá trị này cho dự án của bạn.
   # SIGN_CERTIFICATE: "path/to/certificate.pfx"
-  # SIGN_THUMBPRINT: "certificate-thumbprint"  # Alternative to SIGN_CERTIFICATE
+  # SIGN_THUMBPRINT: "certificate-thumbprint"  # Dùng thay cho SIGN_CERTIFICATE
   # TIMESTAMP_SERVER: "http://timestamp.digicert.com"
   #
-  # Password is stored securely in system keychain. Run: go tool wails3 setup signing
+  # Mật khẩu được lưu an toàn trong keychain hệ thống. Chạy: go tool wails3 setup signing
 
-  # Docker image for cross-compilation with CGO (used when CGO_ENABLED=1 on non-Windows)
+  # Docker image dùng để biên dịch chéo có CGO (khi CGO_ENABLED=1 trên hệ điều hành không phải Windows).
   CROSS_IMAGE: wails-cross
 
 tasks:
   build:
     summary: Builds the application for Windows
     cmds:
-      # Auto-detect CGO: if CGO_ENABLED=1, use Docker; otherwise use native Go cross-compile
+      # Tự nhận biết CGO: nếu CGO_ENABLED=1 thì dùng Docker; ngược lại dùng cross-compile gốc của Go.
       - task: '{{if and (ne OS "windows") (eq .CGO_ENABLED "1")}}build:docker{{else}}build:native{{end}}'
         vars:
           ARCH: '{{.ARCH}}'
@@ -28,7 +28,7 @@ tasks:
           GARBLE_ARGS: '{{.GARBLE_ARGS}}'
           OUT_DIR: '{{.OUT_DIR}}'
     vars:
-      # Default to CGO_ENABLED=0 if not explicitly set
+      # Mặc định đặt CGO_ENABLED=0 nếu chưa được chỉ định.
       CGO_ENABLED: '{{.CGO_ENABLED | default "0"}}'
 
   build:portable:
@@ -42,7 +42,7 @@ tasks:
       - sh: "test -f '{{.WEBVIEW2_DIR}}/msedgewebview2.exe'"
         msg: "WEBVIEW2_DIR '{{.WEBVIEW2_DIR}}' does not contain msedgewebview2.exe. Extract the WebView2 Fixed Version CAB and point to the folder that holds msedgewebview2.exe."
     cmds:
-      # start from an empty package dir so stale files are never shipped
+      # Bắt đầu với thư mục package rỗng để không đóng gói file cũ còn sót.
       - cmd: powershell -NoProfile -Command "Remove-Item -Recurse -Force -ErrorAction SilentlyContinue '{{.PORTABLE_DIR}}'; New-Item -ItemType Directory -Force '{{.PORTABLE_DIR}}/data', '{{.PORTABLE_DIR}}/webview2' | Out-Null"
         platforms: [windows]
       - task: build
@@ -143,8 +143,8 @@ tasks:
       - rm -f *.syso
     vars:
       DOCKER_ARCH: '{{.ARCH | default "amd64"}}'
-      # Generate Docker volume mounts: Go module cache + go.mod replace directives
-      # Uses go tool wails3 tool docker-mounts for cross-platform compatibility (Windows/Linux/macOS)
+      # Tạo Docker volume mount: bộ nhớ đệm Go module và các chỉ thị replace trong go.mod.
+      # Dùng go tool wails3 tool docker-mounts để tương thích đa nền tảng (Windows/Linux/macOS).
       DOCKER_MOUNTS:
         sh: 'go tool wails3 tool docker-mounts'
 
@@ -175,7 +175,7 @@ tasks:
       - sh: '[ "{{.INSTALL_SCOPE}}" = "user" ] || [ "{{.INSTALL_SCOPE}}" = "machine" ]'
         msg: "INSTALL_SCOPE must be 'user' or 'machine', got '{{.INSTALL_SCOPE}}'"
     cmds:
-      # Create the Microsoft WebView2 bootstrapper if it doesn't exist
+      # Tạo bootstrapper Microsoft WebView2 nếu chưa tồn tại.
       - go tool wails3 generate webview2bootstrapper -dir "{{.ROOT_DIR}}/build/windows/nsis"
       - |
         {{if eq OS "windows"}}
@@ -228,8 +228,8 @@ tasks:
     deps:
       - task: build
     cmds:
-      # Certificate vars are optional: if unset, `go tool wails3 tool sign` falls back to
-      # the certificate configured globally via `go tool wails3 setup`.
+      # Các biến chứng chỉ là tùy chọn: nếu chưa đặt, `go tool wails3 tool sign` sẽ dùng
+      # chứng chỉ được cấu hình toàn cục qua `go tool wails3 setup`.
       - go tool wails3 tool sign --input "{{.BIN_DIR}}/{{.APP_NAME}}.exe" {{if .SIGN_CERTIFICATE}}--certificate "{{.SIGN_CERTIFICATE}}"{{end}} {{if .SIGN_THUMBPRINT}}--thumbprint "{{.SIGN_THUMBPRINT}}"{{end}} {{if .TIMESTAMP_SERVER}}--timestamp "{{.TIMESTAMP_SERVER}}"{{end}}
 
   sign:installer:

@@ -5,7 +5,7 @@ import { useModalStackStore } from '@/common/stores/modalStackStore';
 import DeleteResultModal from '@/pages/s3/modals/delete/DeleteResultModal';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// jsdom has no layout, so the real virtualizer would render no row: render every row instead.
+// jsdom không có layout, nên virtualizer thật sẽ không hiển thị hàng nào; thay vào đó, hiển thị mọi hàng.
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: ({ count }: { count: number }) => ({
     getVirtualItems: () => Array.from({ length: count }, (_, index) => ({ key: index, index, start: index * 32 })),

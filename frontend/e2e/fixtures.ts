@@ -5,7 +5,7 @@ import { test as base, expect, type Page } from '@playwright/test';
 
 const localesDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'locales');
 
-/** UI text of a locale key, so tests follow the real labels instead of hard-coding them. */
+/** Lấy văn bản giao diện theo khóa ngôn ngữ để kiểm thử dùng đúng nhãn thực tế thay vì ghi cứng. */
 export function t(namespace: string, key: string, params: Record<string, string | number> = {}, lang = 'en'): string {
   const json = JSON.parse(readFileSync(join(localesDir, lang, `${namespace}.json`), 'utf8'));
   const text = key.split('.').reduce((node, part) => node?.[part], json);
@@ -16,7 +16,7 @@ export function t(namespace: string, key: string, params: Record<string, string 
   );
 }
 
-/** Calls a bound Go handler the way the generated bindings do (used for setup and cleanup only). */
+/** Gọi handler Go đã bind theo cách các binding được sinh tự động thực hiện (chỉ dùng để thiết lập và dọn dẹp). */
 export async function callBackend<T = unknown>(page: Page, handler: string, method: string, ...args: unknown[]) {
   return page.evaluate(
     async ({ methodName, args }) => {
@@ -31,7 +31,7 @@ export async function callBackend<T = unknown>(page: Page, handler: string, meth
   ) as Promise<{ result: boolean; body: T }>;
 }
 
-/** Default settings of a new install, written before each test so specs do not leak settings into each other. */
+/** Cài đặt mặc định của bản cài mới, được ghi trước mỗi kiểm thử để các spec không ảnh hưởng cài đặt của nhau. */
 export const DEFAULT_SETTINGS = {
   theme: 'light',
   font: 'nunito',
@@ -42,16 +42,16 @@ export const DEFAULT_SETTINGS = {
   betaUpdate: false,
 };
 
-// Wails server mode prints this banner with console.warn on every page load; the desktop app does not.
+// Chế độ máy chủ Wails in banner này bằng console.warn mỗi lần tải trang; ứng dụng desktop không làm vậy.
 const WAILS_BANNER = 'Browser Environment Detected';
 
 export const test = base.extend({
-  // The app with default settings and a console check: any warning, error or uncaught exception of the page
-  // during the test fails it (the listeners are attached before the first page load).
+  // Ứng dụng dùng cài đặt mặc định và được kiểm tra console: mọi cảnh báo, lỗi hoặc ngoại lệ không được xử lý trên trang
+  // trong lúc kiểm thử đều khiến kiểm thử thất bại (các listener được gắn trước lần tải trang đầu tiên).
   page: async ({ page }, run) => {
     const errors: string[] = [];
     await page.addInitScript(banner => {
-      // oxlint-disable-next-line no-console -- wraps the page's console to drop only the Wails banner
+      // oxlint-disable-next-line no-console -- bọc console của trang để bỏ riêng banner của Wails
       const warn = console.warn;
       // oxlint-disable-next-line no-console
       console.warn = (...args) => {
@@ -74,7 +74,7 @@ export const test = base.extend({
 
 export { expect };
 
-/** Switches the app between S3 and SQL mode with the switch in the title bar. */
+/** Chuyển ứng dụng giữa chế độ S3 và SQL bằng nút chuyển trên thanh tiêu đề. */
 export async function switchMode(page: Page, mode: 's3' | 'sql') {
   await page
     .getByText(t('common', `appMode.${mode}`), { exact: true })
@@ -82,7 +82,7 @@ export async function switchMode(page: Page, mode: 's3' | 'sql') {
     .click();
 }
 
-/** Hides toasts so they do not cover buttons the test clicks next (sonner keeps owning the nodes). */
+/** Ẩn toast để chúng không che nút mà kiểm thử sẽ bấm tiếp theo (sonner vẫn giữ các node này). */
 export async function hideToasts(page: Page) {
   await page.addStyleTag({ content: '[data-sonner-toaster]{display:none !important}' });
 }

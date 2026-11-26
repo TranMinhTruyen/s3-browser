@@ -1,5 +1,5 @@
-/* The Wails runtime adds file-drop-target-active on the modal content while files are dragged over it.
-   The whole modal accepts the drop, but only the list area is highlighted. */
+/* Runtime Wails thêm file-drop-target-active vào nội dung modal khi file được kéo qua.
+   Toàn modal nhận thao tác thả nhưng chỉ vùng danh sách được làm nổi bật. */
 .dropArea {
   position: relative;
 }

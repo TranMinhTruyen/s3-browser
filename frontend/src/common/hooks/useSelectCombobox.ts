@@ -6,15 +6,15 @@ type UseSelectComboboxOptions = {
   value?: string | null;
   defaultValue?: string | null;
   onChange?: (value: string | null) => void;
-  // Focus the search box when the dropdown opens.
+  // Đưa tiêu điểm vào ô tìm kiếm khi danh sách thả xuống mở.
   focusSearch?: boolean;
-  // Runs on every close path (Escape, trigger click, outside click, option submit).
+  // Chạy với mọi cách đóng (Escape, nhấn nút mở, nhấn bên ngoài hoặc chọn mục).
   onClose?: () => void;
 };
 
 /**
- * Shared state of the single-select comboboxes: a controlled/uncontrolled value plus the Mantine
- * combobox store, wired so the active option is highlighted when the dropdown opens.
+ * State dùng chung cho các combobox chọn một mục: giá trị được điều khiển/không điều khiển cùng store combobox của Mantine,
+ * được kết nối để làm nổi bật lựa chọn đang hoạt động khi danh sách thả xuống mở.
  */
 export function useSelectCombobox({ value, defaultValue, onChange, focusSearch, onClose }: UseSelectComboboxOptions) {
   const [current, handleChange] = useUncontrolled<string | null>({ value, defaultValue, finalValue: null, onChange });

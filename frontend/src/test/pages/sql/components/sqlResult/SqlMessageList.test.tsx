@@ -6,7 +6,7 @@ import SqlMessageList from '@/pages/sql/components/sqlResult/SqlMessageList';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 import { statement } from '@/test/_helpers/sqlStatement';
 
-// jsdom has no layout: render every row.
+// jsdom không có layout: hiển thị mọi hàng.
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: (o: { count: number; estimateSize: () => number; getScrollElement: () => unknown }) => {
     o.getScrollElement();

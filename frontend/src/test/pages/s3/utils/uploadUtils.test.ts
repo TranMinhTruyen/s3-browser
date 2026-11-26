@@ -167,7 +167,7 @@ describe('mergePickedFiles', () => {
 
   it('skips duplicate paths, merges same-name groups and counts previously ticked files', () => {
     const first = mergePickedFiles(empty, [group('g', [file('a', true), file('b')])], limits);
-    // b is unticked: only a (large) is ticked, so one more file fits but no more large ones.
+    // b chưa được đánh dấu: chỉ a (file lớn) được chọn nên còn chỗ cho một file nữa nhưng không thêm được file lớn.
     const prev: PickerList = { groups: first.groups, selected: new Set(['a']) };
     const r = mergePickedFiles(
       prev,
@@ -216,7 +216,7 @@ describe('mergePickedFiles', () => {
     expect(r.groups[0]).toMatchObject({ totalFiles: 1001, overMaxFiles: false });
     expect(r.selected.size).toBe(1001);
     expect(r.autoUnselected).toBe(false);
-    // Neither the previous list nor the incoming group changed.
+    // Cả danh sách trước đó lẫn nhóm mới đều không thay đổi.
     expect(base.groups[0].files).toEqual(baseFiles);
     expect(base.groups[0].files).not.toBe(r.groups[0].files);
     expect(incoming[0].files).toBe(incomingFiles);

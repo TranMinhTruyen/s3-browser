@@ -8,8 +8,8 @@ import { useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
 
 /**
- * Tab title: a table icon and the table name for a TableStructure tab; for a SQL tab the chosen profile's name
- * with its connection status dot, or the default name.
+ * Tiêu đề tab: biểu tượng bảng và tên bảng với tab TableStructure; với tab SQL là tên profile đã chọn kèm chấm trạng thái
+ * kết nối, hoặc tên mặc định nếu chưa chọn profile.
  */
 function SqlTabLabel({ tabId }: { tabId: string }) {
   const { t } = useTranslation('sqlTab');

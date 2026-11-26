@@ -21,9 +21,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// submoduleDownloaderMng downloads objects. Every object in flight is a cancelable job
-// (jobs); dests holds the paths running downloads write to, guarded by destsMu, so two
-// objects with the same base name never write to the same file.
+// submoduleDownloaderMng tải object xuống. Mỗi object đang truyền là một job có thể hủy (jobs); dests lưu các đường dẫn
+// mà lượt tải đang chạy ghi vào, được bảo vệ bởi destsMu, để hai object trùng tên cơ sở không ghi cùng một file.
 type submoduleDownloaderMng struct {
 	logger                      *slog.Logger
 	app                         *application.App
@@ -35,7 +34,7 @@ type submoduleDownloaderMng struct {
 	dests                       map[string]struct{}
 }
 
-// newSubmoduleDownloaderMng wires the downloader to the app, connections and history.
+// newSubmoduleDownloaderMng kết nối downloader với ứng dụng, kho kết nối và lịch sử tải xuống.
 func newSubmoduleDownloaderMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -54,32 +53,32 @@ func newSubmoduleDownloaderMng(
 	}
 }
 
-// downloadResult is the outcome of one object, turned into a message after all finish.
+// downloadResult là kết quả của một object, được chuyển thành thông báo sau khi mọi lượt tải hoàn tất.
 type downloadResult struct {
 	key  string
 	dest string
 	err  error
-	// history is the final history record to save; nil if the record couldn't be created.
+	// history là bản ghi lịch sử cuối cùng cần lưu; nil nếu không tạo được bản ghi.
 	history *models.DownloadHistoryItem
 }
 
-// downloadConcurrency limits both the objects downloaded at once and the parts fetched at once per object.
-// So up to downloadConcurrency^2 (36) connections can be open. Not lowered: no measurement shows a gain,
-// and fewer connections would slow a few large objects.
+// downloadConcurrency giới hạn cả số object tải xuống đồng thời lẫn số part được lấy cùng lúc cho mỗi object.
+// Vì vậy có thể mở tối đa downloadConcurrency^2 (36) kết nối. Không giảm giới hạn này vì chưa có số liệu cho thấy
+// hiệu năng được cải thiện, còn ít kết nối hơn sẽ làm chậm một số object lớn.
 const downloadConcurrency = 6
 
-// downloadObject asks the user where to save, then downloads every object in input.Objects.
-//   - One object: a "Save file" dialog is shown and the object is written to the chosen path.
-//   - Several objects: a folder picker is shown and each object is written into that folder
-//     under its base name.
+// downloadObject hỏi người dùng vị trí lưu rồi tải từng object trong input.Objects.
+//   - Một object: mở hộp thoại "Lưu file" và ghi object vào đường dẫn được chọn.
+//   - Nhiều object: mở hộp thoại chọn thư mục và lưu từng object trong thư mục đó
+//     với tên cơ sở của object.
 //
-// It blocks until all downloads finish and returns one message per object
-// (success, canceled or error). If the user closes the dialog, it returns an empty output.
+// Hàm chờ đến khi mọi lượt tải xuống hoàn tất rồi trả một thông báo cho mỗi object
+// (thành công, đã hủy hoặc lỗi). Nếu người dùng đóng hộp thoại, hàm trả về kết quả rỗng.
 func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) models.Output[any] {
 	output := models.NewOutput[any]()
 
-	// Counts this call as a running transfer, so the profile can't be deleted meanwhile.
-	// All downloads finish inside this call (g.Wait below), so the release goes here.
+	// Ghi nhận lời gọi này là một lượt truyền đang chạy để hồ sơ không bị xóa giữa chừng.
+	// Mọi lượt tải xuống kết thúc bên trong lời gọi này (g.Wait bên dưới), nên giải phóng tại đây.
 	s3Conn, releaseConn, ok := m.global.AcquireConn(input.ConnectionId)
 
 	if !ok {
@@ -88,7 +87,7 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 	}
 	defer releaseConn()
 
-	// Credentials that can't be renewed and run out soon may end the transfer midway: warn, but go on.
+	// Thông tin xác thực sắp hết hạn và không thể gia hạn có thể làm gián đoạn lượt truyền: gửi cảnh báo nhưng vẫn tiếp tục.
 	output.AddMessage(transferExpiryWarning(s3Conn, input.ProfileName)...)
 
 	if len(input.Objects) == 0 {
@@ -100,7 +99,7 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 		err     error
 	)
 
-	// Several objects -> choose a folder; a single object -> choose the file path.
+	// Nhiều object thì chọn thư mục; một object thì chọn đường dẫn file.
 	if len(input.Objects) > 1 {
 		destDir, err = m.app.Dialog.OpenFile().
 			CanChooseDirectories(true).
@@ -121,7 +120,7 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 			map[string]any{"path": destDir}))
 	}
 
-	// Empty path means the user canceled the dialog.
+	// Đường dẫn rỗng nghĩa là người dùng đã hủy hộp thoại.
 	if destDir == "" {
 		m.logger.Warn("no destination path select")
 		return output
@@ -131,28 +130,27 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 		o.Concurrency = downloadConcurrency
 	})
 
-	// Buffered so goroutines never block on send; results are read only after g.Wait().
-	// Downloads use the app context, not a call context: the call blocks behind a native
-	// dialog, and each file is canceled through its own job or through cancelAllDownloads.
+	// Dùng bộ đệm để goroutine không bị chặn khi gửi; chỉ đọc kết quả sau g.Wait().
+	// Lượt tải dùng context của ứng dụng, không dùng context của lời gọi: hàm chờ ở hộp thoại hệ điều hành,
+	// còn từng file được hủy qua job riêng hoặc cancelAllDownloads.
 	results := make(chan downloadResult, len(input.Objects))
-	// A plain errgroup.Group (no shared context): one failed object must not cancel the others.
+	// Dùng errgroup.Group thường (không dùng context chung) để lỗi của một object không hủy các object khác.
 	var g errgroup.Group
 	g.SetLimit(downloadConcurrency)
-	// A single object goes to the exact path the user chose (the dialog already asked
-	// about overwriting); objects saved into a folder must not replace files already there.
+	// Một object được lưu đúng đường dẫn người dùng chọn (hộp thoại đã hỏi về việc ghi đè);
+	// object lưu trong thư mục không được thay thế các file đã có.
 	multi := len(input.Objects) > 1
 	for _, key := range input.Objects {
 		dest := destDir
 		if multi {
 			dest = filepath.Join(destDir, path.Base(key))
 		}
-		// The same ID is used for the job, the history record, the progress events and,
-		// on a name clash, the file name.
+		// Dùng cùng ID cho job, bản ghi lịch sử, sự kiện tiến độ và tên file khi bị trùng.
 		id := utils.GenerateUUID()
-		// Reserve the name now, in order, so objects with the same base name don't clash.
+		// Đặt trước tên file theo thứ tự ngay tại đây để các object trùng tên cơ sở không bị xung đột.
 		dest, release := m.reserveDest(dest, id, multi)
 
-		// Always return nil: errors are reported per object through results.
+		// Luôn trả nil: lỗi được báo riêng cho từng object qua results.
 		g.Go(func() error {
 			defer release()
 			r := m.downloadOne(m.app.Context(), id, tm, input.Bucket, key, dest)
@@ -167,7 +165,7 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 	_ = g.Wait()
 	close(results)
 
-	// Turn each result into a message for the frontend.
+	// Chuyển từng kết quả thành thông báo cho frontend.
 	for r := range results {
 		switch {
 		case r.err == nil:
@@ -200,8 +198,8 @@ func (m *submoduleDownloaderMng) downloadObject(input models.DownloadObjInput) m
 	return output
 }
 
-// cancelDownloadOne cancels the running download with the given ID.
-// Unknown or already finished IDs are ignored.
+// cancelDownloadOne hủy lượt tải xuống đang chạy có ID đã cho.
+// ID không xác định hoặc lượt tải đã hoàn tất sẽ bị bỏ qua.
 func (m *submoduleDownloaderMng) cancelDownloadOne(id string) models.Output[any] {
 	if m.jobs.cancel(id) {
 		m.logger.Info(fmt.Sprintf("download %s is canceled", id))
@@ -209,17 +207,17 @@ func (m *submoduleDownloaderMng) cancelDownloadOne(id string) models.Output[any]
 	return models.NewOutput[any]()
 }
 
-// cancelAllDownloads cancels every running download.
+// cancelAllDownloads hủy mọi lượt tải xuống đang chạy.
 func (m *submoduleDownloaderMng) cancelAllDownloads() models.Output[any] {
 	m.jobs.cancelAll(func(id string) { m.logger.Info(fmt.Sprintf("download %s is canceled", id)) })
 	m.logger.Info("all downloads is canceled")
 	return models.NewOutput[any]()
 }
 
-// reserveDest returns a path for a new download based on dest and marks it as in use
-// until release is called. If dest is taken it becomes "name(<id>).ext"; id is the job's
-// unique ID, so that path is never taken. A path is taken when a running download writes
-// to it or, if avoidExisting is set, when a file (or its .part) already exists on disk.
+// reserveDest trả về đường dẫn mới dựa trên dest và đánh dấu đường dẫn đang được dùng cho đến khi gọi release.
+// Nếu dest đã được dùng, tên file đổi thành "name(<id>).ext"; id là duy nhất cho từng job nên đường dẫn đó chưa thể bị dùng.
+// Đường dẫn được xem là đang dùng khi một lượt tải đang ghi vào đó hoặc, nếu bật avoidExisting, khi file (hoặc file .part)
+// đã tồn tại trên đĩa.
 func (m *submoduleDownloaderMng) reserveDest(dest, id string, avoidExisting bool) (string, func()) {
 	m.destsMu.Lock()
 	defer m.destsMu.Unlock()
@@ -238,8 +236,8 @@ func (m *submoduleDownloaderMng) reserveDest(dest, id string, avoidExisting bool
 	}
 }
 
-// destKey is the key of p in dests. Windows file names are case-insensitive, so
-// "Report.pdf" and "report.pdf" must count as the same file there.
+// destKey tạo khóa cho p trong dests. Tên file trên Windows không phân biệt chữ hoa/thường,
+// vì vậy "Report.pdf" và "report.pdf" phải được xem là cùng một file.
 func destKey(p string) string {
 	if runtime.GOOS == "windows" {
 		return strings.ToLower(p)
@@ -247,9 +245,9 @@ func destKey(p string) string {
 	return p
 }
 
-// destTaken reports whether p cannot be used. The caller must hold destsMu.
-// The dests check and the reservation must be one step under the lock. The disk check (Lstat, cheap,
-// only for multi download) sits here too for simplicity; the lock only contends with release.
+// destTaken cho biết có thể dùng p hay không. Bên gọi phải giữ destsMu.
+// Kiểm tra dests và đặt chỗ phải diễn ra liền mạch dưới khóa. Để đơn giản, kiểm tra đĩa (Lstat, chi phí thấp,
+// chỉ dùng khi tải nhiều file) cũng thực hiện tại đây; khóa chỉ tranh chấp với thao tác release.
 func (m *submoduleDownloaderMng) destTaken(p string, checkDisk bool) bool {
 	if _, ok := m.dests[destKey(p)]; ok {
 		return true
@@ -260,14 +258,14 @@ func (m *submoduleDownloaderMng) destTaken(p string, checkDisk bool) bool {
 	return pathExists(p) || pathExists(p+".part")
 }
 
-// pathExists reports whether p exists, without following a symlink.
+// pathExists cho biết p có tồn tại hay không mà không đi theo symbolic link.
 func pathExists(p string) bool {
 	_, err := os.Lstat(p)
 	return err == nil
 }
 
-// suffixedPath turns "dir/report.pdf" into "dir/report(<suffix>).pdf".
-// A dot file such as ".env" has no extension, so it becomes ".env(<suffix>)".
+// suffixedPath đổi "dir/report.pdf" thành "dir/report(<suffix>).pdf".
+// File ẩn như ".env" không có phần mở rộng nên sẽ thành ".env(<suffix>)".
 func suffixedPath(p, suffix string) string {
 	dir, file := filepath.Split(p)
 	ext := filepath.Ext(file)
@@ -278,17 +276,16 @@ func suffixedPath(p, suffix string) string {
 	return filepath.Join(dir, stem+"("+suffix+")"+ext)
 }
 
-// downloadOne downloads a single object to dest.
-// It registers a cancelable job, creates a history record, emits progress events while
-// downloading and returns the final status. It does not update the history record itself;
-// the caller does that with finishHistory.
+// downloadOne tải một object xuống dest.
+// Hàm đăng ký job có thể hủy, tạo bản ghi lịch sử, gửi sự kiện tiến độ trong khi tải và trả trạng thái cuối cùng.
+// Hàm không tự cập nhật bản ghi lịch sử; bên gọi thực hiện việc đó bằng finishHistory.
 func (m *submoduleDownloaderMng) downloadOne(
 	parent context.Context,
 	id string,
 	tm *transfermanager.Client,
 	bucket, key, dest string,
 ) downloadResult {
-	// Register the job so it can be canceled; remove it when the download ends.
+	// Đăng ký job để có thể hủy; gỡ job khi lượt tải xuống kết thúc.
 	ctx, done := m.jobs.start(parent, id)
 	defer done()
 
@@ -303,13 +300,13 @@ func (m *submoduleDownloaderMng) downloadOne(
 		return downloadResult{key: key, err: fmt.Errorf("create history: %w", err)}
 	}
 
-	// Tell the frontend a new download has started.
+	// Báo cho frontend biết lượt tải xuống mới đã bắt đầu.
 	m.app.Event.Emit(EventLoadDownloadHistory, saved)
 
 	size, err := download(ctx, tm, bucket, key, dest, id, m.progress)
 
-	// Map the error to a history status. If the context was canceled, report
-	// context.Canceled instead of whatever error the S3 call returned.
+	// Ánh xạ lỗi thành trạng thái lịch sử. Nếu context đã bị hủy, trả context.Canceled
+	// thay cho lỗi mà lời gọi S3 trả về.
 	status := DOWNLOADED
 	if err != nil {
 		status = DOWNLOAD_ERROR
@@ -319,7 +316,7 @@ func (m *submoduleDownloaderMng) downloadOne(
 		}
 	}
 
-	// The destination is only recorded for a finished download.
+	// Chỉ ghi nhận đường dẫn đích cho lượt tải xuống đã hoàn tất.
 	destPath := ""
 	if err == nil {
 		destPath = saved.DestPath
@@ -338,8 +335,8 @@ func (m *submoduleDownloaderMng) downloadOne(
 	}
 }
 
-// finishHistory writes the final status from r.history to the history record and
-// notifies the frontend. If the update fails, the error replaces r.err.
+// finishHistory ghi trạng thái cuối cùng từ r.history vào bản ghi lịch sử rồi thông báo cho frontend.
+// Nếu cập nhật thất bại, lỗi đó thay thế r.err.
 func (m *submoduleDownloaderMng) finishHistory(r *downloadResult) {
 	updated, err := m.submoduleDownloadHistoryMng.updateDownloadHistory(*r.history)
 

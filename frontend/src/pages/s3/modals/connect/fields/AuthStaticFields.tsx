@@ -3,11 +3,11 @@ import FieldInput from '@/components/inputs/FieldInput';
 import type { AuthFieldsProps } from '@/pages/s3/modals/connect/connectSchema';
 
 type AuthStaticFieldsProps = AuthFieldsProps & {
-  /** Show the optional session token (temporary credentials). */
+  /** Hiển thị session token tùy chọn (thông tin xác thực tạm thời). */
   withSessionToken?: boolean;
 };
 
-/** Access key, secret key and optional session token. Used by `static` and the key source of `assumeRole`. */
+/** Access key, secret key và session token tùy chọn. Dùng cho `static` và nguồn key của `assumeRole`. */
 function AuthStaticFields({ form, savedSecrets, secretRequired, withSessionToken = true }: AuthStaticFieldsProps) {
   const { t } = useTranslation('connectModal');
   const savedPlaceholder = t('form.placeholder.saved');

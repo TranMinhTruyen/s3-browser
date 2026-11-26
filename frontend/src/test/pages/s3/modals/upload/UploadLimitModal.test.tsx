@@ -6,7 +6,7 @@ import { useModalStackStore } from '@/common/stores/modalStackStore';
 import UploadLimitModal from '@/pages/s3/modals/upload/UploadLimitModal';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// jsdom has no layout, so the real virtualizer would render no row: render every row instead.
+// jsdom không có layout nên virtualizer thật sẽ không render hàng nào: thay bằng cách render mọi hàng.
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: ({ count, getItemKey }: { count: number; getItemKey: (i: number) => string }) => ({
     getVirtualItems: () => Array.from({ length: count }, (_, index) => ({ key: getItemKey(index), index, start: 0 })),
@@ -77,7 +77,7 @@ describe('UploadLimitModal', () => {
     const result = open([photos(), videos(), within_()]);
     await flush();
 
-    // photos: f1,f2 (max 2); videos: v1 (1 large) + v3, v2 skipped; small: in full => 5.
+    // photos: f1,f2 (tối đa 2); videos: v1 (1 file lớn) + v3, bỏ v2; small: lấy hết => 5.
     expect(screen.getByRole('button', { name: 'Upload (5)' })).toBeEnabled();
     expect(screen.getByText('2/2 files')).toBeInTheDocument();
     expect(screen.getByText('1/1 large files')).toBeInTheDocument();
@@ -122,7 +122,7 @@ describe('UploadLimitModal', () => {
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'v2.mp4' }));
     await userEvent.click(screen.getByRole('checkbox', { name: 'v1.mp4' }));
-    // Only v3 is still selected (it is not in the large list, so it stays selected).
+    // Chỉ còn v3 được chọn (file này không nằm trong danh sách file lớn nên vẫn giữ lựa chọn).
     expect(screen.getByRole('button', { name: 'Upload (1)' })).toBeEnabled();
     expect(screen.getAllByText('Large')).toHaveLength(2);
   });
@@ -131,7 +131,7 @@ describe('UploadLimitModal', () => {
     open([group('empty', [file('empty/a.txt', true), file('empty/b.txt', true)], { large: true })]);
     await flush();
 
-    // Preselect a.txt only; unchecking it leaves nothing.
+    // Chỉ chọn trước a.txt; bỏ chọn file này thì không còn mục nào.
     await userEvent.click(screen.getByRole('checkbox', { name: 'a.txt' }));
     expect(screen.getByRole('button', { name: 'Upload (0)' })).toBeDisabled();
   });
@@ -144,7 +144,7 @@ describe('UploadLimitModal', () => {
 
     expect(screen.getByText('(files dropped directly)')).toBeInTheDocument();
     expect(screen.getByText('The folder scan stopped early, so the list may be incomplete.')).toBeInTheDocument();
-    // "dir/" has an empty last segment, so the whole key is shown; backslash paths show the last segment.
+    // "dir/" có đoạn cuối rỗng nên hiển thị toàn bộ key; đường dẫn dấu gạch chéo ngược chỉ hiện đoạn cuối.
     expect(screen.getByText('dir/')).toBeInTheDocument();
     expect(screen.getByText('b.txt')).toBeInTheDocument();
     expect(screen.getByText('Folders with more than 2 files')).toBeInTheDocument();
@@ -163,7 +163,7 @@ describe('UploadLimitModal', () => {
   it('shows only the file counter in the over-max section and only the large counter in the large section', async () => {
     open([photos(), videos()]);
     await flush();
-    // Both sections are open only when expanded; open the large one too.
+    // Hai phần chỉ mở khi được bung ra; mở cả phần file lớn.
     const largeHeader = screen.getByRole('button', { name: /large files \(over/ });
     if (largeHeader.getAttribute('aria-expanded') !== 'true') await userEvent.click(largeHeader);
 

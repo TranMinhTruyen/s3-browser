@@ -1,7 +1,7 @@
-// Package cnst holds the constants shared across the backend.
+// Package cnst chứa các hằng số dùng chung trong backend.
 package cnst
 
-// Module names, used as Message.ModuleName.
+// Tên module, được dùng trong Message.ModuleName.
 var (
 	Master  = "master"
 	Profile = "profile"
@@ -12,16 +12,16 @@ var (
 )
 
 var (
-	// FullDateTimeFormatPattern is the layout of Message.Order.
+	// FullDateTimeFormatPattern là định dạng của Message.Order.
 	FullDateTimeFormatPattern = "2006-01-02T15:04:05.000"
 
-	// MessageTypeSuccess is the success type code. Message type codes must match the names of
-	// Java's MessageTypeEnum (S/E/W/I) - the RPC caller deserializes messageType into that enum.
+	// MessageTypeSuccess là mã loại thông báo thành công. Các mã loại phải khớp tên trong MessageTypeEnum của Java
+	// (S/E/W/I) vì bên gọi RPC giải tuần tự messageType thành enum đó.
 	MessageTypeSuccess = "S"
-	// MessageTypeError is the error type code.
+	// MessageTypeError là mã loại thông báo lỗi.
 	MessageTypeError = "E"
-	// MessageTypeWarn is the warning type code.
+	// MessageTypeWarn là mã loại thông báo cảnh báo.
 	MessageTypeWarn = "W"
-	// MessageTypeInfo is the info type code.
+	// MessageTypeInfo là mã loại thông báo thông tin.
 	MessageTypeInfo = "I"
 )

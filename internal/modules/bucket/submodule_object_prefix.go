@@ -17,23 +17,23 @@ import (
 )
 
 const (
-	// deleteTimeout bounds one deleteObject or deletePrefix call. Both can cover many keys, deleted in
-	// batches, so they get far more time than a single request.
+	// deleteTimeout giới hạn thời gian của một lần gọi deleteObject hoặc deletePrefix. Mỗi thao tác có thể xóa nhiều key
+	// theo từng lô nên cần nhiều thời gian hơn một yêu cầu đơn lẻ.
 	deleteTimeout = 30 * time.Minute
-	// deleteBatchSize is the S3 limit of keys in one DeleteObjects request. It is also the
-	// ListObjectsV2 page size, so memory stays bounded and one page maps to one delete request.
+	// deleteBatchSize là giới hạn số key trong một yêu cầu DeleteObjects của S3. Giá trị này cũng là kích thước trang
+	// ListObjectsV2 để giới hạn bộ nhớ và ánh xạ mỗi trang thành một yêu cầu xóa.
 	deleteBatchSize = 1000
-	// maxFailureDetails caps the failures kept for a folder, which can hold millions of keys.
+	// maxFailureDetails giới hạn số lỗi được giữ lại cho một thư mục có thể chứa hàng triệu key.
 	maxFailureDetails = 1000
 )
 
-// validDeletePrefix reports whether prefix may be deleted: it must name a folder
-// (end with "/") and must not be empty or "/", so a whole bucket is never deleted.
+// validDeletePrefix cho biết có thể xóa prefix hay không: prefix phải là tên thư mục
+// (kết thúc bằng "/") và không được rỗng hoặc là "/" để tránh xóa cả bucket.
 func validDeletePrefix(prefix string) bool {
 	return strings.Trim(prefix, "/") != "" && strings.HasSuffix(prefix, "/")
 }
 
-// isDeleteObjectsUnsupported reports whether the provider doesn't support DeleteObjects.
+// isDeleteObjectsUnsupported cho biết provider có hỗ trợ DeleteObjects hay không.
 func isDeleteObjectsUnsupported(err error) bool {
 	var apiErr smithy.APIError
 	if !errors.As(err, &apiErr) {
@@ -46,26 +46,26 @@ func isDeleteObjectsUnsupported(err error) bool {
 	return false
 }
 
-// batchDeleter deletes keys in batches and records the outcome. It serves deleteObject, deletePrefix and
-// deleteBucket (which deletes by version).
+// batchDeleter xóa key theo từng lô và ghi nhận kết quả. Được dùng bởi deleteObject, deletePrefix và deleteBucket
+// (thao tác xóa theo phiên bản).
 type batchDeleter struct {
 	client  *s3.Client
 	bucket  string
 	deleted int
 	failed  int
-	// deletedKeys lists the deleted keys when collectDeleted is set.
+	// deletedKeys liệt kê các key đã xóa khi bật collectDeleted.
 	deletedKeys    []string
 	collectDeleted bool
-	// failures keeps the detail of the first maxDetails failures; failed counts all of them.
+	// failures lưu chi tiết của maxDetails lỗi đầu tiên; failed đếm tổng số lỗi.
 	failures   []models.DeleteFailure
 	maxDetails int
-	// single is set once the provider rejected DeleteObjects.
+	// single được bật nếu provider từ chối DeleteObjects.
 	single bool
-	// optFns are passed to every request, e.g. to set the region of the bucket.
+	// optFns được truyền vào mọi yêu cầu, ví dụ để đặt region của bucket.
 	optFns []func(*s3.Options)
 }
 
-// ok counts one deleted key.
+// ok ghi nhận một key đã xóa.
 func (d *batchDeleter) ok(key string) {
 	d.deleted++
 	if d.collectDeleted {
@@ -73,7 +73,7 @@ func (d *batchDeleter) ok(key string) {
 	}
 }
 
-// fail counts one failed key and keeps its detail while under maxDetails.
+// fail ghi nhận một key xóa thất bại và giữ chi tiết nếu chưa vượt maxDetails.
 func (d *batchDeleter) fail(key, detail string) {
 	d.failed++
 	if len(d.failures) < d.maxDetails {
@@ -81,7 +81,7 @@ func (d *batchDeleter) fail(key, detail string) {
 	}
 }
 
-// failID is fail for an object identifier: the version id, if any, is added to the detail.
+// failID tương tự fail nhưng dành cho định danh object: nếu có, version id được thêm vào chi tiết lỗi.
 func (d *batchDeleter) failID(id types.ObjectIdentifier, detail string) {
 	if id.VersionId != nil {
 		detail += " (versionId " + *id.VersionId + ")"
@@ -89,8 +89,8 @@ func (d *batchDeleter) failID(id types.ObjectIdentifier, detail string) {
 	d.fail(aws.ToString(id.Key), detail)
 }
 
-// failedIndex finds the id of the batch that a DeleteObjects error is about, skipping ids already matched. An error
-// without a version id matches any one unmatched id with the same key. It returns -1 when none matches.
+// failedIndex tìm định danh trong lô mà lỗi DeleteObjects đề cập, bỏ qua các định danh đã khớp. Lỗi không có version id
+// sẽ khớp với một định danh chưa khớp có cùng key. Trả về -1 nếu không tìm thấy mục phù hợp.
 func failedIndex(ids []types.ObjectIdentifier, matched []bool, failed types.ObjectIdentifier) int {
 	for i, id := range ids {
 		if matched[i] || aws.ToString(id.Key) != aws.ToString(failed.Key) {
@@ -103,8 +103,8 @@ func failedIndex(ids []types.ObjectIdentifier, matched []bool, failed types.Obje
 	return -1
 }
 
-// deleteBatch deletes the current version of keys (at most deleteBatchSize). A returned error is a call level
-// error (canceled context, or expired credentials before any key was deleted); per key failures are recorded by d.fail.
+// deleteBatch xóa phiên bản hiện tại của các key (tối đa deleteBatchSize). Lỗi trả về là lỗi cấp lời gọi
+// (context bị hủy hoặc thông tin xác thực hết hạn trước khi xóa key nào); lỗi riêng từng key được ghi bằng d.fail.
 func (d *batchDeleter) deleteBatch(ctx context.Context, keys []string) error {
 	ids := make([]types.ObjectIdentifier, len(keys))
 	for i, k := range keys {
@@ -113,7 +113,7 @@ func (d *batchDeleter) deleteBatch(ctx context.Context, keys []string) error {
 	return d.deleteIDs(ctx, ids)
 }
 
-// deleteIDs is deleteBatch for object identifiers, which may carry a version id.
+// deleteIDs là deleteBatch dành cho định danh object, có thể bao gồm version id.
 func (d *batchDeleter) deleteIDs(ctx context.Context, ids []types.ObjectIdentifier) error {
 	if len(ids) == 0 {
 		return nil
@@ -126,7 +126,7 @@ func (d *batchDeleter) deleteIDs(ctx context.Context, ids []types.ObjectIdentifi
 		}, d.optFns...)
 		switch {
 		case err == nil:
-			// Quiet mode: out only lists the objects that failed.
+			// Chế độ im lặng: kết quả chỉ liệt kê các object xóa thất bại.
 			bad := make([]bool, len(ids))
 			for _, e := range out.Errors {
 				id := types.ObjectIdentifier{Key: e.Key, VersionId: e.VersionId}
@@ -149,7 +149,7 @@ func (d *batchDeleter) deleteIDs(ctx context.Context, ids []types.ObjectIdentifi
 			if d.deleted == 0 && isCredentialsExpired(err) {
 				return err
 			}
-			// The request itself failed: none of the objects is known to be deleted.
+			// Bản thân yêu cầu đã thất bại: không xác định được object nào đã bị xóa.
 			for _, id := range ids {
 				d.failID(id, UnwrapAwsError(err))
 			}
@@ -160,12 +160,12 @@ func (d *batchDeleter) deleteIDs(ctx context.Context, ids []types.ObjectIdentifi
 	return d.deleteEach(ctx, ids)
 }
 
-// deleteEach is the fallback for providers without DeleteObjects: one DeleteObject per object.
+// deleteEach là phương án thay thế cho provider không hỗ trợ DeleteObjects: gọi DeleteObject riêng cho từng object.
 func (d *batchDeleter) deleteEach(ctx context.Context, ids []types.ObjectIdentifier) error {
 	errs := make([]error, len(ids))
 	var g errgroup.Group
-	// Not errgroup.WithContext: every failure is recorded per object in errs and g.Go returns nil,
-	// so one failed object must not cancel the other deletes in the batch.
+	// Không dùng errgroup.WithContext: mỗi lỗi được ghi riêng theo object trong errs và g.Go trả nil,
+	// nhờ đó lỗi của một object không hủy các thao tác xóa còn lại trong lô.
 	g.SetLimit(deleteConcurrency)
 	for i, id := range ids {
 		g.Go(func() error {
@@ -182,7 +182,7 @@ func (d *batchDeleter) deleteEach(ctx context.Context, ids []types.ObjectIdentif
 	if ctx.Err() != nil {
 		return ctx.Err()
 	}
-	// Nothing deleted so far and every object of this batch failed: expired credentials is a call level error.
+	// Chưa xóa được gì và mọi object trong lô đều thất bại: thông tin xác thực hết hạn là lỗi cấp lời gọi.
 	if d.deleted == 0 && !slices.Contains(errs, nil) {
 		if i := slices.IndexFunc(errs, isCredentialsExpired); i >= 0 {
 			return errs[i]
@@ -198,9 +198,9 @@ func (d *batchDeleter) deleteEach(ctx context.Context, ids []types.ObjectIdentif
 	return nil
 }
 
-// deletePrefix deletes every current object under input.Prefix, page by page.
-// ctx is the call context: it is canceled when the frontend cancels the call.
-// A key that fails doesn't make Result false: the body counts them and keeps the first maxFailureDetails.
+// deletePrefix xóa mọi object phiên bản hiện tại dưới input.Prefix, lần lượt theo trang.
+// ctx là context của lời gọi; frontend sẽ hủy context khi người dùng hủy lời gọi.
+// Key xóa thất bại không làm Result thành false: body đếm số lỗi và giữ chi tiết của maxFailureDetails lỗi đầu tiên.
 func (m *submoduleObjMng) deletePrefix(
 	ctx context.Context,
 	input models.DeletePrefixInput,
@@ -234,7 +234,7 @@ func (m *submoduleObjMng) deletePrefix(
 	var token *string
 
 	for {
-		// No Delimiter: list every key below the prefix, including the folder marker.
+			// Không dùng Delimiter: liệt kê mọi key dưới prefix, kể cả dấu thư mục.
 		page, err := client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 			Bucket:            aws.String(input.Bucket),
 			Prefix:            aws.String(input.Prefix),
@@ -266,7 +266,7 @@ func (m *submoduleObjMng) deletePrefix(
 		if isCallCanceled(ctx) {
 			m.logger.Info("delete prefix canceled",
 				"bucket", input.Bucket, "prefix", input.Prefix, "deleted", d.deleted)
-			// Canceled by the frontend: fail silently, nobody waits for the result.
+			// Frontend đã hủy: dừng im lặng vì không còn bên nào chờ kết quả.
 			return output.ThrowError()
 		}
 		if d.deleted == 0 && isCredentialsExpired(callErr) {

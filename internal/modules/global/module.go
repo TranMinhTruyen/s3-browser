@@ -1,19 +1,19 @@
-// Package global holds state shared by all modules: the registry of live S3 connections.
+// Package global chứa trạng thái dùng chung giữa các module: registry các kết nối S3 đang hoạt động.
 package global
 
 import (
 	"sync"
 )
 
-// Module is the connection registry shared by the bucket and profile modules.
+// Module là registry kết nối được module bucket và profile dùng chung.
 type Module struct {
 	mu            sync.RWMutex
 	connContainer map[string]*S3Conn
-	// transfers counts the running uploads/downloads per connection id; guarded by mu.
+	// transfers đếm số lượt tải lên/tải xuống đang chạy theo connection id; được bảo vệ bởi mu.
 	transfers map[string]int
 }
 
-// NewModule creates an empty registry.
+// NewModule tạo registry rỗng.
 func NewModule() *Module {
 	return &Module{
 		connContainer: make(map[string]*S3Conn),

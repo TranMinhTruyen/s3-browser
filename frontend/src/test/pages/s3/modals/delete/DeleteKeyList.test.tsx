@@ -12,7 +12,7 @@ const virtualizer = vi.hoisted(() => ({
     | { count: number; getScrollElement: () => HTMLElement | null; estimateSize: () => number },
 }));
 
-// jsdom has no layout, so the real virtualizer would render no row: render every row instead.
+// jsdom không có layout, nên virtualizer thật sẽ không hiển thị hàng nào; thay vào đó, hiển thị mọi hàng.
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: (options: NonNullable<typeof virtualizer.options>) => {
     virtualizer.options = options;

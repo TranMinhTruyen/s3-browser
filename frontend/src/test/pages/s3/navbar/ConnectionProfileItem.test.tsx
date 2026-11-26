@@ -4,7 +4,7 @@ import ConnectionProfileItem, { CARD_HEIGHT } from '@/pages/s3/navbar/Connection
 import { type ConnectionProfile, useProfileStore } from '@/pages/s3/stores/profileStore';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// getAuthType runs once per render of an item with a profile, so it counts the item renders.
+// getAuthType chạy một lần mỗi lần render item có hồ sơ, nên có thể dùng để đếm số lần render item.
 const renders = vi.hoisted(() => ({ count: vi.fn() }));
 vi.mock('@/pages/s3/utils/authUtils', async importActual => {
   const actual = await importActual<typeof import('@/pages/s3/utils/authUtils')>();

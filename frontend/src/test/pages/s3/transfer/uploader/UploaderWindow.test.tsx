@@ -9,7 +9,7 @@ import { callIPC } from '@/common/utils/ipcUtils';
 import UploaderWindow from '@/pages/s3/transfer/uploader/UploaderWindow';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// jsdom has no layout, so the real virtualizer would render no row: render every row instead.
+// jsdom không có layout nên virtualizer thật sẽ không render hàng nào: thay bằng cách render mọi hàng.
 const virtual = vi.hoisted(() => ({ getScrollEl: null as null | (() => unknown), estimates: [] as number[] }));
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: ({
@@ -50,7 +50,7 @@ const started = (uploadId: string, fileName = `${uploadId}.bin`) => ({
   total: 2048,
 });
 
-// Mantine writes the Affix position as CSS variables; the downloader size stays in raw px (never scaled by rem).
+// Mantine ghi vị trí Affix dưới dạng biến CSS; kích thước downloader giữ nguyên px (không co giãn theo rem).
 const affixPosition = () => {
   const affix = document.querySelector<HTMLElement>('.mantine-Affix-root')!;
   return {

@@ -446,7 +446,7 @@ pub fn track_tx(in_tx: &mut bool, sql: &str) {
     let first = words.next().unwrap_or("");
     let is = |kw: &str| first.eq_ignore_ascii_case(kw);
     if is("begin") || is("start") {
-        // `BEGIN TRY`/`BEGIN CATCH` (T-SQL) và `BEGIN NOT ATOMIC` (MariaDB) mở khối lệnh, không mở transaction.
+        // `BEGIN TRY`/`BEGIN CATCH` (T-SQL) và `BEGIN NOT ATOMIC` (MariaDB) mở khối lệnh, không mở giao dịch.
         let second = words.next().unwrap_or("");
         let block = ["try", "catch", "not", "atomic"]
             .iter()

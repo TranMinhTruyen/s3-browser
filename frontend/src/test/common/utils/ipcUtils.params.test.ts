@@ -12,7 +12,7 @@ const labels: Record<string, string> = {
   'ipcMessage:params.secret.keyPassword': 'Private key password',
   'ipcMessage:params.secret.oidcSession': 'Sign-in',
 };
-// Labels and the message template are translated; everything else echoes its key.
+// Nhãn và mẫu thông báo đã được dịch; các giá trị còn lại trả về chính khóa của chúng.
 vi.mock('@/locales/i18n', () => ({
   default: {
     exists: (key: string) => key in labels,

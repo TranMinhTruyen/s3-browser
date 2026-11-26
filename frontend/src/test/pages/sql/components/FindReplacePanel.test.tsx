@@ -22,7 +22,7 @@ type Options = {
   options?: Partial<FindOptions>;
 };
 
-/** Panel with its state owned by the test harness, like SqlTabDetail does. */
+/** Panel có state do bộ khung test quản lý, giống cách SqlTabDetail thực hiện. */
 function setup({ doc = 'foo bar foo', find = '', replace = '', focusKey = 0, noView, options }: Options = {}) {
   const view = createView(doc, { anchor: 0 });
   views.push(view);
@@ -439,13 +439,13 @@ describe('FindReplacePanel', () => {
 
   describe('match counter refresh (docChangeRef)', () => {
     type Ctx = ReturnType<typeof setup>;
-    /** The counter is recomputed 120 ms after the last change (DOC_CHANGE_DELAY); fake timers are installed after clicks. */
+    /** Bộ đếm được tính lại sau 120 ms kể từ lần đổi cuối (DOC_CHANGE_DELAY); fake timer được cài sau các thao tác click. */
     const useFakeClock = () => vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
     const advance = (ms = 120) =>
       act(async () => {
         vi.advanceTimersByTime(ms);
       });
-    /** Edits the document like the editor does: the change, then its update listener calls the registered refresh. */
+    /** Sửa tài liệu như editor: tạo thay đổi rồi để update listener gọi hàm làm mới đã đăng ký. */
     const edit = (ctx: Ctx, changes: { from: number; to?: number; insert?: string }) =>
       act(() => {
         ctx.view.dispatch({ changes });

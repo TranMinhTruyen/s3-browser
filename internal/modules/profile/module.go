@@ -1,4 +1,4 @@
-// Package profile manages saved connection profiles and encrypts their secrets.
+// Package profile quản lý hồ sơ kết nối đã lưu và mã hóa các thông tin bí mật.
 package profile
 
 import (
@@ -17,65 +17,65 @@ import (
 )
 
 var (
-	// PFE001 - Error while saving profile
+	// PFE001 - Lỗi khi lưu hồ sơ
 	PFE001 = "PFE001"
 
-	// PFE002 - Encrypted SecretKey failed
+	// PFE002 - Không thể giải mã SecretKey
 	PFE002 = "PFE002"
 
-	// PFE003 - Error while getting connection profiles
+	// PFE003 - Lỗi khi lấy danh sách hồ sơ kết nối
 	PFE003 = "PFE003"
 
-	// PFE005 - Update profile [{name}] error
+	// PFE005 - Lỗi khi cập nhật hồ sơ [{name}]
 	PFE005 = "PFE005"
 
-	// PFE006 - Delete profile [{name}] error
+	// PFE006 - Lỗi khi xóa hồ sơ [{name}]
 	PFE006 = "PFE006"
 
-	// PFE007 - Profile [{name}] has uploads or downloads in progress, cannot delete
+	// PFE007 - Hồ sơ [{name}] đang tải lên hoặc tải xuống, không thể xóa
 	PFE007 = "PFE007"
 
-	// PFE008 - Authentication method {authType} is not valid for provider {provider}.
+	// PFE008 - Phương thức xác thực {authType} không hợp lệ với nhà cung cấp {provider}.
 	PFE008 = "PFE008"
 
-	// PFE009 - Authentication settings are invalid.
+	// PFE009 - Cấu hình xác thực không hợp lệ.
 	PFE009 = "PFE009"
 
-	// PFE010 - Cannot export profile [{name}].
+	// PFE010 - Không thể xuất hồ sơ [{name}].
 	PFE010 = "PFE010"
 
-	// PFE011 - Cannot read the profile file (it may be larger than 1 MiB).
+	// PFE011 - Không thể đọc file hồ sơ (có thể file lớn hơn 1 MiB).
 	PFE011 = "PFE011"
 
-	// PFE012 - The file is not a valid S3Browser profile file.
+	// PFE012 - File không phải là file hồ sơ S3Browser hợp lệ.
 	PFE012 = "PFE012"
 
-	// PFE013 - Profile file version {version} is not supported.
+	// PFE013 - Không hỗ trợ phiên bản {version} của file hồ sơ.
 	PFE013 = "PFE013"
 
-	// PFE014 - Wrong password, or the file is damaged.
+	// PFE014 - Mật khẩu sai hoặc file bị hỏng.
 	PFE014 = "PFE014"
 
-	// PFE015 - Enter a password of at least 8 characters.
+	// PFE015 - Mật khẩu phải có ít nhất 8 ký tự.
 	PFE015 = "PFE015"
 
-	// PFS001 - Add new profile [{name}] success
+	// PFS001 - Thêm hồ sơ [{name}] thành công
 	PFS001 = "PFS001"
 
-	// PFS002 - Update profile [{name}] success
+	// PFS002 - Cập nhật hồ sơ [{name}] thành công
 	PFS002 = "PFS002"
 
-	// PFS003 - Delete profile [{name}] success
+	// PFS003 - Xóa hồ sơ [{name}] thành công
 	PFS003 = "PFS003"
 
-	// PFS004 - Export profile [{name}] success
+	// PFS004 - Xuất hồ sơ [{name}] thành công
 	PFS004 = "PFS004"
 
-	// PFW001 - Profile [{name}] imported. These file paths do not exist on this computer and were cleared: {fields}.
+	// PFW001 - Đã nhập hồ sơ [{name}]. Các đường dẫn file sau không tồn tại trên máy này và đã được xóa: {fields}.
 	PFW001 = "PFW001"
 )
 
-// Module stores connection profiles in the database.
+// Module lưu hồ sơ kết nối trong cơ sở dữ liệu.
 type Module struct {
 	logger *slog.Logger
 	app    *application.App
@@ -86,7 +86,7 @@ type Module struct {
 	submoduleFileMng *submoduleFileMng
 }
 
-// NewModule creates the profile module.
+// NewModule tạo module profile.
 func NewModule(
 	app *application.App,
 	logger *slog.Logger,
@@ -108,8 +108,8 @@ func NewModule(
 	}
 }
 
-// toProfileOutput maps a stored profile for the frontend. It never exposes a secret, only their names.
-// On error (secret or auth_config unreadable) it still returns the readable part of the profile.
+// toProfileOutput chuyển hồ sơ đã lưu thành dữ liệu đầu ra cho frontend. Hàm không trả lộ thông tin bí mật,
+// chỉ trả tên các thông tin đó. Nếu có lỗi (không đọc được secret hoặc auth_config), hàm vẫn trả phần hồ sơ đọc được.
 func (m *Module) toProfileOutput(p sqlc.ConnectionProfile) (models.ConnectionProfileOutput, error) {
 	secrets, secretErr := m.submoduleAuthMng.open(p)
 	authConfig, configErr := parseAuthConfig(p)
@@ -134,7 +134,8 @@ func (m *Module) toProfileOutput(p sqlc.ConnectionProfile) (models.ConnectionPro
 	}, errors.Join(secretErr, configErr)
 }
 
-// outputErrorMessage maps an error of toProfileOutput to its message: PFE009 for a bad auth_config, else PFE002.
+// outputErrorMessage ánh xạ lỗi của toProfileOutput sang thông báo tương ứng: PFE009 nếu auth_config sai,
+// nếu không thì là PFE002.
 func outputErrorMessage(err error) models.Message {
 	code := PFE002
 	if errors.Is(err, errInvalidAuthConfig) {
@@ -143,22 +144,22 @@ func outputErrorMessage(err error) models.Message {
 	return models.NewMessage(cnst.MessageTypeError, cnst.Profile, code, err.Error())
 }
 
-// warnMessage is outputErrorMessage as a warning, for a profile that was saved but can't be read back fully.
+// warnMessage chuyển thông báo của outputErrorMessage thành cảnh báo khi hồ sơ đã lưu nhưng không thể đọc lại đầy đủ.
 func warnMessage(err error) models.Message {
 	msg := outputErrorMessage(err)
 	msg.MessageType = cnst.MessageTypeWarn
 	return msg
 }
 
-// CreateProfile saves a new profile. Secrets are stored encrypted, and only if SavePassword is set.
-// An authType the provider doesn't support is rejected with PFE008 and nothing is written.
+// CreateProfile lưu hồ sơ mới. Thông tin bí mật được mã hóa và chỉ lưu khi SavePassword được bật.
+// Nếu nhà cung cấp không hỗ trợ authType, hàm trả PFE008 và không ghi dữ liệu.
 func (m *Module) CreateProfile(
 	input models.ConnectionProfileInput,
 ) models.Output[models.ConnectionProfileOutput] {
 	return m.createProfile(input, false)
 }
 
-// createProfile is CreateProfile; allowMissingCertKey is only set by the import (see prepare).
+// createProfile thực hiện việc lưu hồ sơ như CreateProfile; chỉ thao tác nhập mới bật allowMissingCertKey (xem prepare).
 func (m *Module) createProfile(
 	input models.ConnectionProfileInput,
 	allowMissingCertKey bool,
@@ -194,7 +195,7 @@ func (m *Module) createProfile(
 
 	if output.Body, err = m.toProfileOutput(result); err != nil {
 		m.logger.Error("read saved profile failed", "connectionId", result.ID, "error", err)
-		// The profile is saved: report a warning, not a failure.
+		// Hồ sơ đã được lưu nên trả cảnh báo thay vì báo lỗi.
 		output.AddMessage(warnMessage(err))
 	}
 	output.AddMessage(nameMessage(cnst.MessageTypeSuccess, PFS001, result.Name.String, ""))
@@ -202,12 +203,12 @@ func (m *Module) createProfile(
 	return output
 }
 
-// UpdateProfileById updates a profile; input.Version is the optimistic-lock value the caller last read.
-// An empty secret keeps the stored one; SavePassword=false deletes every stored secret.
+// UpdateProfileById cập nhật hồ sơ; input.Version là giá trị khóa lạc quan mà bên gọi đọc lần gần nhất.
+// Secret để trống sẽ giữ nguyên giá trị đã lưu; SavePassword=false sẽ xóa toàn bộ secret đã lưu.
 func (m *Module) UpdateProfileById(input models.ConnectionProfileInput) models.Output[models.ConnectionProfileOutput] {
 	output := models.NewOutput[models.ConnectionProfileOutput]()
 
-	// The stored row is only needed to keep secrets the caller left empty.
+	// Chỉ cần đọc bản ghi đã lưu để giữ lại các secret mà bên gọi để trống.
 	var stored *sqlc.ConnectionProfile
 	if input.SavePassword {
 		row, err := m.q.SelectConnectionProfileById(m.app.Context(), input.Id)
@@ -255,18 +256,18 @@ func (m *Module) UpdateProfileById(input models.ConnectionProfileInput) models.O
 	return output
 }
 
-// nameMessage is a profile message whose text takes the profile name as {name}.
+// nameMessage tạo thông báo về hồ sơ, trong đó {name} được thay bằng tên hồ sơ.
 func nameMessage(msgType, code, name, errorDetail string) models.Message {
 	return models.NewParamsMessage(msgType, cnst.Profile, code, errorDetail, map[string]any{"name": name})
 }
 
-// updateError is the PFE005 message of a failed update of profile name.
+// updateError tạo thông báo PFE005 khi cập nhật tên hồ sơ thất bại.
 func updateError(name string, err error) models.Message {
 	return nameMessage(cnst.MessageTypeError, PFE005, name, err.Error())
 }
 
-// DeleteProfileById closes the profile's active connection (if any), then deletes the profile.
-// Result is false if the profile couldn't be deleted, or a transfer still runs on its connection.
+// DeleteProfileById đóng kết nối đang hoạt động của hồ sơ (nếu có), rồi xóa hồ sơ.
+// Result là false nếu không xóa được hồ sơ hoặc vẫn còn lượt truyền dữ liệu trên kết nối đó.
 func (m *Module) DeleteProfileById(input models.ConnectionProfileInput) models.Output[bool] {
 	output := models.NewOutput[bool]()
 
@@ -278,7 +279,7 @@ func (m *Module) DeleteProfileById(input models.ConnectionProfileInput) models.O
 		)
 	}
 	if removed {
-		// Closed here, after the container's lock is released: closing does network I/O.
+		// Đóng kết nối tại đây, sau khi nhả khóa của container, vì thao tác đóng có I/O mạng.
 		conn.Close()
 	}
 
@@ -295,24 +296,24 @@ func (m *Module) DeleteProfileById(input models.ConnectionProfileInput) models.O
 	return output
 }
 
-// ExportProfile writes a profile to a JSON file chosen in a native save dialog and returns the written path.
-// With IncludeSecret the saved secrets are sealed with Password (at least 8 characters, else PFE015); without it
-// the file holds no secret. The body is empty, with no message, when the user cancels the dialog.
+// ExportProfile ghi hồ sơ vào file JSON được chọn qua hộp thoại lưu của hệ điều hành và trả về đường dẫn file.
+// Nếu bật IncludeSecret, các secret đã lưu được mã hóa bằng Password (ít nhất 8 ký tự, nếu không trả PFE015);
+// nếu không, file sẽ không chứa secret. Khi người dùng hủy hộp thoại, body rỗng và không có thông báo.
 func (m *Module) ExportProfile(input models.ExportProfileInput) models.Output[string] {
 	return m.submoduleFileMng.exportAction(input)
 }
 
-// ChooseImportFile opens a native dialog to pick a profile file and checks it (size, format, version).
-// The body tells whether the file holds secrets (so a password is needed); its path is empty when cancelled.
+// ChooseImportFile mở hộp thoại của hệ điều hành để chọn file hồ sơ và kiểm tra kích thước, định dạng, phiên bản.
+// Body cho biết file có chứa secret hay không (để xác định có cần mật khẩu); đường dẫn rỗng nếu người dùng hủy.
 func (m *Module) ChooseImportFile() models.Output[models.ImportFileOutput] {
 	return m.submoduleFileMng.chooseImportAction()
 }
 
-// ImportProfile saves the profile of a profile file as a new profile with a new id and its secrets encrypted
-// again. A taken name gets " (2)", " (3)"... and a file path that does not exist here is cleared; then PFW001
-// replaces the success message PFS001.
-// The file is checked again, and nothing is written when it is invalid or the password is wrong.
-// It never connects, even with AutoConnect.
+// ImportProfile lưu hồ sơ trong file thành hồ sơ mới với id mới và mã hóa lại các secret.
+// Nếu tên đã được dùng, hàm thêm " (2)", " (3)"...; đường dẫn file không tồn tại trên máy này sẽ bị xóa.
+// Khi đó PFW001 thay cho thông báo thành công PFS001.
+// File được kiểm tra lại; nếu file không hợp lệ hoặc mật khẩu sai thì không ghi dữ liệu.
+// Hàm không kết nối, kể cả khi AutoConnect được bật.
 func (m *Module) ImportProfile(input models.ImportProfileInput) models.Output[models.ConnectionProfileOutput] {
 	imported, failure := m.submoduleFileMng.importAction(input)
 	if failure != nil {
@@ -322,7 +323,7 @@ func (m *Module) ImportProfile(input models.ImportProfileInput) models.Output[mo
 
 	output := m.createProfile(imported.input, imported.allowMissingCertKey)
 	if output.Result && len(imported.clearedFields) > 0 {
-		// PFW001 already says the profile was imported, so it replaces the PFS001 toast.
+		// PFW001 đã thông báo nhập hồ sơ thành công nên thay cho toast PFS001.
 		output.MessageList = slices.DeleteFunc(output.MessageList, func(msg models.Message) bool {
 			return msg.MessageCode == PFS001
 		})
@@ -334,7 +335,7 @@ func (m *Module) ImportProfile(input models.ImportProfileInput) models.Output[mo
 	return output
 }
 
-// GetConnectionProfileById returns a profile; its secrets are not included, only the names in SavedSecrets.
+// GetConnectionProfileById trả về hồ sơ; không kèm secret mà chỉ kèm tên trong SavedSecrets.
 func (m *Module) GetConnectionProfileById(connectionID string) models.Output[models.ConnectionProfileOutput] {
 	output := models.NewOutput[models.ConnectionProfileOutput]()
 
@@ -352,8 +353,8 @@ func (m *Module) GetConnectionProfileById(connectionID string) models.Output[mod
 	return output
 }
 
-// GetConnectInput returns a saved profile as a connect input with its secrets decrypted. It is for the
-// backend only (no handler exposes it): the frontend never receives the secrets.
+// GetConnectInput trả hồ sơ đã lưu dưới dạng dữ liệu đầu vào kết nối và giải mã các secret.
+// Hàm chỉ dành cho backend (không handler nào công khai hàm này), frontend không bao giờ nhận được secret.
 func (m *Module) GetConnectInput(connectionID string) models.Output[models.ConnectionProfileInput] {
 	output := models.NewOutput[models.ConnectionProfileInput]()
 
@@ -390,9 +391,8 @@ func (m *Module) GetConnectInput(connectionID string) models.Output[models.Conne
 	return output
 }
 
-// GetAllConnectionProfile returns every profile keyed by id, with IsConnected set from the live
-// connections. A profile whose secret or auth_config is unreadable is reported with PFE002/PFE009
-// but still returned.
+// GetAllConnectionProfile trả về mọi hồ sơ, dùng id làm khóa và lấy IsConnected từ các kết nối đang hoạt động.
+// Hồ sơ có secret hoặc auth_config không đọc được vẫn được trả về, đồng thời báo PFE002/PFE009.
 func (m *Module) GetAllConnectionProfile() models.Output[models.GetAllConnectionProfileOutput] {
 	output := models.NewOutput[models.GetAllConnectionProfileOutput]()
 

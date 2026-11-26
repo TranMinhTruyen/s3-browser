@@ -1,5 +1,5 @@
-// Package memprobe writes the Go runtime memory numbers to a JSONL file for the RAM benchmark
-// (test-env/mem-bench.ps1). It does nothing unless the S3B_MEMPROBE env names the file.
+// Package memprobe ghi số liệu bộ nhớ của Go runtime vào file JSONL để đo RAM (test-env/mem-bench.ps1).
+// Không làm gì nếu biến môi trường S3B_MEMPROBE chưa chỉ định file.
 package memprobe
 
 import (
@@ -11,13 +11,13 @@ import (
 	"time"
 )
 
-// envFile names the output file; the probe is off when it is empty.
+// envFile là tên file đầu ra; nếu rỗng thì không bật theo dõi.
 const envFile = "S3B_MEMPROBE"
 
-// interval is the time between two lines.
+// interval là khoảng thời gian giữa hai dòng.
 const interval = 2 * time.Second
 
-// names are the runtime metrics of one line, in the order of the fields of line.
+// names là các metric runtime của một dòng, theo thứ tự trường trong line.
 var names = []string{
 	"/memory/classes/total:bytes",
 	"/memory/classes/heap/objects:bytes",
@@ -26,7 +26,7 @@ var names = []string{
 	"/gc/heap/goal:bytes",
 }
 
-// line is one JSONL record.
+// line là một bản ghi JSONL.
 type line struct {
 	Time         int64  `json:"time"` // Unix milliseconds
 	Total        uint64 `json:"total"`
@@ -37,9 +37,8 @@ type line struct {
 	DllLoaded    bool   `json:"dllLoaded"`
 }
 
-// Start begins writing one line every 2 seconds until ctx ends. dllLoaded tells whether the native library is
-// loaded. It returns at once and does nothing when S3B_MEMPROBE is unset; an unwritable file is logged and the
-// app keeps running.
+// Start bắt đầu ghi một dòng mỗi 2 giây cho đến khi ctx kết thúc. dllLoaded cho biết thư viện native đã được nạp chưa.
+// Hàm trả về ngay và không làm gì nếu chưa đặt S3B_MEMPROBE; nếu không ghi được file thì chỉ ghi log và ứng dụng vẫn chạy.
 func Start(ctx context.Context, logger *slog.Logger, dllLoaded func() bool) {
 	path := os.Getenv(envFile)
 	if path == "" {
@@ -89,7 +88,7 @@ func Start(ctx context.Context, logger *slog.Logger, dllLoaded func() bool) {
 	}()
 }
 
-// value is the sample as bytes, or 0 when this Go version does not have the metric.
+// value là số liệu theo byte hoặc 0 nếu phiên bản Go này không có metric đó.
 func value(s metrics.Sample) uint64 {
 	if s.Value.Kind() != metrics.KindUint64 {
 		return 0

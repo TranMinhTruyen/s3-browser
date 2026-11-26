@@ -7,7 +7,7 @@ import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 vi.mock('motion/react', async () => (await import('@/test/_helpers/mockMotion')).motionMock);
 
-// Plain button that also exposes the latest onClick so tests can call it after unmount.
+// Nút thường đồng thời lưu onClick mới nhất để test có thể gọi sau khi component unmount.
 const clicks = vi.hoisted(() => ({}) as Record<string, () => void>);
 vi.mock('@/components/buttons/ActionIcon', () => ({
   default: ({ children, onClick, disabled, tooltip, ...rest }: any) => {
@@ -39,11 +39,11 @@ class FakeResizeObserver {
   }
 }
 
-// Fake clock shared by performance.now and the rAF timestamps.
+// Đồng hồ giả dùng chung cho performance.now và timestamp của rAF.
 const clock = { now: 1000 };
 let roundScroll = false;
 
-// Runs the currently queued frames once, advancing the clock by `dt` ms first.
+// Chạy một lần các khung hình đang xếp hàng, sau khi tăng đồng hồ thêm `dt` ms.
 const flushFrames = (dt = 16) =>
   act(() => {
     clock.now += dt;
@@ -52,7 +52,7 @@ const flushFrames = (dt = 16) =>
     for (const cb of cbs) cb(clock.now);
   });
 
-// Runs frames until the queue is empty; returns how many frames ran.
+// Chạy khung hình cho đến khi hàng đợi rỗng; trả về số khung hình đã chạy.
 const runToEnd = (limit = 500) => {
   let frames = 0;
   while (raf.queue.size > 0 && frames < limit) {
@@ -66,7 +66,7 @@ let metrics: Metrics;
 let viewportLeft: number;
 let itemBoxes: Box[];
 
-// Render the scroller, then wire the viewport DOM metrics and rects (jsdom has no layout).
+// Render vùng cuộn rồi gắn các chỉ số DOM và rect cho viewport (jsdom không có layout).
 const setup = (opts: { items?: number; withChildren?: boolean } = {}) => {
   const { items = 4, withChildren = true } = opts;
   const ref = createRef<HTMLDivElement>();
@@ -104,7 +104,7 @@ const resize = () => {
   flushFrames();
 };
 
-// Move the scroll position and let the scroll listener measure inside a frame.
+// Di chuyển vị trí cuộn và để listener scroll đo lại trong một khung hình.
 const scrollToLeft = (viewport: HTMLElement, left: number) => {
   metrics.scrollLeft = left;
   fireEvent.scroll(viewport);
@@ -139,7 +139,7 @@ beforeEach(() => {
       raf.queue.delete(id);
     })
   );
-  // 4 items of 100px, viewport 250px wide, content 400px.
+  // 4 mục, mỗi mục 100px; viewport rộng 250px, nội dung rộng 400px.
   metrics = { scrollWidth: 400, clientWidth: 250, scrollLeft: 0 };
   viewportLeft = 50;
   itemBoxes = makeItems(4);
@@ -307,7 +307,7 @@ describe('TabScroller', () => {
       setup({ items: 6 });
       resize();
       fireEvent.click(arrowRight() as HTMLElement);
-      // Nothing moves synchronously; visible edge is 250, so the item at 200..300 is the target.
+      // Không có chuyển động đồng bộ; mép nhìn thấy ở 250 nên mục nằm trong khoảng 200..300 là đích.
       expect(metrics.scrollLeft).toBe(0);
       flushFrames();
       expect(metrics.scrollLeft).toBeGreaterThan(0);
@@ -321,7 +321,7 @@ describe('TabScroller', () => {
       setup();
       resize();
       fireEvent.click(arrowRight() as HTMLElement);
-      // item at 200 would overshoot: max is 400 - 250 = 150.
+      // Mục ở vị trí 200 sẽ vượt quá giới hạn: tối đa là 400 - 250 = 150.
       runToEnd();
       expect(metrics.scrollLeft).toBe(150);
     });
@@ -353,7 +353,7 @@ describe('TabScroller', () => {
       resize();
       scrollToLeft(viewport, 350);
       fireEvent.click(arrowLeft() as HTMLElement);
-      // target 350 - 250 = 100: the item at 100.
+      // Đích 350 - 250 = 100: chọn mục ở vị trí 100.
       runToEnd();
       expect(metrics.scrollLeft).toBe(100);
     });
@@ -364,7 +364,7 @@ describe('TabScroller', () => {
       resize();
       scrollToLeft(viewport, 100);
       fireEvent.click(arrowLeft() as HTMLElement);
-      // target 50: first left >= 49 is 100 (current), so go to the previous item at 0.
+      // Đích 50: vị trí trái đầu tiên >= 49 là 100 (vị trí hiện tại), nên lùi về mục trước ở vị trí 0.
       runToEnd();
       expect(metrics.scrollLeft).toBe(0);
     });
@@ -386,7 +386,7 @@ describe('TabScroller', () => {
       const { viewport } = setup();
       resize();
       scrollToLeft(viewport, 100);
-      // target 50 -> item at 100 equals current -> previous item is at -20 -> clamped to 0.
+      // Đích 50 -> mục ở vị trí 100 trùng vị trí hiện tại -> mục trước ở -20 -> giới hạn về 0.
       fireEvent.click(arrowLeft() as HTMLElement);
       runToEnd();
       expect(metrics.scrollLeft).toBe(0);
@@ -449,7 +449,7 @@ describe('TabScroller', () => {
       expect(rafMock).not.toHaveBeenCalled();
       expect(raf.queue.size).toBe(1);
       runToEnd();
-      // 80 (target + 40), not the in-flight scrollLeft + 40.
+      // 80 (đích + 40), không phải scrollLeft + 40 khi cuộn vẫn đang chạy.
       expect(metrics.scrollLeft).toBe(80);
     });
 

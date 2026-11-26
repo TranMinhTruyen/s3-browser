@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-// Accepted values; the frontend uses the same keys.
+// Các giá trị được chấp nhận; frontend dùng cùng các key này.
 var (
 	themes = []string{"light", "dark", "auto"}
 	fonts  = []string{
@@ -19,12 +19,12 @@ var (
 	sizes     = []string{"small", "medium", "large"}
 )
 
-// defaultSettings is what the app uses when nothing is saved, and the fallback for any unknown value.
+// defaultSettings là các giá trị ứng dụng dùng khi chưa lưu cài đặt và là phương án thay thế cho giá trị không xác định.
 func defaultSettings() models.AppSettings {
 	return models.AppSettings{Theme: "light", Font: "nunito", Language: "en", Size: "medium", AutoUpdate: true}
 }
 
-// sanitize replaces each unknown value with its default, so an old or edited file never breaks startup.
+// sanitize thay mỗi giá trị không xác định bằng giá trị mặc định để file cũ hoặc bị chỉnh sửa không làm lỗi khởi động.
 func sanitize(s models.AppSettings) models.AppSettings {
 	def := defaultSettings()
 	if !slices.Contains(themes, s.Theme) {
@@ -42,7 +42,7 @@ func sanitize(s models.AppSettings) models.AppSettings {
 	return s
 }
 
-// validate rejects any value outside the accepted lists.
+// validate từ chối mọi giá trị nằm ngoài danh sách được chấp nhận.
 func validate(s models.AppSettings) error {
 	switch {
 	case !slices.Contains(themes, s.Theme):
@@ -57,7 +57,7 @@ func validate(s models.AppSettings) error {
 	return nil
 }
 
-// submoduleSettingMng serializes access to the settings file and applies the autostart option.
+// submoduleSettingMng tuần tự hóa thao tác truy cập file cài đặt và áp dụng tùy chọn tự khởi động.
 type submoduleSettingMng struct {
 	logger  *slog.Logger
 	appName string
@@ -73,15 +73,15 @@ func newSubmoduleSettingMng(logger *slog.Logger, appName string) *submoduleSetti
 	}
 }
 
-// get returns the saved settings.
+// get trả về các cài đặt đã lưu.
 func (m *submoduleSettingMng) get() (models.AppSettings, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.file.read()
 }
 
-// save persists the settings. When the autostart entry cannot be changed the other values are still saved,
-// LaunchOnStartup keeps its previous value and the autostart error is returned separately.
+// save lưu cài đặt. Nếu không thay đổi được mục tự khởi động thì các giá trị khác vẫn được lưu,
+// LaunchOnStartup giữ giá trị cũ và lỗi tự khởi động được trả riêng.
 func (m *submoduleSettingMng) save(in models.AppSettings) (saved models.AppSettings, autostartErr, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -96,12 +96,12 @@ func (m *submoduleSettingMng) save(in models.AppSettings) (saved models.AppSetti
 		return in, nil, m.file.write(in)
 	}
 
-	// Write the file first so a failed write never leaves the registry changed; setAutostart is idempotent.
+	// Ghi file trước để lỗi ghi không làm registry thay đổi; setAutostart có tính idempotent.
 	if err = m.file.write(in); err != nil {
 		return in, nil, err
 	}
 	if autostartErr = setAutostart(m.appName, in.LaunchOnStartup); autostartErr != nil {
-		// Registry unchanged: rewrite the file with the previous value so both stay in sync.
+		// Registry không đổi: ghi lại file bằng giá trị trước đó để hai bên tiếp tục đồng bộ.
 		in.LaunchOnStartup = current.LaunchOnStartup
 		err = m.file.write(in)
 	}

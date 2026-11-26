@@ -8,7 +8,7 @@ import ObjectItem, { type ObjectItemLabels } from '@/pages/s3/object/ObjectItem'
 import { useTabListStore } from '@/pages/s3/stores/tabListStore';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// Every ObjectRow renders exactly one ActionIcon, labelled per row below: counting its renders counts row renders.
+// Mỗi ObjectRow hiển thị đúng một ActionIcon, được gắn nhãn theo từng hàng bên dưới; đếm số lần render của icon cũng là đếm số lần render hàng.
 const rowRenders = vi.hoisted(() => new Map<string, number>());
 vi.mock('@/components/buttons/ActionIcon', async importOriginal => {
   const Original = (await importOriginal<{ default: ComponentType<Record<string, unknown>> }>()).default;

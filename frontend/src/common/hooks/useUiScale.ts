@@ -3,13 +3,13 @@ import { UI_SIZE_FONT_PX } from '@/common/cnst/settingConst';
 import { useSettingStore } from '@/common/stores/settingStore';
 
 /**
- * Scale of the interface (0.875 / 1 / 1.125) relative to the default 16px root font.
- * Pixel sizes that are not rem (virtualizer row heights) multiply by it. Reads `draft`, which always equals
- * the size shown, because every apply path in the store sets `draft` to the applied value.
+ * Tỷ lệ giao diện (0.875 / 1 / 1.125) so với cỡ phông gốc mặc định 16px.
+ * Các kích thước pixel không dùng rem (như chiều cao hàng của virtualizer) được nhân với tỷ lệ này. Đọc `draft`, vốn luôn
+ * bằng cỡ đang hiển thị vì mọi luồng áp dụng trong store đều đặt `draft` bằng giá trị đã áp dụng.
  */
 export const useUiScale = (): number => useSettingStore(s => UI_SIZE_FONT_PX[s.draft.size] / 16);
 
-/** Row sizes come from `estimateSize`, which the virtualizer caches: after a size change it must measure again. */
+/** Kích thước hàng lấy từ `estimateSize` và được virtualizer lưu đệm; sau khi đổi cỡ cần đo lại. */
 export function useRemeasureOnScale(virtualizer: { measure: () => void }, scale: number): void {
   const previous = useRef(scale);
   useEffect(() => {

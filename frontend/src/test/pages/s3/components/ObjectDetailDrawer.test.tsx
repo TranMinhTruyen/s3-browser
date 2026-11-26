@@ -35,7 +35,7 @@ function renderDrawer() {
   return renderWithProviders(<ObjectDetailDrawer tabId={TAB_ID} connectionId="conn" profileName="p" bucket="bkt" />);
 }
 
-// [key, value] pairs of the nested metadata DataList, in rendered order.
+// Các cặp [key, value] của DataList metadata lồng nhau, theo thứ tự hiển thị.
 function metadataEntries() {
   const metadataTerm = screen.getByText('Metadata');
   const nested = metadataTerm.nextElementSibling!.querySelector('dl')!;
@@ -91,7 +91,7 @@ describe('ObjectDetailDrawer', () => {
 
     expect(await screen.findByText('x/y')).toBeInTheDocument();
     expect(screen.queryByText('Storage class')).not.toBeInTheDocument();
-    // etag, lastModified and metadata are all empty.
+    // etag, lastModified và metadata đều rỗng.
     expect(screen.getAllByText('-')).toHaveLength(3);
   });
 
@@ -176,12 +176,12 @@ describe('ObjectDetailDrawer', () => {
     const user = userEvent.setup();
 
     const copyButton = screen.getAllByRole('button', { name: 'Copy' })[0];
-    // The button sits in a span wrapper, next to the text holding the value.
+    // Nút nằm trong span bọc, bên cạnh phần văn bản chứa giá trị.
     const value = copyButton.parentElement!.parentElement!.textContent;
     await user.click(copyButton);
 
-    // Wait for it right after the click and unmount at once: the tooltip transition keeps updating on its own
-    // timers, and any await between the click and the unmount would let an update land outside act.
+    // Chờ tooltip ngay sau click rồi unmount luôn: hiệu ứng tooltip tiếp tục cập nhật bằng timer riêng,
+    // và bất kỳ await nào giữa click với unmount đều có thể khiến cập nhật chạy ngoài act.
     expect(await screen.findByText('Copied')).toBeInTheDocument();
     cleanup();
 

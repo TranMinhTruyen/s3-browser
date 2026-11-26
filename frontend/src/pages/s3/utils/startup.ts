@@ -3,10 +3,10 @@ import { installDropTargetCleanup } from '@/pages/s3/utils/dropTargetUtils';
 import { restoreTabsFromDisk } from '@/pages/s3/utils/tabPersistence';
 
 /**
- * Prepares what the first render needs: drop-target cleanup, then settings (so the UI never flashes the wrong
- * theme, font or language) and the saved tab layout, loaded in parallel. Neither load rejects: failed settings
- * keep the defaults, and a failed tab restore keeps the default tab and disables saving (see
- * `isTabRestoreFailed`), so tabs.json is not overwritten. Profiles are loaded later by `App`.
+ * Chuẩn bị dữ liệu cần cho lần render đầu: dọn vùng thả, rồi tải thiết lập (để giao diện không lóe sai theme,
+ * phông chữ hoặc ngôn ngữ) và bố cục tab đã lưu song song. Cả hai thao tác tải đều không reject: nếu tải thiết lập
+ * thất bại thì giữ mặc định; nếu khôi phục tab thất bại thì giữ tab mặc định và tắt lưu (xem `isTabRestoreFailed`)
+ * để không ghi đè tabs.json. `App` sẽ tải profile sau.
  */
 export async function loadStartupData(): Promise<void> {
   installDropTargetCleanup();

@@ -93,7 +93,7 @@ describe('reloginOidc', () => {
   });
 
   describe('while a sign-in runs', () => {
-    // Every started sign-in is finished in afterEach, so the module-level set never leaks into another test.
+    // afterEach hoàn tất mọi lần đăng nhập đã bắt đầu, nên tập hợp ở cấp module không bị rò sang kiểm thử khác.
     const pending: Array<(login: unknown) => void> = [];
     const hold = () =>
       vi.mocked(callIPC).mockImplementationOnce(

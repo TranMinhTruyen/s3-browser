@@ -19,24 +19,24 @@ import (
 )
 
 const (
-	// searchMaxResults is the most matches returned by one call.
+	// searchMaxResults là số kết quả khớp tối đa trả về trong một lần gọi.
 	searchMaxResults = 100
-	// searchPageSize is the keys requested per ListObjectsV2 page.
+	// searchPageSize là số key được yêu cầu trong mỗi trang ListObjectsV2.
 	searchPageSize = 1000
-	// searchMaxPages is the most pages scanned by one call.
+	// searchMaxPages là số trang tối đa được quét trong một lần gọi.
 	searchMaxPages = 20
-	// searchBucketCallTimeout bounds each ListBuckets call.
+	// searchBucketCallTimeout giới hạn thời gian của mỗi lần gọi ListBuckets.
 	searchBucketCallTimeout = 10 * time.Second
 )
 
-// submoduleSearchMng searches objects and buckets by keyword, page by page.
+// submoduleSearchMng tìm object và bucket theo từ khóa, lần lượt qua từng trang.
 type submoduleSearchMng struct {
 	logger *slog.Logger
 	app    *application.App
 	global *global.Module
 }
 
-// newSubmoduleSearchMng builds the search submodule on the shared connection store.
+// newSubmoduleSearchMng tạo submodule tìm kiếm trên kho kết nối dùng chung.
 func newSubmoduleSearchMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -49,11 +49,11 @@ func newSubmoduleSearchMng(
 	}
 }
 
-// searchObject scans the folder input.Prefix (no recursion) for keys containing input.Keyword,
-// case-insensitively, and returns at most searchMaxResults matches.
-// input.NextCursor is the StartAfter key to continue from (empty to start over). The returned
-// NextCursor is where the next call must continue; it is empty only when nothing is left to scan.
-// ctx is the call context: it is canceled when the frontend cancels the call.
+// searchObject quét thư mục input.Prefix (không đệ quy) để tìm key chứa input.Keyword,
+// không phân biệt chữ hoa/thường và trả về tối đa searchMaxResults kết quả.
+// input.NextCursor là key StartAfter để tiếp tục (để trống nếu bắt đầu lại). NextCursor trả về là vị trí
+// lần gọi tiếp theo cần tiếp tục; chỉ rỗng khi không còn gì để quét.
+// ctx là context của lời gọi; frontend sẽ hủy context khi người dùng hủy lời gọi.
 func (m *submoduleSearchMng) searchObject(
 	ctx context.Context,
 	input models.SearchObjectInput,
@@ -91,7 +91,7 @@ func (m *submoduleSearchMng) searchObject(
 		page, err := s3Conn.Client.ListObjectsV2(ctx, listInput)
 		if err != nil {
 			if isCallCanceled(ctx) {
-				// Canceled by the frontend: fail silently, nobody waits for the result.
+				// Frontend đã hủy: dừng im lặng vì không còn bên nào chờ kết quả.
 				return output.ThrowError()
 			}
 
@@ -112,7 +112,7 @@ func (m *submoduleSearchMng) searchObject(
 		truncated := aws.ToBool(page.IsTruncated)
 		before := cursor
 		forEachKey(page, input.Prefix, func(key string, isFolder, isLast bool, item func() models.ObjectItem) bool {
-			// The cursor always moves past the raw key, even when the key is filtered out.
+			// Cursor luôn chuyển qua key gốc, kể cả khi key bị bộ lọc loại bỏ.
 			cursor = key
 			if isFolder {
 				cursor = strings.TrimSuffix(key, "/") + "0"
@@ -123,8 +123,8 @@ func (m *submoduleSearchMng) searchObject(
 			if len(body.ObjectList) < searchMaxResults {
 				return true
 			}
-			// Stop right at this item, even in the middle of a page.
-			// Nothing is left only if it was the last item of the last page.
+			// Dừng ngay tại mục này, kể cả khi đang ở giữa trang.
+			// Chỉ không còn kết quả nếu đây là mục cuối cùng của trang cuối.
 			if isLast && !truncated {
 				cursor = ""
 			}
@@ -138,22 +138,21 @@ func (m *submoduleSearchMng) searchObject(
 		}
 
 		if !truncated || cursor == before {
-			// Data ended (or the page gave no key to move on from, which would loop forever).
+			// Đã hết dữ liệu (hoặc trang không có key để tiếp tục, nếu không sẽ lặp vô hạn).
 			cursor = ""
 			break
 		}
 	}
 
-	// Either the data ended (cursor empty) or the page limit hit: continue from the last examined key.
+	// Đã hết dữ liệu (cursor rỗng) hoặc chạm giới hạn trang: tiếp tục từ key cuối cùng đã kiểm tra.
 	body.NextCursor = cursor
 	output.Body = body
 	return output
 }
 
-// forEachKey visits the folders (CommonPrefixes) and files (Contents) of a page in key order, the order
-// S3 lists them in, by merging the two already sorted lists. Empty keys and the folder marker
-// (key == prefix) are skipped. item builds the ObjectItem lazily, so only matches pay for it.
-// visit returns false to stop.
+// forEachKey duyệt thư mục (CommonPrefixes) và file (Contents) trong trang theo thứ tự key mà S3 liệt kê,
+// bằng cách trộn hai danh sách đã sắp xếp. Bỏ qua key rỗng và dấu thư mục (key == prefix).
+// item tạo ObjectItem theo nhu cầu để chỉ các kết quả khớp mới phải xử lý. visit trả false để dừng.
 func forEachKey(
 	page *s3.ListObjectsV2Output,
 	prefix string,
@@ -163,7 +162,7 @@ func forEachKey(
 	i, j := 0, 0
 	for i < len(folders) || j < len(files) {
 		var key string
-		// S3-compatible providers may omit optional fields, so read them via aws.ToX.
+		// Provider tương thích S3 có thể bỏ qua trường tùy chọn, vì vậy hãy đọc chúng qua aws.ToX.
 		isFolder := j >= len(files) ||
 			(i < len(folders) && aws.ToString(folders[i].Prefix) < aws.ToString(files[j].Key))
 		var item func() models.ObjectItem
@@ -200,8 +199,8 @@ func forEachKey(
 	}
 }
 
-// containsFold reports whether s contains lowerSub (already lower-cased), ignoring case.
-// ASCII-only input is compared without allocating; otherwise it falls back to strings.ToLower.
+// containsFold cho biết s có chứa lowerSub (đã chuyển thành chữ thường) hay không, không phân biệt hoa/thường.
+// Nếu chuỗi chỉ có ASCII thì so sánh không cần cấp phát bộ nhớ; trường hợp khác dùng strings.ToLower.
 func containsFold(s, lowerSub string) bool {
 	for k := 0; k < len(s); k++ {
 		if s[k] >= utf8.RuneSelf {
@@ -228,20 +227,20 @@ func containsFold(s, lowerSub string) bool {
 	return false
 }
 
-// bucketCursor is the decoded SearchBucketInput.NextCursor: the ListBuckets page to call again
-// (Token, empty for the first page) and how many of its buckets were already examined (Skip).
+// bucketCursor là SearchBucketInput.NextCursor sau khi giải mã: trang ListBuckets cần gọi lại
+// (Token, rỗng ở trang đầu) và số bucket đã kiểm tra trong trang đó (Skip).
 type bucketCursor struct {
 	Token string `json:"token"`
 	Skip  int    `json:"skip"`
 }
 
-// encodeBucketCursor turns c into the opaque string the frontend passes back as NextCursor.
+// encodeBucketCursor chuyển c thành chuỗi opaque để frontend gửi lại trong NextCursor.
 func encodeBucketCursor(c bucketCursor) string {
 	data, _ := json.Marshal(c)
 	return base64.RawURLEncoding.EncodeToString(data)
 }
 
-// decodeBucketCursor parses a cursor made by encodeBucketCursor; an empty string means the first page.
+// decodeBucketCursor phân tích cursor do encodeBucketCursor tạo; chuỗi rỗng nghĩa là trang đầu tiên.
 func decodeBucketCursor(s string) (bucketCursor, error) {
 	var c bucketCursor
 	if s == "" {
@@ -257,16 +256,16 @@ func decodeBucketCursor(s string) (bucketCursor, error) {
 	return c, err
 }
 
-// searchBucket scans the buckets for names containing input.Keyword, case-insensitively, and returns at
-// most searchMaxResults matches. ListBuckets has no StartAfter, so the NextCursor is an opaque
-// {token, skip} pair: re-list the page of token, then skip the buckets already examined.
-// The returned NextCursor is empty only when nothing is left to scan; it always moves forward.
-// An invalid input.NextCursor is rejected with S3E027 (not silently restarted, to avoid endless loops).
+// searchBucket quét bucket để tìm tên chứa input.Keyword, không phân biệt chữ hoa/thường, và trả về tối đa
+// searchMaxResults kết quả. ListBuckets không có StartAfter nên NextCursor là cặp opaque {token, skip}:
+// liệt kê lại trang có token rồi bỏ qua số bucket đã kiểm tra.
+// NextCursor trả về chỉ rỗng khi không còn gì để quét và luôn tiến về phía trước.
+// input.NextCursor không hợp lệ sẽ bị từ chối bằng S3E027 (không âm thầm bắt đầu lại để tránh vòng lặp vô hạn).
 func (m *submoduleSearchMng) searchBucket(
 	ctx context.Context,
 	input models.SearchBucketInput,
 ) models.Output[models.SearchBucketOutput] {
-	// No overall timeout: each ListBuckets call has its own (searchBucketCallTimeout).
+	// Không đặt timeout tổng thể: mỗi lần gọi ListBuckets đã có timeout riêng (searchBucketCallTimeout).
 	ctx, cancel := withCallContext(ctx, m.app.Context(), 0)
 	defer cancel()
 
@@ -304,7 +303,7 @@ func (m *submoduleSearchMng) searchBucket(
 	}
 
 	body := models.SearchBucketOutput{BucketList: make([]models.Bucket, 0, searchMaxResults)}
-	// finish flags the inaccessible buckets of the matches to return (not of every bucket scanned).
+	// finish đánh dấu các bucket không truy cập được trong những kết quả sẽ trả về (không phải mọi bucket đã quét).
 	finish := func() models.Output[models.SearchBucketOutput] {
 		if !flagBucketAccess(ctx, s3Conn, body.BucketList, input.CheckWrite, input.LazyAccess, false) {
 			return output.ThrowError()
@@ -324,13 +323,13 @@ func (m *submoduleSearchMng) searchBucket(
 		cancelCall()
 		if err != nil {
 			if isCallCanceled(ctx) {
-				// Canceled by the frontend: fail silently, nobody waits for the result.
+				// Frontend đã hủy: dừng im lặng vì không còn bên nào chờ kết quả.
 				return output.ThrowError()
 			}
 			return failure(UnwrapAwsError(err))
 		}
 
-		// A provider may omit the token and return everything at once; then the page is the last one.
+		// Provider có thể bỏ token và trả về tất cả kết quả cùng lúc; khi đó đây là trang cuối.
 		next := aws.ToString(page.ContinuationToken)
 		if next == cur.Token {
 			next = ""
@@ -348,7 +347,7 @@ func (m *submoduleSearchMng) searchBucket(
 			if len(body.BucketList) < searchMaxResults {
 				continue
 			}
-			// Stop right at this bucket, even in the middle of a page.
+			// Dừng ngay tại bucket này, kể cả khi đang ở giữa trang.
 			switch {
 			case i+1 < len(page.Buckets):
 				body.NextCursor = encodeBucketCursor(bucketCursor{Token: cur.Token, Skip: i + 1})
@@ -364,7 +363,7 @@ func (m *submoduleSearchMng) searchBucket(
 		cur = bucketCursor{Token: next}
 	}
 
-	// Page limit hit: continue from the next page.
+	// Đã chạm giới hạn trang: tiếp tục từ trang kế tiếp.
 	body.NextCursor = encodeBucketCursor(cur)
 	return finish()
 }

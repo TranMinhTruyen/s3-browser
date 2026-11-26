@@ -16,12 +16,12 @@ import { type PolicyMode, validateBucketName, validatePolicy } from '@/pages/s3/
 type CreateBucketModalProps = ModalProps & {
   connectionId: string;
   profileName?: string;
-  // Only real AWS lets the user pick the region of the new bucket.
+  // Chỉ AWS thật mới cho phép chọn region của bucket mới.
   withRegion: boolean;
   defaultRegion?: string;
 };
 
-/** Asks for the new bucket's name (and region on AWS); resolves true once the bucket is created, false if canceled. */
+/** Yêu cầu nhập tên bucket mới (và region trên AWS); trả về true khi tạo xong, false nếu hủy. */
 export default createMantineModal<CreateBucketModalProps, boolean>(
   props => {
     const {
@@ -43,10 +43,10 @@ export default createMantineModal<CreateBucketModalProps, boolean>(
     const [policy, setPolicy] = useState('');
     const ctrl = useRef<AbortController>(null);
 
-    // Closing the modal (any way) cancels a create still in flight.
+    // Đóng modal bằng cách nào cũng hủy thao tác tạo bucket đang chạy.
     useEffect(() => () => ctrl.current?.abort(), []);
 
-    // An empty name is not flagged while typing, only the Create button stays disabled.
+    // Không báo lỗi khi tên đang trống trong lúc nhập; chỉ vô hiệu hóa nút Tạo.
     const error = name ? validateBucketName(name) : null;
 
     const onChangeName = useCallback((e: ChangeEvent<HTMLInputElement>) => setName(e.currentTarget.value), []);
@@ -77,7 +77,7 @@ export default createMantineModal<CreateBucketModalProps, boolean>(
           },
         }
       );
-      // On failure callIPC already showed the error; the modal stays open so the user can fix the name.
+      // Khi thất bại, callIPC đã hiện lỗi; giữ modal mở để người dùng sửa tên.
       if (signal.aborted || !created) return;
       mantine.handler.resolve(true);
       mantine.handler.hide();

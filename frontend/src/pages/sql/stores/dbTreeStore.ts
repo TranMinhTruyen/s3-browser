@@ -4,7 +4,7 @@ import { invalidateLoads } from '@/common/utils/ipcUtils';
 import { type DbProfile, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 import { buildTreeNodes, isNodeOf, listTableNames, loadSchemas } from '@/pages/sql/utils/dbObjectSource';
 
-/** The object tree of one profile. `nodes` is empty until `ready`; `tableNames` feeds SQL autocomplete. */
+/** Cây đối tượng của một profile. `nodes` rỗng cho đến khi `ready`; `tableNames` cung cấp dữ liệu gợi ý SQL. */
 type DbTree = {
   status: 'loading' | 'ready' | 'error';
   nodes: TreeNodeData[];
@@ -12,37 +12,37 @@ type DbTree = {
 };
 
 interface DbTreeState {
-  /** Profiles whose Accordion is open. */
+  /** Các profile đang mở Accordion. */
   opened: Partial<Record<string, true>>;
   trees: Partial<Record<string, DbTree>>;
-  /** Expanded nodes by node value. The top nodes of a tree start expanded. */
+  /** Các node đang mở rộng, được lập chỉ mục theo giá trị node. Node cấp cao nhất mặc định được mở rộng. */
   expanded: Record<string, boolean>;
-  /** The highlighted node (one at a time, across all profiles). */
+  /** Node đang được tô sáng (mỗi lần chỉ có một node trong tất cả profile). */
   selected: string | null;
 }
 
 interface DbTreeAction {
-  /** Opens the Accordion of a connected profile and loads its tree once (an earlier failure is retried). */
+  /** Mở Accordion của profile đã kết nối và tải cây một lần (nếu lần trước thất bại thì thử lại). */
   openProfile: (profileId: string) => Promise<void>;
-  /** Reloads the tree of a connected profile (stops a load in flight); expanded and selected nodes that still exist stay. */
+  /** Tải lại cây của profile đã kết nối (dừng lượt tải đang chạy); giữ các node đang mở rộng/chọn nếu chúng vẫn tồn tại. */
   refreshProfile: (profileId: string) => Promise<void>;
   closeProfile: (profileId: string) => void;
   toggleProfile: (profileId: string) => void;
   toggleNode: (value: string) => void;
   selectNode: (value: string) => void;
-  /** The profile was disconnected or deleted: closes its Accordion, drops its tree and stops its load. */
+  /** Profile đã ngắt kết nối hoặc bị xóa: đóng Accordion, bỏ cây đối tượng và dừng lượt tải. */
   dropProfile: (profileId: string) => void;
   reset: () => void;
 }
 
 const SCOPE = 'dbTree';
 
-/** Tree loads in flight, so a drop can stop them. */
+/** Các lượt tải cây đang chạy để thao tác xóa có thể dừng chúng. */
 const loads = new Map<string, AbortController>();
 
-/** Object trees (Accordion state, loaded nodes, expanded and selected nodes) of the connected database profiles. */
+/** Cây đối tượng của các profile database đã kết nối (state Accordion, node đã tải, node mở rộng và node được chọn). */
 export const useDbTreeStore = createAppStore<DbTreeState & DbTreeAction>((set, get) => {
-  /** Loads the tree of a connected profile into `trees`; a newer load or a drop aborts it. */
+  /** Tải cây của profile đã kết nối vào `trees`; lượt tải mới hơn hoặc thao tác xóa sẽ hủy lượt tải này. */
   const loadTree = async (profile: DbProfile) => {
     const profileId = profile.id;
     const controller = new AbortController();
@@ -55,7 +55,7 @@ export const useDbTreeStore = createAppStore<DbTreeState & DbTreeAction>((set, g
     const nodes = schemas ? buildTreeNodes(profileId, database, schemas) : [];
     set(
       state => {
-        // A refresh keeps the expanded state of the nodes that still exist.
+        // Làm mới sẽ giữ trạng thái mở rộng của các node vẫn còn tồn tại.
         for (const node of nodes) state.expanded[node.value] ??= true;
         state.trees[profileId] = {
           status: schemas ? 'ready' : 'error',

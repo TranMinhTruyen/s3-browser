@@ -8,7 +8,7 @@ type TabDragPreviewProps = {
   closable: boolean;
 };
 
-/** Presentational copy of a tab shown in the DragOverlay (not a Tabs.Tab, so no duplicate role="tab"). */
+/** Bản sao chỉ để hiển thị của tab trong DragOverlay (không phải Tabs.Tab nên không tạo role="tab" trùng lặp). */
 function TabDragPreview({ label, closable }: TabDragPreviewProps) {
   return (
     <Group
@@ -20,11 +20,11 @@ function TabDragPreview({ label, closable }: TabDragPreviewProps) {
       w={TAB_WIDTH}
       style={{
         cursor: 'grabbing',
-        // Same look as the active tab (SortableTab.module.css): primary "light" variant.
+        // Dùng giao diện như tab đang hoạt động (SortableTab.module.css): biến thể "light" của màu chính.
         background: 'var(--mantine-primary-color-light)',
         color: 'var(--mantine-primary-color-light-color)',
         borderRadius: 'var(--mantine-radius-md)',
-        // Same transparent 1px border as the active tab so the content lines up.
+        // Dùng viền trong suốt 1px như tab đang hoạt động để nội dung thẳng hàng.
         border: '1px solid transparent',
       }}
     >

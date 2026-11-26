@@ -1,7 +1,7 @@
-// Package setting holds the models of the app settings module.
+// Package setting chứa các model của module cài đặt ứng dụng.
 package setting
 
-// SaveSettingInput is the settings the user wants to persist.
+// SaveSettingInput chứa các cài đặt người dùng muốn lưu.
 type SaveSettingInput struct {
 	Theme           string `json:"theme"`
 	Font            string `json:"font"`

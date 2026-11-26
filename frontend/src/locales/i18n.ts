@@ -14,7 +14,7 @@ i18n.use(initReactI18next).init({
   resources: { en: englishResource },
 });
 
-/** Dynamic imports, so Vite emits one chunk per language; `en` is already bundled. */
+/** Import động để Vite tạo một chunk cho mỗi ngôn ngữ; `en` đã được đóng gói sẵn. */
 const RESOURCE_LOADERS: Record<Exclude<LanguageKey, 'en'>, () => Promise<{ default: ResourceLanguage }>> = {
   vi: () => import('@/locales/vi/resource'),
   ja: () => import('@/locales/ja/resource'),
@@ -27,8 +27,8 @@ const RESOURCE_LOADERS: Record<Exclude<LanguageKey, 'en'>, () => Promise<{ defau
 const loadings = new Map<string, Promise<boolean>>();
 
 /**
- * Registers the resource bundle of `lng` (loaded once, then cached).
- * Resolves false when the language is unsupported or its chunk fails to load, so the caller keeps the old language.
+ * Đăng ký resource bundle của `lng` (chỉ tải một lần rồi lưu đệm).
+ * Trả về false nếu ngôn ngữ không được hỗ trợ hoặc tải chunk thất bại, để nơi gọi giữ nguyên ngôn ngữ cũ.
  */
 export function loadLanguage(lng: string): Promise<boolean> {
   if (lng === 'en') {

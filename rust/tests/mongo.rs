@@ -65,7 +65,7 @@ fn slow_find(db: &str, coll: &str, marker: &str) -> String {
 }
 
 mongo! {
-    // ---- open ----
+    // ---- mở ----
 
     fn open_pings_and_close_makes_the_connection_unknown(s: &Server) {
         let r = s.open("disable");
@@ -318,7 +318,7 @@ mongo! {
         assert_eq!(all_ids(&c, &db, "c"), vec![1]);
     }
 
-    // ---- affected ----
+    // ---- số hàng bị ảnh hưởng ----
 
     fn insert_update_and_delete_report_rows_affected(s: &Server) {
         let c = s.conn();
@@ -583,7 +583,7 @@ mongo! {
         assert_eq!(all_ids(&c, &db, "c").len(), 10);
     }
 
-    // ---- truncated ----
+    // ---- dữ liệu bị cắt ----
 
     fn a_non_last_command_with_more_rows_is_truncated_and_the_last_keeps_the_cursor(s: &Server) {
         let monitor = s.conn();
@@ -860,7 +860,7 @@ mongo! {
         assert_eq!(a.doc(r#"{"ping":1}"#)["ok"], 1.0);
     }
 
-    // ---- method chỉ SQLite có ----
+    // ---- phương thức chỉ SQLite có ----
 
     fn schema_methods_are_invalid_request_for_mongodb(s: &Server) {
         let c = s.conn();
@@ -921,7 +921,7 @@ mongo! {
         assert!(message_of(st(&r, 0)).starts_with("NamespaceNotFound (26)"), "{r}");
     }
 
-    // ---- kiểu dữ liệu và document lớn ----
+    // ---- kiểu dữ liệu và tài liệu lớn ----
 
     fn bson_types_round_trip_as_relaxed_extended_json(s: &Server) {
         let c = s.conn();

@@ -1,6 +1,6 @@
 package bucket
 
-// DownloadObjInput asks to download the given object keys of a bucket.
+// DownloadObjInput yêu cầu tải xuống các key object đã cho trong bucket.
 type DownloadObjInput struct {
 	ConnectionId string   `json:"connectionId"`
 	ProfileName  string   `json:"profileName,omitempty"`

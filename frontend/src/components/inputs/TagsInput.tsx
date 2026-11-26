@@ -1,7 +1,7 @@
 import { TagsInput as MTagsInput, type TagsInputProps } from '@mantine/core';
 import { useFieldError } from '@/common/hooks/useFieldError';
 
-/** Mantine `TagsInput` that translates `error` through `useFieldError`. */
+/** `TagsInput` của Mantine, dịch `error` thông qua `useFieldError`. */
 function TagsInput(props: TagsInputProps) {
   const { size = 'sm', error, label, ...rest } = props;
   const formatError = useFieldError();

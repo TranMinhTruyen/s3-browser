@@ -12,12 +12,12 @@ type SqlTabActionBarProps = {
   onChangeSelectProfile: (value: string | null) => void;
   onClickConnect: () => void;
   onClickExecute: () => void;
-  /** A run is in flight: Execute is off and Cancel shows. */
+  /** Đang thực thi truy vấn: Execute bị tắt và nút Cancel được hiển thị. */
   running: boolean;
   onClickCancel: () => void;
 };
 
-/** Toolbar of a SQL tab: profile picker, connect, execute and cancel. */
+/** Thanh công cụ của tab SQL: chọn hồ sơ, kết nối, thực thi và hủy. */
 function SqlTabActionBar(props: SqlTabActionBarProps) {
   const {
     isConnected,

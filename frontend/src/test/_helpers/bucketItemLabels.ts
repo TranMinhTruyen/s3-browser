@@ -1,6 +1,6 @@
 import type { BucketItemLabels } from '@/pages/s3/bucket/BucketItem';
 
-/** English texts of `bucket` / `page` (keyPrefix of the list), as BucketListView passes them to rows. */
+/** Nhãn tiếng Anh cho `bucket` / `page` (keyPrefix của danh sách), do BucketListView truyền vào từng hàng. */
 export const BUCKET_ITEM_LABELS: BucketItemLabels = {
   inaccessible: 'Cannot access this bucket (no permission or it does not exist).',
   moreActions: 'More actions',

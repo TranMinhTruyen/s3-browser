@@ -4,8 +4,8 @@ package main
 
 import "github.com/wailsapp/wails/v3/pkg/w32"
 
-// osDarkMode reads the Windows app theme from the registry. Env.IsDarkMode() cannot be used here because it
-// returns false until the app runs, and the window background must be chosen before that.
+// osDarkMode đọc giao diện ứng dụng Windows từ registry. Không thể dùng Env.IsDarkMode() vì hàm trả false
+// cho đến khi ứng dụng chạy, trong khi cần chọn màu nền cửa sổ trước thời điểm đó.
 func osDarkMode() bool {
 	return w32.IsCurrentlyDarkMode()
 }

@@ -17,7 +17,7 @@ const callIPCMock = vi.mocked(callIPC);
 const flush = () => act(async () => {});
 
 type Policy = { mode: string; policy: string; editDenied?: boolean; publicBlocked?: boolean };
-// Per binding: the next result (null = failed), or a promise to control the timing.
+// Với từng binding: kết quả kế tiếp (null = thất bại) hoặc promise để điều khiển thời điểm trả kết quả.
 const results = {
   get: undefined as unknown,
   put: undefined as unknown,
@@ -245,7 +245,7 @@ describe('BucketPolicyModal', () => {
     await waitFor(() => expect(signals.get?.aborted).toBe(true));
     await act(async () => finishLoad());
 
-    // The close button settles the modal with cancelValue (false), never with the late result.
+    // Nút đóng kết thúc modal bằng cancelValue (false), không dùng kết quả trả về muộn.
     await expect(result).resolves.toBe(false);
     expect(screen.queryByRole('radio', { name: 'Public (read-only)' })).not.toBeInTheDocument();
   });

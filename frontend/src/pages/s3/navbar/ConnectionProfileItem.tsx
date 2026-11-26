@@ -7,13 +7,13 @@ import TruncatedText from '@/components/display/TruncatedText';
 import { useProfileStore } from '@/pages/s3/stores/profileStore';
 import { getAuthType } from '@/pages/s3/utils/authUtils';
 
-/** Fixed card height: rows never change size with content or font, so the virtual list can use it as-is. */
+/** Chiều cao thẻ cố định: hàng không đổi kích thước theo nội dung hoặc phông chữ nên danh sách ảo dùng trực tiếp được. */
 export const CARD_HEIGHT = 68;
 
-/** Share of the profile color kept in dark mode; the rest is the body color, so light colors don't glare. */
+/** Tỷ lệ màu profile được giữ lại ở chế độ tối; phần còn lại lấy màu nền để màu sáng không gây chói. */
 const DARK_COLOR_PERCENT = 35;
 
-/** Black/white text that contrasts with the user-chosen profile color; theme text when no color or in dark mode. */
+/** Chữ đen/trắng tương phản với màu profile do người dùng chọn; dùng màu chữ theo giao diện nếu không có màu hoặc ở chế độ tối. */
 const getProfileTextColor = (color: string | undefined, dark: boolean) =>
   color && !dark
     ? isLightColor(color)
@@ -21,7 +21,7 @@ const getProfileTextColor = (color: string | undefined, dark: boolean) =>
       : 'var(--mantine-color-white)'
     : 'var(--mantine-color-text)';
 
-/** The profile color as chosen in light mode, dimmed toward the body color in dark mode. */
+/** Màu profile theo lựa chọn ở chế độ sáng, được làm dịu về màu nền trong chế độ tối. */
 const getProfileBackground = (color: string | undefined, dark: boolean) => {
   if (!color) return 'var(--mantine-color-body)';
   return dark ? `color-mix(in srgb, ${color} ${DARK_COLOR_PERCENT}%, var(--mantine-color-body))` : color;
@@ -30,12 +30,12 @@ const getProfileBackground = (color: string | undefined, dark: boolean) => {
 type ConnectionProfileItemProps = {
   profileKey: string;
   connecting: boolean;
-  // Must be stable (owned by the parent) so memo skips unchanged items.
+  // Phải ổn định (do component cha quản lý) để memo bỏ qua các mục không đổi.
   onConnect: (key: string) => void;
 };
 
-// Selects its own profile, so connecting/disconnecting one profile re-renders only this item.
-// The context menu is shared and owned by ConnectionProfiles; rows carry `data-profile-key` for it.
+// Tự chọn profile của mình nên kết nối/ngắt kết nối một profile chỉ render lại mục tương ứng.
+// Menu ngữ cảnh dùng chung do ConnectionProfiles quản lý; mỗi hàng có `data-profile-key` để menu xác định hàng.
 function ConnectionProfileItem({ profileKey, connecting, onConnect }: ConnectionProfileItemProps) {
   const { t } = useTranslation('connectModal');
   const profile = useProfileStore(s => s.connectionProfiles[profileKey]);
@@ -64,12 +64,12 @@ function ConnectionProfileItem({ profileKey, connecting, onConnect }: Connection
           alignItems: 'center',
           minWidth: '2.5rem',
           justifyContent: 'center',
-          // Status uses Mantine "light" variant colors: connected = green, disconnected = red
+          // Trạng thái dùng màu của biến thể "light" trong Mantine: xanh khi kết nối, đỏ khi mất kết nối.
           color: profile.isConnected
             ? 'var(--mantine-color-green-light-color)'
             : 'var(--mantine-color-red-light-color)',
           backgroundColor: profile.isConnected ? 'var(--mantine-color-green-light)' : 'var(--mantine-color-red-light)',
-          // Light divider so the status cell stays apart from a profile color of the same hue
+          // Dùng vạch phân cách nhạt để ô trạng thái vẫn tách biệt khi profile có màu cùng tông.
           borderRight: '1px solid var(--mantine-color-default-border)',
         }}
       >

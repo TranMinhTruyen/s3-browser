@@ -9,26 +9,26 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// Kinds of file ChooseAuthFile can ask for.
+// Các loại file ChooseAuthFile có thể yêu cầu chọn.
 const (
 	authFileCert = "cert"
 	authFileKey  = "key"
 	authFileCa   = "ca"
 )
 
-// submoduleAuthFilesMng lets the user pick the certificate, key and CA files of a profile.
+// submoduleAuthFilesMng cho phép người dùng chọn file chứng chỉ, khóa và CA của hồ sơ.
 type submoduleAuthFilesMng struct {
 	logger *slog.Logger
 	app    *application.App
 }
 
-// newSubmoduleAuthFilesMng creates the file chooser.
+// newSubmoduleAuthFilesMng tạo bộ chọn file.
 func newSubmoduleAuthFilesMng(app *application.App, logger *slog.Logger) *submoduleAuthFilesMng {
 	return &submoduleAuthFilesMng{logger: logger.With("submodules", "auth_files"), app: app}
 }
 
-// chooseAuthFile opens the native dialog for a file of the given kind (cert, key or ca) and returns its path.
-// The body is empty when the user cancels. The dialog blocks until closed, so it has no timeout.
+// chooseAuthFile mở hộp thoại của hệ điều hành để chọn file thuộc loại đã cho (cert, key hoặc ca) rồi trả đường dẫn.
+// Body rỗng nếu người dùng hủy. Hộp thoại chặn cho đến khi đóng nên không đặt timeout.
 func (m *submoduleAuthFilesMng) chooseAuthFile(kind string) models.Output[string] {
 	output := models.NewOutput[string]()
 
@@ -42,7 +42,7 @@ func (m *submoduleAuthFilesMng) chooseAuthFile(kind string) models.Output[string
 		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Bucket, S3E029, "unknown file kind"))
 	}
 	dialog.AddFilter("All files", "*.*")
-	// The app has one window; attach to it so the dialog is modal (Current may be nil).
+	// Ứng dụng chỉ có một cửa sổ; gắn hộp thoại vào cửa sổ này để hộp thoại ở chế độ modal (Current có thể là nil).
 	if window := m.app.Window.Current(); window != nil {
 		dialog.AttachToWindow(window)
 	}

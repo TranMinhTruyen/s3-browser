@@ -5,16 +5,16 @@ const SETTING = 'components/modals/settingModal';
 
 const openSettings = (page: Page) => page.getByRole('button', { name: t(SETTING, 'title'), exact: true }).click();
 
-/** Picks an option of a Settings select by its label. */
+/** Chọn một tùy chọn trong select Cài đặt theo nhãn của tùy chọn đó. */
 async function pick(page: Page, labelKey: string, optionText: string) {
   await page.getByRole('combobox', { name: t(SETTING, labelKey), exact: true }).click();
   await page.getByRole('option', { name: optionText, exact: true }).click();
 }
 
 /**
- * Visible elements that stick out past the right edge of the window (the window cannot scroll sideways), plus the
- * window itself when it scrolls sideways. Content inside a scroll or clip container that ends inside the window
- * (tab strip, grid, editor) is fine: the container is the one that scrolls.
+ * Các phần tử hiển thị nhô ra khỏi mép phải cửa sổ (cửa sổ không thể cuộn ngang), và cả
+ * chính cửa sổ nếu nó cuộn ngang. Nội dung nằm trong vùng chứa có cuộn hoặc cắt và kết thúc bên trong cửa sổ
+ * (tab strip, grid, editor) được chấp nhận: vùng chứa đó mới là phần được cuộn.
  */
 const overflowingElements = (page: Page) =>
   page.evaluate(() => {
@@ -33,7 +33,7 @@ const overflowingElements = (page: Page) =>
     return out;
   });
 
-/** The open modal scrolls sideways (not allowed at any interface size). */
+/** Hộp thoại đang mở bị cuộn ngang (không được phép ở bất kỳ kích thước giao diện nào). */
 const modalScrollsSideways = (page: Page) =>
   page
     .locator('.mantine-Modal-content')
@@ -46,11 +46,11 @@ const modalScrollsSideways = (page: Page) =>
 test('theme and language apply right away', async ({ page }) => {
   await openSettings(page);
   await pick(page, 'label.theme', t(SETTING, 'option.theme.dark'));
-  // Apply keeps the values for this session; the modal stays open.
+  // Apply giữ nguyên các giá trị trong phiên này; hộp thoại vẫn mở.
   await page.getByRole('button', { name: t(SETTING, 'button.apply'), exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-mantine-color-scheme', 'dark');
 
-  // The modal already shows the language being picked, so the next labels are Vietnamese.
+  // Hộp thoại đã hiển thị ngôn ngữ đang chọn, nên các nhãn tiếp theo sẽ bằng tiếng Việt.
   await pick(page, 'label.language', 'Tiếng Việt');
   await page.getByRole('button', { name: t(SETTING, 'button.apply', {}, 'vi'), exact: true }).click();
   await page.getByRole('button', { name: t(SETTING, 'button.cancel', {}, 'vi'), exact: true }).click();
@@ -95,7 +95,7 @@ test('S3 tabs are restored after a reload', async ({ page }) => {
     .click();
   await expect(tabs).toHaveCount(before + 1);
 
-  // The layout is saved 500 ms after it stops changing.
+  // Bố cục được lưu sau 500 ms kể từ khi ngừng thay đổi.
   await expect
     .poll(async () => (await callBackend<{ tabs: unknown[] }>(page, 'SettingHandler', 'GetTabState')).body.tabs.length)
     .toBe(before + 1);
@@ -103,7 +103,7 @@ test('S3 tabs are restored after a reload', async ({ page }) => {
   await switchMode(page, 's3');
   await expect(tabs).toHaveCount(before + 1);
 
-  // Leave the app as it was for the next spec.
+  // Khôi phục trạng thái ứng dụng để spec tiếp theo sử dụng.
   await tabs
     .last()
     .getByRole('button', { name: t('common', 'tab.close'), exact: true })

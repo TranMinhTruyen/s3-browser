@@ -1,6 +1,6 @@
 package bucket
 
-// DownloadProgressBatchOutput is the payload of the download progress event: the progress of every running download.
+// DownloadProgressBatchOutput là payload của sự kiện tiến độ tải xuống, gồm tiến độ của mọi lượt tải xuống đang chạy.
 type DownloadProgressBatchOutput struct {
 	Items []DownloadProgressOutput `json:"items"`
 }

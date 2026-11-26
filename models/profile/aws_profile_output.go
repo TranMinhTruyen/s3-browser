@@ -1,6 +1,6 @@
 package profile
 
-// AwsProfileOutput is one profile found in the AWS CLI config files.
+// AwsProfileOutput là một hồ sơ tìm thấy trong các file cấu hình AWS CLI.
 type AwsProfileOutput struct {
 	Name                 string `json:"name"`
 	Region               string `json:"region,omitempty"`

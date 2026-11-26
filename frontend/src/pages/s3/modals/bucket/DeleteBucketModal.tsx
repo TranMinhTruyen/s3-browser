@@ -23,20 +23,20 @@ const WARNING_TEXT_COLOR = 'var(--mantine-color-orange-filled)';
 const ERROR_TEXT_COLOR = 'var(--mantine-color-red-filled)';
 
 /**
- * Asks the user to type the bucket name before deleting it, with warnings from what the bucket holds.
- * Resolves the delete result when the bucket or some of its objects were deleted, null otherwise (canceled or failed).
+ * Yêu cầu người dùng nhập tên bucket trước khi xóa, kèm cảnh báo dựa trên nội dung bucket.
+ * Trả về kết quả xóa nếu bucket hoặc một số đối tượng trong đó đã bị xóa; ngược lại trả về null (đã hủy hoặc thất bại).
  */
 export default createMantineModal<DeleteBucketModalProps, DeleteBucketOutput | null>(props => {
   const { connectionId, profileName, bucket, mantine, size = 'md', centered = true, ...rest } = props;
 
   const { t } = useTranslation('deleteBucketModal');
 
-  // undefined while checking, null when the check failed.
+  // undefined khi đang kiểm tra, null nếu kiểm tra thất bại.
   const [info, setInfo] = useState<DeleteBucketInfoOutput | null>();
   const [confirmName, setConfirmName] = useState('');
   const [deleting, setDeleting] = useState(false);
 
-  // Closing the modal (any way) cancels the check in flight, so a late result never sets state.
+  // Đóng modal bằng bất kỳ cách nào cũng hủy thao tác kiểm tra đang chạy để kết quả về muộn không cập nhật state.
   useEffect(() => {
     const ctrl = new AbortController();
     callIPC(GetBucketDeleteInfo, [{ connectionId, profileName, bucket }], { signal: ctrl.signal }).then(output => {
@@ -45,7 +45,7 @@ export default createMantineModal<DeleteBucketModalProps, DeleteBucketOutput | n
     return () => ctrl.abort();
   }, [connectionId, profileName, bucket]);
 
-  // The check failed and callIPC already told the user: nothing to confirm.
+  // Kiểm tra thất bại và callIPC đã thông báo cho người dùng: không còn gì cần xác nhận.
   useEffect(() => {
     if (info !== null) return;
     mantine.handler.resolve(null);
@@ -67,7 +67,7 @@ export default createMantineModal<DeleteBucketModalProps, DeleteBucketOutput | n
 
   const onClickDelete = useCallback(async () => {
     setDeleting(true);
-    // Not aborted from here: a half-done delete would leave the bucket half emptied without telling the user.
+    // Không hủy từ đây: thao tác xóa dở dang có thể làm bucket bị xóa một phần mà không thông báo cho người dùng.
     let result: DeleteBucketOutput | undefined;
     const onResult = (output?: Output<DeleteBucketOutput>) => {
       result = output?.body;

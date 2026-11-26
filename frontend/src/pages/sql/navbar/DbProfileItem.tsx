@@ -8,13 +8,13 @@ import TruncatedText from '@/components/display/TruncatedText';
 import { type DbProfile, PROVIDER_LABEL_KEY, useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 import { useDbTreeStore } from '@/pages/sql/stores/dbTreeStore';
 
-/** Fixed card height, same as the S3 profile card, so the virtual list can use it as-is. */
+/** Chiều cao thẻ cố định, giống thẻ profile S3 để danh sách ảo có thể dùng trực tiếp. */
 export const CARD_HEIGHT = 68;
 
-/** Share of the profile color kept in dark mode; the rest is the body color, so light colors do not glare. */
+/** Tỷ lệ màu profile được giữ lại ở chế độ tối; phần còn lại lấy màu nền để màu sáng không gây chói. */
 const DARK_COLOR_PERCENT = 35;
 
-/** Black/white text that contrasts with the user-chosen profile color; theme text when no color or in dark mode. */
+/** Chữ đen/trắng tương phản với màu profile do người dùng chọn; dùng màu chữ theo giao diện nếu không có màu hoặc ở chế độ tối. */
 const getProfileTextColor = (color: string | undefined, dark: boolean) =>
   color && !dark
     ? isLightColor(color)
@@ -22,26 +22,26 @@ const getProfileTextColor = (color: string | undefined, dark: boolean) =>
       : 'var(--mantine-color-white)'
     : 'var(--mantine-color-text)';
 
-/** The profile color as chosen in light mode, dimmed toward the body color in dark mode. */
+/** Màu profile theo lựa chọn ở chế độ sáng, được làm dịu về màu nền trong chế độ tối. */
 const getProfileBackground = (color: string | undefined, dark: boolean) => {
   if (!color) return 'var(--mantine-color-body)';
   return dark ? `color-mix(in srgb, ${color} ${DARK_COLOR_PERCENT}%, var(--mantine-color-body))` : color;
 };
 
-/** Second line of the card: where the database is. */
+/** Dòng thứ hai của thẻ: vị trí database. */
 const getLocation = ({ provider, config }: DbProfile) =>
   provider === 'sqlite' ? (config.filePath ?? '') : `${config.host}:${config.port}/${config.database}`;
 
 type DbProfileItemProps = {
   profileKey: string;
-  // Must be stable (owned by the parent) so memo skips unchanged items.
+  // Phải ổn định (do component cha quản lý) để memo bỏ qua các mục không đổi.
   onConnect: (key: string) => void;
-  /** Opens or closes the object tree under the card (Accordion). */
+  /** Mở hoặc đóng cây đối tượng bên dưới thẻ (Accordion). */
   onToggleTree: (key: string) => void;
 };
 
-// Selects its own profile, so connecting one profile re-renders only this item.
-// The context menu is shared and owned by DbProfiles; rows carry `data-profile-key` for it.
+// Tự chọn profile của mình nên kết nối một profile chỉ render lại mục tương ứng.
+// Menu ngữ cảnh dùng chung do DbProfiles quản lý; mỗi hàng có `data-profile-key` để menu xác định hàng.
 function DbProfileItem({ profileKey, onConnect, onToggleTree }: DbProfileItemProps) {
   const { t } = useTranslation('sqlNavbar');
   const profile = useDbProfileStore(s => s.dbProfiles[profileKey]);
@@ -72,7 +72,7 @@ function DbProfileItem({ profileKey, onConnect, onToggleTree }: DbProfileItemPro
           alignItems: 'center',
           minWidth: '2.5rem',
           justifyContent: 'center',
-          // Status uses Mantine "light" variant colors: connected = green, disconnected = red
+          // Trạng thái dùng màu của biến thể "light" trong Mantine: xanh khi kết nối, đỏ khi mất kết nối.
           color: profile.isConnected
             ? 'var(--mantine-color-green-light-color)'
             : 'var(--mantine-color-red-light-color)',

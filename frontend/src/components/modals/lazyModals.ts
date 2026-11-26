@@ -2,10 +2,10 @@ import { toast } from 'sonner';
 import i18n from '@/locales/i18n';
 import type { ConnectModalProps } from '@/pages/s3/modals/connect/connectSchema';
 
-/** A chunk that loads faster than this shows no feedback, so fast loads do not flash a toast. */
+/** Chunk tải nhanh hơn khoảng thời gian này sẽ không hiện thông báo, tránh toast lóe lên khi tải nhanh. */
 const SLOW_LOAD_MS = 300;
 
-/** Tells the user a chunk failed to load, with the error as detail, so it never becomes an unhandled rejection. */
+/** Báo cho người dùng biết chunk tải thất bại, kèm chi tiết lỗi để tránh unhandled rejection. */
 const onLoadModalFailed = (error: unknown) => {
   toast.error(i18n.t('common:modalLoadError'), {
     description: error instanceof Error ? error.message : String(error),
@@ -13,8 +13,8 @@ const onLoadModalFailed = (error: unknown) => {
 };
 
 /**
- * Loads a modal chunk. Shows a loading toast if it is slow and an error toast if it fails (then resolves undefined).
- * Only the chunk load is guarded: an error thrown later by `show()` is not reported as a load error.
+ * Tải chunk của modal. Hiện toast đang tải nếu thao tác chậm và toast lỗi nếu thất bại (sau đó trả về undefined).
+ * Chỉ bước tải chunk được bắt lỗi: lỗi phát sinh sau đó trong `show()` không được báo là lỗi tải.
  */
 async function loadModal<M>(load: () => Promise<M>): Promise<M | undefined> {
   let loadingId: string | number | undefined;
@@ -33,9 +33,9 @@ async function loadModal<M>(load: () => Promise<M>): Promise<M | undefined> {
 }
 
 /**
- * Heavy modals are loaded on first use so they stay out of the main bundle.
- * Callers keep the same `show` contract; only the first call waits for the chunk.
- * When the chunk fails to load, `show` resolves undefined: callers that await a result must treat it as a cancel.
+ * Modal nặng chỉ được tải ở lần dùng đầu tiên để không nằm trong bundle chính.
+ * Nơi gọi vẫn dùng cùng hợp đồng `show`; chỉ lần gọi đầu tiên phải chờ chunk.
+ * Nếu tải chunk thất bại, `show` trả về undefined: nơi gọi chờ kết quả phải xem như người dùng đã hủy.
  */
 export const showConnectModal = async (props: ConnectModalProps) =>
   (await loadModal(() => import('@/pages/s3/modals/connect/ConnectModal')))?.default.show(props);

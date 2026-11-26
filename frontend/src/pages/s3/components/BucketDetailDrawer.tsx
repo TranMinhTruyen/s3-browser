@@ -18,14 +18,14 @@ type BucketDetailDrawerProps = {
   profileName?: string;
 };
 
-// `key` is the bucket the state belongs to; a state of another key counts as loading.
+// `key` là bucket mà state thuộc về; state mang key khác được xem như đang tải.
 type DetailState =
   | { key: string; status: 'loading' | 'error' }
   | { key: string; status: 'done'; detail: BucketDetailOutput };
 
 const OBJECT_LOCK_ENABLED = 'Enabled';
 
-/** Right-side drawer showing the configuration of the selected bucket (loaded lazily, cancelable). */
+/** Ngăn bên phải hiển thị cấu hình bucket đã chọn (tải theo nhu cầu, có thể hủy). */
 function BucketDetailDrawer(props: BucketDetailDrawerProps) {
   const { tabId, connectionId, profileName } = props;
 
@@ -35,16 +35,16 @@ function BucketDetailDrawer(props: BucketDetailDrawerProps) {
   const closeBucketDetail = useTabListStore(s => s.closeBucketDetail);
 
   const [loaded, setLoaded] = useState<DetailState>({ key: '', status: 'loading' });
-  // Bumped by the retry button to run the request again for the same key.
+  // Được nút thử lại tăng lên để chạy lại yêu cầu với cùng key.
   const [reloadCount, setReloadCount] = useState(0);
 
   const bucketName = bucket?.name;
-  // Drawer closed: forget the loaded detail, so reopening the same bucket does not flash stale data.
+  // Khi ngăn đóng, bỏ chi tiết đã tải để mở lại cùng bucket không bị lóe dữ liệu cũ.
   if (!bucketName && loaded.key !== '') setLoaded({ key: '', status: 'loading' });
-  // Never show the previous bucket's detail while the new one loads.
+  // Không hiển thị chi tiết bucket trước trong lúc tải bucket mới.
   const state: DetailState = loaded.key === bucketName ? loaded : { key: bucketName ?? '', status: 'loading' };
 
-  // A new request per bucket: the cleanup aborts the previous one, so a late result never overwrites the new bucket.
+  // Mỗi bucket có một yêu cầu mới: hàm dọn dẹp hủy yêu cầu trước để kết quả về muộn không ghi đè bucket mới.
   useEffect(() => {
     if (!bucketName) return;
     const ctrl = new AbortController();
@@ -63,8 +63,8 @@ function BucketDetailDrawer(props: BucketDetailDrawerProps) {
     setReloadCount(c => c + 1);
   }, [bucketName]);
 
-  // The backend sends raw values (`Enabled`, `Enabled (GOVERNANCE, 30d)`, `AES256`...): only the known words are
-  // translated, anything else is shown as it is.
+  // Backend gửi giá trị thô (`Enabled`, `Enabled (GOVERNANCE, 30d)`, `AES256`...): chỉ dịch các từ đã biết,
+  // các giá trị khác được hiển thị nguyên dạng.
   const formatVersioning = useCallback(
     (value: string) =>
       value === 'Enabled' || value === 'Suspended' || value === 'Off'
@@ -76,7 +76,7 @@ function BucketDetailDrawer(props: BucketDetailDrawerProps) {
   const formatObjectLock = useCallback(
     (value: string) => {
       if (value === 'Disabled') return t('value.objectLock.disabled');
-      // Keep the retention part, e.g. `Enabled (GOVERNANCE, 30d)`.
+      // Giữ nguyên phần thời hạn lưu giữ, ví dụ `Enabled (GOVERNANCE, 30d)`.
       return value.startsWith(OBJECT_LOCK_ENABLED)
         ? `${t('value.objectLock.enabled')}${value.slice(OBJECT_LOCK_ENABLED.length)}`
         : value;
@@ -100,10 +100,10 @@ function BucketDetailDrawer(props: BucketDetailDrawerProps) {
 
   if (!bucket) return null;
 
-  // Go's zero time (0001-01-01) means the backend has no date (anonymous connection).
+  // Thời điểm zero của Go (0001-01-01) nghĩa là backend không có ngày (kết nối ẩn danh).
   const createDate = dayjs(bucket.creationDate);
   const detail = state.status === 'done' ? state.detail : undefined;
-  // The mode kept in the store follows a save of the policy; the loaded detail can be older than that.
+  // Mode trong store được cập nhật sau khi lưu policy; chi tiết đã tải có thể cũ hơn trạng thái đó.
   const policyMode = POLICY_MODES.includes(bucket.policyMode as PolicyMode) ? bucket.policyMode : detail?.policyMode;
 
   return (

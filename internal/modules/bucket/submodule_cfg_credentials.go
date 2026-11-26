@@ -29,38 +29,38 @@ import (
 )
 
 const (
-	// credExpiryWindow renews cached credentials this long before they expire.
+	// credExpiryWindow là khoảng thời gian trước khi hết hạn để gia hạn thông tin xác thực đã lưu tạm.
 	credExpiryWindow = 5 * time.Minute
 
-	// defaultSTSRegion signs the STS call of AssumeRole when neither the profile nor the CLI profile has a region.
+	// defaultSTSRegion dùng để ký yêu cầu STS của AssumeRole khi cả hồ sơ lẫn hồ sơ CLI đều không có region.
 	defaultSTSRegion = "us-east-1"
 
-	// defaultS3Region is used when the profile has no region at all (AWS accepts any region for the
-	// global endpoint; the SDK redirects to the bucket's region).
+	// defaultS3Region được dùng khi hồ sơ hoàn toàn không có region (AWS chấp nhận mọi region với endpoint toàn cục;
+	// SDK sẽ chuyển hướng đến region của bucket).
 	defaultS3Region = "us-east-1"
 
-	// defaultAssumeRoleDuration is the session length when the profile doesn't set one.
+	// defaultAssumeRoleDuration là thời lượng phiên nếu hồ sơ không chỉ định giá trị này.
 	defaultAssumeRoleDuration = time.Hour
 )
 
-// credSet is what buildCredentials returns for one connection.
+// credSet là giá trị buildCredentials trả về cho một kết nối.
 type credSet struct {
-	// AWS signs the S3 requests.
+	// AWS ký các yêu cầu S3.
 	AWS aws.CredentialsProvider
-	// Region comes from the CLI profile when the profile has none.
+	// Lấy Region từ hồ sơ CLI nếu hồ sơ hiện tại chưa có.
 	Region string
-	// Refreshable is false when the credentials can't be renewed without the user (see global.CredInfo).
+	// Refreshable là false nếu không thể gia hạn thông tin xác thực mà không cần người dùng (xem global.CredInfo).
 	Refreshable bool
-	// Anonymous means requests are not signed.
+	// Anonymous cho biết yêu cầu không được ký.
 	Anonymous bool
-	// Expiry, when set, replaces the expiry of the retrieved credentials as what the user is warned about (SSO
-	// login token). A nil Expiry on an sso profile means the expiry is unknown.
+	// Nếu được đặt, Expiry thay thế thời hạn của thông tin xác thực lấy được để dùng làm mốc cảnh báo cho người dùng
+	// (token đăng nhập SSO). Expiry bằng nil trên hồ sơ sso nghĩa là chưa xác định được thời hạn.
 	Expiry func() (time.Time, bool)
 }
 
-// credError is a credentials failure with its own message code (S3E030 - S3E038, PFE009), see describeConnectStatus.
+// credError là lỗi thông tin xác thực có mã thông báo riêng (S3E030 - S3E038, PFE009), xem describeConnectStatus.
 type credError struct {
-	// module is the message module; empty means the bucket module.
+	// module là module sở hữu thông báo; để trống nghĩa là module bucket.
 	module string
 	code   string
 	params map[string]any
@@ -70,13 +70,13 @@ type credError struct {
 func (e *credError) Error() string { return e.err.Error() }
 func (e *credError) Unwrap() error { return e.err }
 
-// errMFACodeRequired means an MFA token provider that hands out a code once was asked again: the MFA session
-// expired and needs a new code. It is reported as S3E030, like an expired token.
+// errMFACodeRequired cho biết nhà cung cấp token MFA chỉ cấp mã một lần nhưng lại được gọi lần nữa:
+// phiên MFA đã hết hạn và cần mã mới. Lỗi này được báo bằng S3E030, giống token hết hạn.
 var errMFACodeRequired = errors.New("MFA code is required")
 
-// buildCredentials resolves the credentials of input.AuthType and retrieves them once, so a wrong profile,
-// an expired SSO session or a rejected role fails here with a specific message instead of at the first request.
-// httpClient is the one of the connection, used for the MinIO STS calls; oidc holds the sign-in sessions.
+// buildCredentials chọn thông tin xác thực theo input.AuthType và lấy chúng một lần, nhờ đó hồ sơ sai,
+// phiên SSO hết hạn hoặc role bị từ chối sẽ báo lỗi cụ thể tại đây thay vì đợi đến yêu cầu đầu tiên.
+// httpClient là client của kết nối, dùng cho các yêu cầu MinIO STS; oidc lưu các phiên đăng nhập.
 func buildCredentials(
 	ctx context.Context,
 	input models.ConnectionProfileInput,
@@ -105,19 +105,19 @@ func buildCredentials(
 	}
 }
 
-// staticCredentials signs with the access key, secret key and the optional session token.
+// staticCredentials ký yêu cầu bằng access key, secret key và session token nếu có.
 func staticCredentials(input models.ConnectionProfileInput) credSet {
 	token := input.AuthSecret.SessionToken
 	return credSet{
 		AWS: credentials.NewStaticCredentialsProvider(input.AccessKey, input.SecretKey, token),
-		// A session token may expire, but not at a time we know, so there is nothing to warn about.
+		// Session token có thể hết hạn nhưng không xác định được thời điểm, nên không thể gửi cảnh báo trước.
 		Refreshable: true,
 	}
 }
 
-// profileCredentials uses an AWS CLI profile (static keys, role_arn, credential_process, SSO).
-// The SDK renews the role credentials of an SSO profile on its own, but only while the SSO login token is valid,
-// so for sso the user-facing expiry is the one of that token (ssoTokenExpiry), not of the role credentials.
+// profileCredentials dùng hồ sơ AWS CLI (khóa tĩnh, role_arn, credential_process, SSO).
+// SDK tự gia hạn thông tin xác thực role của hồ sơ SSO, nhưng chỉ khi token đăng nhập SSO còn hạn,
+// vì vậy thời hạn hiển thị cho người dùng của sso là thời hạn token đó (ssoTokenExpiry), không phải thời hạn thông tin xác thực role.
 func profileCredentials(ctx context.Context, input models.ConnectionProfileInput) (credSet, error) {
 	awsCfg, err := loadAwsConfig(ctx, input.AuthConfig, true)
 	if err != nil {
@@ -131,14 +131,14 @@ func profileCredentials(ctx context.Context, input models.ConnectionProfileInput
 	return set, err
 }
 
-// ssoTokenExpiry returns a function that reads when the cached SSO login token of the profile expires, or nil
-// when the token can't be located. The function only reads ~/.aws/sso/cache and reports false when the file is
-// missing or unreadable, so an unknown expiry never triggers a warning.
+// ssoTokenExpiry trả về hàm đọc thời hạn token đăng nhập SSO đã lưu tạm của hồ sơ, hoặc nil nếu không tìm thấy token.
+// Hàm chỉ đọc ~/.aws/sso/cache và trả false nếu file không tồn tại hoặc không đọc được, nhờ đó thời hạn chưa biết
+// sẽ không kích hoạt cảnh báo.
 func ssoTokenExpiry(awsCfg aws.Config) func() (time.Time, bool) {
 	var key string
 	for _, src := range awsCfg.ConfigSources {
-		// The cache file is named after the sso-session, or after the start URL of a legacy profile.
-		// The first shared config wins, as in the SDK.
+		// Tên file cache dựa trên sso-session hoặc URL khởi tạo của hồ sơ cũ.
+		// Như SDK, cấu hình dùng chung đầu tiên sẽ được ưu tiên.
 		switch shared := src.(type) {
 		case config.SharedConfig:
 			key = cmp.Or(shared.SSOSessionName, shared.SSOStartURL)
@@ -168,13 +168,13 @@ func ssoTokenExpiry(awsCfg aws.Config) func() (time.Time, bool) {
 		if json.Unmarshal(data, &token) != nil {
 			return time.Time{}, false
 		}
-		// AWS CLI v1 wrote "...UTC" instead of "Z".
+		// AWS CLI v1 ghi "...UTC" thay vì "Z".
 		at, err := time.Parse(time.RFC3339, strings.Replace(token.ExpiresAt, "UTC", "Z", 1))
 		return at, err == nil
 	}
 }
 
-// defaultChainCredentials uses the AWS SDK default chain: environment, shared files, container/EC2 role.
+// defaultChainCredentials dùng chuỗi mặc định của AWS SDK: biến môi trường, file dùng chung, role của container/EC2.
 func defaultChainCredentials(ctx context.Context, input models.ConnectionProfileInput) (credSet, error) {
 	awsCfg, err := loadAwsConfig(ctx, models.AuthConfig{}, false)
 	if err != nil {
@@ -183,8 +183,8 @@ func defaultChainCredentials(ctx context.Context, input models.ConnectionProfile
 	return retrieveCredSet(ctx, input, awsCfg.Credentials, awsCfg.Region, true)
 }
 
-// assumeRoleCredentials calls STS AssumeRole with static keys or a CLI profile as the source. With an MFA
-// serial the one-time code is used once and the credentials cannot be renewed without a new code.
+// assumeRoleCredentials gọi STS AssumeRole với khóa tĩnh hoặc hồ sơ CLI làm nguồn. Khi có MFA serial,
+// mã dùng một lần chỉ được dùng một lần và thông tin xác thực không thể gia hạn nếu thiếu mã mới.
 func assumeRoleCredentials(ctx context.Context, input models.ConnectionProfileInput) (credSet, error) {
 	cfg := input.AuthConfig
 
@@ -218,8 +218,8 @@ func assumeRoleCredentials(ctx context.Context, input models.ConnectionProfileIn
 			o.TokenProvider = oneTimeToken(input.MfaCode)
 		}
 	})
-	// With MFA a renewal 5 minutes early would ask for a new code and fail, so the credentials are used until
-	// they expire and the user is warned by the credential-expiring event instead.
+	// Nếu có MFA, gia hạn sớm 5 phút sẽ cần mã mới và thất bại, vì vậy dùng thông tin xác thực đến khi hết hạn
+	// rồi cảnh báo người dùng qua sự kiện credential-expiring.
 	renewable := cfg.MfaSerial == ""
 	cached := aws.NewCredentialsCache(provider, func(o *aws.CredentialsCacheOptions) {
 		if renewable {
@@ -230,7 +230,7 @@ func assumeRoleCredentials(ctx context.Context, input models.ConnectionProfileIn
 	return retrieveCredSet(ctx, input, cached, region, renewable)
 }
 
-// retrieveCredSet fetches the credentials once to surface their errors, then wraps provider into a credSet.
+// retrieveCredSet lấy thông tin xác thực một lần để phát hiện lỗi, rồi bọc provider trong credSet.
 func retrieveCredSet(
 	ctx context.Context,
 	input models.ConnectionProfileInput,
@@ -244,8 +244,8 @@ func retrieveCredSet(
 	return credSet{AWS: provider, Region: region, Refreshable: refreshable}, nil
 }
 
-// loadAwsConfig loads the AWS CLI config. With useProfile it reads cfg.ProfileName ("default" when empty) from
-// the files in cfg (or the standard ~/.aws files, AWS_CONFIG_FILE and AWS_SHARED_CREDENTIALS_FILE).
+// loadAwsConfig tải cấu hình AWS CLI. Khi useProfile được bật, hàm đọc cfg.ProfileName ("default" nếu để trống)
+// từ các file trong cfg (hoặc các file ~/.aws mặc định, AWS_CONFIG_FILE và AWS_SHARED_CREDENTIALS_FILE).
 func loadAwsConfig(ctx context.Context, cfg models.AuthConfig, useProfile bool) (aws.Config, error) {
 	var opts []func(*config.LoadOptions) error
 	if useProfile {
@@ -260,8 +260,8 @@ func loadAwsConfig(ctx context.Context, cfg models.AuthConfig, useProfile bool) 
 	return config.LoadDefaultConfig(ctx, opts...)
 }
 
-// anonymousCredentials sends unsigned requests. The buckets the user entered are required because an anonymous
-// client can neither list buckets nor probe the endpoint without one.
+// anonymousCredentials gửi yêu cầu không ký. Cần có bucket do người dùng nhập vì client ẩn danh không thể
+// liệt kê bucket hoặc kiểm tra endpoint nếu thiếu bucket.
 func anonymousCredentials(input models.ConnectionProfileInput) (credSet, error) {
 	if len(input.AuthConfig.BucketNames()) == 0 {
 		err := errors.New("anonymous access needs at least one bucket")
@@ -270,8 +270,8 @@ func anonymousCredentials(input models.ConnectionProfileInput) (credSet, error) 
 	return credSet{AWS: aws.AnonymousCredentials{}, Refreshable: true, Anonymous: true}, nil
 }
 
-// minioSTSCredentials asks the MinIO STS endpoint (the S3 endpoint) for temporary credentials: AssumeRole with
-// the access key and secret key, or LDAP with the LDAP user and password. MinIO renews them on its own.
+// minioSTSCredentials yêu cầu endpoint MinIO STS (endpoint S3) cấp thông tin xác thực tạm thời:
+// AssumeRole bằng access key và secret key, hoặc LDAP bằng tên người dùng và mật khẩu LDAP. MinIO tự gia hạn chúng.
 func minioSTSCredentials(
 	ctx context.Context,
 	input models.ConnectionProfileInput,
@@ -311,10 +311,10 @@ func minioSTSCredentials(
 	return minioCredSet(ctx, input, minio, httpClient, endpoint, credExpiryWindow, true)
 }
 
-// minioCredSet wraps the MinIO credentials for the AWS SDK and fetches them once to surface STS errors.
-// expiryWindow is how long before expiry they are renewed; refreshable tells whether the renewal needs no user.
-// minio keeps the secrets it was built with (password, key) so it can renew the credentials by itself. It is only
-// referenced by the returned provider, which SwapCreds drops on Reauth, and never logged.
+// minioCredSet bọc thông tin xác thực MinIO cho AWS SDK và lấy chúng một lần để phát hiện lỗi STS.
+// expiryWindow là khoảng thời gian trước hạn để gia hạn; refreshable cho biết có thể gia hạn mà không cần người dùng hay không.
+// minio giữ các thông tin bí mật được dùng để tạo nó (mật khẩu, khóa) nhằm tự gia hạn thông tin xác thực.
+// Giá trị này chỉ được provider trả về tham chiếu; SwapCreds loại bỏ nó khi Reauth và không ghi log.
 func minioCredSet(
 	ctx context.Context,
 	input models.ConnectionProfileInput,
@@ -331,9 +331,9 @@ func minioCredSet(
 	return retrieveCredSet(ctx, input, provider, "", refreshable)
 }
 
-// minioOidcCredentials exchanges the tokens of a OIDC sign-in for MinIO credentials (AssumeRoleWithWebIdentity).
-// The tokens are handed out once: they are single use and may be stale at the next renewal, which then needs a new
-// sign-in (S3E030) instead of MinIO renewing it by itself.
+// minioOidcCredentials đổi token của phiên đăng nhập OIDC lấy thông tin xác thực MinIO (AssumeRoleWithWebIdentity).
+// Token chỉ được cấp một lần và có thể không còn hợp lệ ở lần gia hạn tiếp theo; khi đó người dùng phải đăng nhập lại
+// (S3E030), MinIO không thể tự gia hạn.
 func minioOidcCredentials(
 	ctx context.Context,
 	input models.ConnectionProfileInput,
@@ -362,12 +362,12 @@ func minioOidcCredentials(
 	if err != nil {
 		return credSet{}, err
 	}
-	// No early renewal: it would need a new sign-in, so the credentials are used until they expire.
+	// Không gia hạn sớm vì cần đăng nhập lại; dùng thông tin xác thực đến khi hết hạn.
 	return minioCredSet(ctx, input, minio, httpClient, endpoint, 0, false)
 }
 
-// minioCertCredentials asks MinIO STS for credentials with a TLS client certificate (AssumeRoleWithCertificate).
-// MinIO needs https for it; the certificate is presented through the transport of httpClient.
+// minioCertCredentials yêu cầu MinIO STS cấp thông tin xác thực bằng chứng chỉ TLS của client (AssumeRoleWithCertificate).
+// MinIO yêu cầu https; chứng chỉ được gửi qua transport của httpClient.
 func minioCertCredentials(
 	ctx context.Context,
 	input models.ConnectionProfileInput,
@@ -391,14 +391,14 @@ func minioCertCredentials(
 	return minioCredSet(ctx, input, minio, httpClient, endpoint, credExpiryWindow, true)
 }
 
-// minioProvider adapts MinIO credentials to the AWS SDK, so the S3 client and madmin share one STS session.
+// minioProvider chuyển đổi thông tin xác thực MinIO sang định dạng AWS SDK để client S3 và madmin dùng chung một phiên STS.
 type minioProvider struct {
 	creds    *miniocredentials.Credentials
 	client   *http.Client
 	endpoint string
 }
 
-// Retrieve returns the cached MinIO credentials, or asks STS again when they are about to expire.
+// Retrieve trả về thông tin xác thực MinIO đã lưu tạm hoặc yêu cầu STS cấp lại khi chúng sắp hết hạn.
 func (p *minioProvider) Retrieve(ctx context.Context) (aws.Credentials, error) {
 	v, err := p.creds.GetWithContext(
 		&miniocredentials.CredContext{Client: p.client, Endpoint: p.endpoint, Context: ctx},
@@ -416,8 +416,8 @@ func (p *minioProvider) Retrieve(ctx context.Context) (aws.Credentials, error) {
 	}, nil
 }
 
-// oneTimeToken returns an MFA token provider that hands out code once: the code is single use, so a
-// later renewal must fail instead of sending the same code again.
+// oneTimeToken trả về provider MFA chỉ cấp mã một lần: mã chỉ dùng được một lần nên lần gia hạn sau phải thất bại,
+// không được gửi lại cùng mã.
 func oneTimeToken(code string) func() (string, error) {
 	var used atomic.Bool
 	return func() (string, error) {
@@ -430,7 +430,7 @@ func oneTimeToken(code string) func() (string, error) {
 
 var invalidSessionNameChars = regexp.MustCompile(`[^\w+=,.@-]`)
 
-// defaultSessionName is s3browser-<os user>, cleaned to the characters STS accepts.
+// defaultSessionName tạo tên s3browser-<os user> và loại bỏ các ký tự STS không chấp nhận.
 func defaultSessionName() string {
 	name := "s3browser"
 	if u, err := user.Current(); err == nil {
@@ -439,7 +439,7 @@ func defaultSessionName() string {
 	return name
 }
 
-// mapCredError wraps err in a credError when it matches a known credentials failure, else returns it as is.
+// mapCredError bọc err trong credError nếu lỗi khớp với một lỗi thông tin xác thực đã biết; nếu không thì trả nguyên lỗi.
 func mapCredError(input models.ConnectionProfileInput, err error) error {
 	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 		return err
@@ -470,7 +470,7 @@ func mapCredError(input models.ConnectionProfileInput, err error) error {
 	case input.AuthType == cnst.AuthDefaultChain && !isAPI:
 		return &credError{code: S3E035, err: err}
 	case errors.As(err, &stsErr):
-		// MinIO answered but refused the STS request.
+		// MinIO đã phản hồi nhưng từ chối yêu cầu STS.
 		if input.AuthType == cnst.AuthMinioLdap {
 			return &credError{code: S3E038, err: err}
 		}
@@ -481,7 +481,7 @@ func mapCredError(input models.ConnectionProfileInput, err error) error {
 	return err
 }
 
-// isSsoSessionCode reports whether code means the SSO login session is gone or no longer valid.
+// isSsoSessionCode cho biết code có nghĩa là phiên đăng nhập SSO đã mất hoặc không còn hợp lệ hay không.
 func isSsoSessionCode(code string) bool {
 	switch code {
 	case "UnauthorizedException", "InvalidGrantException", "ExpiredTokenException":
@@ -490,8 +490,8 @@ func isSsoSessionCode(code string) bool {
 	return false
 }
 
-// assumeRoleDenied tells a wrong MFA code (S3E032) apart from a role that can't be assumed (S3E031). A CLI profile
-// that chains a role_arn has no ARN in the input, so its name is shown instead.
+// assumeRoleDenied phân biệt mã MFA sai (S3E032) với role không thể AssumeRole (S3E031). Hồ sơ CLI dùng chuỗi role_arn
+// không có ARN trong input nên thay vào đó hiển thị tên hồ sơ.
 func assumeRoleDenied(input models.ConnectionProfileInput, err error) error {
 	cfg := input.AuthConfig
 	if cfg.MfaSerial != "" && strings.Contains(err.Error(), "MultiFactorAuthentication") {

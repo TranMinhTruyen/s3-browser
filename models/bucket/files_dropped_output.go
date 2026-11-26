@@ -1,60 +1,59 @@
 package bucket
 
-// DroppedFile is one file found in a drop. A dropped folder is expanded into its files.
+// DroppedFile là một file được tìm thấy trong thao tác thả. Thư mục được thả sẽ được mở rộng thành các file bên trong.
 type DroppedFile struct {
-	// Path is the absolute local path of the file.
+	// Path là đường dẫn tuyệt đối đến file trên máy.
 	Path string `json:"path"`
-	// RelKey is the key of the file relative to the upload prefix, with "/" separators.
-	// A dropped file has just its name; a file in a dropped folder starts with the
-	// folder's name, e.g. "photos/2026/a.jpg".
+	// RelKey là key của file tính tương đối với prefix tải lên, dùng dấu phân cách "/".
+	// File được thả trực tiếp chỉ có tên file; file trong thư mục được thả bắt đầu bằng tên thư mục,
+	// ví dụ "photos/2026/a.jpg".
 	RelKey string `json:"relKey"`
-	// Size is the file size in bytes.
+	// Size là kích thước file tính bằng byte.
 	Size int64 `json:"size"`
-	// IsLarge is true when Size is over LargeFileSize.
+	// IsLarge là true nếu Size lớn hơn LargeFileSize.
 	IsLarge bool `json:"isLarge"`
 }
 
-// DroppedGroup is the files that sit directly in one folder of the drop. A folder with no
-// file of its own (empty, or holding only sub folders) is not a group.
+// DroppedGroup gồm các file nằm trực tiếp trong một thư mục được thả. Thư mục không có file riêng
+// (rỗng hoặc chỉ chứa thư mục con) sẽ không tạo thành nhóm.
 type DroppedGroup struct {
-	// Name is the folder of the files relative to the prefix, e.g. "photos/2026"; empty for
-	// files dropped directly (not inside a dropped folder).
+	// Name là đường dẫn thư mục của các file tính tương đối với prefix, ví dụ "photos/2026"; rỗng với
+	// file được thả trực tiếp (không nằm trong thư mục được thả).
 	Name string `json:"name"`
-	// Files are all the files found directly in the folder, in walk order. It can hold more
-	// than MaxFilesPerFolder files so the user can pick which ones to upload.
+	// Files gồm mọi file được tìm thấy trực tiếp trong thư mục, theo thứ tự duyệt. Có thể chứa nhiều hơn
+	// MaxFilesPerFolder file để người dùng chọn file muốn tải lên.
 	Files []DroppedFile `json:"files"`
-	// TotalFiles is len(Files).
+	// TotalFiles là len(Files).
 	TotalFiles int `json:"totalFiles"`
-	// LargeCount is the number of large files in Files.
+	// LargeCount là số file lớn trong Files.
 	LargeCount int `json:"largeCount"`
-	// OverMaxFiles is true when TotalFiles is over MaxFilesPerFolder.
+	// OverMaxFiles là true nếu TotalFiles lớn hơn MaxFilesPerFolder.
 	OverMaxFiles bool `json:"overMaxFiles"`
-	// OverLargeCount is true when LargeCount is over LargeFileMaxCount.
+	// OverLargeCount là true nếu LargeCount lớn hơn LargeFileMaxCount.
 	OverLargeCount bool `json:"overLargeCount"`
 }
 
-// FilesDroppedOutput is sent to the frontend when files are dropped on a tab's object list.
+// FilesDroppedOutput được gửi đến frontend khi người dùng thả file vào danh sách object của một tab.
 type FilesDroppedOutput struct {
-	// TabId is the tab the files were dropped on (the drop target's data-tab-id).
+	// TabId là tab nhận file được thả (data-tab-id của vùng thả).
 	TabId string `json:"tabId"`
-	// Groups are the folders that hold files, in drop order.
+	// Groups là các thư mục chứa file, theo thứ tự thả.
 	Groups []DroppedGroup `json:"groups"`
-	// Skipped is the number of dropped items that are not uploadable (unreadable, symlink, special files).
+	// Skipped là số mục được thả nhưng không thể tải lên (không đọc được, symbolic link, file đặc biệt).
 	Skipped int `json:"skipped"`
-	// TotalFiles is the number of files in Groups (at most MaxTotalFiles).
+	// TotalFiles là tổng số file trong Groups (tối đa MaxTotalFiles).
 	TotalFiles int `json:"totalFiles"`
-	// OverMaxTotal is true when the drop holds more than MaxTotalFiles files: the extra files
-	// are left out of Groups.
+	// OverMaxTotal là true nếu thao tác thả có nhiều hơn MaxTotalFiles file; các file vượt giới hạn
+	// không được thêm vào Groups.
 	OverMaxTotal bool `json:"overMaxTotal"`
-	// Capped is true when a folder had too many entries to be walked to the end, so Groups
-	// may be incomplete.
+	// Capped là true nếu thư mục có quá nhiều mục nên chưa thể duyệt hết; Groups có thể chưa đầy đủ.
 	Capped bool `json:"capped"`
-	// MaxFilesPerFolder is the most files uploaded from one folder.
+	// MaxFilesPerFolder là số file tối đa được tải lên từ một thư mục.
 	MaxFilesPerFolder int `json:"maxFilesPerFolder"`
-	// LargeFileSize is the size in bytes above which a file counts as large.
+	// LargeFileSize là kích thước tính bằng byte mà file phải vượt qua để được xem là file lớn.
 	LargeFileSize int64 `json:"largeFileSize"`
-	// LargeFileMaxCount is the most large files uploaded from one folder.
+	// LargeFileMaxCount là số file lớn tối đa được tải lên từ một thư mục.
 	LargeFileMaxCount int `json:"largeFileMaxCount"`
-	// MaxTotalFiles is the most files uploaded in one call.
+	// MaxTotalFiles là tổng số file tối đa được tải lên trong một lần gọi.
 	MaxTotalFiles int `json:"maxTotalFiles"`
 }

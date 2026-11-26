@@ -1,8 +1,8 @@
-// Package db holds the input/output models of the database (SQL mode) module.
+// Package db chứa các model đầu vào/đầu ra của module cơ sở dữ liệu (chế độ SQL).
 package db
 
-// DbProfileConfig is the connection setting of a database profile, stored as JSON. Only the fields of the
-// profile's provider are kept: sqlite uses FilePath and ReadOnly, postgres the others. The password is not here.
+// DbProfileConfig là cấu hình kết nối của hồ sơ cơ sở dữ liệu, được lưu dưới dạng JSON. Chỉ giữ các trường của provider
+// trong hồ sơ: sqlite dùng FilePath và ReadOnly, postgres dùng các trường còn lại. Mật khẩu không được lưu tại đây.
 type DbProfileConfig struct {
 	FilePath string `json:"filePath,omitempty"` // sqlite
 	ReadOnly bool   `json:"readOnly,omitempty"` // sqlite
@@ -13,8 +13,8 @@ type DbProfileConfig struct {
 	SslMode  string `json:"sslMode,omitempty"`  // postgres
 }
 
-// DbProfileInput is the form data to create or update a database profile. Id is empty on create. Secret is the
-// plain password; empty on update keeps the stored one when the provider is unchanged.
+// DbProfileInput là dữ liệu biểu mẫu để tạo hoặc cập nhật hồ sơ cơ sở dữ liệu. Id rỗng khi tạo mới. Secret là mật khẩu
+// dạng văn bản thuần; nếu để trống khi cập nhật thì giữ mật khẩu đã lưu nếu provider không đổi.
 type DbProfileInput struct {
 	Id       string          `json:"id,omitempty"`
 	Name     string          `json:"name,omitempty"`
@@ -24,7 +24,7 @@ type DbProfileInput struct {
 	Secret   string          `json:"secret,omitempty"`
 }
 
-// DbProfileRefInput names a saved database profile.
+// DbProfileRefInput chỉ định một hồ sơ cơ sở dữ liệu đã lưu.
 type DbProfileRefInput struct {
 	ProfileId string `json:"profileId"`
 }

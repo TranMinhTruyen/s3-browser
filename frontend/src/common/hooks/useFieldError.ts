@@ -3,11 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { formatFieldError } from '@/common/utils/stringUtils';
 
 /**
- * Returns a formatter that turns a raw validation code (`V000001`, `V000002:255`, ...)
- * into a translated message.
+ * Trả về hàm định dạng chuyển mã kiểm tra dữ liệu thô (`V000001`, `V000002:255`, ...) thành thông báo đã dịch.
  *
- * Subscribes the calling component to i18next, so messages already on screen are
- * re-rendered with the new wording when the language changes.
+ * Đăng ký component gọi hàm với i18next để các thông báo đang hiển thị được render lại
+ * bằng câu chữ mới khi ngôn ngữ thay đổi.
  */
 export function useFieldError() {
   const { t } = useTranslation('validateMessage');

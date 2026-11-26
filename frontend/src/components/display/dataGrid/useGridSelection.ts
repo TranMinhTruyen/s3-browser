@@ -11,31 +11,31 @@ import {
 
 export type Cell = { row: number; col: number };
 
-/** What is selected: one rectangle of cells (a single cell is a rectangle of one), whole columns, or whole rows. */
+/** Nội dung được chọn: một vùng chữ nhật gồm các ô (một ô cũng là vùng chữ nhật), toàn bộ cột hoặc toàn bộ hàng. */
 type Sel = {
   kind: 'cell' | 'col' | 'row';
-  /** The active cell: the moving end of the rectangle, the target of F2 and typing. */
+  /** Ô đang hoạt động: đầu di động của vùng chữ nhật, đích khi nhấn F2 hoặc nhập ký tự. */
   cursor: Cell | null;
-  /** The fixed end of the rectangle (cell kind); the row/column Shift ranges start from here. */
+  /** Đầu cố định của vùng chữ nhật (loại cell); vùng chọn hàng/cột bằng Shift bắt đầu từ đây. */
   anchor: Cell | null;
-  /** Selected columns (col kind). */
+  /** Các cột được chọn (loại col). */
   cols: ReadonlySet<number>;
-  /** Selected grid rows (row kind). */
+  /** Các hàng grid được chọn (loại row). */
   rows: ReadonlySet<number>;
 };
 
-/** The rectangle of a cell selection with more than one cell (inclusive bounds). */
+/** Vùng chữ nhật của lựa chọn có nhiều hơn một ô (bao gồm cả hai biên). */
 export type GridRange = { r1: number; r2: number; c1: number; c2: number };
 
 type Args = {
-  /** Number of grid rows (new rows + loaded rows). */
+  /** Số hàng trong grid (hàng mới + hàng đã tải). */
   count: number;
   columnCount: number;
   columns: string[];
   getValue: (row: number, col: number) => string | null;
   scrollRef: RefObject<HTMLDivElement | null>;
   scrollToCell: (row: number, col: number) => void;
-  /** Width (px) of the sticky row number column and height (px) of the sticky header, to hit-test while dragging. */
+  /** Độ rộng (px) của cột số hàng cố định và chiều cao (px) của header cố định, dùng để xác định ô khi kéo. */
   insetX: number;
   insetY: number;
 };
@@ -43,7 +43,7 @@ type Args = {
 const NONE: ReadonlySet<number> = new Set();
 const EMPTY: Sel = { kind: 'cell', cursor: null, anchor: null, cols: NONE, rows: NONE };
 const NO_ROWS: number[] = [];
-/** Fastest auto scroll while dragging outside the grid, px per frame. */
+/** Tốc độ cuộn tự động tối đa khi kéo ra ngoài grid, tính bằng px mỗi frame. */
 const MAX_SCROLL_STEP = 40;
 const NEEDS_QUOTE = /[\t\n\r"]/;
 
@@ -52,20 +52,20 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 const seq = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
 const sorted = (values: ReadonlySet<number>) => [...values].sort((a, b) => a - b);
 
-/** Row and column of the grid cell an event came from; `col` is -1 for the row number cell. */
+/** Hàng và cột của ô grid phát sinh sự kiện; `col` bằng -1 với ô số thứ tự hàng. */
 export const cellOf = (target: EventTarget | null): Cell | null => {
   const el = target instanceof Element ? target.closest<HTMLElement>('[data-col]') : null;
   const rowEl = el?.closest<HTMLElement>('[data-row]');
   return el && rowEl ? { row: Number(rowEl.dataset.row), col: Number(el.dataset.col) } : null;
 };
 
-/** Column of the header cell an event came from. */
+/** Cột của ô header phát sinh sự kiện. */
 const headerColOf = (target: EventTarget): number | null => {
   const el = target instanceof Element ? target.closest<HTMLElement>('[data-hcol]') : null;
   return el ? Number(el.dataset.hcol) : null;
 };
 
-/** How fast to scroll for a pointer at `p` when the visible band is `lo..hi`. */
+/** Tốc độ cuộn khi con trỏ ở `p` và vùng hiển thị nằm trong `lo..hi`. */
 const scrollStep = (p: number, lo: number, hi: number) =>
   p < lo
     ? -Math.min(MAX_SCROLL_STEP, Math.ceil((lo - p) / 4))
@@ -75,7 +75,7 @@ const scrollStep = (p: number, lo: number, hi: number) =>
 
 const quote = (value: string) => (NEEDS_QUOTE.test(value) ? `"${value.replaceAll('"', '""')}"` : value);
 
-/** Cells as TSV (tab between columns, newline between rows) for Excel; NULL is an empty text. */
+/** Các ô ở dạng TSV (tab giữa cột, newline giữa hàng) để dùng trong Excel; NULL là nội dung rỗng. */
 const toTsv = (
   rows: readonly number[],
   cols: readonly number[],
@@ -97,8 +97,8 @@ const toTsv = (
 };
 
 /**
- * Selection of `DataGrid` (read-only or editable): a rectangle of cells (click, Shift+click, drag, Shift+arrows), whole
- * columns (header click, Ctrl/Shift) or whole rows (row number click, Ctrl/Shift), copy, and the context menu state.
+ * Lựa chọn trong `DataGrid` (chỉ đọc hoặc chỉnh sửa): vùng chữ nhật các ô (click, Shift+click, kéo, Shift+mũi tên),
+ * toàn bộ cột (click header, Ctrl/Shift) hoặc toàn bộ hàng (click số hàng, Ctrl/Shift), sao chép và trạng thái menu ngữ cảnh.
  */
 export function useGridSelection({
   count,
@@ -114,7 +114,7 @@ export function useGridSelection({
   const [menuOpen, setMenuOpen] = useState(false);
   const stopDrag = useRef<(() => void) | null>(null);
 
-  // The rows were replaced (another table): the selected cell may not exist any more.
+  // Hàng đã được thay thế (bảng khác): ô đang chọn có thể không còn tồn tại.
   if (sel.cursor && (sel.cursor.row >= count || sel.cursor.col >= columnCount)) setSel(EMPTY);
 
   const range = useMemo((): GridRange | null => {
@@ -129,7 +129,7 @@ export function useGridSelection({
   }, [sel]);
 
   const cursorRow = sel.cursor?.row ?? -1;
-  /** Selected grid rows, ascending: the selected rows, else the row of the active cell. */
+  /** Các hàng grid được chọn, theo thứ tự tăng dần; nếu không chọn hàng thì trả hàng của ô đang hoạt động. */
   const selectedRows = useMemo(
     () => (sel.kind === 'row' ? sorted(sel.rows) : sel.kind === 'cell' && cursorRow >= 0 ? [cursorRow] : NO_ROWS),
     [sel.kind, sel.rows, cursorRow]
@@ -137,7 +137,7 @@ export function useGridSelection({
 
   const clear = useCallback(() => setSel(EMPTY), []);
 
-  /** Selects one cell without scrolling (the cell is already in view). */
+  /** Chọn một ô mà không cuộn (ô đang nằm trong vùng hiển thị). */
   const setCursor = useCallback((row: number, col: number) => setSel(single({ row, col })), []);
 
   const moveTo = useCallback(
@@ -149,7 +149,7 @@ export function useGridSelection({
     [count, columnCount, scrollToCell]
   );
 
-  /** The rows and columns (ascending) the selection covers, or null when nothing is selected. */
+  /** Các hàng và cột (theo thứ tự tăng dần) nằm trong vùng chọn hoặc null nếu chưa chọn gì. */
   const getTarget = useCallback((): { rows: number[]; cols: number[] } | null => {
     const { kind, cursor, rows, cols } = sel;
     if (!cursor) return null;
@@ -198,12 +198,12 @@ export function useGridSelection({
       }
       const rows = new Set(mod ? (prev.kind === 'row' ? prev.rows : prev.cursor ? [prev.cursor.row] : []) : []);
       if (!(mod && rows.delete(row))) rows.add(row);
-      // Toggling off the last selected row leaves nothing selected.
+      // Bỏ chọn hàng cuối cùng khiến không còn hàng nào được chọn.
       return rows.size > 0 ? { kind: 'row', cursor, anchor: cursor, rows, cols: NONE } : EMPTY;
     });
   }, []);
 
-  /** Extends the rectangle to the cell under the pointer until the button is released; scrolls at the edges. */
+  /** Mở rộng vùng chọn đến ô dưới con trỏ cho đến khi nhả nút; cuộn khi con trỏ ở sát mép. */
   const startDrag = useCallback(
     (x: number, y: number) => {
       let pointer = { x, y };
@@ -273,7 +273,7 @@ export function useGridSelection({
     [selectColumn, selectRow, startDrag]
   );
 
-  /** Arrows (Shift extends the rectangle) and Ctrl/Cmd+C. Returns true when the key was handled. */
+  /** Xử lý phím mũi tên (Shift mở rộng vùng chọn) và Ctrl/Cmd+C. Trả true nếu đã xử lý phím. */
   const onKeyDownGrid = useCallback(
     (e: KeyboardEvent<HTMLDivElement>): boolean => {
       if (e.target !== e.currentTarget || count === 0) return false;
@@ -283,7 +283,7 @@ export function useGridSelection({
         const dRow = key === 'ArrowDown' ? 1 : key === 'ArrowUp' ? -1 : 0;
         const dCol = key === 'ArrowRight' ? 1 : key === 'ArrowLeft' ? -1 : 0;
         const { cursor } = sel;
-        // The first arrow press only selects the first cell.
+        // Lần nhấn mũi tên đầu tiên chỉ chọn ô đầu tiên.
         if (!cursor) moveTo(0, 0);
         else if (!shiftKey) moveTo(cursor.row + dRow, cursor.col + dCol);
         else {
@@ -313,7 +313,7 @@ export function useGridSelection({
         e.preventDefault(); // no menu outside the cells
         return;
       }
-      // Right click inside the selection keeps it; anywhere else it selects the cell under the pointer.
+      // Click phải bên trong vùng chọn sẽ giữ nguyên vùng đó; ở vị trí khác thì chọn ô dưới con trỏ.
       const inside =
         sel.kind === 'row'
           ? sel.rows.has(hit.row)

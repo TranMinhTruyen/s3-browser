@@ -12,7 +12,7 @@ type DownloaderItemProps = {
   id: string;
 };
 
-/** One download row. */
+/** Một hàng tải xuống. */
 function DownloaderItem(props: DownloaderItemProps) {
   const { id } = props;
   const { t } = useTranslation('downloaderWindow');

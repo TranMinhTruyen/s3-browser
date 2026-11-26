@@ -6,12 +6,12 @@ import FieldInput from '@/components/inputs/FieldInput';
 import type { AuthFieldsProps } from '@/pages/s3/modals/connect/connectSchema';
 import FilePathField from '@/pages/s3/modals/connect/fields/FilePathField';
 
-/** MinIO client certificate (mTLS): certificate and key files, plus the key password when the key has one. */
+/** Chứng chỉ client MinIO (mTLS): file chứng chỉ và key, kèm mật khẩu key nếu có. */
 function AuthCertFields({ form, savedSecrets, secretRequired }: AuthFieldsProps) {
   const { t } = useTranslation('connectModal');
   const keyEncrypted = form.useWatchValue('authConfig.keyEncrypted');
 
-  // A key without a password has nothing to type: drop what was typed.
+  // Key không có mật khẩu thì không cần nhập gì: xóa nội dung đã nhập.
   const onChangeKeyEncrypted = useCallback(
     ({ value }: { value: unknown }) => {
       if (!value) form.setFieldValue('authSecret.keyPassword', '');

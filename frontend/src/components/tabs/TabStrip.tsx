@@ -23,13 +23,13 @@ import SortableTab from './SortableTab';
 import TabDragPreview from './TabDragPreview';
 import TabScroller from './TabScroller';
 
-// Keep the overlay on the x axis and inside the visible tab strip (the TabScroller viewport, not over the + button).
+// Giữ overlay trên trục x và trong dải tab đang hiển thị (viewport của TabScroller, không phủ lên nút +).
 const OVERLAY_MODIFIERS = [restrictToHorizontalAxis, restrictToFirstScrollableAncestor];
 
-// A slot becomes the drop target only when the dragged tab covers this share of its width (0.9 = almost fully).
+// Một vị trí chỉ trở thành đích thả khi tab đang kéo phủ ít nhất tỷ lệ này theo chiều rộng (0.9 = gần như phủ kín).
 const SWAP_COVER_RATIO = 0.9;
 
-/** Minimal shape of a tab store (S3 and SQL workspaces); `tabList` values are opaque to the strip. */
+/** Cấu trúc tối thiểu của store tab (workspace S3 và SQL); dải tab không cần biết kiểu giá trị trong `tabList`. */
 type TabStoreState = {
   activeTab: string;
   tabList: Record<string, unknown>;
@@ -44,15 +44,15 @@ type TabStripProps = {
     <T>(selector: (state: TabStoreState) => T): T;
     getState: () => TabStoreState;
   };
-  /** Must be referentially stable (memoised tabs depend on it). */
+  /** Phải giữ ổn định tham chiếu (các tab được memo phụ thuộc vào giá trị này). */
   renderLabel: (tabId: string) => ReactNode;
-  /** Content of a tab that was active at least once; the caller decides how to hide it while `active` is false. */
+  /** Nội dung tab từng được kích hoạt; nơi gọi quyết định cách ẩn khi `active` là false. */
   renderDetail: (tabId: string, active: boolean) => ReactNode;
 };
 
 /**
- * Shared tab page: a strip of closable, scrollable, drag-sortable tabs over each tab's detail.
- * A tab's content mounts on first activation, then stays mounted to keep its state (hiding is up to renderDetail).
+ * Trang tab dùng chung: dải tab có thể đóng, cuộn và kéo sắp xếp, nằm phía trên nội dung chi tiết của từng tab.
+ * Nội dung tab được mount ở lần kích hoạt đầu tiên rồi giữ nguyên để bảo toàn state (renderDetail chịu trách nhiệm ẩn tab).
  */
 function TabStrip({ useTabStore, renderLabel, renderDetail }: TabStripProps) {
   const { t } = useTranslation('common');
@@ -60,7 +60,7 @@ function TabStrip({ useTabStore, renderLabel, renderDetail }: TabStripProps) {
   const activeTab = useTabStore(s => s.activeTab);
   const tabIds = useTabStore(useShallow(s => Object.keys(s.tabList)));
 
-  // Closing and dragging only make sense with at least two tabs.
+  // Chỉ bật thao tác đóng và kéo khi có ít nhất hai tab.
   const multiple = tabIds.length > 1;
 
   const addTab = useTabStore(s => s.addTab);
@@ -68,18 +68,18 @@ function TabStrip({ useTabStore, renderLabel, renderDetail }: TabStripProps) {
   const setActiveTab = useTabStore(s => s.setActiveTab);
   const moveTab = useTabStore(s => s.moveTab);
 
-  // Pointer only (needs a 5px move to start a drag, so clicks still select the tab).
-  // No KeyboardSensor: Space/Enter select the tab; keyboard reordering is Ctrl+Shift+Left/Right (onMoveTab).
+  // Chỉ dùng con trỏ (cần di chuyển 5px mới bắt đầu kéo, nên click vẫn chọn được tab).
+  // Không dùng KeyboardSensor: Space/Enter chọn tab; Ctrl+Shift+Left/Right sắp xếp tab bằng bàn phím (onMoveTab).
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  // Screen readers announce this for each tab instead of dnd-kit's default (keyboard drag is not supported).
+  // Trình đọc màn hình đọc nội dung này cho từng tab thay cho mặc định của dnd-kit (không hỗ trợ kéo bằng bàn phím).
   const accessibility = useMemo(() => ({ screenReaderInstructions: { draggable: t('tab.drag') } }), [t]);
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const draggingRef = useRef(false);
   const overIdRef = useRef<UniqueIdentifier | null>(null);
 
-  // Pick the slot covered >= SWAP_COVER_RATIO by the overlay; otherwise keep the previous one (no flicker, no miss).
+  // Chọn vị trí được overlay phủ >= SWAP_COVER_RATIO; nếu không thì giữ vị trí trước đó (tránh nhấp nháy hoặc bỏ sót).
   const collisionDetection = useCallback<CollisionDetection>(
     ({ active, collisionRect, droppableRects, droppableContainers }) => {
       const { left, right } = collisionRect;
@@ -116,7 +116,7 @@ function TabStrip({ useTabStore, renderLabel, renderDetail }: TabStripProps) {
     [moveTab]
   );
 
-  // Swap a tab with its neighbour; reads the store so the callback stays stable. No-op at either end.
+  // Đổi chỗ tab với tab kế bên; đọc từ store để callback giữ ổn định. Không làm gì nếu tab đang ở một trong hai đầu.
   const onMoveTab = useCallback(
     (tabId: string, offset: -1 | 1) => {
       const ids = Object.keys(useTabStore.getState().tabList);
@@ -134,14 +134,14 @@ function TabStrip({ useTabStore, renderLabel, renderDetail }: TabStripProps) {
     [closeTab]
   );
 
-  // Tabs that were active at least once: only these mount their content, then stay mounted to keep state.
-  // Updated during render (not in an effect) so the first active frame is never empty; closed tabs are dropped.
+  // Các tab từng được kích hoạt: chỉ những tab này mới mount nội dung, sau đó giữ nguyên để bảo toàn state.
+  // Cập nhật ngay lúc render (không dùng effect) để khung hình đầu tiên luôn có nội dung; tab đã đóng sẽ bị loại bỏ.
   const [visited, setVisited] = useState<ReadonlySet<string>>(() => new Set());
   if (activeTab && !visited.has(activeTab)) {
     setVisited(new Set([...visited, activeTab].filter(id => tabIds.includes(id))));
   }
 
-  // Scroll the active tab into view when it changes or a tab is added/closed, not when tabs are only reordered.
+  // Cuộn để hiện tab đang hoạt động khi tab thay đổi, được thêm hoặc đóng; không cuộn khi chỉ sắp xếp lại.
   const scrollerRef = useRef<HTMLDivElement>(null);
   const tabCount = tabIds.length;
   useEffect(() => {
@@ -152,7 +152,7 @@ function TabStrip({ useTabStore, renderLabel, renderDetail }: TabStripProps) {
   }, [tabCount, activeTab]);
 
   return (
-    // Bordered like S3Navbar so the tab page reads as its own panel.
+    // Thêm viền như S3Navbar để trang tab hiển thị thành một panel riêng.
     <Paper withBorder h="100%" p="0.25rem">
       <Tabs
         variant="outline"

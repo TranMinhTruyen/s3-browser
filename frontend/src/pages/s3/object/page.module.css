@@ -20,7 +20,7 @@
   border-color: var(--mantine-color-indigo-light-color);
 }
 
-/* The Wails runtime adds file-drop-target-active while files are dragged over the drop target. */
+/* Runtime Wails thêm file-drop-target-active khi file được kéo qua vùng thả. */
 .dropZone:global(.file-drop-target-active) {
   outline: 2px dashed var(--mantine-color-indigo-light-color);
   outline-offset: -4px;

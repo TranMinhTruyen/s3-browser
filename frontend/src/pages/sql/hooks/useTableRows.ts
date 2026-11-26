@@ -7,19 +7,19 @@ type RowsState = { columns: string[]; rows: (string | null)[][]; hasMore: boolea
 const INITIAL_STATE: RowsState = { columns: [], rows: [], hasMore: false, loading: true };
 
 /**
- * Rows of one table, loaded page by page. They live here, not in a zustand store: a table can have 100,000+ rows
- * and immer would copy and freeze them on every page. The first page loads on mount; a failed load shows no rows.
- * `resetKey` changes with the table (and tab), so state kept per table can reset with it.
+ * Các hàng của một bảng, được tải theo từng trang. State được lưu ở đây thay vì zustand store: bảng có thể có hơn
+ * 100.000 hàng và immer sẽ sao chép, đóng băng chúng sau mỗi trang. Trang đầu tải khi mount; nếu tải thất bại thì không hiện hàng.
+ * `resetKey` thay đổi theo bảng (và tab), nhờ đó state của từng bảng có thể được reset.
  */
 export function useTableRows(tabId: string, provider: Provider, profileId: string, schema: string, table: string) {
   const [state, setState] = useState<RowsState>(INITIAL_STATE);
   const [loadingMore, setLoadingMore] = useState(false);
   const [fetchAll, setFetchAll] = useState(false);
-  // Bumped by `refresh` to run the first-page load again.
+  // Được tăng bởi `refresh` để tải lại trang đầu.
   const [reloadCount, setReloadCount] = useState(0);
   const key = `${tabId}|${provider}|${profileId}|${schema}|${table}`;
   const [stateKey, setStateKey] = useState(key);
-  // A different table starts from scratch (adjusting state during render, so no stale rows are ever painted).
+  // Bảng khác bắt đầu từ đầu (điều chỉnh state ngay trong lúc render để không hiển thị hàng cũ).
   if (stateKey !== key) {
     setStateKey(key);
     setState(INITIAL_STATE);
@@ -31,7 +31,7 @@ export function useTableRows(tabId: string, provider: Provider, profileId: strin
   const fetchRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    // The cleanup below already cancelled the previous table's loads.
+    // Hàm dọn dẹp bên dưới đã hủy các lượt tải của bảng trước.
     cursorRef.current = null;
     loadedRef.current = 0;
 
@@ -54,10 +54,10 @@ export function useTableRows(tabId: string, provider: Provider, profileId: strin
       fetchRef.current?.abort();
       fetchRef.current = null;
     };
-    // reloadCount only re-runs the load on refresh.
+    // reloadCount chỉ chạy lại thao tác tải khi được refresh.
   }, [tabId, provider, profileId, schema, table, reloadCount]);
 
-  /** Reads the next page, or every remaining row when `all`; does nothing while a fetch runs or all was read. */
+  /** Đọc trang tiếp theo, hoặc toàn bộ hàng còn lại nếu `all`; không làm gì khi đang tải hoặc đã đọc hết. */
   const fetchPage = useCallback(
     async (all: boolean) => {
       const cursorId = cursorRef.current;
@@ -78,7 +78,7 @@ export function useTableRows(tabId: string, provider: Provider, profileId: strin
         );
         if (controller.signal.aborted) return;
 
-        // A failed fetch leaves the cursor unusable, so the grid stops asking for more.
+        // Nếu tải thất bại thì con trỏ không còn dùng được, vì vậy grid ngừng yêu cầu thêm dữ liệu.
         const done = page?.done ?? true;
         if (done) cursorRef.current = null;
         loadedRef.current += page?.rows.length ?? 0;
@@ -100,8 +100,8 @@ export function useTableRows(tabId: string, provider: Provider, profileId: strin
   const loadMore = useCallback(() => fetchPage(false), [fetchPage]);
 
   /**
-   * Ticking reads the rest of the cursor in one call. Unticking while it runs cancels it and keeps the rows already
-   * loaded; the cancelled read may have consumed part of the cursor, so no more rows can be fetched afterwards.
+   * Đánh dấu sẽ đọc toàn bộ phần còn lại của con trỏ trong một lần gọi. Bỏ đánh dấu khi đang chạy sẽ hủy thao tác và giữ
+   * các hàng đã tải; lượt đọc bị hủy có thể đã tiêu thụ một phần con trỏ nên sau đó không thể tải thêm hàng.
    */
   const setFetchAllRows = useCallback(
     (checked: boolean) => {
@@ -120,7 +120,7 @@ export function useTableRows(tabId: string, provider: Provider, profileId: strin
     [fetchPage]
   );
 
-  /** Reloads the first page and unticks fetch all; the cleanup of the load effect cancels any running read. */
+  /** Tải lại trang đầu và bỏ chọn tải tất cả; hàm dọn dẹp của effect tải sẽ hủy lượt đọc đang chạy. */
   const refresh = useCallback(() => {
     setState(INITIAL_STATE);
     setLoadingMore(false);

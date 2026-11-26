@@ -1,6 +1,6 @@
 import { useAppUpdate } from '@/common/hooks/useAppUpdate';
 
-/** Renders nothing; isolates the update progress re-renders from `App`. */
+/** Không hiển thị nội dung; tách các lần render lại tiến trình cập nhật khỏi `App`. */
 function AppUpdateToast() {
   useAppUpdate();
   return null;

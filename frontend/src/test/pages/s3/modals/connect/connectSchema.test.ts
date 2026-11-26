@@ -15,7 +15,7 @@ import {
 type AuthConfig = ConnectionInfo['authConfig'];
 type Patch = Partial<Omit<ConnectionInfo, 'authConfig'>> & { authConfig?: Partial<AuthConfig> };
 
-/** Valid static AWS values; tests override what they check. */
+/** Các giá trị AWS tĩnh hợp lệ; từng kiểm thử ghi đè những giá trị cần kiểm tra. */
 const make = (patch: Patch = {}) => {
   const base = getDefaultConnectionInfo('p');
   const { authConfig, ...rest } = patch;
@@ -40,7 +40,7 @@ const assumeRole = (authConfig: Partial<AuthConfig> = {}, rest: Patch = {}) =>
     },
   });
 
-/** First message per field, the one the form shows. */
+/** Thông báo đầu tiên của mỗi trường, cũng là thông báo biểu mẫu hiển thị. */
 const issues = (schema: typeof connectSchema, values: unknown) => {
   const r = schema.safeParse(values);
   const first = new Map<string, string>();

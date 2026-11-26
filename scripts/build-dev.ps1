@@ -1,15 +1,13 @@
-# Builds the HMR dev binary (tags: dev) with the same Windows resources that
-# `wails build` embeds: the app icon and a DPI-aware GUI manifest.
+# Tạo binary phát triển có HMR (tag: dev) với cùng tài nguyên Windows mà
+# `wails build` nhúng vào: biểu tượng ứng dụng và manifest GUI nhận biết DPI.
 #
-# `wails build` generates a *-res.syso in the project root, links it and then
-# deletes it. A plain `go build` skips that step entirely, which is why the dev
-# binary used to show no taskbar icon. We reproduce it here with go-winres and
-# clean up afterwards so the file never collides with the one `wails build`
-# generates.
+# `wails build` tạo file *-res.syso ở thư mục gốc dự án, liên kết file đó rồi
+# xóa đi. Lệnh `go build` thông thường bỏ qua hoàn toàn bước này, khiến binary
+# phát triển trước đây không hiện biểu tượng trên taskbar. Tại đây ta mô phỏng
+# bằng go-winres rồi dọn file sau đó để không trùng với file `wails build` tạo ra.
 #
-# The icon MUST be resource group #3: wails hard-codes AppIconID = 3 and calls
-# LoadIcon with that id (winc/app.go), so an icon under any other id is ignored
-# by the window and the taskbar.
+# Biểu tượng BẮT BUỘC nằm trong nhóm tài nguyên #3: wails ghi cứng AppIconID = 3 và gọi
+# LoadIcon với id đó (winc/app.go), vì vậy cửa sổ và taskbar sẽ bỏ qua biểu tượng ở id khác.
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
@@ -19,22 +17,22 @@ $syso = Join-Path $root 'wailsdev-res_windows_amd64.syso'
 $bin = Join-Path $root 'build/bin'
 $exe = Join-Path $bin 'S3Browser-dev.exe'
 
-# VSCode fires this preLaunchTask before the previous debug session has released
-# the binary, so `go build -o` would hit "Access is denied" on a restart.
+# VSCode chạy preLaunchTask này trước khi phiên debug trước giải phóng binary,
+# vì vậy `go build -o` sẽ gặp lỗi "Access is denied" khi khởi động lại.
 #
-# Do NOT kill the holders. On a Restart the process holding the exe is the very
-# dlv.exe acting as the debug adapter, and killing it is what makes VSCode
-# report "No debugger available, can not send 'restart'".
+# KHÔNG được kết thúc các tiến trình đang giữ file. Khi Restart, tiến trình giữ exe chính là
+# dlv.exe đang làm debug adapter; kết thúc nó sẽ khiến VSCode báo
+# "No debugger available, can not send 'restart'".
 #
-# Windows refuses to overwrite a running image but happily *renames* one, so we
-# move the old exe aside instead: the running app keeps its renamed image, dlv
-# stays alive, and its restart re-execs the freshly built path.
+# Windows từ chối ghi đè image đang chạy nhưng vẫn cho phép *đổi tên*, nên ta
+# chuyển exe cũ sang tên khác: ứng dụng đang chạy tiếp tục dùng image đã đổi tên, dlv
+# vẫn hoạt động và lệnh restart sẽ chạy lại file vừa build ở đường dẫn cũ.
 Get-ChildItem $bin -Filter 'S3Browser-dev.old-*.exe' -ErrorAction SilentlyContinue |
     ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
 
 if (Test-Path $exe) {
     try {
-        # Nothing holds it: plain overwrite is fine.
+        # Không có tiến trình nào giữ file: có thể ghi đè trực tiếp.
         $fs = [IO.File]::Open($exe, 'Open', 'ReadWrite', 'None')
         $fs.Close()
     } catch {

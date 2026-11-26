@@ -15,7 +15,7 @@ type Options = {
   overscan?: number;
 };
 
-// jsdom has no layout, so the virtualizers are replaced: they render every item unless a range is set.
+// jsdom không có layout nên thay virtualizer bằng mock: render mọi mục trừ khi đặt phạm vi cụ thể.
 const virtual = vi.hoisted(() => ({
   rows: null as [number, number] | null,
   cols: null as [number, number] | null,
@@ -211,7 +211,7 @@ describe('DataGrid', () => {
       useSettingStore.setState(s => ({ draft: { ...s.draft, size: 'large' } }));
       renderGrid();
       drag(0, 0, 90);
-      // 160 + 90 / 1.125 = 240 at the medium size, x 1.125 on screen
+      // 160 + 90 / 1.125 = 240 ở cỡ trung bình, nhân 1.125 trên màn hình
       expect(headerOf('id')).toHaveStyle({ width: '270px' });
     });
 
@@ -256,7 +256,7 @@ describe('DataGrid', () => {
         ],
       });
       fireEvent.doubleClick(resizer(1));
-      // widest is "Roberta" (7 x 10) + 17 of cell padding and border
+      // Chuỗi rộng nhất là "Roberta" (7 x 10) + 17px padding và viền ô
       expect(headerOf('name')).toHaveStyle({ width: '87px' });
       expect(measureText).toHaveBeenCalledWith('name');
     });
@@ -285,7 +285,7 @@ describe('DataGrid', () => {
       useSettingStore.setState(s => ({ draft: { ...s.draft, size: 'large' } }));
       renderGrid({ rows: [['1', 'a'.repeat(45), 'x']] });
       fireEvent.doubleClick(resizer(1));
-      // 450 / 1.125 + 17 = 417 at the medium size, x 1.125 on screen
+      // 450 / 1.125 + 17 = 417 ở cỡ trung bình, nhân 1.125 trên màn hình
       expect(headerOf('name')).toHaveStyle({ width: '469.125px' });
     });
 

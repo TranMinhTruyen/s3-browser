@@ -1,4 +1,4 @@
-// Package setting stores the user preferences (theme, font, language, UI size, launch on startup) in settings.json.
+// Package setting lưu tùy chọn của người dùng (giao diện, phông chữ, ngôn ngữ, cỡ UI, khởi chạy cùng hệ thống) trong settings.json.
 package setting
 
 import (
@@ -8,36 +8,36 @@ import (
 )
 
 var (
-	// STE001 - Error while loading settings
+	// STE001 - Lỗi khi tải cài đặt
 	STE001 = "STE001"
 
-	// STE002 - Error while saving settings
+	// STE002 - Lỗi khi lưu cài đặt
 	STE002 = "STE002"
 
-	// STE003 - Cannot change launch on Windows startup, other settings were saved
+	// STE003 - Không thể đổi tùy chọn khởi chạy cùng Windows; các cài đặt khác đã được lưu
 	STE003 = "STE003"
 
-	// STE004 - Invalid setting value
+	// STE004 - Giá trị cài đặt không hợp lệ
 	STE004 = "STE004"
 
-	// STE005 - Error while loading tab state
+	// STE005 - Lỗi khi tải trạng thái tab
 	STE005 = "STE005"
 
-	// STE006 - Error while saving tab state
+	// STE006 - Lỗi khi lưu trạng thái tab
 	STE006 = "STE006"
 
-	// STE007 - Invalid tab data
+	// STE007 - Dữ liệu tab không hợp lệ
 	STE007 = "STE007"
 )
 
-// Module reads and writes the app settings file.
+// Module đọc và ghi file cài đặt ứng dụng.
 type Module struct {
 	logger  *slog.Logger
 	setting *submoduleSettingMng
 	tab     *submoduleTabMng
 }
 
-// NewModule creates the setting module; appName selects the data dir and names the autostart entry.
+// NewModule tạo module setting; appName dùng để chọn thư mục dữ liệu và đặt tên mục tự khởi động.
 func NewModule(logger *slog.Logger, appName string) *Module {
 	return &Module{
 		logger:  logger.With("component", "setting_module"),
@@ -46,7 +46,7 @@ func NewModule(logger *slog.Logger, appName string) *Module {
 	}
 }
 
-// GetSettings returns the saved settings. A missing or malformed file yields the defaults.
+// GetSettings trả về các cài đặt đã lưu. Nếu file không tồn tại hoặc sai định dạng, hàm trả về giá trị mặc định.
 func (m *Module) GetSettings() models.Output[models.SettingsOutput] {
 	output := models.NewOutput[models.SettingsOutput]()
 	output.Body.AutostartSupported = autostartSupported()
@@ -60,7 +60,7 @@ func (m *Module) GetSettings() models.Output[models.SettingsOutput] {
 	return output
 }
 
-// SaveSettings validates and saves the settings, then applies launch on startup.
+// SaveSettings kiểm tra rồi lưu cài đặt, sau đó áp dụng tùy chọn khởi chạy cùng hệ thống.
 func (m *Module) SaveSettings(input models.SaveSettingInput) models.Output[models.SettingsOutput] {
 	output := models.NewOutput[models.SettingsOutput]()
 	output.Body.AutostartSupported = autostartSupported()
@@ -83,8 +83,8 @@ func (m *Module) SaveSettings(input models.SaveSettingInput) models.Output[model
 	return output
 }
 
-// SetLaunchOnStartup changes only launch on startup (registry and settings file), leaving the other saved values.
-// When the registry cannot be changed it returns the unchanged value with a STE003 warning.
+// SetLaunchOnStartup chỉ thay đổi tùy chọn khởi chạy cùng hệ thống (registry và file cài đặt), giữ nguyên các giá trị đã lưu khác.
+// Nếu không thể cập nhật registry, hàm trả về giá trị cũ kèm cảnh báo STE003.
 func (m *Module) SetLaunchOnStartup(enabled bool) models.Output[models.SettingsOutput] {
 	output := models.NewOutput[models.SettingsOutput]()
 
@@ -97,7 +97,7 @@ func (m *Module) SetLaunchOnStartup(enabled bool) models.Output[models.SettingsO
 	return m.SaveSettings(models.SaveSettingInput(current))
 }
 
-// GetTabState returns the remembered tabs. A missing, malformed or invalid file yields an empty state.
+// GetTabState trả về các tab đã ghi nhớ. Nếu file không tồn tại, sai định dạng hoặc không hợp lệ, hàm trả về trạng thái rỗng.
 func (m *Module) GetTabState() models.Output[models.TabState] {
 	output := models.NewOutput[models.TabState]()
 
@@ -110,11 +110,11 @@ func (m *Module) GetTabState() models.Output[models.TabState] {
 	return output
 }
 
-// SaveTabState validates and saves the tab order, active tab and profile of each tab.
+// SaveTabState kiểm tra rồi lưu thứ tự tab, tab đang hoạt động và hồ sơ của từng tab.
 func (m *Module) SaveTabState(input models.SaveTabStateInput) models.Output[models.TabState] {
 	output := models.NewOutput[models.TabState]()
 
-	state := models.TabState(input)
+	state := models.TabState{Tabs: input.Tabs, ActiveTab: input.ActiveTab}
 	invalid, err := m.tab.save(state)
 	if invalid != nil {
 		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Setting, STE007, invalid.Error()))
@@ -124,5 +124,22 @@ func (m *Module) SaveTabState(input models.SaveTabStateInput) models.Output[mode
 		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Setting, STE006, err.Error()))
 	}
 	output.Body = state
+	return output
+}
+
+// SaveSqlTabState kiểm tra rồi lưu thứ tự tab SQL, tab đang hoạt động và nội dung từng tab.
+func (m *Module) SaveSqlTabState(input models.SaveSqlTabStateInput) models.Output[models.TabState] {
+	output := models.NewOutput[models.TabState]()
+
+	invalid, err := m.tab.saveSql(input)
+	if invalid != nil {
+		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Setting, STE007, invalid.Error()))
+	}
+	if err != nil {
+		m.logger.Error("save SQL tab state failed", "error", err)
+		return output.ThrowError(models.NewMessage(cnst.MessageTypeError, cnst.Setting, STE006, err.Error()))
+	}
+	output.Body.SqlTabs = input.Tabs
+	output.Body.ActiveSqlTab = input.ActiveTab
 	return output
 }

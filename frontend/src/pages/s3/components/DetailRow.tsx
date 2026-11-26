@@ -11,7 +11,7 @@ type DetailRowProps = {
   copyable?: boolean;
 };
 
-/** One label/value item of a `DataList`: an empty value shows `-`, a `copyable` one gets a copy button. */
+/** Một mục nhãn/giá trị của `DataList`: giá trị rỗng hiển thị `-`, mục `copyable` có thêm nút sao chép. */
 function DetailRow(props: DetailRowProps) {
   const { label, value, copyable } = props;
 

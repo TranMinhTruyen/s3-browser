@@ -35,7 +35,7 @@ const result = (extra: Partial<Result> = {}): Result => ({
   ...extra,
 });
 
-// The next result of each binding (null = failed); `deleteVia` picks how DeleteBucket reports its output.
+// Kết quả kế tiếp của từng binding (null = thất bại); `deleteVia` chọn cách DeleteBucket trả kết quả.
 const next = {
   info: undefined as unknown,
   del: undefined as unknown,

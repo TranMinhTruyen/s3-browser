@@ -1,8 +1,8 @@
 //go:build portable
 
-// Package portable decides where the app keeps its data: next to the exe (portable build, tag "portable") or in
-// the user config dir. Two files with opposite build tags provide the same API, so callers never branch on the tag
-// except through Enabled.
+// Package portable xác định nơi lưu dữ liệu ứng dụng: cạnh exe (bản portable, tag "portable") hoặc trong thư mục cấu hình
+// của người dùng. Hai file có build tag đối lập cung cấp cùng API nên bên gọi không cần rẽ nhánh theo tag,
+// ngoại trừ khi dùng Enabled.
 package portable
 
 import (
@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 )
 
-// Enabled reports whether the binary was built with the "portable" tag.
+// Enabled cho biết binary có được build với tag "portable" hay không.
 const Enabled = true
 
-// exeDir returns the directory of the running exe, with symlinks resolved.
+// exeDir trả về thư mục của exe đang chạy sau khi phân giải symbolic link.
 func exeDir() (string, error) {
 	exe, err := os.Executable()
 	if err != nil {
@@ -26,7 +26,7 @@ func exeDir() (string, error) {
 	return filepath.Dir(exe), nil
 }
 
-// DataDir returns <exe dir>/data and creates it when missing.
+// DataDir trả về <thư mục exe>/data và tạo thư mục nếu chưa tồn tại.
 func DataDir(_ string) (string, error) {
 	dir, err := exeDir()
 	if err != nil {
@@ -39,7 +39,7 @@ func DataDir(_ string) (string, error) {
 	return dataDir, nil
 }
 
-// WebView2Dir returns <exe dir>/webview2, where the WebView2 Fixed Version runtime is shipped.
+// WebView2Dir trả về <thư mục exe>/webview2, nơi chứa WebView2 Fixed Version runtime đi kèm ứng dụng.
 func WebView2Dir() (string, error) {
 	dir, err := exeDir()
 	if err != nil {

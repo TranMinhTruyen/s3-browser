@@ -14,19 +14,19 @@
 pub mod common;
 /// Đổi số ngày/micro giây/ticks sang chuỗi ngày giờ ISO.
 pub mod datetime;
-/// Driver MongoDB.
+/// Trình điều khiển MongoDB.
 pub mod mongodb;
 /// Driver MySQL và MariaDB.
 pub mod mysql;
-/// Driver PostgreSQL.
+/// Trình điều khiển PostgreSQL.
 pub mod postgres;
-/// Driver Redis.
+/// Trình điều khiển Redis.
 pub mod redis;
 /// Tách một đoạn SQL thành từng câu (PostgreSQL, MySQL/MariaDB, SQL Server).
 pub mod split_sql;
-/// Driver SQLite.
+/// Trình điều khiển SQLite.
 pub mod sqlite;
-/// Driver SQL Server.
+/// Trình điều khiển SQL Server.
 pub mod sqlserver;
 /// Cấu hình TLS (rustls) cho các driver mạng.
 pub mod tls;

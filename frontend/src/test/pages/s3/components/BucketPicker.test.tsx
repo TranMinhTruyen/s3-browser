@@ -32,7 +32,7 @@ type Pending = { resolve: (page: Page) => void; signal: AbortSignal; binding: un
 
 const page = (names: string[], nextCursor = ''): Page => ({ bucketList: names.map(name => ({ name })), nextCursor });
 
-/** Replaces callIPC with a mock that answers from a queue (or keeps the call pending when manual). */
+/** Thay callIPC bằng mock lấy kết quả từ hàng đợi (hoặc giữ lời gọi chờ nếu đặt ở chế độ thủ công). */
 function answerWith(...pages: Page[]) {
   const queue = [...pages];
   vi.mocked(callIPC).mockImplementation((async () => (queue.length > 1 ? queue.shift() : queue[0])) as never);
@@ -118,7 +118,7 @@ describe('BucketPicker', () => {
 
   it('focuses the search box when the dropdown opens', async () => {
     answerWith(page(['alpha']));
-    // jsdom cannot focus inside the display:none transition wrapper, so assert the focus() call target.
+    // jsdom không thể focus bên trong wrapper transition display:none nên kiểm tra đối tượng được gọi focus().
     const focus = vi.spyOn(HTMLInputElement.prototype, 'focus');
     const { user } = setup();
     await user.click(trigger());
@@ -228,7 +228,7 @@ describe('BucketPicker', () => {
       await act(async () => pending[0].resolve(page(['a'], 'cur1')));
       await user.click(await screen.findByText('Load more'));
       expect(pending).toHaveLength(2);
-      // Closing the dropdown aborts the running request.
+      // Đóng danh sách thả xuống sẽ hủy yêu cầu đang chạy.
       await user.keyboard('{Escape}');
       expect(pending[1].signal.aborted).toBe(true);
       await act(async () => pending[1].resolve(page(['late'], '')));
@@ -301,7 +301,7 @@ describe('BucketPicker', () => {
       });
       expect(pending[0].signal.aborted).toBe(true);
       expect(pending.at(-1)!.binding).toBe(SearchBucket);
-      // The stale answer of the first request is ignored.
+      // Bỏ qua kết quả cũ của yêu cầu đầu tiên.
       await act(async () => pending[0].resolve(page(['stale'])));
       expect(screen.queryByText('stale')).not.toBeInTheDocument();
     });
@@ -326,7 +326,7 @@ describe('BucketPicker', () => {
       await user.keyboard('{Escape}');
       await flush();
       expect(screen.getByPlaceholderText('Search bucket')).not.toBeVisible();
-      // Reopening shows the loader only for the fresh request, and closing again clears it.
+      // Mở lại chỉ hiện trạng thái tải cho yêu cầu mới; đóng lần nữa sẽ xóa trạng thái đó.
       await user.click(trigger());
       await flush();
       expect(document.querySelector('.mantine-Loader-root')).toBeInTheDocument();

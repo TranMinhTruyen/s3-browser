@@ -3,17 +3,17 @@ import { isAllDeletedLoaded } from '@/components/display/dataGrid/useGridEdit';
 
 type Row = (string | null)[];
 
-/** Pending changes of one table. Row numbers are indexes in the loaded `rows`, so they stay valid as pages load. */
+/** Các thay đổi đang chờ của một bảng. Số hàng là index trong `rows` đã tải nên vẫn hợp lệ khi tải thêm trang. */
 type Edits = {
-  /** Row index -> (column index -> new value). Only cells that differ from the loaded value are kept. */
+  /** Index hàng -> (index cột -> giá trị mới). Chỉ giữ các ô khác giá trị đã tải. */
   edited: ReadonlyMap<number, ReadonlyMap<number, string | null>>;
-  /** Rows to insert, newest first: they are shown before the loaded rows. */
+  /** Các hàng cần chèn, hàng mới nhất trước: chúng được hiển thị phía trên các hàng đã tải. */
   newRows: Row[];
-  /** Loaded rows to delete. */
+  /** Các hàng đã tải cần xóa. */
   deleted: ReadonlySet<number>;
 };
 
-/** What a Commit has to send: enough to find each row by its primary key, or by every column when there is none. */
+/** Dữ liệu Commit cần gửi: đủ để tìm từng hàng bằng khóa chính, hoặc bằng mọi cột nếu không có khóa chính. */
 export type ChangeSet = {
   updates: { rowIndex: number; original: Row; changes: Record<string, string | null> }[];
   inserts: Row[];
@@ -23,14 +23,14 @@ export type ChangeSet = {
 const NO_EDITS: Edits = { edited: new Map(), newRows: [], deleted: new Set() };
 
 /**
- * Uncommitted changes of the grid rows, kept next to the loaded rows (never copied into them: a table can have
- * 100,000+ rows). Grid rows are numbered `0..newRows.length-1` for new rows, then the loaded rows. A different
- * `resetKey` (another table) drops every change.
+ * Các thay đổi chưa commit của hàng trong grid được lưu riêng bên cạnh dữ liệu đã tải (không sao chép vào đó vì bảng có thể
+ * chứa hơn 100.000 hàng). Hàng mới được đánh số `0..newRows.length-1`, sau đó đến các hàng đã tải. `resetKey` khác
+ * (bảng khác) sẽ xóa mọi thay đổi.
  */
 export function useTableEdits(rows: Row[], columns: string[], resetKey: string) {
   const [edits, setEdits] = useState<Edits>(NO_EDITS);
   const [editsKey, setEditsKey] = useState(resetKey);
-  // Safety net when the props change (another table): the grid of the old table never sees the new rows.
+  // Bảo vệ khi props thay đổi (sang bảng khác): grid của bảng cũ không bao giờ nhận các hàng mới.
   if (editsKey !== resetKey) {
     setEditsKey(resetKey);
     setEdits(NO_EDITS);
@@ -45,8 +45,8 @@ export function useTableEdits(rows: Row[], columns: string[], resetKey: string) 
   }, [columnCount]);
 
   /**
-   * Sets every cell of `gridRows` x `cols` in one update; a value equal to the loaded one removes the change.
-   * Deleted rows are read-only.
+   * Cập nhật mọi ô trong `gridRows` x `cols` bằng một lần cập nhật; giá trị trùng với dữ liệu đã tải sẽ xóa thay đổi.
+   * Các hàng đã xóa chỉ đọc.
    */
   const setCells = useCallback(
     (gridRows: number[], cols: number[], value: string | null) => {
@@ -83,13 +83,13 @@ export function useTableEdits(rows: Row[], columns: string[], resetKey: string) 
     [rows]
   );
 
-  /** Sets one cell of a grid row. */
+  /** Đặt giá trị cho một ô của hàng trong grid. */
   const setCell = useCallback(
     (row: number, col: number, value: string | null) => setCells([row], [col], value),
     [setCells]
   );
 
-  /** Deletes the grid rows (new rows vanish); when every row is a deleted loaded row they are restored instead. */
+  /** Xóa các hàng trong grid (hàng mới sẽ biến mất); nếu mọi hàng đều đã bị đánh dấu xóa thì khôi phục chúng. */
   const toggleDeleteRows = useCallback((gridRows: number[]) => {
     setEdits(prev => {
       const newCount = prev.newRows.length;
@@ -109,14 +109,14 @@ export function useTableEdits(rows: Row[], columns: string[], resetKey: string) 
 
   const rollback = useCallback(() => setEdits(NO_EDITS), []);
 
-  /** Rows with a pending change; an edited row that is also deleted counts once. */
+  /** Các hàng có thay đổi đang chờ; hàng vừa được sửa vừa bị xóa chỉ tính một lần. */
   const changedCount = useMemo(() => {
     let count = edits.newRows.length + edits.deleted.size;
     for (const index of edits.edited.keys()) if (!edits.deleted.has(index)) count++;
     return count;
   }, [edits]);
 
-  /** The pending changes in the shape a Commit needs (not used until the backend can commit). */
+  /** Các thay đổi đang chờ theo cấu trúc Commit cần (chưa dùng cho đến khi backend hỗ trợ commit). */
   const getChangeSet = useCallback((): ChangeSet => {
     const updates: ChangeSet['updates'] = [];
     for (const [rowIndex, cells] of edits.edited) {

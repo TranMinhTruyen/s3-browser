@@ -13,7 +13,7 @@ import { useTabListStore } from '@/pages/s3/stores/tabListStore';
 import { BUCKET_ITEM_LABELS } from '@/test/_helpers/bucketItemLabels';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// jsdom has no layout, so render every row; `endIndex` is the last row the user "sees" (null = end of list).
+// jsdom không có layout nên render mọi hàng; `endIndex` là hàng cuối người dùng "nhìn thấy" (null = cuối danh sách).
 const virtual = vi.hoisted(() => ({
   endIndex: null as number | null,
   estimate: 0,
@@ -58,12 +58,12 @@ vi.mock('@/common/utils/ipcUtils', () => ({ callIPC: vi.fn() }));
 
 const profile = { id: 'conn', name: 'my-profile' } as ConnectionProfileOutput;
 const other = { id: 'conn-2', name: 'other' } as ConnectionProfileOutput;
-// policyMode is set so the lazy access check never adds CheckBucketAccess calls to the counts of other tests.
+// Đặt policyMode để bước kiểm tra quyền truy cập theo nhu cầu không làm tăng số lần gọi CheckBucketAccess trong test khác.
 const b = (name?: string) => new Bucket({ name, creationDate: '2026-01-02T03:04:05', policyMode: 'private' });
 const page = (bucketList: Bucket[], nextCursor = '') => ({ bucketList, nextCursor });
 
 const callIPCMock = vi.mocked(callIPC);
-// Each call resolves with the next queued value (the last one repeats); null means a failed request.
+// Mỗi lần gọi trả về giá trị kế tiếp trong hàng đợi (giá trị cuối lặp lại); null nghĩa là yêu cầu thất bại.
 let queue: unknown[] = [];
 
 function renderList({
@@ -549,7 +549,7 @@ describe('BucketListView', () => {
       expect(loader()).not.toBeInTheDocument();
     });
 
-    // The old cursor still sits in state for one render after the source changes, with the list near its end.
+    // Con trỏ cũ vẫn còn trong state thêm một lần render sau khi nguồn đổi, trong khi danh sách gần cuối.
     it('never sends the list cursor to the search when the keyword is applied', async () => {
       virtual.endIndex = 0;
       callIPCMock.mockImplementation((async (f: unknown) =>
@@ -648,7 +648,7 @@ describe('BucketListView', () => {
     let listed: Bucket[] = [];
     let checkImpl: () => Promise<unknown> = async () => ({ bucketList: [] });
 
-    // Renders and lets the first page land.
+    // Render và chờ trang đầu tải xong.
     async function renderLoaded(opts: Parameters<typeof renderList>[0] = {}) {
       const view = renderList(opts);
       await settle();
@@ -872,7 +872,7 @@ describe('BucketListView', () => {
       listed = [pb('a'), new Bucket({ accessPending: true })];
       await renderLoaded();
       await tick();
-      // Only the nameless row receives it; the named bucket 'a' stays untouched.
+      // Chỉ hàng không có tên nhận giá trị này; bucket có tên 'a' không bị ảnh hưởng.
       expect(screen.getAllByLabelText(WARNING)).toHaveLength(1);
       expect(checkCalls()).toHaveLength(1);
     });
@@ -1021,7 +1021,7 @@ describe('BucketListView', () => {
       useTabListStore.setState({ activeTab: 'tab-1' });
       view.rerender(ui('visible'));
     };
-    // Captures the signal of the first request and never answers it.
+    // Lưu signal của yêu cầu đầu tiên và không trả lời yêu cầu đó.
     const hangAndCapture = () => {
       const captured: { signal?: AbortSignal } = {};
       callIPCMock.mockImplementation((async (_f: unknown, _a: unknown, o: { signal: AbortSignal }) => {

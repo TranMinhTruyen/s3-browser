@@ -163,7 +163,7 @@ fn sqlite_golden() {
     let db = Db::new();
     let c = db.conn;
 
-    // ---- open / close ----
+    // ---- mở / đóng ----
     let mut k = Case::new("00_open_close");
     let rw = k.rec(
         "open readOnly=false",
@@ -192,7 +192,7 @@ fn sqlite_golden() {
     }
     g.finish(k);
 
-    // ---- nhiều câu trong một execute ----
+    // ---- nhiều câu trong một lần thực thi ----
     let mut k = Case::new("01_multi_statements");
     k.rec(
         "script create/insert/select/update/delete/select",
@@ -244,7 +244,7 @@ fn sqlite_golden() {
     k.rec("connection still usable", exec(c, "SELECT 4"));
     g.finish(k);
 
-    // ---- connection chỉ đọc ----
+    // ---- kết nối chỉ đọc ----
     let mut k = Case::new("03_read_only");
     ok(&exec(
         c,

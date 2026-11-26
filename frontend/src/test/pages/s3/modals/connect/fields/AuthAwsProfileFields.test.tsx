@@ -4,7 +4,7 @@ import AuthAwsProfileFields from '@/pages/s3/modals/connect/fields/AuthAwsProfil
 import { Harness, input, type Patch, type Probe, queryInput, values } from '@/test/_helpers/authFieldsHarness';
 import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
-// The profile picker has its own tests: here it only shows the props it receives.
+// Bộ chọn hồ sơ có kiểm thử riêng; ở đây chỉ xác nhận các props mà nó nhận được.
 vi.mock('@/pages/s3/components/AwsProfileCombobox', () => ({
   default: ({ ssoOnly, configFile, credentialsFile, defaultValue }: Record<string, unknown>) => (
     <div>{`picker sso=${!!ssoOnly} config=[${configFile ?? ''}] credentials=[${credentialsFile ?? ''}] value=[${defaultValue}]`}</div>

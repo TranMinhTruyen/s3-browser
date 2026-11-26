@@ -6,7 +6,7 @@ import TruncatedText from '@/components/display/TruncatedText';
 import { useProfileStore } from '@/pages/s3/stores/profileStore';
 import { useTabListStore } from '@/pages/s3/stores/tabListStore';
 
-/** Tab title: status dot (when the tab has a profile) + the connected profile's name, or the default name. */
+/** Tiêu đề tab: chấm trạng thái (khi tab có hồ sơ) + tên hồ sơ đã kết nối hoặc tên mặc định. */
 function TabLabel({ tabId }: { tabId: string }) {
   const { t } = useTranslation('tabLayout');
 

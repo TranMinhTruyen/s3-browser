@@ -34,7 +34,7 @@ type ComboboxProps = Omit<MComboboxProps, 'store' | 'onOptionSubmit' | 'children
     style?: CSSProperties;
     inputClassNames?: InputBaseProps['classNames'];
     inputStyles?: InputBaseProps['styles'];
-    // When set, a search box is shown at the top of the dropdown and filters the options by name.
+    // Khi được bật, hiện ô tìm kiếm ở đầu danh sách thả xuống để lọc các lựa chọn theo tên.
     searchPlaceholder?: string;
     emptyText?: string;
   };
@@ -51,8 +51,8 @@ const ComboboxOption = memo(function ComboboxOption({ item, active }: { item: Co
 });
 
 /**
- * Single-select dropdown over `data` (`name` is shown, `value` is stored). Works controlled (`value`)
- * or uncontrolled (`defaultValue`), and can be spread with Mantine form `getInputProps`.
+ * Danh sách thả xuống cho phép chọn một mục từ `data` (`name` được hiển thị, `value` được lưu). Hỗ trợ dạng
+ * có điều khiển (`value`) và không điều khiển (`defaultValue`), đồng thời dùng được với `getInputProps` của Mantine form.
  */
 function Combobox(props: ComboboxProps) {
   const {
@@ -77,7 +77,7 @@ function Combobox(props: ComboboxProps) {
 
   const hasSearch = searchPlaceholder !== undefined;
   const [keyword, setKeyword] = useState('');
-  // Clear the filter on every close path so the dropdown reopens with the full list.
+  // Xóa bộ lọc ở mọi cách đóng để lần mở sau danh sách hiển thị đầy đủ.
   const onCloseDropdown = useCallback(() => setKeyword(''), []);
 
   const { combobox, current, onSubmitOption, onClear, onClickToggle } = useSelectCombobox({

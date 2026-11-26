@@ -14,12 +14,12 @@ import ActionIcon from '@/components/buttons/ActionIcon';
 import TransferPanel from '@/pages/s3/transfer/TransferPanel';
 import UploaderItem from '@/pages/s3/transfer/uploader/UploaderItem';
 
-// rem units; the downloader size is measured in px, so it is added with calc() instead of going through rem().
+// Đơn vị rem; kích thước downloader đo bằng px nên được cộng bằng calc() thay vì chuyển qua rem().
 const EDGE = 1;
 const GAP = 1;
 const ITEM_GAP = 8;
 
-/** Floating upload progress window (or a button when closed), placed next to the downloader. */
+/** Cửa sổ nổi hiển thị tiến độ tải lên (hoặc một nút khi đóng), đặt cạnh downloader. */
 function UploaderWindow() {
   const { t } = useTranslation('uploaderWindow');
 
@@ -79,7 +79,7 @@ function UploaderWindow() {
   const hasDownloader = downloaderWidth > 0 && downloaderHeight > 0;
 
   if (!visible) {
-    // Button: above the downloader (window or button) when there is one.
+    // Nút nằm phía trên downloader (cửa sổ hoặc nút) nếu downloader đang hiển thị.
     const bottom = hasDownloader ? `calc(${EDGE + GAP}rem + ${downloaderHeight}px)` : `${EDGE}rem`;
     return (
       <Affix position={{ bottom, right: `${EDGE}rem` }}>
@@ -90,7 +90,7 @@ function UploaderWindow() {
     );
   }
 
-  // Window: to the left of the downloader (window or button) when there is one.
+  // Cửa sổ nằm bên trái downloader (cửa sổ hoặc nút) nếu downloader đang hiển thị.
   const right = hasDownloader ? `calc(${EDGE + GAP}rem + ${downloaderWidth}px)` : `${EDGE}rem`;
 
   return (

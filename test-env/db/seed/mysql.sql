@@ -1,6 +1,6 @@
--- Sample data for MySQL 8.4 and MariaDB 11.4 (database demo), loaded by `sh scripts/test-env.sh seed`.
--- Same shape in every SQL database: customers, products, orders, order_items, events (10,000 rows for paging)
--- and the view v_order_summary. Values are generated, deterministic and not real.
+-- Dữ liệu mẫu cho MySQL 8.4 và MariaDB 11.4 (database demo), nạp bằng `sh scripts/test-env.sh seed`.
+-- Cùng cấu trúc với mọi database SQL: customers, products, orders, order_items, events (10.000 hàng để kiểm tra phân trang)
+-- và view v_order_summary. Các giá trị được tạo có thể lặp lại và không phải dữ liệu thật.
 CREATE DATABASE demo CHARACTER SET utf8mb4;
 USE demo;
 
@@ -50,7 +50,7 @@ CREATE TABLE events (
   , created_at DATETIME     NOT NULL
 );
 
--- Numbers 1..10000 (no recursive CTE: MySQL caps recursion at 1000 and MariaDB has no cte_max_recursion_depth).
+-- Các số 1..10000 (không dùng CTE đệ quy: MySQL giới hạn đệ quy ở 1000 và MariaDB không có cte_max_recursion_depth).
 CREATE TABLE _digits (v INT);
 INSERT INTO _digits VALUES (0), (1), (2), (3), (4), (5), (6), (7), (8), (9);
 CREATE TABLE _seq (i INT PRIMARY KEY);
@@ -85,7 +85,7 @@ SELECT i
      , TIMESTAMP('2025-06-01') + INTERVAL i * 3 HOUR
 FROM _seq WHERE i <= 2000;
 
--- 1 to 3 different products per order.
+-- Mỗi đơn hàng có từ 1 đến 3 sản phẩm khác nhau.
 INSERT INTO order_items
 SELECT o.i, p.id, 1 + (o.i + k.i) % 5, p.price
 FROM _seq o

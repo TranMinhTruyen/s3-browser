@@ -11,7 +11,7 @@ import ConfirmModal from '@/components/modals/confirm/ConfirmModal';
 import classes from '@/pages/s3/bucket/page.module.css';
 import PolicyBadge from '@/pages/s3/components/PolicyBadge';
 
-/** Texts of a row, translated once by the list so rows do not subscribe to i18n. */
+/** Nội dung của một hàng, được danh sách dịch một lần để các hàng không phải đăng ký i18n. */
 export type BucketItemLabels = {
   inaccessible: string;
   moreActions: string;
@@ -24,7 +24,7 @@ export type BucketItemLabels = {
 type BucketItemProps = {
   item: Bucket;
   labels: BucketItemLabels;
-  // An anonymous connection cannot change the bucket, so its menu has no "Access permission".
+  // Kết nối ẩn danh không thể thay đổi bucket nên menu không có mục "Quyền truy cập".
   canEdit?: boolean;
   onSelectBucket?: (bucketName: string | undefined) => void;
   onOpenDetail?: (item: Bucket) => void;
@@ -32,7 +32,7 @@ type BucketItemProps = {
   onDeleteBucket?: (bucketName: string | undefined) => void;
 };
 
-// Same icon section as ObjectItem's folder row.
+// Dùng cùng phần biểu tượng với hàng thư mục trong ObjectItem.
 const ICON_SECTION_STYLE: CSSProperties = {
   flexShrink: 0,
   display: 'flex',
@@ -45,24 +45,23 @@ const MENU_SECTION_STYLE: CSSProperties = { ...ICON_SECTION_STYLE, minWidth: '3.
 const stopPropagation = (e: MouseEvent) => e.stopPropagation();
 
 /**
- * One row of the bucket list: name, creation date (unknown for anonymous buckets) and a warning when the bucket
- * cannot be accessed, and a menu with the detail and permission actions. Clicking the row opens the bucket,
- * after a confirmation when it may be inaccessible.
+ * Một hàng trong danh sách bucket: tên, ngày tạo (không rõ với bucket ẩn danh), cảnh báo nếu không truy cập được,
+ * cùng menu chứa thao tác xem chi tiết và quyền. Nhấn vào hàng sẽ mở bucket, sau khi xác nhận nếu bucket có thể không truy cập được.
  */
 function BucketItem(props: BucketItemProps) {
   const { item, labels, canEdit, onSelectBucket, onOpenDetail, onEditPolicy, onDeleteBucket } = props;
-  // An anonymous connection cannot read the creation date, so the backend sends the zero date (year 1).
+  // Kết nối ẩn danh không đọc được ngày tạo nên backend gửi ngày zero (năm 1).
   const hasCreationDate = dayjs(item.creationDate).year() > 1;
 
-  // A Menu is heavy and a list shows many rows: it is mounted only once the user opens it.
+  // Menu khá nặng và danh sách có thể có nhiều hàng: chỉ mount menu khi người dùng mở.
   const [menuOpened, setMenuOpened] = useState(false);
 
   const onClickMoreActions = useCallback(() => setMenuOpened(true), []);
   const onClickDetail = useCallback(() => onOpenDetail?.(item), [onOpenDetail, item]);
   const onClickEditPolicy = useCallback(() => onEditPolicy?.(item.name), [onEditPolicy, item.name]);
 
-  // The button is remounted when the menu closes: give the focus back to it (not to body).
-  // On open the Menu moves the focus into its dropdown itself.
+  // Nút được mount lại khi menu đóng: trả tiêu điểm về nút (không chuyển sang body).
+  // Khi mở, Menu tự chuyển tiêu điểm vào danh sách thả xuống.
   const menuSectionRef = useRef<HTMLDivElement>(null);
   const wasOpened = useRef(false);
   useEffect(() => {
@@ -73,7 +72,7 @@ function BucketItem(props: BucketItemProps) {
   const onClickDelete = useCallback(() => onDeleteBucket?.(item.name), [onDeleteBucket, item.name]);
 
   const onClickBucket = useCallback(async () => {
-    // The access probe can be wrong (e.g. prefix-scoped policies), so warn and let the user decide.
+    // Kiểm tra quyền truy cập có thể sai (ví dụ policy giới hạn theo tiền tố), nên cảnh báo để người dùng tự quyết định.
     if (item.inaccessible) {
       const confirmed = await ConfirmModal.show({
         type: 'warning',

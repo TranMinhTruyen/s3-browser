@@ -1,7 +1,7 @@
 package bucket
 
-// DeleteBucketOutput counts the objects (versions and delete markers) deleted before the bucket itself.
-// Failed is the total; Failures keeps the details of the first ones only.
+// DeleteBucketOutput đếm số object (phiên bản và delete marker) đã xóa trước khi xóa bucket.
+// Failed là tổng số lỗi; Failures chỉ giữ chi tiết của các lỗi đầu tiên.
 type DeleteBucketOutput struct {
 	Deleted       int             `json:"deleted"`
 	Failed        int             `json:"failed"`

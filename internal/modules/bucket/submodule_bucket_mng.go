@@ -21,22 +21,22 @@ import (
 )
 
 const (
-	// bucketProbeConcurrency is the most HeadBucket / PutObject probes at the same time when flagging buckets.
+	// bucketProbeConcurrency là số phép thử HeadBucket / PutObject tối đa chạy đồng thời khi đánh dấu bucket.
 	bucketProbeConcurrency = 16
-	// bucketProbeTimeout caps the whole access probe of one listing.
+	// bucketProbeTimeout giới hạn thời gian kiểm tra quyền truy cập cho toàn bộ một lần liệt kê.
 	bucketProbeTimeout = 4 * time.Second
-	// writeProbeKey is the key of the write probe; the wrong Content-MD5 keeps the object from being stored.
+	// writeProbeKey là key dùng để thử quyền ghi; Content-MD5 sai khiến object không được lưu.
 	writeProbeKey = ".s3b-write-probe"
 )
 
-// submoduleBucketMng lists the buckets of a connection.
+// submoduleBucketMng liệt kê các bucket của một kết nối.
 type submoduleBucketMng struct {
 	logger *slog.Logger
 	app    *application.App
 	global *global.Module
 }
 
-// newSubmoduleBucketMng builds the bucket submodule on the shared connection store.
+// newSubmoduleBucketMng tạo submodule bucket trên kho kết nối dùng chung.
 func newSubmoduleBucketMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -49,8 +49,8 @@ func newSubmoduleBucketMng(
 	}
 }
 
-// listBucket returns one page of the buckets of a connection (ListBuckets, 10s timeout).
-// input.NextCursor is the continuation token of the previous page.
+// listBucket trả về một trang bucket của kết nối (ListBuckets, thời gian chờ 10 giây).
+// input.NextCursor là token tiếp tục của trang trước.
 func (m *submoduleBucketMng) listBucket(
 	ctx context.Context,
 	input models.ListBucketInput,
@@ -66,10 +66,10 @@ func (m *submoduleBucketMng) listBucket(
 	}
 
 	if s3Conn.AuthType == cnst.AuthAnonymous {
-		// Check again so a bucket whose policy changed since connecting gets the right flag.
+		// Kiểm tra lại để bucket có policy thay đổi từ lúc kết nối được gắn cờ chính xác.
 		checkAnonymousBuckets(ctx, s3Conn)
 		if isCallCanceled(ctx) {
-			// Canceled by the frontend: fail silently, nobody waits for the result.
+			// Frontend đã hủy: dừng im lặng vì không còn bên nào chờ kết quả.
 			return output.ThrowError()
 		}
 		output.Body.BucketList = anonymousBuckets(s3Conn, "")
@@ -115,8 +115,8 @@ func (m *submoduleBucketMng) listBucket(
 	return output
 }
 
-// checkBucketAccess returns the access flags of input.BucketNames (10s timeout), probing the ones the cache
-// doesn't know. A bucket whose probe gave no sure answer comes back with AccessPending.
+// checkBucketAccess trả về các cờ quyền truy cập của input.BucketNames (thời gian chờ 10 giây) và kiểm tra các bucket
+// chưa có trong cache. Bucket nào chưa có kết quả kiểm tra chắc chắn sẽ được trả về với AccessPending.
 func (m *submoduleBucketMng) checkBucketAccess(
 	ctx context.Context,
 	input models.CheckBucketAccessInput,
@@ -137,7 +137,7 @@ func (m *submoduleBucketMng) checkBucketAccess(
 	}
 
 	if s3Conn.AuthType == cnst.AuthAnonymous {
-		// The anonymous check already ran when listing; only copy its result.
+		// Kết nối ẩn danh đã được kiểm tra khi liệt kê; chỉ cần sao chép kết quả.
 		inaccessible := map[string]bool{}
 		for _, b := range anonymousBuckets(s3Conn, "") {
 			inaccessible[b.Name] = b.Inaccessible
@@ -154,11 +154,10 @@ func (m *submoduleBucketMng) checkBucketAccess(
 	return output
 }
 
-// flagBucketAccess flags Inaccessible, DeleteDenied (MinIO with credentials) and, when checkWrite is set, ReadOnly
-// on the buckets, then PolicyMode (see flagPolicyModes; readPolicy tells whether to read the missing ones). An
-// anonymous connection is already flagged Inaccessible by its own check. When lazy is set, a bucket that needs a
-// probe and has no cached result is not probed but flagged AccessPending. It returns false when the frontend
-// canceled the call.
+// flagBucketAccess đánh dấu Inaccessible, DeleteDenied (MinIO có thông tin xác thực) và, nếu bật checkWrite, ReadOnly
+// cho các bucket; sau đó cập nhật PolicyMode (xem flagPolicyModes; readPolicy cho biết có đọc policy còn thiếu hay không).
+// Kết nối ẩn danh đã được phép kiểm tra riêng đánh dấu Inaccessible. Khi bật lazy, bucket cần kiểm tra nhưng chưa có
+// kết quả cache sẽ không được thăm dò mà được đánh dấu AccessPending. Hàm trả false nếu frontend hủy lời gọi.
 func flagBucketAccess(
 	ctx context.Context,
 	conn *global.S3Conn,
@@ -167,7 +166,7 @@ func flagBucketAccess(
 ) bool {
 	if conn.AuthType != cnst.AuthAnonymous {
 		if conn.MinioAdmin != nil {
-			// Fills the read cache so markInaccessibleBuckets can skip HeadBucket.
+			// Điền cache quyền đọc để markInaccessibleBuckets có thể bỏ qua HeadBucket.
 			loadAccountAccess(ctx, conn)
 		}
 		markInaccessibleBuckets(ctx, conn, buckets, lazy)
@@ -184,10 +183,10 @@ func flagBucketAccess(
 	return !isCallCanceled(ctx)
 }
 
-// flagPolicyModes sets PolicyMode from the cache and, unless lazy, reads the missing ones in parallel under
-// bucketProbeTimeout. A bucket whose policy can't be read is flagged "unknown"; only a sure answer of the server
-// (see isSurePolicyError) is cached, so a timeout or network error is retried next time. Anonymous connections
-// are skipped, and so are lazy buckets with nothing cached (PolicyMode stays empty = not known yet).
+// flagPolicyModes lấy PolicyMode từ cache và, trừ khi bật lazy, đọc song song các mục còn thiếu trong giới hạn
+// bucketProbeTimeout. Bucket không đọc được policy được đánh dấu "unknown"; chỉ lưu cache câu trả lời chắc chắn
+// từ máy chủ (xem isSurePolicyError), vì vậy timeout hoặc lỗi mạng sẽ được thử lại lần sau. Bỏ qua kết nối ẩn danh
+// và các bucket ở chế độ lazy chưa có dữ liệu cache (PolicyMode vẫn rỗng = chưa xác định).
 func flagPolicyModes(ctx context.Context, conn *global.S3Conn, buckets []models.Bucket, lazy bool) {
 	if conn.AuthType == cnst.AuthAnonymous {
 		return
@@ -227,10 +226,10 @@ func flagPolicyModes(ctx context.Context, conn *global.S3Conn, buckets []models.
 	_ = g.Wait()
 }
 
-// markInaccessibleBuckets flags Inaccessible the buckets the connection can't read. Results are cached per
-// connection (global.AccessCache); for MinIO with credentials loadAccountAccess has already cached most of them.
-// The others are checked with HeadBucket in parallel, and only a 403 flags the bucket: other failures (301 wrong
-// region, 404, network) leave it unflagged. The probe has its own timeout, so a slow bucket never fails the listing.
+// markInaccessibleBuckets đánh dấu Inaccessible cho các bucket mà kết nối không thể đọc. Kết quả được lưu cache theo
+// kết nối (global.AccessCache); với MinIO có thông tin xác thực, loadAccountAccess đã lưu sẵn phần lớn kết quả.
+// Các bucket còn lại được kiểm tra HeadBucket song song và chỉ mã 403 mới đánh dấu bucket: lỗi khác (301 sai region,
+// 404, lỗi mạng) không gắn cờ. Phép thử có timeout riêng để bucket phản hồi chậm không làm hỏng lần liệt kê.
 func markInaccessibleBuckets(ctx context.Context, conn *global.S3Conn, buckets []models.Bucket, lazy bool) {
 	checkDenied(ctx, conn, global.AccessRead, buckets, lazy, func(ctx context.Context, name string) error {
 		_, err := conn.Client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: aws.String(name)})
@@ -238,18 +237,18 @@ func markInaccessibleBuckets(ctx context.Context, conn *global.S3Conn, buckets [
 	}, func(b *models.Bucket, denied bool) { b.Inaccessible = denied })
 }
 
-// isDenied reports whether a valid cached check says the access to the bucket is denied.
+// isDenied cho biết kết quả kiểm tra hợp lệ trong cache xác nhận quyền truy cập bucket bị từ chối hay không.
 func isDenied(conn *global.S3Conn, kind global.AccessKind, name string) bool {
 	denied, ok := conn.Access.Get(kind, name)
 	return ok && denied
 }
 
-// loadAccountAccess caches the read and write access of every bucket from one MinIO AccountInfo, unless the cache
-// still has it. Write is Access.Write. Read is cached only when sure (see the switch below); otherwise the bucket is
-// left to a HeadBucket probe. MinIO leaves out the buckets with no permission at all, so those still need a probe.
-// It has its own timeout. A failed AccountInfo is remembered (not retried within the cache TTL) unless the caller's
-// ctx is done (canceled or past its deadline). It returns false on failure, but true while a remembered failure is
-// still fresh.
+// loadAccountAccess lấy quyền đọc và ghi của mọi bucket từ một phản hồi MinIO AccountInfo rồi lưu cache, trừ khi cache
+// đã có dữ liệu. Quyền ghi lấy từ Access.Write. Chỉ cache quyền đọc khi kết quả chắc chắn (xem switch bên dưới); nếu
+// không, bucket sẽ được kiểm tra bằng HeadBucket. MinIO bỏ qua các bucket hoàn toàn không có quyền, nên vẫn phải thử
+// kiểm tra chúng. Thao tác có timeout riêng. Kết quả AccountInfo thất bại được ghi nhớ (không thử lại trong thời gian
+// TTL của cache), trừ khi ctx của bên gọi đã kết thúc (bị hủy hoặc quá hạn). Hàm trả false khi thất bại, nhưng trả true
+// khi lỗi đã ghi nhớ vẫn còn hiệu lực.
 func loadAccountAccess(ctx context.Context, conn *global.S3Conn) bool {
 	if conn.Access.AccountFresh() {
 		return true
@@ -265,11 +264,11 @@ func loadAccountAccess(ctx context.Context, conn *global.S3Conn) bool {
 		return false
 	}
 	pol, parseErr := policy.ParseConfig(bytes.NewReader(info.Policy))
-	// IsAllowed is evaluated without request conditions, so a "no" is only trusted for a simple policy.
+	// IsAllowed được đánh giá mà không có điều kiện của yêu cầu, nên chỉ tin kết quả "không được phép" với policy đơn giản.
 	simple := isSimplePolicy(info.Policy)
 	for _, b := range info.Buckets {
 		conn.Access.Set(global.AccessWrite, b.Name, !b.Access.Write, gen)
-		// Unlike read, a "no" for delete is only trusted for a simple policy; otherwise it stays "allowed".
+		// Khác với quyền đọc, chỉ tin kết quả "không được phép" khi xóa nếu policy đơn giản; trường hợp khác vẫn xem là "được phép".
 		canDelete := parseErr != nil || !simple || pol.IsAllowed(policy.Args{
 			Action:          policy.DeleteBucketAction,
 			BucketName:      b.Name,
@@ -294,17 +293,17 @@ func loadAccountAccess(ctx context.Context, conn *global.S3Conn) bool {
 	return true
 }
 
-// isSimplePolicy reports whether the policy has no Condition nor variable, so IsAllowed (evaluated without request
-// conditions) can be trusted when it says "no".
+// isSimplePolicy cho biết policy không có Condition hoặc biến, nhờ đó có thể tin IsAllowed (được đánh giá mà không có
+// điều kiện của yêu cầu) khi hàm trả về "không được phép".
 func isSimplePolicy(raw []byte) bool {
 	return !bytes.Contains(raw, []byte(`"Condition"`)) && !bytes.Contains(raw, []byte("${"))
 }
 
-// checkDenied sets the flag of each bucket (skipping the Inaccessible ones) from the cache, and runs probe in
-// parallel for the others, under bucketProbeTimeout. Only the answers of the server are cached: probe returning
-// nil or an HTTP status counts, 403 meaning denied. Timeouts, cancels and network errors are not cached, leave
-// the flag unset and mark the bucket AccessPending. When lazy is set, the buckets without a cached result are not
-// probed and are marked AccessPending.
+// checkDenied đặt cờ cho từng bucket dựa trên cache (bỏ qua các bucket Inaccessible) và thăm dò song song các bucket
+// còn lại trong giới hạn bucketProbeTimeout. Chỉ lưu câu trả lời từ máy chủ: probe trả nil hoặc mã trạng thái HTTP
+// đều được tính, trong đó 403 nghĩa là bị từ chối. Timeout, thao tác hủy và lỗi mạng không được cache, cờ không đổi
+// và bucket được đánh dấu AccessPending. Khi bật lazy, bucket chưa có kết quả cache sẽ không được thăm dò và được
+// đánh dấu AccessPending.
 func checkDenied(
 	ctx context.Context,
 	conn *global.S3Conn,
@@ -353,13 +352,14 @@ func checkDenied(
 	_ = g.Wait()
 }
 
-// markReadOnlyBuckets flags ReadOnly on the accessible buckets the connection can read but not write to.
-// It must run after markInaccessibleBuckets / anonymousBuckets. How it checks depends on the connection:
-//   - MinIO with credentials: the cached admin AccountInfo (see loadAccountAccess) gives the write access of every
-//     bucket in one call; if it fails, or a bucket isn't in it, nothing is flagged.
-//   - MinIO anonymous, or real AWS (no custom endpoint): a cached write probe per bucket (see probeWriteDenied).
-//   - Any other server (custom-endpoint AWS provider such as Floci or Ceph): not checked, nothing is flagged.
-//     Some of them ignore Content-MD5 and would really store the probe object.
+// markReadOnlyBuckets đánh dấu ReadOnly cho các bucket mà kết nối đọc được nhưng không ghi được.
+// Hàm phải chạy sau markInaccessibleBuckets / anonymousBuckets. Cách kiểm tra tùy thuộc kết nối:
+//   - MinIO có thông tin xác thực: AccountInfo quản trị đã cache (xem loadAccountAccess) trả quyền ghi của mọi bucket
+//     trong một lần gọi; nếu lỗi hoặc bucket không có trong kết quả thì không gắn cờ.
+//   - MinIO ẩn danh hoặc AWS thật (không dùng endpoint tùy chỉnh): dùng phép thử quyền ghi đã cache cho từng bucket
+//     (xem probeWriteDenied).
+//   - Máy chủ khác (provider AWS có endpoint tùy chỉnh như Floci hoặc Ceph): không kiểm tra, không gắn cờ.
+//     Một số máy chủ bỏ qua Content-MD5 và sẽ thực sự lưu object thử nghiệm.
 func markReadOnlyBuckets(ctx context.Context, conn *global.S3Conn, buckets []models.Bucket, lazy bool) {
 	switch {
 	case conn.AuthType != cnst.AuthAnonymous && conn.MinioAdmin != nil: // MinIO with credentials
@@ -375,9 +375,9 @@ func markReadOnlyBuckets(ctx context.Context, conn *global.S3Conn, buckets []mod
 	}
 }
 
-// probeWriteDenied flags ReadOnly on the buckets where a PutObject with a deliberately wrong Content-MD5 gets 403.
-// A caller allowed to write gets BadDigest and nothing is stored; a caller not allowed gets AccessDenied first.
-// Both answers are cached; buckets not checked in time (own timeout) are not flagged.
+// probeWriteDenied đánh dấu ReadOnly cho bucket nếu PutObject với Content-MD5 cố tình sai trả về 403.
+// Bên gọi có quyền ghi sẽ nhận BadDigest và không lưu object; bên không có quyền sẽ nhận AccessDenied trước.
+// Cả hai kết quả đều được cache; bucket không kịp kiểm tra (hết timeout riêng) sẽ không bị gắn cờ.
 func probeWriteDenied(ctx context.Context, conn *global.S3Conn, buckets []models.Bucket, lazy bool) {
 	wrongMD5 := md5.Sum([]byte("s3b"))
 	checkDenied(ctx, conn, global.AccessWrite, buckets, lazy, func(ctx context.Context, name string) error {
@@ -388,16 +388,16 @@ func probeWriteDenied(ctx context.Context, conn *global.S3Conn, buckets []models
 			ContentLength: aws.Int64(0),
 			ContentMD5:    aws.String(base64.StdEncoding.EncodeToString(wrongMD5[:])),
 		}, func(o *s3.Options) {
-			// Without this the SDK adds a CRC checksum header on top of the MD5.
+			// Nếu thiếu thiết lập này, SDK sẽ thêm header checksum CRC bên cạnh MD5.
 			o.RequestChecksumCalculation = aws.RequestChecksumCalculationWhenRequired
 		})
 		return err
 	}, func(b *models.Bucket, denied bool) { b.ReadOnly = denied })
 }
 
-// anonymousBuckets returns the buckets the user entered for an anonymous connection (the API can't list them),
-// keeping those whose name contains lowerKeyword (already lower-cased; empty keeps all). Buckets that failed
-// the latest check are flagged Inaccessible.
+// anonymousBuckets trả về các bucket người dùng đã nhập cho kết nối ẩn danh (API không thể liệt kê chúng),
+// chỉ giữ bucket có tên chứa lowerKeyword (đã chuyển thành chữ thường; giá trị rỗng giữ lại tất cả). Bucket không
+// vượt qua lần kiểm tra gần nhất sẽ được đánh dấu Inaccessible.
 func anonymousBuckets(c *global.S3Conn, lowerKeyword string) []models.Bucket {
 	all := c.AnonymousBuckets()
 	buckets := make([]models.Bucket, 0, len(all))

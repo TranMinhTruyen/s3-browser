@@ -6,23 +6,23 @@ import { fadeScale, TRANSITION_FAST } from '@/common/cnst/motionConst';
 import ActionIcon from '@/components/buttons/ActionIcon';
 
 type TabScrollerProps = {
-  /** Points at the scrollable viewport (for scrollIntoView / dnd-kit scrollable ancestor). */
+  /** Trỏ đến vùng cuộn (dùng cho scrollIntoView / phần tử cuộn cha của dnd-kit). */
   ref?: Ref<HTMLDivElement | null>;
   children: ReactNode;
 };
 
 type ScrollState = { overflow: boolean; atStart: boolean; atEnd: boolean };
 
-// Sub-pixel tolerance for scroll position comparisons.
+// Sai số nhỏ hơn một pixel khi so sánh vị trí cuộn.
 const EPS = 1;
-// Smooth-scroll time constant (ms): the remaining distance shrinks by 1/e every TAU, independent of frame rate.
+// Hằng số thời gian cuộn mượt (ms): quãng đường còn lại giảm theo hệ số 1/e sau mỗi TAU, không phụ thuộc tốc độ khung hình.
 const TAU = 90;
-// Stop animating (and snap to target) when closer than this many px.
+// Dừng chuyển động (và khớp về đích) khi khoảng cách nhỏ hơn số px này.
 const STOP_DISTANCE = 0.5;
 
 /**
- * Horizontal scroller with arrow buttons outside the viewport; arrows page by aligning a tab to the left edge.
- * Tracks overflow via scroll + ResizeObserver and removes every listener/observer/frame on unmount.
+ * Vùng cuộn ngang có các nút mũi tên nằm ngoài khung nhìn; mỗi lần bấm sẽ cuộn để căn một tab vào mép trái.
+ * Theo dõi phần tràn bằng scroll + ResizeObserver và gỡ mọi listener/observer/frame khi component bị gỡ.
  */
 function TabScroller({ ref, children }: TabScrollerProps) {
   const { t } = useTranslation('common');
@@ -32,17 +32,17 @@ function TabScroller({ ref, children }: TabScrollerProps) {
   const reducedMotion = useReducedMotion();
   const [state, setState] = useState<ScrollState>({ overflow: false, atStart: true, atEnd: true });
 
-  // Smooth scroll animator (refs only, no state): one rAF loop runs only while scrollLeft is approaching targetRef.
+  // Bộ điều khiển cuộn mượt (chỉ dùng ref, không dùng state): một vòng lặp rAF chạy khi scrollLeft đang tiến đến targetRef.
   const targetRef = useRef(0);
   const animRef = useRef(0);
   const lastTimeRef = useRef(0);
-  // Float position: the browser may round scrollLeft to integers, which would swallow sub-pixel steps.
+  // Vị trí dạng số thực: trình duyệt có thể làm tròn scrollLeft thành số nguyên, khiến mất các bước nhỏ hơn một pixel.
   const posRef = useRef(0);
-  // Target is the far end: re-clamp it every frame, since arrows showing/hiding resize the viewport mid-scroll.
+  // Đích là điểm cuối: giới hạn lại ở mỗi khung hình vì hiện/ẩn mũi tên có thể đổi kích thước vùng nhìn giữa lúc cuộn.
   const toEndRef = useRef(false);
 
-  // Recompute from the DOM; only set state when a value changed. While animating, judge by the target so the
-  // arrows react as soon as a scroll heads to (or leaves) an edge instead of waiting for the slow easing tail.
+  // Tính lại từ DOM và chỉ cập nhật state khi giá trị thay đổi. Khi đang chuyển động, xét theo đích để mũi tên
+  // phản hồi ngay khi cuộn tiến đến (hoặc rời khỏi) mép, không phải đợi đoạn giảm tốc chậm kết thúc.
   const measure = useCallback(() => {
     const el = viewportRef.current;
     if (!el) return;
@@ -58,7 +58,7 @@ function TabScroller({ ref, children }: TabScrollerProps) {
     const el = viewportRef.current;
     if (!el) return;
 
-    // Throttle to one measure per frame.
+    // Giới hạn còn một lần đo mỗi khung hình.
     let frame = 0;
     const schedule = () => {
       if (frame) return;
@@ -81,7 +81,7 @@ function TabScroller({ ref, children }: TabScrollerProps) {
     };
   }, [measure]);
 
-  // Left offset of each item relative to the viewport's scroll origin.
+  // Độ lệch trái của mỗi mục so với gốc cuộn của vùng nhìn.
   const getItemLefts = useCallback((el: HTMLElement) => {
     const base = el.getBoundingClientRect().left - el.scrollLeft;
     return Array.from(el.firstElementChild?.children ?? [], c => c.getBoundingClientRect().left - base);
@@ -104,7 +104,7 @@ function TabScroller({ ref, children }: TabScrollerProps) {
     animRef.current = requestAnimationFrame(tick);
   }, []);
 
-  // Scroll to `left` (clamped); a running loop just picks up the new target.
+  // Cuộn đến `left` (đã giới hạn); vòng lặp đang chạy sẽ nhận đích mới.
   const animateTo = useCallback(
     (left: number) => {
       const el = viewportRef.current;
@@ -121,7 +121,7 @@ function TabScroller({ ref, children }: TabScrollerProps) {
         lastTimeRef.current = performance.now();
         animRef.current = requestAnimationFrame(step);
       }
-      // Update the arrows right away from the new target.
+      // Cập nhật mũi tên ngay theo đích mới.
       measure();
     },
     [reducedMotion, step, measure]
@@ -135,7 +135,7 @@ function TabScroller({ ref, children }: TabScrollerProps) {
     const items = Array.from(el.firstElementChild?.children ?? []);
     const lefts = getItemLefts(el);
     const edge = el.scrollLeft + el.clientWidth;
-    // First item not fully visible at the right edge becomes the first visible tab.
+    // Mục đầu tiên chưa hiện trọn ở mép phải sẽ trở thành tab đầu tiên cần hiện.
     const index = items.findIndex((c, i) => lefts[i] + c.getBoundingClientRect().width > edge + EPS);
     if (index >= 0) animateTo(lefts[index]);
   }, [getItemLefts, animateTo]);
@@ -146,13 +146,13 @@ function TabScroller({ ref, children }: TabScrollerProps) {
     const lefts = getItemLefts(el);
     const target = el.scrollLeft - el.clientWidth;
     let index = lefts.findIndex(left => left >= target - EPS);
-    // Same spot as now: step back one more item.
+    // Nếu vẫn ở vị trí cũ thì lùi thêm một mục.
     if (index >= 0 && lefts[index] >= el.scrollLeft - EPS) index -= 1;
     animateTo(lefts[index] ?? 0);
   }, [getItemLefts, animateTo]);
 
-  // Vertical wheel scrolls horizontally; deltas accumulate on the running target. When idle, start from the
-  // current scrollLeft (it may have been changed externally, e.g. scrollIntoView or dnd-kit autoscroll).
+  // Cuộn bánh xe theo chiều dọc sẽ cuộn ngang; cộng dồn delta vào đích đang chạy. Khi đang nghỉ, bắt đầu từ
+  // scrollLeft hiện tại (có thể đã bị thay đổi bên ngoài, chẳng hạn bởi scrollIntoView hoặc dnd-kit autoscroll).
   const onWheelViewport = useCallback(
     (e: React.WheelEvent<HTMLDivElement>) => {
       if (Math.abs(e.deltaX) >= 1) return;

@@ -15,7 +15,7 @@ describe('tabListStore', () => {
     vi.clearAllMocks();
   });
 
-  // reset() keeps uploadingTabId on purpose, so clear it explicitly to not leak into the next test.
+  // reset() cố ý giữ uploadingTabId nên cần xóa rõ ràng để không ảnh hưởng đến test tiếp theo.
   afterEach(() => {
     state().setUploadingTab(null);
   });
@@ -432,7 +432,7 @@ describe('tabListStore removeBucket', () => {
   const other = { name: 'other', creationDate: '2026-01-02T03:04:05' } as never;
   const tabs = () => state().tabList;
 
-  // Four tabs of profile p1 plus one of p2, each given a view.
+  // Bốn tab thuộc profile p1 và một tab thuộc p2, mỗi tab được gán một view.
   function seed() {
     state().restoreTabs({
       tabs: [

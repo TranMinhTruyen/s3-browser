@@ -25,7 +25,7 @@ vi.mock('@wails/S3Browser/internal/handlers/settinghandler', () => ({
   SetLaunchOnStartup: vi.fn(),
 }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-// Mantine Select never emits null with allowDeselect=false, so a helper button drives that branch.
+// Mantine Select không bao giờ trả null khi allowDeselect=false nên dùng nút phụ để chạy nhánh đó.
 vi.mock('@/components/inputs/SelectInput', async importOriginal => {
   const Original = (await importOriginal<typeof import('@/components/inputs/SelectInput')>()).default;
   return {
@@ -152,7 +152,7 @@ describe('SettingModal', () => {
     expect(state().draft.autoUpdate).toBe(false);
     expect(state().saved.autoUpdate).toBe(true);
     expect(autoUpdate).not.toBeChecked();
-    // Reaches the updater at once, but is not saved to settings.json.
+    // Cập nhật trình cập nhật ngay nhưng không lưu vào settings.json.
     await waitFor(() => expect(updaterCalls()).toHaveLength(1));
     expect(callIPCMock).toHaveBeenCalledWith(SetUpdateOptions, [false, false], {
       scope: 'Setting/syncUpdater',
@@ -264,7 +264,7 @@ describe('SettingModal', () => {
     expect(callIPCMock).not.toHaveBeenCalled();
   });
 
-  // Intended behaviour change (sprint-17 Q2=A): Apply writes launchOnStartup at once.
+  // Thay đổi hành vi dự kiến (sprint-17 Q2=A): Apply ghi launchOnStartup ngay.
   it('apply keeps the values for the session, writes launchOnStartup, shows a toast and does not save', async () => {
     const user = userEvent.setup();
     useSettingStore.setState({ autostartSupported: true });

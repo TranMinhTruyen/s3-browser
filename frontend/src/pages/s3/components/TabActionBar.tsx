@@ -10,20 +10,20 @@ import SearchInput from '@/components/inputs/SearchInput';
 import type { ObjectListViewRef } from '@/pages/s3/object/ObjectListView';
 import { useTabListStore } from '@/pages/s3/stores/tabListStore';
 
-// Stable fallback so the selector does not return a new array on every call.
+// Giá trị dự phòng ổn định để selector không trả về mảng mới ở mỗi lần gọi.
 const EMPTY_SELECTION: Record<string, true> = {};
 
 type TabActionBarProps = {
   tabId: string;
   currentView: 'bucketList' | 'objectList';
   isConnected: boolean;
-  // An anonymous connection cannot create buckets, so the button is hidden.
+  // Kết nối ẩn danh không thể tạo bucket nên ẩn nút này.
   isAnonymous: boolean;
   selectedProfileId: string | null;
   profileOptions: { name: string; value: string }[];
   prefix: string;
   keyword: string;
-  // Changes with the list context; remounts the search input so its text resets.
+  // Thay đổi theo ngữ cảnh danh sách; mount lại ô tìm kiếm để xóa văn bản cũ.
   searchContext: string;
   objectListRef: RefObject<ObjectListViewRef | null>;
   onChangeSelectProfile: (value: string | null) => void;
@@ -36,7 +36,7 @@ type TabActionBarProps = {
   onClickBack: () => void;
 };
 
-/** Toolbar of a tab: profile picker, connect, refresh, search, upload, back and the selection actions. */
+/** Thanh công cụ của tab: chọn profile, kết nối, làm mới, tìm kiếm, tải lên, quay lại và thao tác với mục được chọn. */
 function TabActionBar(props: TabActionBarProps) {
   const {
     tabId,

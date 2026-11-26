@@ -18,10 +18,10 @@ import TruncatedText from '@/components/display/TruncatedText';
 import classes from '@/pages/sql/navbar/DbTreeRow.module.css';
 import type { NodeKind, NodeMeta } from '@/pages/sql/utils/dbObjectSource';
 
-/** Node height, px at the medium interface size; the list multiplies it by the interface scale. */
+/** Chiều cao node theo px ở cỡ giao diện trung bình; danh sách nhân giá trị này với tỷ lệ giao diện. */
 export const NODE_HEIGHT = 28;
 
-/** Indent of one tree level and of the first one, in rem (the node rows sit under the profile card). */
+/** Độ thụt lề theo rem cho mỗi cấp cây và cấp đầu tiên (các hàng node nằm dưới thẻ profile). */
 const INDENT = 1;
 const BASE_INDENT = 0.5;
 
@@ -39,13 +39,13 @@ type DbTreeRowProps = {
   profileKey: string;
   flat: FlattenedTreeNodeData;
   selected: boolean;
-  // The three handlers must be stable (owned by the parent) so memo skips unchanged rows.
+  // Ba handler phải ổn định (do component cha quản lý) để memo bỏ qua các hàng không đổi.
   onToggle: (value: string) => void;
   onSelect: (value: string) => void;
   onOpenTable: (profileKey: string, schema: string, name: string) => void;
 };
 
-/** One node of an object tree: indent, chevron, icon and name. Click selects; double click opens a table. */
+/** Một node của cây đối tượng: độ thụt lề, chevron, biểu tượng và tên. Click chọn; click đúp mở bảng. */
 function DbTreeRow({ profileKey, flat, selected, onToggle, onSelect, onOpenTable }: DbTreeRowProps) {
   const { t } = useTranslation('sqlNavbar');
   const { node, level, hasChildren, expanded } = flat;
@@ -62,7 +62,7 @@ function DbTreeRow({ profileKey, flat, selected, onToggle, onSelect, onOpenTable
     [onToggle, node.value]
   );
 
-  // A table opens its tab; a node with children folds/unfolds; a view, index or trigger does nothing.
+  // Bảng sẽ mở tab; node có node con sẽ đóng/mở; view, index hoặc trigger không làm gì.
   const onDoubleClickRow = useCallback(() => {
     if (meta.kind === 'table') onOpenTable(profileKey, meta.schema, meta.name);
     else if (hasChildren) onToggle(node.value);
@@ -93,7 +93,7 @@ type DbTreeStatusRowProps = {
   status: 'loading' | 'error' | 'empty';
 };
 
-/** The line under a profile card while its tree loads, failed to load, or has no objects. */
+/** Dòng dưới thẻ profile khi cây đang tải, tải thất bại hoặc không có đối tượng. */
 export const DbTreeStatusRow = memo(function DbTreeStatusRow({ status }: DbTreeStatusRowProps) {
   const { t } = useTranslation('sqlNavbar');
   return (

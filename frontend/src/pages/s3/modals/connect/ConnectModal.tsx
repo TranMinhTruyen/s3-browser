@@ -48,7 +48,7 @@ import CaFileField from '@/pages/s3/modals/connect/fields/CaFileField';
 import { useProfileStore } from '@/pages/s3/stores/profileStore';
 import { canAutoConnect, getAuthType, getRequiredSecrets } from '@/pages/s3/utils/authUtils';
 
-/** Provider options of the segmented control; static, so built once. */
+/** Các lựa chọn provider của segmented control; dữ liệu tĩnh nên chỉ tạo một lần. */
 const PROVIDER_OPTIONS = [
   { logo: awsLogo, label: 'AWS', value: 'aws' },
   { logo: minioLogo, label: 'MinIO', value: 'minio' },
@@ -62,21 +62,21 @@ const PROVIDER_OPTIONS = [
   ),
 }));
 
-// Max body height on tall screens, sized for the Access key method: shorter methods shrink the modal to fit, longer
-// methods scroll. Each cap shrinks on short screens so the modal stays in the viewport. Create/edit show the hint under
-// the fields (2 lines of xs text plus the Stack gap, measured at about 43px); connect modes do not. Measured content:
-// 747px in create, so 747 - 43 = 704 in connect, plus a few px of slack = 710.
+// Chiều cao nội dung tối đa trên màn hình cao, lấy theo phương thức Access key: phương thức ngắn hơn sẽ làm modal
+// thu nhỏ vừa nội dung, phương thức dài hơn sẽ có vùng cuộn. Mỗi giới hạn giảm trên màn hình thấp để modal luôn vừa
+// khung nhìn. Chế độ tạo/sửa hiện gợi ý dưới các trường (2 dòng chữ cỡ xs cộng khoảng cách Stack, khoảng 43px); chế độ
+// kết nối thì không. Nội dung ở chế độ tạo đo được 747px, nên chế độ kết nối là 747 - 43 = 704, cộng thêm khoảng đệm = 710.
 const bodyHeight = (px: number) =>
   `min(${px / 16}rem, calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT}))`;
 const BODY_HEIGHT_WITH_HINT = bodyHeight(750);
 const BODY_HEIGHT_NO_HINT = bodyHeight(710);
 
 /**
- * Modal to connect, test a connection, or create/edit a connection profile depending on `mode`:
- * - `connect`: connect with typed credentials (nothing saved unless "save password" is ticked);
- * - `manualconnect`: connect a saved profile that needs input it does not store (secret key, MFA code);
- * - `createProfile` / `editProfile`: save a profile; secrets are optional (an empty one keeps the saved value).
- * Resolves `false` when dismissed. Load it through `showConnectModal` (lazy chunk).
+ * Modal dùng để kết nối, kiểm tra kết nối hoặc tạo/sửa profile kết nối tùy theo `mode`:
+ * - `connect`: kết nối bằng thông tin xác thực đã nhập (chỉ lưu nếu đánh dấu "save password");
+ * - `manualconnect`: kết nối bằng profile đã lưu nhưng cần nhập thông tin chưa được lưu (secret key, mã MFA);
+ * - `createProfile` / `editProfile`: lưu profile; thông tin bí mật là tùy chọn (để trống sẽ giữ giá trị đã lưu).
+ * Trả về `false` khi đóng modal. Tải qua `showConnectModal` (lazy chunk).
  */
 export default createMantineModal<ConnectModalProps, false>(
   props => {
@@ -85,13 +85,13 @@ export default createMantineModal<ConnectModalProps, false>(
     const { t } = useTranslation('connectModal');
 
     const actionRef = useRef<'connect' | 'profile'>('connect');
-    // Closing the modal cancels a connect/test that is still running.
+    // Đóng modal sẽ hủy thao tác kết nối/kiểm tra vẫn đang chạy.
     const getSignal = useUnmountSignal();
     const updateConnectionProfiles = useProfileStore(s => s.updateConnectionProfiles);
-    // The profile as last saved: its id, version and which secrets are stored.
+    // Profile ở lần lưu gần nhất: id, phiên bản và các thông tin bí mật đã được lưu.
     const [profile, setProfile] = useState(connectionProfile);
 
-    // useForm only reads initialValues on mount; compute them once instead of on every keystroke.
+    // useForm chỉ đọc initialValues khi mount; tính một lần thay vì mỗi khi nhấn phím.
     const [initialValues] = useState(() => {
       const defaultValues = getDefaultConnectionInfo(`Connection No.${createUUID()}`);
 
@@ -130,10 +130,10 @@ export default createMantineModal<ConnectModalProps, false>(
       }
     });
 
-    // A different method does not share the old method's fields (e.g. a non-SSO profile must not reach `sso`).
+    // Phương thức khác không dùng chung các trường của phương thức cũ (ví dụ profile không phải SSO không được chuyển sang `sso`).
     form.watch('authType', ({ value }) => {
       form.clearErrors(); // errors from the previous method no longer apply
-      // The CA belongs to the MinIO server, not to the method: keep it.
+      // CA thuộc về máy chủ MinIO, không phụ thuộc phương thức; giữ nguyên giá trị này.
       const { caFile } = form.getValues().authConfig;
       form.setFieldValue('authConfig', { ...getDefaultAuthConfig(value), caFile });
       form.setFieldValue('mfaCode', '');
@@ -142,7 +142,7 @@ export default createMantineModal<ConnectModalProps, false>(
     });
 
     const secretRequired = mode === 'connect' || mode === 'manualconnect';
-    // Saved secrets only mean something for the saved method; another method starts without secrets.
+    // Thông tin bí mật đã lưu chỉ có ý nghĩa với phương thức đã lưu; phương thức khác bắt đầu mà không có chúng.
     const savedSecrets = useMemo(
       () =>
         mode === 'editProfile' && profile && authType === getAuthType(profile) ? (profile.savedSecrets ?? []) : [],
@@ -154,7 +154,7 @@ export default createMantineModal<ConnectModalProps, false>(
       [provider, t]
     );
 
-    // Auto connect needs stored secrets and a method that connects without input (no MFA code).
+    // Tự động kết nối cần thông tin bí mật đã lưu và phương thức không yêu cầu nhập thêm (không cần mã MFA).
     const authState = useMemo(
       () => ({ authType, authConfig: { sourceType, mfaSerial, keyEncrypted } }),
       [authType, sourceType, mfaSerial, keyEncrypted]
@@ -163,14 +163,14 @@ export default createMantineModal<ConnectModalProps, false>(
     const typedSecrets: Record<string, string> = { secretKey, ldapPassword, keyPassword };
     const requiredSecrets = getRequiredSecrets(authState);
     const secretsReady = requiredSecrets.every(name => !!typedSecrets[name] || savedSecrets.includes(name));
-    // Saving secrets only matters for methods that have some; the others (anonymous, SSO...) auto connect without.
+    // Chỉ cần lưu thông tin bí mật với phương thức có dùng chúng; các phương thức khác (ẩn danh, SSO...) tự kết nối.
     const autoConnectDisabled = (requiredSecrets.length > 0 && !savePassword) || autoConnectLocked || !secretsReady;
 
     useEffect(() => {
       if (autoConnectDisabled && form.getValues().autoConnect) form.setFieldValue('autoConnect', false);
     }, [autoConnectDisabled, form]);
 
-    // Clearing the region gives null; the form keeps an empty string.
+    // Xóa region sẽ trả về null; form lưu giá trị chuỗi rỗng.
     const onChangeRegion = useCallback(
       (value: string | null) => form.getInputProps('region').onChange(value ?? ''),
       [form]

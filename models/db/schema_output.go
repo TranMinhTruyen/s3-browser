@@ -1,12 +1,12 @@
 package db
 
-// DbObject is an index or trigger and the table it belongs to.
+// DbObject là một chỉ mục hoặc trigger cùng bảng chứa nó.
 type DbObject struct {
 	Name  string `json:"name"`
 	Table string `json:"table"`
 }
 
-// DbSchema is one schema ("main" for SQLite) with its objects.
+// DbSchema là một schema ("main" với SQLite) cùng các đối tượng bên trong.
 type DbSchema struct {
 	Name     string     `json:"name"`
 	Tables   []string   `json:"tables"`
@@ -15,12 +15,12 @@ type DbSchema struct {
 	Triggers []DbObject `json:"triggers"`
 }
 
-// SchemaTreeOutput is the object tree of a connected database.
+// SchemaTreeOutput là cây đối tượng của cơ sở dữ liệu đã kết nối.
 type SchemaTreeOutput struct {
 	Schemas []DbSchema `json:"schemas"`
 }
 
-// TableColumn is a column of a table. Pk is the 1-based position in the primary key, 0 if not part of it.
+// TableColumn là một cột trong bảng. Pk là vị trí bắt đầu từ 1 trong khóa chính, hoặc 0 nếu cột không thuộc khóa chính.
 type TableColumn struct {
 	Cid          int64   `json:"cid"`
 	Name         string  `json:"name"`
@@ -30,7 +30,7 @@ type TableColumn struct {
 	Pk           int64   `json:"pk"`
 }
 
-// TableIndex is an index of a table.
+// TableIndex là chỉ mục của một bảng.
 type TableIndex struct {
 	Name    string   `json:"name"`
 	Unique  bool     `json:"unique"`
@@ -39,7 +39,7 @@ type TableIndex struct {
 	Columns []string `json:"columns"`
 }
 
-// TableConstraint is a PRIMARY KEY, UNIQUE or CHECK constraint (Expression only for CHECK).
+// TableConstraint là ràng buộc PRIMARY KEY, UNIQUE hoặc CHECK (chỉ CHECK có Expression).
 type TableConstraint struct {
 	Kind       string   `json:"kind"`
 	Name       *string  `json:"name"`
@@ -47,7 +47,7 @@ type TableConstraint struct {
 	Expression *string  `json:"expression"`
 }
 
-// TableForeignKey is a foreign key of a table.
+// TableForeignKey là khóa ngoại của một bảng.
 type TableForeignKey struct {
 	Id         int64    `json:"id"`
 	Columns    []string `json:"columns"`
@@ -57,7 +57,7 @@ type TableForeignKey struct {
 	OnDelete   string   `json:"onDelete"`
 }
 
-// TableInfoOutput is the structure of a table; Ddl is nil when the engine has no source for it.
+// TableInfoOutput là cấu trúc bảng; Ddl là nil nếu engine không có mã nguồn tạo bảng.
 type TableInfoOutput struct {
 	Columns     []TableColumn     `json:"columns"`
 	Indexes     []TableIndex      `json:"indexes"`

@@ -18,22 +18,22 @@ import { useSqlTabStore } from '@/pages/sql/stores/sqlTabStore';
 import { isTableDirty } from '@/pages/sql/utils/dirtyTables';
 import { notifyNoBackend } from '@/pages/sql/utils/sqlToast';
 
-// Space above every card except the first one, so the list has the same 8px space at the top and bottom.
+// Tạo khoảng cách phía trên mọi thẻ trừ thẻ đầu tiên để danh sách có khoảng trống 8px bằng nhau ở trên và dưới.
 const CARD_GAP = 8;
 
-/** A row of the flat list: a profile card, a node of its object tree, or a status line under the card. */
+/** Một hàng của danh sách phẳng: thẻ hồ sơ, một node trong cây đối tượng hoặc dòng trạng thái bên dưới thẻ. */
 type ListRow =
   | { key: string; type: 'card'; profileKey: string }
   | { key: string; type: 'node'; profileKey: string; flat: FlattenedTreeNodeData }
   | { key: string; type: 'status'; profileKey: string; status: 'loading' | 'error' | 'empty' };
 
-/** Height of a row in px at the medium interface size (a card also holds the gap above it). */
+/** Chiều cao hàng tính bằng px ở cỡ giao diện trung bình (thẻ cũng chứa khoảng cách phía trên). */
 const getRowHeight = (row: ListRow, index: number) =>
   row.type === 'card' ? CARD_HEIGHT + (index > 0 ? CARD_GAP : 0) : NODE_HEIGHT;
 
 /**
- * Virtualized list of database profiles with a shared right-click menu (same behavior as the S3 list).
- * The cards and the object trees of the open profiles are one flat list, so the tree rows are virtualized too.
+ * Danh sách hồ sơ cơ sở dữ liệu được virtualize, dùng chung menu click phải (cùng cách hoạt động với danh sách S3).
+ * Thẻ và cây đối tượng của các hồ sơ đang mở nằm trong cùng một danh sách phẳng nên các hàng cây cũng được virtualize.
  */
 function DbProfiles() {
   const { t } = useTranslation('sqlNavbar');
@@ -41,7 +41,7 @@ function DbProfiles() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const keys = useDbProfileStore(useShallow(s => Object.keys(s.dbProfiles)));
-  // Only the connected flag of the profile owning the shared menu is needed (undefined = no menu / deleted).
+  // Chỉ cần cờ kết nối của hồ sơ sở hữu menu dùng chung (undefined = không có menu / đã xóa).
   const menuConnected = useDbProfileStore(s => (menuKey ? s.dbProfiles[menuKey]?.isConnected : undefined));
   const getDbProfileById = useDbProfileStore(s => s.getDbProfileById);
   const removeDbProfile = useDbProfileStore(s => s.removeDbProfile);
@@ -60,13 +60,13 @@ function DbProfiles() {
   const expanded = useDbTreeStore(s => s.expanded);
   const selectedNode = useDbTreeStore(s => s.selected);
   const openTableTab = useSqlTabStore(s => s.openTableTab);
-  // The profile of the selected tab: its tree opens by itself when it is closed.
+  // Hồ sơ của tab đang chọn: cây của hồ sơ tự mở nếu đang đóng.
   const activeTab = useSqlTabStore(s => s.activeTab);
   const activeProfileId = useSqlTabStore(s => s.tabList[activeTab]?.profileId ?? null);
   const activeConnected = useDbProfileStore(s => !!(activeProfileId && s.dbProfiles[activeProfileId]?.isConnected));
 
-  // Handlers take the key and read the latest profile from the store, so they stay stable for memoized items.
-  // SQLite connects for real; PostgreSQL is still fake (only the flag). The store keeps the flag when it fails.
+  // Handler nhận key rồi đọc hồ sơ mới nhất từ store nên luôn ổn định với các item đã memo.
+  // SQLite kết nối thật; PostgreSQL hiện chỉ cập nhật cờ. Nếu kết nối thất bại, store vẫn giữ cờ đó.
   const onClickConnect = useCallback(
     async (key: string) => {
       const profile = getDbProfileById(key);
@@ -76,7 +76,7 @@ function DbProfiles() {
     [getDbProfileById, connectDbProfile, t]
   );
 
-  // Disconnecting or deleting closes the profile's table tabs: ask first when one has uncommitted row changes.
+  // Ngắt kết nối hoặc xóa sẽ đóng các tab bảng của hồ sơ: hỏi xác nhận trước nếu còn thay đổi hàng chưa lưu.
   const confirmDiscardEdits = useCallback(async (key: string, name: string) => {
     const { tabList } = useSqlTabStore.getState();
     const dirty = Object.entries(tabList).some(([id, tab]) => tab.profileId === key && tab.table && isTableDirty(id));
@@ -127,8 +127,8 @@ function DbProfiles() {
     [getDbProfileById, confirmDiscardEdits, removeDbProfile, dropTreeProfile, closeProfileTables, clearProfile, t]
   );
 
-  // One shared context menu for all rows (a Menu per row is costly with hundreds of profiles).
-  // Right click resolves the row from the DOM; the menu is positioned by Mantine at the mouse.
+  // Dùng một menu ngữ cảnh chung cho mọi hàng (mỗi hàng tạo một Menu sẽ tốn tài nguyên khi có hàng trăm hồ sơ).
+  // Click phải xác định hàng từ DOM; Mantine đặt menu tại vị trí con trỏ.
   const onContextMenuRows = useCallback((e: MouseEvent<HTMLElement>) => {
     const key = (e.target as HTMLElement).closest<HTMLElement>('[data-profile-key]')?.dataset.profileKey;
     if (key) setMenuKey(key);
@@ -148,8 +148,8 @@ function DbProfiles() {
     [menuKey, onClickDeleteProfile]
   );
 
-  // Selecting a tab of a connected profile opens its tree when closed; a tree opened or closed by hand stays so.
-  // activeTab: selecting another tab of the same profile must reopen a tree the user closed.
+  // Chọn tab của hồ sơ đã kết nối sẽ mở cây nếu cây đang đóng; cây được mở hoặc đóng thủ công sẽ giữ trạng thái đó.
+  // activeTab: chọn tab khác của cùng hồ sơ phải mở lại cây nếu người dùng đã đóng.
   useEffect(() => {
     if (activeProfileId && activeConnected) void openTreeProfile(activeProfileId);
   }, [activeTab, activeProfileId, activeConnected, openTreeProfile]);
@@ -172,13 +172,13 @@ function DbProfiles() {
 
   const scale = useUiScale();
 
-  // React Compiler is disabled, so this compiler-only lint does not apply.
+  // React Compiler đang tắt nên quy tắc lint chỉ dành cho compiler này không áp dụng.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
-    // Fixed row heights: the virtualizer never measures, so the scroll size stays stable while scrolling.
-    // Rounded: at small/large the scale gives fractional px, which blurs icons and offsets translateY by half a pixel.
+    // Chiều cao hàng cố định: virtualizer không cần đo nên kích thước cuộn ổn định trong khi cuộn.
+    // Làm tròn: ở cỡ nhỏ/lớn, scale tạo px lẻ khiến icon mờ và translateY lệch nửa pixel.
     estimateSize: idx => Math.round(getRowHeight(rows[idx], idx) * scale),
     getItemKey: idx => rows[idx].key,
     overscan: 10,
@@ -189,7 +189,7 @@ function DbProfiles() {
   const virtualItems = virtualizer.getVirtualItems();
   const menuOpened = menuKey !== null && menuConnected !== undefined;
 
-  // The menu is anchored to the mouse point, so close it when the list scrolls (listener only while open).
+  // Menu neo tại vị trí con trỏ nên đóng menu khi danh sách cuộn (chỉ đăng ký listener khi đang mở).
   useEffect(() => {
     const el = scrollRef.current;
     if (!menuOpened || !el) return;
@@ -210,7 +210,7 @@ function DbProfiles() {
           <div style={{ position: 'relative', height: virtualizer.getTotalSize() }} onContextMenu={onContextMenuRows}>
             {virtualItems.map(item => {
               const row = rows[item.index];
-              // A group is a card followed by its tree rows; the row before the next card (or the end) closes it.
+              // Một nhóm gồm thẻ và các hàng cây bên dưới; hàng trước thẻ tiếp theo (hoặc cuối danh sách) sẽ đóng nhóm.
               const hasTreeBelow = rows[item.index + 1] ? rows[item.index + 1].type !== 'card' : false;
               const className =
                 row.type === 'card'
@@ -227,7 +227,7 @@ function DbProfiles() {
                     width: '100%',
                     height: item.size,
                     boxSizing: 'border-box',
-                    // The gap above a card is rem, so it follows the interface size like the card itself.
+                    // Khoảng cách trên thẻ dùng rem nên thay đổi theo cỡ giao diện như chính thẻ.
                     paddingTop: row.type === 'card' && item.index > 0 ? `${CARD_GAP / 16}rem` : undefined,
                     transform: `translateY(${item.start}px)`,
                   }}

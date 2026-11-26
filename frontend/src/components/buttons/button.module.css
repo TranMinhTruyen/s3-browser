@@ -1,4 +1,4 @@
-/* The button shrinks with its container; a label that does not fit is cut with an ellipsis. */
+/* Nút co theo container; nhãn không vừa sẽ được cắt bằng dấu ba chấm. */
 .root {
   min-width: 0;
   max-width: 100%;
@@ -9,7 +9,7 @@
   max-width: 100%;
 }
 
-/* Block instead of Mantine's flex: text-overflow has no effect on a flex container. Inner (flex) still centers it. */
+/* Dùng block thay cho flex của Mantine vì text-overflow không có tác dụng trên container flex. Phần tử con (flex) vẫn căn giữa nội dung. */
 .label {
   display: block;
   height: auto;
@@ -20,7 +20,7 @@
   white-space: nowrap;
 }
 
-/* Small UI size (14px root): Chromium rounds the baseline of the 10.5px xs label up, so it sits 1px above the icon. */
+/* Cỡ giao diện nhỏ (gốc 14px): Chromium làm tròn baseline của nhãn xs 10.5px lên trên nên nhãn cao hơn biểu tượng 1px. */
 :global(:root[data-ui-size="small"]) .root[data-size="xs"] .label {
   position: relative;
   top: 1px;

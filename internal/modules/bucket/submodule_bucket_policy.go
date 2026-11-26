@@ -22,16 +22,16 @@ import (
 	"github.com/minio/pkg/v3/policy"
 )
 
-// Access modes of a bucket.
+// Các chế độ truy cập của bucket.
 const (
 	policyModePrivate = "private"
 	policyModePublic  = "public"
 	policyModeCustom  = "custom"
-	// policyModeUnknown is a bucket whose policy can't be read (no permission, not supported, ...).
+	// policyModeUnknown là bucket không đọc được policy (không có quyền, không được hỗ trợ, ...).
 	policyModeUnknown = "unknown"
 )
 
-// getBucketPolicy reads the access state of input.Bucket (10s timeout).
+// getBucketPolicy đọc trạng thái truy cập của input.Bucket (timeout 10 giây).
 func (m *submoduleBucketEditMng) getBucketPolicy(
 	ctx context.Context,
 	input models.BucketPolicyInput,
@@ -60,7 +60,7 @@ func (m *submoduleBucketEditMng) getBucketPolicy(
 	return output
 }
 
-// putBucketPolicy sets the access mode of input.Bucket (30s timeout) and returns the state read back.
+// putBucketPolicy đặt chế độ truy cập của input.Bucket (timeout 30 giây) rồi trả trạng thái đọc lại.
 func (m *submoduleBucketEditMng) putBucketPolicy(
 	ctx context.Context,
 	input models.PutBucketPolicyInput,
@@ -93,7 +93,7 @@ func (m *submoduleBucketEditMng) putBucketPolicy(
 	conn.Access.Reset()
 	state, err := m.loadPolicyState(ctx, conn, input.Bucket, optFns)
 	if err != nil {
-		// Saved, only the read back failed: show what was asked.
+		// Đã lưu, chỉ bước đọc lại thất bại: hiển thị chế độ được yêu cầu.
 		m.logger.Warn("read back bucket policy failed", slog.String("bucket", input.Bucket), slog.Any("error", err))
 		state = models.BucketPolicyOutput{Mode: input.Mode, Policy: input.Policy}
 	}
@@ -108,7 +108,7 @@ var (
 	errInvalidPolicy = errors.New("invalid policy json")
 )
 
-// validPolicyMode checks mode and, for custom, that policy is JSON. It returns nil, errInvalidMode or errInvalidPolicy.
+// validPolicyMode kiểm tra mode và, với custom, xác nhận policy là JSON. Hàm trả nil, errInvalidMode hoặc errInvalidPolicy.
 func validPolicyMode(mode, pol string) error {
 	switch mode {
 	case policyModePrivate, policyModePublic:
@@ -122,8 +122,8 @@ func validPolicyMode(mode, pol string) error {
 	return errInvalidMode
 }
 
-// applyBucketPolicy sets the access mode of the bucket: private deletes the policy, public and custom put one.
-// The mode must have passed validPolicyMode.
+// applyBucketPolicy đặt chế độ truy cập cho bucket: private xóa policy, còn public và custom sẽ ghi policy.
+// Mode phải được validPolicyMode xác nhận trước.
 func applyBucketPolicy(
 	ctx context.Context,
 	conn *global.S3Conn,
@@ -145,8 +145,8 @@ func applyBucketPolicy(
 	return err
 }
 
-// policyOptFns sends the policy requests of real AWS to the region of the bucket. Elsewhere, or when the region
-// can't be read, it returns nil and the connection region is used.
+// policyOptFns gửi yêu cầu policy trên AWS thật đến region của bucket. Với máy chủ khác hoặc khi không đọc được region,
+// hàm trả nil và dùng region của kết nối.
 func policyOptFns(ctx context.Context, conn *global.S3Conn, bucket string) []func(*s3.Options) {
 	if !isRealAws(conn) {
 		return nil
@@ -158,9 +158,9 @@ func policyOptFns(ctx context.Context, conn *global.S3Conn, bucket string) []fun
 	return regionOptFns(conn, region)
 }
 
-// readPolicyModeInRegion reads the access mode of the bucket for the badge. Real AWS first asks the region of the
-// connection; only when the answer says the bucket lives elsewhere (isWrongRegion) it reads the bucket region and
-// asks once more there, so a bucket in the connection region costs one request instead of two.
+// readPolicyModeInRegion đọc chế độ truy cập của bucket để hiển thị huy hiệu. Với AWS thật, trước tiên hỏi region của
+// kết nối; chỉ khi phản hồi cho biết bucket nằm ở region khác (isWrongRegion) mới đọc region của bucket và hỏi lại.
+// Nhờ đó bucket cùng region với kết nối chỉ cần một yêu cầu thay vì hai.
 func readPolicyModeInRegion(ctx context.Context, conn *global.S3Conn, bucket string) (string, error) {
 	mode, _, err := readPolicyMode(ctx, conn, bucket)
 	if err == nil || !isRealAws(conn) || !isWrongRegion(err) {
@@ -174,7 +174,7 @@ func readPolicyModeInRegion(ctx context.Context, conn *global.S3Conn, bucket str
 	return mode, err
 }
 
-// isWrongRegion reports whether err says the request went to a region the bucket is not in.
+// isWrongRegion cho biết err có báo yêu cầu được gửi đến region khác với region của bucket hay không.
 func isWrongRegion(err error) bool {
 	if statusCode(err) == http.StatusMovedPermanently {
 		return true
@@ -186,8 +186,8 @@ func isWrongRegion(err error) bool {
 	return false
 }
 
-// isSurePolicyError reports whether err is a definite answer of the server that the policy can't be read, which
-// stays true until the credentials or the bucket change, so it may be cached.
+// isSurePolicyError cho biết err có phải phản hồi chắc chắn từ máy chủ rằng không thể đọc policy hay không.
+// Kết quả này vẫn đúng cho đến khi thông tin xác thực hoặc bucket thay đổi nên có thể được cache.
 func isSurePolicyError(err error) bool {
 	switch UnwrapAwsError(err) {
 	case "AccessDenied", "NotImplemented", "MethodNotAllowed":
@@ -196,8 +196,8 @@ func isSurePolicyError(err error) bool {
 	return statusCode(err) == http.StatusForbidden
 }
 
-// putPolicyFailed maps a failed save: a malformed policy gives S3E057, a denied public policy under Block Public
-// Access S3E058, anything else the generic bucket edit errors with S3E056 as fallback.
+// putPolicyFailed ánh xạ lỗi lưu: policy sai định dạng trả S3E057, policy công khai bị Block Public Access từ chối
+// trả S3E058; các lỗi khác dùng lỗi chỉnh sửa bucket chung, mặc định là S3E056.
 func putPolicyFailed(
 	ctx context.Context,
 	conn *global.S3Conn,
@@ -219,8 +219,8 @@ func putPolicyFailed(
 	return bucketEditFailed(ctx, output, input.ProfileName, input.Bucket, err, S3E056)
 }
 
-// loadPolicyState reads the mode, policy and Block Public Access of the bucket. Only the policy read can fail the
-// call: a Block Public Access read that fails counts as not blocked.
+// loadPolicyState đọc chế độ, policy và trạng thái Block Public Access của bucket. Chỉ lỗi đọc policy mới làm lời gọi
+// thất bại; nếu không đọc được Block Public Access thì xem như không bị chặn.
 func (m *submoduleBucketEditMng) loadPolicyState(
 	ctx context.Context,
 	conn *global.S3Conn,
@@ -238,7 +238,7 @@ func (m *submoduleBucketEditMng) loadPolicyState(
 	return models.BucketPolicyOutput{Mode: mode, Policy: pol, PublicBlocked: blocked}, nil
 }
 
-// readPolicyMode returns the access mode of the bucket and its policy JSON (indented, empty when private).
+// readPolicyMode trả chế độ truy cập của bucket và policy JSON (được thụt lề, rỗng nếu ở chế độ private).
 func readPolicyMode(
 	ctx context.Context,
 	conn *global.S3Conn,
@@ -265,7 +265,7 @@ func readPolicyMode(
 	return mode, pol, nil
 }
 
-// readPublicBlocked reports whether Block Public Access forbids a public policy. Only real AWS has it.
+// readPublicBlocked cho biết Block Public Access có cấm policy công khai hay không. Chỉ AWS thật có tính năng này.
 func readPublicBlocked(
 	ctx context.Context,
 	conn *global.S3Conn,
@@ -286,8 +286,8 @@ func readPublicBlocked(
 		aws.ToBool(result.PublicAccessBlockConfiguration.BlockPublicPolicy), nil
 }
 
-// policyEditDenied reports whether the MinIO account is known not to be allowed to change the bucket policy.
-// Without admin access, on a failed AccountInfo or a policy that is not simple, the answer is false.
+// policyEditDenied cho biết tài khoản MinIO có bị xác định là không được phép thay đổi policy của bucket hay không.
+// Nếu không có quyền admin, AccountInfo thất bại hoặc policy không đơn giản, hàm trả false.
 func policyEditDenied(ctx context.Context, conn *global.S3Conn, bucket string) bool {
 	if conn.MinioAdmin == nil {
 		return false
@@ -314,7 +314,7 @@ func policyEditDenied(ctx context.Context, conn *global.S3Conn, bucket string) b
 	return false
 }
 
-// publicReadPolicy is the policy of the "public" mode: everyone can list the bucket and read its objects.
+// publicReadPolicy là policy của chế độ "public": mọi người đều có thể liệt kê bucket và đọc object.
 func publicReadPolicy(bucket string) string {
 	arn := "arn:aws:s3:::" + bucket
 	raw, _ := json.Marshal(map[string]any{
@@ -337,16 +337,16 @@ func publicReadPolicy(bucket string) string {
 	return string(raw)
 }
 
-// samePolicy reports whether a and b are the same policy, ignoring formatting, key order and the string-or-array
-// form MinIO normalizes (Principal "*" is {"AWS":["*"]}, Action and Resource are lists).
+// samePolicy cho biết a và b có cùng policy hay không, bỏ qua định dạng, thứ tự key và cách biểu diễn chuỗi/mảng
+// mà MinIO chuẩn hóa (Principal "*" thành {"AWS":["*"]}, Action và Resource thành danh sách).
 func samePolicy(a, b string) bool {
 	x, okA := canonicalPolicy(a)
 	y, okB := canonicalPolicy(b)
 	return okA && okB && reflect.DeepEqual(x, y)
 }
 
-// canonicalPolicy parses a policy, rewrites Principal, Action and Resource of each statement to sorted lists
-// and sorts the statements themselves.
+// canonicalPolicy phân tích policy, chuyển Principal, Action và Resource của mỗi statement thành danh sách đã sắp xếp,
+// rồi sắp xếp cả các statement.
 func canonicalPolicy(raw string) (map[string]any, bool) {
 	var pol map[string]any
 	if json.Unmarshal([]byte(raw), &pol) != nil || pol == nil {
@@ -378,7 +378,7 @@ func canonicalPolicy(raw string) (map[string]any, bool) {
 			}
 		}
 	}
-	// json.Marshal sorts map keys, so the marshaled statement is a stable sort key.
+	// json.Marshal sắp xếp các key của map nên statement sau khi marshal có thể dùng làm khóa sắp xếp ổn định.
 	slices.SortFunc(statements, func(x, y any) int {
 		jx, _ := json.Marshal(x)
 		jy, _ := json.Marshal(y)
@@ -388,7 +388,7 @@ func canonicalPolicy(raw string) (map[string]any, bool) {
 	return pol, true
 }
 
-// sortedStrings turns a JSON string or array of strings into a sorted []any of strings.
+// sortedStrings chuyển chuỗi JSON hoặc mảng chuỗi thành []any chứa các chuỗi đã sắp xếp.
 func sortedStrings(v any) []any {
 	items, ok := v.([]any)
 	if !ok {

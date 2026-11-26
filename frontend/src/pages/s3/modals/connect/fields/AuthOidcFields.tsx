@@ -11,7 +11,7 @@ import Button from '@/components/buttons/Button';
 import FieldInput from '@/components/inputs/FieldInput';
 import { type AuthFieldsProps, DEFAULT_CALLBACK_PORT } from '@/pages/s3/modals/connect/connectSchema';
 
-/** Sign-in state shown next to the button; `expiresAt` is an epoch in ms. */
+/** Trạng thái đăng nhập hiển thị cạnh nút; `expiresAt` là thời điểm epoch tính bằng ms. */
 type Session = { status: 'none' | 'waiting' | 'expired' } | { status: 'signedIn'; expiresAt: number };
 
 const NO_SESSION: Session = { status: 'none' };
@@ -26,7 +26,7 @@ const SETTINGS_PATHS = [
 
 const STATUS_KEYS = { none: 'oidcNotSignedIn', waiting: 'oidcWaiting', expired: 'oidcExpired' } as const;
 
-/** MinIO OpenID Connect: provider settings and the browser sign-in whose session id the connect sends. */
+/** OpenID Connect của MinIO: cấu hình provider và phiên đăng nhập trình duyệt có session id được gửi khi kết nối. */
 function AuthOidcFields({ form }: Pick<AuthFieldsProps, 'form'>) {
   const { t } = useTranslation('connectModal');
   const formatError = useFieldError();
@@ -38,13 +38,13 @@ function AuthOidcFields({ form }: Pick<AuthFieldsProps, 'form'>) {
   const [session, setSession] = useState<Session>(NO_SESSION);
   const [controller, setController] = useState<AbortController | null>(null);
 
-  // The aborted sign-in's result is ignored, so the cancel resets the status itself.
+  // Kết quả đăng nhập bị hủy sẽ bị bỏ qua nên thao tác hủy tự đặt lại trạng thái.
   const onClickCancelOidc = useCallback(() => {
     controller?.abort();
     setSession(NO_SESSION);
   }, [controller]);
 
-  // A sign-in belongs to the settings it was made with: changing one of them drops it, or cancels a pending one.
+  // Phiên đăng nhập gắn với cấu hình lúc tạo: đổi một trong các thiết lập sẽ xóa phiên hoặc hủy đăng nhập đang chờ.
   const isWaiting = session.status === 'waiting';
   const onChangeSettings = useCallback(() => {
     if (isWaiting) onClickCancelOidc();
@@ -54,7 +54,7 @@ function AuthOidcFields({ form }: Pick<AuthFieldsProps, 'form'>) {
   }, [form, isWaiting, onClickCancelOidc]);
   for (const path of SETTINGS_PATHS) form.watch(path, onChangeSettings);
 
-  // The backend forgets the session when it expires: do the same, so the connect asks to sign in again.
+  // Backend quên phiên khi hết hạn: thực hiện tương tự để thao tác kết nối yêu cầu đăng nhập lại.
   const expiresAt = session.status === 'signedIn' ? session.expiresAt : null;
   useEffect(() => {
     if (expiresAt === null) return;
@@ -68,7 +68,7 @@ function AuthOidcFields({ form }: Pick<AuthFieldsProps, 'form'>) {
     return () => clearTimeout(timer);
   }, [expiresAt, form]);
 
-  // Closing the modal (or leaving the method) cancels a sign-in that still waits for the browser.
+  // Đóng modal (hoặc đổi phương thức) sẽ hủy phiên đăng nhập vẫn đang chờ trình duyệt.
   useEffect(() => () => controller?.abort(), [controller]);
 
   const onClickLoginOidc = useCallback(async () => {
@@ -91,7 +91,7 @@ function AuthOidcFields({ form }: Pick<AuthFieldsProps, 'form'>) {
       { signal: controller.signal }
     );
 
-    // A canceled sign-in settling late must not overwrite the state of a newer one.
+    // Kết quả đăng nhập đã hủy nhưng trả về muộn không được ghi đè trạng thái của phiên mới hơn.
     if (controller.signal.aborted) return;
 
     if (output?.sessionId) {

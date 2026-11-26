@@ -299,7 +299,7 @@ describe('replacement with a regular expression', () => {
     expect(sel(upper)).toEqual([4, 7]);
   });
 
-  // BUG (reported): the selection is searched alone, so the neighbours that decide "whole word" are not seen.
+  // BUG (đã được báo): chỉ tìm trong vùng chọn, nên không xét được các ký tự lân cận dùng để xác định "whole word".
   it('replaceCurrent does not replace a selection that is only part of a longer word', () => {
     const inWord = make('foobar foo', { anchor: 0, head: 3 });
     replaceCurrent(inWord, q('foo', { wholeWord: true }), 'x');

@@ -9,7 +9,7 @@ import { renderWithProviders } from '@/test/_helpers/renderWithProviders';
 
 type Options = { count: number; paddingStart?: number; estimateSize: (index?: number) => number };
 
-// jsdom has no layout: the virtualizers render every item, and `measure` is a spy.
+// jsdom không có layout: virtualizer render mọi mục và `measure` được thay bằng spy.
 const virtual = vi.hoisted(() => ({ measure: vi.fn() }));
 
 vi.mock('@tanstack/react-virtual', async () => {
@@ -42,12 +42,12 @@ const ROWS: (string | null)[][] = [
 ];
 
 const resizer = (col: number) => document.querySelector<HTMLElement>(`[data-index="${col}"]`) as HTMLElement;
-/** Width of a column: the header cell holding the resizer is the element the grid sizes. */
+/** Chiều rộng cột: grid đo ô header chứa tay nắm đổi kích thước. */
 const widthOf = (col: number) => resizer(col).parentElement?.style.width ?? '';
 
 describe('DataGrid fit columns', () => {
-  // [text, font] of every measureText call. A string of 2+ characters measures 1px less than 10 per character (as if
-  // kerned), so the exact path and the per-character sum give different widths.
+  // [text, font] của mọi lời gọi measureText. Chuỗi từ 2 ký tự trở lên được đo ngắn hơn 1px so với 10px mỗi ký tự
+  // (giả lập kerning), nên đo nguyên chuỗi và cộng từng ký tự sẽ cho độ rộng khác nhau.
   let calls: [string, string][];
   let hasContext: boolean;
   const ctx = { font: '', measureText: (_text: string) => ({ width: 0 }) };
@@ -81,7 +81,7 @@ describe('DataGrid fit columns', () => {
   it('sets every column to its widest title or value, measures once and keeps a floor of 48px', () => {
     const { ref } = setup();
     fit(ref);
-    // id: title 19 + 17 = 36 -> 48; name: "Roberta" 7 x 10 + 17; description: title 11 x 10 - 1 + 17
+    // id: tiêu đề 19 + 17 = 36 -> 48; name: "Roberta" 7 x 10 + 17; description: tiêu đề 11 x 10 - 1 + 17
     expect(widthOf(0)).toBe('48px');
     expect(widthOf(1)).toBe('87px');
     expect(widthOf(2)).toBe('126px');
@@ -113,7 +113,7 @@ describe('DataGrid fit columns', () => {
       ],
     });
     fit(ref);
-    // Each of 'a' and 'b' once as a value character, plus once as a one-letter title (titles are measured whole).
+    // 'a' và 'b' mỗi ký tự xuất hiện một lần trong giá trị, thêm một lần làm tiêu đề một ký tự (tiêu đề được đo nguyên chuỗi).
     expect(measuredTexts().filter(t => t === 'a')).toHaveLength(2);
     expect(measuredTexts().filter(t => t === 'b')).toHaveLength(2);
     expect(widthOf(0)).toBe('57px'); // aaaa = 40 + 17
@@ -150,7 +150,7 @@ describe('DataGrid fit columns', () => {
     useSettingStore.setState(s => ({ draft: { ...s.draft, size: 'large' } }));
     const { ref } = setup({ columns: ['v', 'w'], rows: [['a'.repeat(40), 'a'.repeat(70)]] });
     fit(ref);
-    // 400 / 1.125 -> 356 + 17 = 373 at the medium size, x 1.125 on screen
+    // 400 / 1.125 -> 356 + 17 = 373 ở cỡ trung bình, nhân 1.125 trên màn hình
     expect(widthOf(0)).toBe('419.625px');
     expect(widthOf(1)).toBe('675px'); // 700 >= (600 - 17) x 1.125: capped at 600
   });

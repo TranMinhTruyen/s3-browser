@@ -12,7 +12,7 @@ import CloseButton from '@/components/buttons/CloseButton';
 import DetailRow, { EMPTY_VALUE } from '@/pages/s3/components/DetailRow';
 import { useTabListStore } from '@/pages/s3/stores/tabListStore';
 
-// Go's zero time (0001-01-01) means the backend has no date.
+// Thời điểm zero của Go (0001-01-01) nghĩa là backend không có ngày.
 const formatDate = (value: string) => {
   const date = dayjs(value);
   return date.isValid() && date.year() > 1 ? date.format(FULL_DATE_TIME_FORMAT) : undefined;
@@ -25,12 +25,12 @@ type ObjectDetailDrawerProps = {
   bucket: string;
 };
 
-// `key` is the object the state belongs to; a state of another key counts as loading.
+// `key` là đối tượng mà state thuộc về; state mang key khác được xem như đang tải.
 type DetailState =
   | { key: string; status: 'loading' | 'error' }
   | { key: string; status: 'done'; detail: ObjectDetailOutput };
 
-/** Right-side drawer showing metadata of the selected object (loaded lazily, cancelable). */
+/** Ngăn bên phải hiển thị metadata của đối tượng đã chọn (tải theo nhu cầu, có thể hủy). */
 function ObjectDetailDrawer(props: ObjectDetailDrawerProps) {
   const { tabId, connectionId, profileName, bucket } = props;
 
@@ -40,16 +40,16 @@ function ObjectDetailDrawer(props: ObjectDetailDrawerProps) {
   const closeDetail = useTabListStore(s => s.closeDetail);
 
   const [loaded, setLoaded] = useState<DetailState>({ key: '', status: 'loading' });
-  // Bumped by the retry button to run the request again for the same key.
+  // Được nút thử lại tăng lên để chạy lại yêu cầu với cùng key.
   const [reloadCount, setReloadCount] = useState(0);
 
   const itemKey = item?.key;
-  // Drawer closed: forget the loaded detail, so reopening the same key does not flash stale data.
+  // Khi ngăn đóng, bỏ chi tiết đã tải để mở lại cùng key không bị lóe dữ liệu cũ.
   if (!itemKey && loaded.key !== '') setLoaded({ key: '', status: 'loading' });
-  // Never show the previous item's detail while the new one loads.
+  // Không hiển thị chi tiết mục trước trong lúc tải mục mới.
   const state: DetailState = loaded.key === itemKey ? loaded : { key: itemKey ?? '', status: 'loading' };
 
-  // A new request per item: the cleanup aborts the previous one, so a late result never overwrites the new item.
+  // Mỗi mục có một yêu cầu mới: hàm dọn dẹp hủy yêu cầu trước để kết quả về muộn không ghi đè mục mới.
   useEffect(() => {
     if (!itemKey) return;
     const ctrl = new AbortController();

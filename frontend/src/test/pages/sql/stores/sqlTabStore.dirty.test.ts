@@ -14,7 +14,7 @@ const ids = () => Object.keys(store().tabList);
 const confirmMock = vi.mocked(ConfirmModal.show);
 const callIPCMock = vi.mocked(callIPC);
 
-/** A table tab with uncommitted changes, plus the first SQL tab. */
+/** Một tab bảng có thay đổi chưa lưu, cùng với tab SQL đầu tiên. */
 const openDirty = () => {
   store().openTableTab('p1', 'main', 'users');
   const tab = store().activeTab as string;

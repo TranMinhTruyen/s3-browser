@@ -74,7 +74,7 @@ fn params(json: serde_json::Value) -> OpenParams {
     serde_json::from_value(json).unwrap()
 }
 
-// ---- open: kiểm input ----
+// ---- mở: kiểm dữ liệu đầu vào ----
 
 #[tokio::test]
 async fn open_requires_a_host() {
@@ -144,7 +144,7 @@ async fn open_to_a_server_that_hangs_up_is_open_failed() {
     assert_eq!(*log.lock().unwrap(), ["plain"]);
 }
 
-// ---- connect: thứ tự thử theo từng mode ----
+// ---- kết nối: thứ tự thử theo từng chế độ ----
 
 #[tokio::test]
 async fn disable_tries_only_plain() {

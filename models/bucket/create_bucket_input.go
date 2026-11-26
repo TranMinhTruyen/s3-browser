@@ -1,14 +1,14 @@
 package bucket
 
-// CreateBucketInput asks to create a bucket on a connection.
+// CreateBucketInput yêu cầu tạo bucket trên một kết nối.
 type CreateBucketInput struct {
 	ConnectionId string `json:"connectionId"`
 	ProfileName  string `json:"profileName,omitempty"`
 	Bucket       string `json:"bucket"`
-	// Region is only used by real AWS; empty means the region of the connection.
+	// Region chỉ được dùng với AWS thật; nếu rỗng thì dùng region của kết nối.
 	Region string `json:"region,omitempty"`
-	// Mode is the access set after creating: private (or empty, nothing is set), public or custom.
+	// Mode là quyền truy cập được đặt sau khi tạo: private (hoặc rỗng, không đặt quyền), public hoặc custom.
 	Mode string `json:"mode,omitempty"`
-	// Policy is the policy JSON, only used by the custom mode.
+	// Policy là JSON policy, chỉ dùng với chế độ custom.
 	Policy string `json:"policy,omitempty"`
 }

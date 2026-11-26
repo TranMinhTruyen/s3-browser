@@ -1,46 +1,46 @@
 Unicode true
 
 ####
-## Please note: Template replacements don't work in this file. They are provided with default defines like
-## mentioned underneath.
-## If the keyword is not defined, "wails_tools.nsh" will populate them with the values from ProjectInfo.
-## If they are defined here, "wails_tools.nsh" will not touch them. This allows to use this project.nsi manually
-## from outside of Wails for debugging and development of the installer.
+## Lưu ý: các giá trị thay thế của template không hoạt động trong file này. Thay vào đó, chúng được cung cấp bằng các định nghĩa mặc định như
+## bên dưới.
+## Nếu chưa định nghĩa từ khóa, "wails_tools.nsh" sẽ điền giá trị từ ProjectInfo.
+## Nếu đã định nghĩa tại đây, "wails_tools.nsh" sẽ không thay đổi chúng. Nhờ vậy có thể dùng project.nsi này thủ công
+## bên ngoài Wails để gỡ lỗi và phát triển trình cài đặt.
 ##
-## For development first make a wails nsis build to populate the "wails_tools.nsh":
+## Khi phát triển, trước tiên hãy tạo bản build NSIS bằng Wails để điền nội dung cho "wails_tools.nsh":
 ## > wails build --target windows/amd64 --nsis
-## Then you can call makensis on this file with specifying the path to your binary:
-## For a AMD64 only installer:
+## Sau đó gọi makensis trên file này và chỉ định đường dẫn tới binary:
+## Trình cài đặt chỉ dành cho AMD64:
 ## > makensis -DARG_WAILS_AMD64_BINARY=..\..\bin\app.exe
-## For a ARM64 only installer:
+## Trình cài đặt chỉ dành cho ARM64:
 ## > makensis -DARG_WAILS_ARM64_BINARY=..\..\bin\app.exe
-## For a installer with both architectures:
+## Trình cài đặt hỗ trợ cả hai kiến trúc:
 ## > makensis -DARG_WAILS_AMD64_BINARY=..\..\bin\app-amd64.exe -DARG_WAILS_ARM64_BINARY=..\..\bin\app-arm64.exe
 ####
-## The following information is taken from the ProjectInfo file, but they can be overwritten here.
+## Các thông tin sau được lấy từ file ProjectInfo, nhưng có thể ghi đè tại đây.
 ####
-## !define INFO_PROJECTNAME    "MyProject" # Default "{{.Name}}"
-## !define INFO_COMPANYNAME    "MyCompany" # Default "{{.Info.CompanyName}}"
-## !define INFO_PRODUCTNAME    "MyProduct" # Default "{{.Info.ProductName}}"
-## !define INFO_PRODUCTVERSION "1.0.0"     # Default "{{.Info.ProductVersion}}"
-## !define INFO_COPYRIGHT      "Copyright" # Default "{{.Info.Copyright}}"
+## !define INFO_PROJECTNAME    "MyProject" # Mặc định "{{.Name}}"
+## !define INFO_COMPANYNAME    "MyCompany" # Mặc định "{{.Info.CompanyName}}"
+## !define INFO_PRODUCTNAME    "MyProduct" # Mặc định "{{.Info.ProductName}}"
+## !define INFO_PRODUCTVERSION "1.0.0"     # Mặc định "{{.Info.ProductVersion}}"
+## !define INFO_COPYRIGHT      "Copyright" # Mặc định "{{.Info.Copyright}}"
 ###
-## !define PRODUCT_EXECUTABLE  "Application.exe"      # Default "${INFO_PROJECTNAME}.exe"
-## !define UNINST_KEY_NAME     "UninstKeyInRegistry"  # Default "${INFO_COMPANYNAME}${INFO_PRODUCTNAME}"
+## !define PRODUCT_EXECUTABLE  "Application.exe"      # Mặc định "${INFO_PROJECTNAME}.exe"
+## !define UNINST_KEY_NAME     "UninstKeyInRegistry"  # Mặc định "${INFO_COMPANYNAME}${INFO_PRODUCTNAME}"
 ####
-## !define REQUEST_EXECUTION_LEVEL "admin"            # Default "admin"  see also https://nsis.sourceforge.io/Docs/Chapter4.html
+## !define REQUEST_EXECUTION_LEVEL "admin"            # Mặc định "admin"; xem thêm https://nsis.sourceforge.io/Docs/Chapter4.html
 ####
-## Include the wails tools
+## Nạp các công cụ Wails
 ####
 !include "wails_tools.nsh"
 
-!insertmacro GetOptions # From FileFunc.nsh (included by wails_tools.nsh), reads /relaunch below.
+!insertmacro GetOptions # Từ FileFunc.nsh (được nạp trong wails_tools.nsh), đọc tùy chọn /relaunch bên dưới.
 
-# 1 when the app runs this installer to update itself (/S /relaunch /D=<install dir>): wait for the old exe to
-# exit and start the app again when done. A manual install does not pass /relaunch and never starts the app.
+# 1 nếu ứng dụng chạy trình cài đặt này để tự cập nhật (/S /relaunch /D=<thư mục cài đặt>): chờ exe cũ
+# thoát rồi khởi động lại ứng dụng khi hoàn tất. Cài đặt thủ công không truyền /relaunch và không khởi động ứng dụng.
 Var Relaunch
 
-# Numeric 4-part version for VIProductVersion/VIFileVersion (INFO_PRODUCTVERSION may hold a prerelease suffix)
+# Phiên bản số gồm 4 phần cho VIProductVersion/VIFileVersion (INFO_PRODUCTVERSION có thể chứa hậu tố bản phát hành thử)
 !define INFO_NUMERIC_VERSION "0.0.1.1"
 VIProductVersion "${INFO_NUMERIC_VERSION}"
 VIFileVersion    "${INFO_NUMERIC_VERSION}"
@@ -52,33 +52,33 @@ VIAddVersionKey "FileVersion"     "${INFO_PRODUCTVERSION}"
 VIAddVersionKey "LegalCopyright"  "${INFO_COPYRIGHT}"
 VIAddVersionKey "ProductName"     "${INFO_PRODUCTNAME}"
 
-# Enable HiDPI support. https://nsis.sourceforge.io/Reference/ManifestDPIAware
+# Bật hỗ trợ HiDPI. https://nsis.sourceforge.io/Reference/ManifestDPIAware
 ManifestDPIAware true
 
 !include "MUI.nsh"
 
 !define MUI_ICON "..\icon.ico"
 !define MUI_UNICON "..\icon.ico"
-# !define MUI_WELCOMEFINISHPAGE_BITMAP "resources\leftimage.bmp" #Include this to add a bitmap on the left side of the Welcome Page. Must be a size of 164x314
-!define MUI_FINISHPAGE_NOAUTOCLOSE # Wait on the INSTFILES page so the user can take a look into the details of the installation steps
-!define MUI_ABORTWARNING # This will warn the user if they exit from the installer.
+# !define MUI_WELCOMEFINISHPAGE_BITMAP "resources\leftimage.bmp" #Bật tùy chọn này để thêm bitmap bên trái trang chào mừng. Kích thước phải là 164x314.
+!define MUI_FINISHPAGE_NOAUTOCLOSE # Chờ tại trang INSTFILES để người dùng xem chi tiết các bước cài đặt.
+!define MUI_ABORTWARNING # Cảnh báo người dùng nếu họ thoát trình cài đặt.
 
-!insertmacro MUI_PAGE_WELCOME # Welcome to the installer page.
-# !insertmacro MUI_PAGE_LICENSE "resources\eula.txt" # Adds a EULA page to the installer
-!insertmacro MUI_PAGE_DIRECTORY # In which folder install page.
-!insertmacro MUI_PAGE_INSTFILES # Installing page.
-!insertmacro MUI_PAGE_FINISH # Finished installation page.
+!insertmacro MUI_PAGE_WELCOME # Trang chào mừng của trình cài đặt.
+# !insertmacro MUI_PAGE_LICENSE "resources\eula.txt" # Thêm trang EULA vào trình cài đặt.
+!insertmacro MUI_PAGE_DIRECTORY # Trang chọn thư mục cài đặt.
+!insertmacro MUI_PAGE_INSTFILES # Trang đang cài đặt.
+!insertmacro MUI_PAGE_FINISH # Trang hoàn tất cài đặt.
 
-!insertmacro MUI_UNPAGE_INSTFILES # Uinstalling page
+!insertmacro MUI_UNPAGE_INSTFILES # Trang đang gỡ cài đặt.
 
-!insertmacro MUI_LANGUAGE "English" # Set the Language of the installer
+!insertmacro MUI_LANGUAGE "English" # Đặt ngôn ngữ của trình cài đặt.
 
-## The following two statements can be used to sign the installer and the uninstaller. The path to the binaries are provided in %1
+## Có thể dùng hai lệnh sau để ký trình cài đặt và trình gỡ cài đặt. Đường dẫn tới binary được truyền trong %1.
 #!uninstfinalize 'signtool --file "%1"'
 #!finalize 'signtool --file "%1"'
 
 Name "${INFO_PRODUCTNAME}"
-OutFile "..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe" # Name of the installer's file.
+OutFile "..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe" # Tên file trình cài đặt.
 !ifdef WAILS_INSTALL_SCOPE
   !if "${WAILS_INSTALL_SCOPE}" == "user"
     InstallDir "$LOCALAPPDATA\Programs\${INFO_PRODUCTNAME}"
@@ -87,8 +87,8 @@ OutFile "..\..\bin\${INFO_PROJECTNAME}-${ARCH}-installer.exe" # Name of the inst
   !endif
 !else
   InstallDir "$PROGRAMFILES64\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}"
-!endif # Default installing folder ($PROGRAMFILES is Program Files folder).
-ShowInstDetails show # This will always show the installation details.
+!endif # Thư mục cài đặt mặc định ($PROGRAMFILES là thư mục Program Files).
+ShowInstDetails show # Luôn hiển thị chi tiết cài đặt.
 
 Function .onInit
    !insertmacro wails.checkArchitecture
@@ -107,7 +107,7 @@ Section
 
     SetOutPath $INSTDIR
 
-    # The app quits right after starting this installer; wait (up to 15 s) until the old exe can be overwritten.
+    # Ứng dụng thoát ngay sau khi khởi chạy trình cài đặt này; chờ tối đa 15 giây để có thể ghi đè exe cũ.
     StrCmp $Relaunch 1 0 skipWait
     IfFileExists "$INSTDIR\${PRODUCT_EXECUTABLE}" 0 skipWait
     StrCpy $0 0
@@ -134,7 +134,7 @@ Section
 
     !insertmacro wails.writeUninstaller
 
-    # Start the app through explorer.exe so it runs as the normal user, not with this installer's admin rights.
+    # Khởi chạy ứng dụng qua explorer.exe để ứng dụng chạy với quyền của người dùng thông thường, không dùng quyền quản trị của trình cài đặt.
     StrCmp $Relaunch 1 0 +2
     Exec '"$WINDIR\explorer.exe" "$INSTDIR\${PRODUCT_EXECUTABLE}"'
 SectionEnd
@@ -142,7 +142,7 @@ SectionEnd
 Section "uninstall"
     !insertmacro wails.setShellContext
 
-    RMDir /r "$AppData\${PRODUCT_EXECUTABLE}" # Remove the WebView2 DataPath
+RMDir /r "$AppData\${PRODUCT_EXECUTABLE}" # Xóa thư mục dữ liệu WebView2.
 
     RMDir /r $INSTDIR
 

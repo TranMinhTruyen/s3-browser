@@ -54,10 +54,10 @@ const openBucket = (bucket: Bucket) => act(() => useTabListStore.getState().open
 const closeBucket = () => act(() => useTabListStore.getState().closeBucketDetail(TAB_ID));
 const loader = () => document.querySelector('.mantine-Loader-root');
 
-// Text of the value paired with a label of a detail row.
+// Văn bản giá trị đi cùng nhãn trong một hàng chi tiết.
 const valueOf = (label: string) => screen.getByText(label, { selector: 'dt' }).nextElementSibling!.textContent;
 
-// [key, value] pairs of the nested tag DataList, in rendered order.
+// Các cặp [key, value] của DataList tag lồng nhau, theo thứ tự hiển thị.
 function tagEntries() {
   const nested = screen.getByText('Tags', { selector: 'dt' }).nextElementSibling!.querySelector('dl')!;
   return Array.from(nested.querySelectorAll(':scope > div')).map(item => [

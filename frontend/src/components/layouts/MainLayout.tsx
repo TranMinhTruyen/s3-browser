@@ -25,7 +25,7 @@ import UploaderWindow from '@/pages/s3/transfer/uploader/UploaderWindow';
 
 type AppMode = 'S3' | 'SQL';
 
-/** App modes in SegmentedControl order. Each chunk loads on the first visit to its mode. */
+/** Các chế độ ứng dụng theo thứ tự SegmentedControl. Mỗi chunk tải ở lần đầu truy cập chế độ tương ứng. */
 const WORKSPACES = [
   { mode: 'S3', labelKey: 'appMode.s3', errorKey: 'common:s3LoadError', load: () => import('@/pages/s3/S3Workspace') },
   {
@@ -39,8 +39,8 @@ const WORKSPACES = [
 const lazyWorkspaces: Partial<Record<AppMode, LazyExoticComponent<ComponentType>>> = {};
 
 /**
- * The lazy component of a mode, created once. A failed chunk load shows a toast (the app has no ErrorBoundary),
- * drops the cached component so the next visit loads the chunk again, and calls `onFail` so the caller can unmount it.
+ * Component lazy của một chế độ, chỉ tạo một lần. Nếu tải chunk thất bại thì hiện toast (ứng dụng không có ErrorBoundary),
+ * xóa component khỏi bộ nhớ đệm để lần sau tải lại chunk, đồng thời gọi `onFail` để nơi gọi unmount component.
  */
 const getWorkspace = (workspace: (typeof WORKSPACES)[number], onFail: (mode: AppMode) => void) => {
   const { mode, errorKey, load } = workspace;
@@ -55,14 +55,14 @@ const getWorkspace = (workspace: (typeof WORKSPACES)[number], onFail: (mode: App
   return lazyWorkspaces[mode] as LazyExoticComponent<ComponentType>;
 };
 
-/** Suspense fallback centered in both directions. */
+/** Nội dung thay thế của Suspense, căn giữa theo cả hai chiều. */
 const LOADING_FALLBACK = (
   <Center h="100%">
     <Loader />
   </Center>
 );
 
-/** App shell: header (settings, history), navbar + tab page splitter, and transfer windows. */
+/** Khung ứng dụng: header (thiết lập, lịch sử), thanh điều hướng, vùng chia trang tab và cửa sổ truyền file. */
 function MainLayout() {
   const { t } = useTranslation('historyModal');
   const { t: tSetting } = useTranslation('settingModal');
@@ -88,7 +88,7 @@ function MainLayout() {
     visit(mode);
   }, [visit, mode]);
 
-  // Un-visit a mode whose chunk failed to load, so selecting it again retries.
+  // Bỏ đánh dấu đã truy cập chế độ có chunk tải lỗi để lần chọn tiếp theo thử tải lại.
   const onLoadFail = useCallback((failed: AppMode) => {
     setVisited(prev => {
       const next = new Set(prev);

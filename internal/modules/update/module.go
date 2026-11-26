@@ -1,6 +1,5 @@
-// Package update checks GitHub Releases for a newer version of the app, downloads the NSIS installer with a
-// SHA-256 check and runs it. Module is the public API called by the handlers; the work is done by the
-// submodule_*.go files.
+// Package update kiểm tra GitHub Releases để tìm phiên bản mới, tải bộ cài NSIS có kiểm tra SHA-256 rồi chạy bộ cài.
+// Module là API công khai để các handler gọi; phần xử lý nằm trong các file submodule_*.go.
 package update
 
 import (
@@ -14,40 +13,40 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// Message codes returned to the frontend by the update module.
-// Naming convention: UPS = success, UPE = error.
+// Mã thông báo mà module update trả về cho frontend.
+// Quy ước đặt tên: UPS = thành công, UPE = lỗi.
 var (
-	// You are using the latest version {version}.
+	// Đang sử dụng phiên bản mới nhất {version}.
 	UPS001 = "UPS001"
 
-	// Cannot check for updates.
+	// Không thể kiểm tra bản cập nhật.
 	UPE001 = "UPE001"
 
-	// GitHub is limiting requests, try again later.
+	// GitHub đang giới hạn số yêu cầu; hãy thử lại sau.
 	UPE002 = "UPE002"
 
-	// Cannot download the update.
+	// Không thể tải bản cập nhật.
 	UPE003 = "UPE003"
 
-	// The update has no checksum or the checksum does not match, the file was deleted.
+	// Bản cập nhật không có checksum hoặc checksum không khớp; file đã bị xóa.
 	UPE004 = "UPE004"
 
-	// Cannot run the installer (or administrator permission was denied).
+	// Không thể chạy bộ cài (hoặc quyền quản trị viên đã bị từ chối).
 	UPE005 = "UPE005"
 
-	// Version {version} has no installer for this machine.
+	// Phiên bản {version} không có bộ cài dành cho máy này.
 	UPE006 = "UPE006"
 )
 
-// Module is the self-update of the app.
+// Module quản lý việc tự cập nhật ứng dụng.
 type Module struct {
 	app *application.App
 	mng *submoduleUpdateMng
 }
 
-// NewModule creates the update module. version comes from build/config.yml; the feature is off for portable
-// and non-NSIS builds, and always on in dev mode for testing. The periodic check starts when autoUpdate is on
-// in the saved settings.
+// NewModule tạo module update. version được lấy từ build/config.yml; tính năng này tắt với bản portable
+// và bản dựng không dùng NSIS, luôn bật trong chế độ dev để kiểm thử. Việc kiểm tra định kỳ bắt đầu khi
+// autoUpdate được bật trong cài đặt đã lưu.
 func NewModule(app *application.App, logger *slog.Logger, setting *setting.Module, version string, devMode bool,
 ) *Module {
 	m := &Module{app: app, mng: newSubmoduleUpdateMng(app, logger, version, devMode)}
@@ -57,16 +56,16 @@ func NewModule(app *application.App, logger *slog.Logger, setting *setting.Modul
 	return m
 }
 
-// GetState returns the current update state.
+// GetState trả về trạng thái cập nhật hiện tại.
 func (m *Module) GetState() models.Output[models.UpdateStateOutput] {
 	output := models.NewOutput[models.UpdateStateOutput]()
 	output.Body = m.mng.snapshot()
 	return output
 }
 
-// Check looks for a newer release when the user asks. The result is in the returned state, so a check that
-// is skipped because another one, a download or a ready installer is in the way returns the state unchanged.
-// With auto update on, a new release starts downloading right away.
+// Check tìm bản phát hành mới hơn khi người dùng yêu cầu. Kết quả nằm trong trạng thái trả về; nếu bỏ qua lần
+// kiểm tra vì đang có lần khác chạy, đang tải xuống hoặc đã có bộ cài sẵn sàng thì trạng thái không đổi.
+// Khi bật tự động cập nhật, bản phát hành mới sẽ được tải xuống ngay.
 func (m *Module) Check(ctx context.Context) models.Output[models.UpdateStateOutput] {
 	output := models.NewOutput[models.UpdateStateOutput]()
 	ctx, cancel := context.WithCancel(ctx)
@@ -88,8 +87,8 @@ func (m *Module) Check(ctx context.Context) models.Output[models.UpdateStateOutp
 	return output
 }
 
-// Download starts downloading the release found by the last check and returns at once; progress comes with
-// the update:state-changed event.
+// Download bắt đầu tải bản phát hành tìm được ở lần kiểm tra gần nhất rồi trả về ngay; tiến độ được gửi qua
+// sự kiện update:state-changed.
 func (m *Module) Download() models.Output[models.UpdateStateOutput] {
 	output := models.NewOutput[models.UpdateStateOutput]()
 	err := m.mng.startDownload()
@@ -100,8 +99,8 @@ func (m *Module) Download() models.Output[models.UpdateStateOutput] {
 	return output
 }
 
-// Install runs the downloaded installer silently (Windows asks for administrator permission) and quits the
-// app; the installer starts the new version when it is done. If the installer cannot run, the app keeps running.
+// Install chạy ngầm bộ cài đã tải xuống (Windows sẽ hỏi quyền quản trị viên) rồi thoát ứng dụng; bộ cài khởi
+// chạy phiên bản mới sau khi hoàn tất. Nếu không chạy được bộ cài, ứng dụng vẫn tiếp tục hoạt động.
 func (m *Module) Install() models.Output[models.UpdateStateOutput] {
 	output := models.NewOutput[models.UpdateStateOutput]()
 	err := m.mng.install()
@@ -113,17 +112,17 @@ func (m *Module) Install() models.Output[models.UpdateStateOutput] {
 	return output
 }
 
-// SetAutoUpdate starts or stops the periodic check. A download that is already running keeps going.
+// SetAutoUpdate bật hoặc tắt kiểm tra định kỳ. Lượt tải xuống đang chạy vẫn tiếp tục.
 func (m *Module) SetAutoUpdate(enabled bool) {
 	m.mng.setAutoUpdate(enabled)
 }
 
-// SetBeta makes the next checks follow pre-releases too (true) or stable releases only (false).
+// SetBeta quyết định các lần kiểm tra tiếp theo có xét cả bản phát hành thử nghiệm (true) hay chỉ bản ổn định (false).
 func (m *Module) SetBeta(enabled bool) {
 	m.mng.setBeta(enabled)
 }
 
-// SetOptions applies both update switches at once, without saving them, and returns the resulting state.
+// SetOptions áp dụng đồng thời hai tùy chọn cập nhật, không lưu chúng, rồi trả về trạng thái mới.
 func (m *Module) SetOptions(beta, autoUpdate bool) models.Output[models.UpdateStateOutput] {
 	output := models.NewOutput[models.UpdateStateOutput]()
 	m.mng.setBeta(beta)
@@ -132,12 +131,12 @@ func (m *Module) SetOptions(beta, autoUpdate bool) models.Output[models.UpdateSt
 	return output
 }
 
-// Close stops the periodic check and any download.
+// Close dừng kiểm tra định kỳ và mọi lượt tải xuống.
 func (m *Module) Close() {
 	m.mng.close()
 }
 
-// errorMessage turns a failure of the submodule into its message; anything else is UPE001.
+// errorMessage chuyển lỗi của submodule thành thông báo tương ứng; các lỗi khác dùng UPE001.
 func errorMessage(err error) models.Message {
 	var updErr *updateError
 	if !errors.As(err, &updErr) {

@@ -1,7 +1,7 @@
 package bucket
 
-// DeletePrefixOutput counts the objects deleted and the ones that failed.
-// Failed is the total; Failures keeps the details of the first ones only.
+// DeletePrefixOutput đếm số object đã xóa và số object xóa thất bại.
+// Failed là tổng số lỗi; Failures chỉ giữ chi tiết của các lỗi đầu tiên.
 type DeletePrefixOutput struct {
 	Deleted  int             `json:"deleted"`
 	Failed   int             `json:"failed"`

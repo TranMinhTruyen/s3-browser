@@ -9,7 +9,7 @@ import { formatStringJson } from '@/common/utils/stringUtils';
 import Button from '@/components/buttons/Button';
 import UpdateProgress from '@/components/display/UpdateProgress';
 
-/** "Update" block of the settings modal: version, manual check, download/install and the release link. */
+/** Khối "Update" trong modal thiết lập: phiên bản, kiểm tra thủ công, tải/cài đặt và liên kết bản phát hành. */
 function UpdateSection() {
   const { t } = useTranslation('settingModal', { keyPrefix: 'update' });
   const { t: tRoot } = useTranslation();
@@ -30,13 +30,13 @@ function UpdateSection() {
   const download = useUpdateStore(s => s.download);
   const install = useUpdateStore(s => s.install);
 
-  // The button is only rendered when `releaseUrl` is set.
+  // Chỉ render nút khi đã có `releaseUrl`.
   const onClickViewRelease = useCallback(() => void Browser.OpenURL(releaseUrl as string), [releaseUrl]);
 
   if (!supported) return null;
 
   const busy = state === 'checking' || state === 'downloading';
-  // The backend message of the failure (e.g. UPE003); a state without a code gets a general text.
+  // Mã thông báo lỗi từ backend (ví dụ UPE003); state không có mã sẽ dùng thông báo chung.
   const status =
     state === 'error' && errorCode
       ? formatStringJson(tRoot(`ipcMessage:update.${errorCode}`), { version })

@@ -21,7 +21,7 @@ vi.mock('@wails/S3Browser/internal/handlers/updatehandler', () => ({ SetUpdateOp
 const callIPCMock = vi.mocked(callIPC);
 const state = () => useSettingStore.getState();
 const updaterCalls = () => callIPCMock.mock.calls.filter(call => call[0] === SetUpdateOptions);
-/** Lets the store's updater promise chain run; callIPC is a mock, so a few microtasks are enough. */
+/** Để chuỗi promise của trình cập nhật trong store chạy xong; callIPC là mock nên chỉ cần vài microtask. */
 const settle = async () => {
   for (let i = 0; i < 10; i++) {
     await Promise.resolve();
@@ -261,7 +261,7 @@ describe('settingStore', () => {
   });
 
   describe('apply', () => {
-    // Intended behaviour change (sprint-17 Q2=A): Apply writes launchOnStartup at once through SetLaunchOnStartup.
+    // Thay đổi hành vi dự kiến (sprint-17 Q2=A): Apply ghi launchOnStartup ngay qua SetLaunchOnStartup.
     it('writes a changed launchOnStartup at once and follows the value the backend returns', async () => {
       callIPCMock.mockResolvedValueOnce({ settings: { ...DEFAULT_SETTINGS, launchOnStartup: true } });
       state().setDraft({ theme: 'dark', font: 'arial', language: 'vi', launchOnStartup: true });
@@ -330,7 +330,7 @@ describe('settingStore', () => {
       expect(state().saved).toEqual(DEFAULT_SETTINGS);
     });
 
-    // Intended behaviour change (sprint-16 R4): Apply keeps the draft's update switches.
+    // Thay đổi hành vi dự kiến (sprint-16 R4): Apply giữ các tùy chọn cập nhật trong bản nháp.
     it('keeps the draft autoUpdate (already sent to the updater) and leaves saved untouched', async () => {
       state().setDraft({ theme: 'dark', autoUpdate: false });
       await settle();
@@ -383,7 +383,7 @@ describe('settingStore', () => {
     callIPCMock.mockResolvedValueOnce({ settings: { ...DEFAULT_SETTINGS, betaUpdate: true } });
     await expect(state().save()).resolves.toBe(true);
 
-    // The save call is no longer calls[0]: setDraft calls SetUpdateOptions first (sprint-16 R4).
+    // Lệnh lưu không còn nằm ở calls[0]: setDraft gọi SetUpdateOptions trước (sprint-16 R4).
     const saveCall = callIPCMock.mock.calls.find(call => call[0] === SaveSettings);
     expect(saveCall?.[1]).toEqual([expect.objectContaining({ betaUpdate: true })]);
     expect(state().saved.betaUpdate).toBe(true);

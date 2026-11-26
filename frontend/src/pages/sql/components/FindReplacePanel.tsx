@@ -22,9 +22,9 @@ type FindReplacePanelProps = {
   find: string;
   replace: string;
   options: FindOptions;
-  /** The panel puts its counter refresh here while mounted; the editor calls it after every text change. */
+  /** Khi panel đang mount, lưu hàm làm mới bộ đếm tại đây; editor gọi hàm sau mỗi lần văn bản thay đổi. */
   docChangeRef: RefObject<(() => void) | null>;
-  /** Changes every time Ctrl+F is pressed, so the Find box is focused again even when already open. */
+  /** Thay đổi mỗi lần nhấn Ctrl+F để ô Find được focus lại ngay cả khi panel đang mở. */
   focusKey: number;
   onChangeFind: (value: string) => void;
   onChangeReplace: (value: string) => void;
@@ -32,7 +32,7 @@ type FindReplacePanelProps = {
   onClose: () => void;
 };
 
-/** Wait (ms) after the last text change before the "i/n" counter is recomputed. */
+/** Thời gian chờ (ms) sau lần đổi văn bản cuối trước khi tính lại bộ đếm "i/n". */
 const DOC_CHANGE_DELAY = 120;
 
 type MatchInfo = { index: number; total: number };
@@ -43,7 +43,7 @@ const OPTION_ICONS = [
   { key: 'regexp', Icon: Regex, label: 'find.useRegex' },
 ] as const;
 
-/** Find / Replace box floating over the editor. It is not a modal, so the editor stays usable while it is open. */
+/** Hộp Find / Replace nổi trên editor. Đây không phải modal nên editor vẫn dùng được khi hộp đang mở. */
 function FindReplacePanel(props: FindReplacePanelProps) {
   const {
     viewRef,
@@ -66,13 +66,13 @@ function FindReplacePanel(props: FindReplacePanelProps) {
     findInputRef.current?.select();
   }, []);
 
-  // Runs on open and on every later Ctrl+F (`focusKey` changes).
+  // Chạy khi mở và mỗi lần nhấn Ctrl+F sau đó (`focusKey` thay đổi).
   useEffect(focusFind, [focusKey, focusFind]);
 
   const query = useMemo(() => createQuery(find, options), [find, options]);
   const isInvalid = !!find && !query.valid;
 
-  // Keeps a shown "i/n" counter up to date; a hidden one (null) is left alone, so typing does not re-render.
+  // Cập nhật bộ đếm "i/n" đang hiển thị; nếu bị ẩn (null) thì giữ nguyên để thao tác nhập không gây render lại.
   const updateInfo = useCallback(() => {
     const view = viewRef.current;
     if (!view) return;
@@ -83,7 +83,7 @@ function FindReplacePanel(props: FindReplacePanelProps) {
     });
   }, [viewRef, query]);
 
-  // Runs on mount and when the query or an option changes; text changes are batched so typing stays cheap.
+  // Chạy khi mount và khi truy vấn hoặc tùy chọn thay đổi; các lần đổi văn bản được gom lại để nhập liệu không bị chậm.
   useEffect(() => {
     updateInfo();
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -118,7 +118,7 @@ function FindReplacePanel(props: FindReplacePanelProps) {
     [onChangeReplace]
   );
 
-  // The editor is the source of truth: read the selection back to show "i/n".
+  // Editor là nguồn dữ liệu chính: đọc lại vùng chọn để hiển thị "i/n".
   const refreshInfo = useCallback((view: EditorView) => setInfo(getMatchInfo(view.state, query)), [query]);
 
   const onClickFind = useCallback(() => {
@@ -154,11 +154,11 @@ function FindReplacePanel(props: FindReplacePanelProps) {
         e.stopPropagation();
         onClickCancel();
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
-        // Keep the WebView's own find bar away; just re-focus the Find box.
+        // Tránh mở thanh tìm kiếm riêng của WebView; chỉ focus lại ô Find.
         e.preventDefault();
         focusFind();
       } else if ((e.ctrlKey || e.metaKey) && ['e', 'q'].includes(e.key.toLowerCase())) {
-        // Editor shortcuts (execute, format): inert while typing here, and the WebView must not act on them either.
+        // Phím tắt của editor (chạy, định dạng) không hoạt động khi nhập ở đây; WebView cũng không được xử lý chúng.
         e.preventDefault();
       } else if (e.key === 'Enter' && e.target === findInputRef.current) {
         onClickFind();

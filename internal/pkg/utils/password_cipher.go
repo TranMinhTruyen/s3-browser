@@ -22,14 +22,14 @@ const (
 )
 
 var (
-	// ErrWrongPassword is returned by OpenWithPassword when authentication fails: wrong password or damaged data.
+	// ErrWrongPassword được OpenWithPassword trả về nếu xác thực thất bại: mật khẩu sai hoặc dữ liệu bị hỏng.
 	ErrWrongPassword = errors.New("wrong password or damaged data")
-	// ErrInvalidSealed is returned by OpenWithPassword when the KDF parameters are not acceptable.
+	// ErrInvalidSealed được OpenWithPassword trả về nếu tham số KDF không được chấp nhận.
 	ErrInvalidSealed = errors.New("sealed data invalid")
 )
 
-// PasswordSealed is data encrypted with AES-256-GCM under a key derived from a password (PBKDF2-SHA256).
-// []byte fields are base64 in JSON.
+// PasswordSealed chứa dữ liệu được mã hóa bằng AES-256-GCM với khóa dẫn xuất từ mật khẩu (PBKDF2-SHA256).
+// Các trường []byte được biểu diễn bằng base64 trong JSON.
 type PasswordSealed struct {
 	KDF        string `json:"kdf"`
 	Iterations int    `json:"iterations"`
@@ -38,8 +38,8 @@ type PasswordSealed struct {
 	Data       []byte `json:"data"`
 }
 
-// SealWithPassword encrypts plain under password, with a fresh random salt and nonce. aad is authenticated but not
-// encrypted: OpenWithPassword needs the same aad, so it binds the ciphertext to the data the caller passes.
+// SealWithPassword mã hóa plain bằng password với salt và nonce ngẫu nhiên mới. aad được xác thực nhưng không mã hóa:
+// OpenWithPassword cần cùng aad nên ciphertext được gắn với dữ liệu mà bên gọi truyền vào.
 func SealWithPassword(plain []byte, password string, aad []byte) (PasswordSealed, error) {
 	sealed := PasswordSealed{
 		KDF:        kdfPBKDF2SHA256,
@@ -62,9 +62,8 @@ func SealWithPassword(plain []byte, password string, aad []byte) (PasswordSealed
 	return sealed, nil
 }
 
-// OpenWithPassword reverses SealWithPassword. Parameters outside the accepted range give ErrInvalidSealed
-// before any key is derived; a failed authentication (wrong password,
-// damaged data or a different aad) gives ErrWrongPassword.
+// OpenWithPassword thực hiện ngược lại SealWithPassword. Tham số nằm ngoài giới hạn được chấp nhận sẽ trả ErrInvalidSealed
+// trước khi dẫn xuất khóa; xác thực thất bại (mật khẩu sai, dữ liệu hỏng hoặc aad khác) sẽ trả ErrWrongPassword.
 func OpenWithPassword(s PasswordSealed, password string, aad []byte) ([]byte, error) {
 	if s.KDF != kdfPBKDF2SHA256 || s.Iterations < minKdfIterations || s.Iterations > maxKdfIterations ||
 		len(s.Salt) != passwordSaltSize || len(s.Nonce) != passwordNonceSize {
@@ -82,7 +81,7 @@ func OpenWithPassword(s PasswordSealed, password string, aad []byte) ([]byte, er
 	return plain, nil
 }
 
-// passwordGCM derives the key of s from password and returns the AES-256-GCM cipher for it.
+// passwordGCM dẫn xuất khóa của s từ password rồi trả cipher AES-256-GCM tương ứng.
 func passwordGCM(password string, s PasswordSealed) (cipher.AEAD, error) {
 	key, err := pbkdf2.Key(sha256.New, password, s.Salt, s.Iterations, passwordKeySize)
 	if err != nil {

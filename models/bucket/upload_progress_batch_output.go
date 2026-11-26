@@ -1,6 +1,6 @@
 package bucket
 
-// UploadProgressBatchOutput is the payload of the upload progress event: the progress of every running upload.
+// UploadProgressBatchOutput là payload của sự kiện tiến độ tải lên, gồm tiến độ của mọi lượt tải lên đang chạy.
 type UploadProgressBatchOutput struct {
 	Items []UploadProgressOutput `json:"items"`
 }

@@ -211,7 +211,7 @@ async fn open_cursor_bad_sql_is_sql_error() {
     );
 }
 
-// ---------- execute ----------
+// ---------- thực thi ----------
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn execute_only_last_statement_keeps_cursor() {

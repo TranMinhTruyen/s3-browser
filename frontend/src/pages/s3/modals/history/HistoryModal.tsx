@@ -19,14 +19,14 @@ import { MODAL_CHROME_HEIGHT } from '@/components/modals/modalLayout';
 const PAGE_SIZE = 10;
 const HISTORY_ROW_ESTIMATE = 100;
 
-// Fixed body height on tall screens; shrinks on short ones so Modal.Content never exceeds its max-height.
+// Chiều cao nội dung cố định trên màn hình cao; giảm trên màn hình thấp để Modal.Content không vượt max-height.
 const BODY_HEIGHT = `min(40.625rem, calc(100dvh - 2 * var(--modal-y-offset) - ${MODAL_CHROME_HEIGHT}))`;
 
 type HistoryCardProps = {
   item: DownloadHistoryItem;
 };
 
-/** One download history entry: name, size, time, status and a link to the destination. */
+/** Một mục lịch sử tải xuống: tên, dung lượng, thời gian, trạng thái và liên kết đến đích lưu. */
 const HistoryCard = memo(function HistoryCard(props: HistoryCardProps) {
   const { item } = props;
   const { t } = useTranslation('historyModal');
@@ -76,7 +76,7 @@ const HistoryCard = memo(function HistoryCard(props: HistoryCardProps) {
   );
 });
 
-/** Paged, virtualized list of past downloads; loads the next page near the end of the list. */
+/** Danh sách lịch sử tải xuống được phân trang và ảo hóa; tải trang tiếp theo khi gần cuối danh sách. */
 export default createMantineModal<{}, false>(props => {
   const { mantine, ...restProps } = props;
 
@@ -113,7 +113,7 @@ export default createMantineModal<{}, false>(props => {
   }, [startRequest]);
 
   const loadNextPage = useCallback(async () => {
-    // The backend returns an empty afterID once the last page is reached.
+    // Backend trả về afterID rỗng khi đã đến trang cuối.
     if (!afterID) return;
     const ctrl = startRequest();
     setIsLoadingMore(true);
@@ -135,17 +135,17 @@ export default createMantineModal<{}, false>(props => {
 
   useEffect(() => {
     loadFirstPage();
-    // Cancel any running request when the modal closes.
+    // Hủy yêu cầu đang chạy khi modal đóng.
     return () => requestCtrl.current?.abort();
   }, [loadFirstPage]);
 
-  // The list sits below the scroll container's padding, so the virtualizer needs that offset.
+  // Danh sách nằm dưới padding của vùng cuộn nên virtualizer cần biết độ lệch này.
   useLayoutEffect(() => {
     setScrollMargin(listRef.current?.offsetTop ?? 0);
-    // offsetTop is px and the padding above the list is rem: measure again when the interface size changes.
+    // offsetTop tính bằng px còn padding phía trên danh sách tính bằng rem: đo lại khi đổi cỡ giao diện.
   }, [scale]);
 
-  // React Compiler is disabled, so this compiler-only lint does not apply.
+  // React Compiler đang tắt nên quy tắc lint chỉ dành cho compiler này không áp dụng.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
     count: historyList.length,
@@ -163,9 +163,9 @@ export default createMantineModal<{}, false>(props => {
   const lastVisibleIndex = virtualizer.range?.endIndex ?? -1;
 
   useEffect(() => {
-    // After a failed page, stop instead of retrying in a loop.
+    // Nếu tải trang thất bại thì dừng thay vì thử lại liên tục.
     if (!afterID || isLoadingMore || loadMoreError) return;
-    // Load the next page once only 2 items are left below the viewport.
+    // Tải trang tiếp theo khi chỉ còn 2 mục bên dưới khung nhìn.
     if (lastVisibleIndex >= historyList.length - 1 - 2) {
       loadNextPage();
     }

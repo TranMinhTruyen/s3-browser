@@ -30,7 +30,7 @@ const mfaField = () => screen.getByLabelText(/MFA code/, { selector: 'input' });
 const secretField = () => screen.getByLabelText(/Secret key/, { selector: 'input' });
 const querySecretField = () => screen.queryByLabelText(/Secret key/, { selector: 'input' });
 
-/** Shows the modal; `result` settles when it resolves. */
+/** Hiển thị hộp thoại; `result` được giải quyết khi hộp thoại đóng. */
 async function open(stored?: ConnectionProfileOutput) {
   useProfileStore.setState({ connectionProfiles: stored ? { c1: stored } : {} });
   const view = renderWithProviders(<div />);

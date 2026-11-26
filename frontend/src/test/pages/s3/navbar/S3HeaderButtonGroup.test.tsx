@@ -145,7 +145,7 @@ describe('S3HeaderButtonGroup', () => {
       callIPCMock.mockReturnValueOnce(new Promise(r => (release = r)) as never);
       renderWithProviders(<S3HeaderButtonGroup />);
 
-      // Both clicks land in one batch, before React can disable the button, so only the ref guard stops the second.
+      // Cả hai click đến trong cùng batch trước khi React kịp vô hiệu hóa nút nên chỉ ref guard ngăn được lần thứ hai.
       act(() => {
         fireEvent.click(importBtn());
         fireEvent.click(importBtn());

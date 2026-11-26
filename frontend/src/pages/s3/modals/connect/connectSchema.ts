@@ -12,7 +12,7 @@ const DURATION_ERROR = `V000003:${MIN_DURATION_SECONDS},${MAX_DURATION_SECONDS}`
 const ROLE_ARN_REGEX = /^arn:aws[\w-]*:iam::\d{12}:role\/\S+$/;
 const OCTET = String.raw`(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)`;
 const LOOPBACK_HOST_REGEX = new RegExp(String.raw`^(localhost|127(\.${OCTET}){3}|\[::1\])$`, 'i');
-// Host of the raw URL (no userinfo/port), read before `new URL` normalises forms like `127.1`.
+// Host của URL gốc (không gồm userinfo/port), đọc trước khi `new URL` chuẩn hóa các dạng như `127.1`.
 const RAW_HOST_REGEX = /^[a-z]+:\/\/(?:[^/\\?#@]*@)?(\[[^\]/\\?#]*\]|[^/\\?#:@]*)/i;
 
 export const DEFAULT_CALLBACK_PORT = 48765;
@@ -20,13 +20,13 @@ const MIN_CALLBACK_PORT = 1024;
 const MAX_CALLBACK_PORT = 65535;
 const PORT_ERROR = `V000003:${MIN_CALLBACK_PORT},${MAX_CALLBACK_PORT}`;
 
-/** Mirrors backend `utils.IsSecureUrl`: https with any host, http only for a loopback host. */
+/** Mô phỏng backend `utils.IsSecureUrl`: chấp nhận https với mọi host, chỉ chấp nhận http với host loopback. */
 export const isSecureIssuerUrl = (value: string): boolean => {
   try {
     const { protocol, hostname } = new URL(value);
     if (protocol === 'https:') return hostname !== '';
     if (protocol !== 'http:') return false;
-    // Go's url.Parse rejects a backslash in the authority, which the URL API would silently treat as a slash.
+    // url.Parse của Go từ chối dấu gạch chéo ngược trong authority; URL API lại âm thầm xem nó như dấu gạch chéo xuôi.
     if ((/^[a-z]+:\/\/([^/?#]*)/i.exec(value.trim())?.[1] ?? '').includes('\\')) return false;
     return LOOPBACK_HOST_REGEX.test(RAW_HOST_REGEX.exec(value.trim())?.[1] ?? '');
   } catch {
@@ -34,12 +34,12 @@ export const isSecureIssuerUrl = (value: string): boolean => {
   }
 };
 
-/** Methods with a session duration: required for `assumeRole`, optional for the MinIO ones. */
+/** Các phương thức có thời lượng phiên: bắt buộc với `assumeRole`, tùy chọn với các phương thức MinIO. */
 const DURATION_TYPES: AuthType[] = ['assumeRole', 'minioAssumeRole', 'minioLdap'];
 
 const text = z.string().trim();
 const required = text.nonempty('V000001');
-// A NumberInput gives '' (or a partial string) while the user is typing.
+// NumberInput trả '' (hoặc chuỗi đang nhập dở) trong khi người dùng gõ.
 const numberInput = z.union([z.number(), z.string()]);
 
 const authConfigSchema = z.object({
@@ -65,7 +65,7 @@ const authConfigSchema = z.object({
   buckets: z.array(z.string()),
 });
 
-/** Fields every method shares; a method adds its own rules on top. */
+/** Các trường dùng chung cho mọi phương thức; từng phương thức bổ sung quy tắc riêng. */
 const common = z.object({
   name: text,
   color: text,
@@ -78,10 +78,10 @@ const common = z.object({
   savePassword: z.boolean(),
   autoConnect: z.boolean(),
   mfaCode: text,
-  // Id of the OIDC sign-in held by the backend; never saved with a profile.
+  // Id của phiên đăng nhập OIDC được giữ ở backend; không bao giờ lưu cùng hồ sơ.
   oidcSessionId: text,
   authConfig: authConfigSchema,
-  // Passwords are not trimmed: leading/trailing spaces may be part of them.
+  // Không trim mật khẩu: dấu cách đầu/cuối có thể là một phần của mật khẩu.
   authSecret: z.object({ sessionToken: text, ldapPassword: z.string(), keyPassword: z.string() }),
 });
 
@@ -96,12 +96,12 @@ const isJson = (value: string) => {
 
 const formSchema = common.extend({ authType: z.enum(AUTH_TYPES) });
 
-/** Form values of the connect modal (all fields of all methods; the hidden ones are dropped on submit). */
+/** Giá trị biểu mẫu của hộp thoại kết nối (mọi trường của mọi phương thức; khi submit sẽ bỏ các trường đang ẩn). */
 export type ConnectionInfo = z.infer<typeof formSchema>;
 
 /**
- * Schema per authentication method. `requireSecret` is true to connect/test (secrets and the MFA code are
- * mandatory) and false to only save a profile.
+ * Schema cho từng phương thức xác thực. `requireSecret` là true khi kết nối/kiểm tra (bắt buộc có secret và mã MFA),
+ * false khi chỉ lưu hồ sơ.
  */
 const buildConnectSchema = (requireSecret: boolean) => {
   const secret = requireSecret ? required : text;
@@ -161,7 +161,7 @@ const buildConnectSchema = (requireSecret: boolean) => {
         if (requireSecret && authConfig.mfaSerial && !values.mfaCode) addRequired(['mfaCode']);
       }
 
-      // The AWS role session needs a duration; the MinIO methods leave it empty for the server default.
+      // Phiên AWS role cần thời lượng; các phương thức MinIO để trống để dùng giá trị mặc định của máy chủ.
       if (!DURATION_TYPES.includes(authType)) return;
       const duration = authConfig.durationSeconds;
       if (duration === '') {
@@ -172,28 +172,28 @@ const buildConnectSchema = (requireSecret: boolean) => {
     });
 };
 
-/** Schema used when only saving a profile (secrets are optional). */
+/** Schema dùng khi chỉ lưu hồ sơ (secret là tùy chọn). */
 export const profileSchema = buildConnectSchema(false);
 
-/** Schema used when connecting or testing a connection (secrets and the MFA code are required). */
+/** Schema dùng khi kết nối hoặc kiểm tra kết nối (bắt buộc có secret và mã MFA). */
 export const connectSchema = buildConnectSchema(true);
 
-/** Props of `ConnectModal.show()`. `connectionProfile` is the profile to connect or edit; omit it for a new one. */
+/** Props của `ConnectModal.show()`. `connectionProfile` là hồ sơ cần kết nối hoặc chỉnh sửa; bỏ qua nếu tạo hồ sơ mới. */
 export type ConnectModalProps = {
   mode?: 'connect' | 'manualconnect' | 'createProfile' | 'editProfile';
   connectionProfile?: ConnectionProfileOutput;
 };
 
-/** Props shared by the per-method field components. */
+/** Props dùng chung cho các component trường theo từng phương thức. */
 export type AuthFieldsProps = {
   form: UseFormReturnType<ConnectionInfo>;
-  /** Secrets already stored for the profile being edited (shown as a placeholder instead of a value). */
+  /** Secret đã lưu của hồ sơ đang chỉnh sửa (hiển thị làm placeholder thay vì giá trị). */
   savedSecrets: string[];
-  /** True when the secret must be typed (connect/test); false when saving a profile. */
+  /** True nếu cần nhập secret (kết nối/kiểm tra); false khi lưu hồ sơ. */
   secretRequired: boolean;
 };
 
-/** Empty `authConfig` of a method; the MinIO methods leave the duration empty (server default). */
+/** `authConfig` rỗng của một phương thức; các phương thức MinIO để trống thời lượng (dùng mặc định máy chủ). */
 export const getDefaultAuthConfig = (authType: AuthType): ConnectionInfo['authConfig'] => ({
   profileName: '',
   configFile: '',
@@ -217,7 +217,7 @@ export const getDefaultAuthConfig = (authType: AuthType): ConnectionInfo['authCo
   buckets: [],
 });
 
-/** Builds the empty form values, with the given default profile name. */
+/** Tạo giá trị biểu mẫu rỗng với tên hồ sơ mặc định đã cho. */
 export const getDefaultConnectionInfo = (name: string): ConnectionInfo => ({
   name,
   color: DEFAULT_PROFILE_COLOR,
@@ -236,7 +236,7 @@ export const getDefaultConnectionInfo = (name: string): ConnectionInfo => ({
   authSecret: { sessionToken: '', ldapPassword: '', keyPassword: '' },
 });
 
-/** Form values of a saved profile; secrets stay empty (the backend never returns them). */
+/** Giá trị biểu mẫu của hồ sơ đã lưu; secret luôn rỗng (backend không bao giờ trả chúng về). */
 export const toFormValues = (defaults: ConnectionInfo, profile: ConnectionProfileOutput): ConnectionInfo => {
   const savedConfig = Object.fromEntries(
     Object.entries(profile.authConfig ?? {}).filter(([, value]) => value !== undefined && value !== null)
@@ -260,7 +260,7 @@ export const toFormValues = (defaults: ConnectionInfo, profile: ConnectionProfil
   };
 };
 
-/** Config fields each method uses; `assumeRole` adds `profileName` when its source is an AWS CLI profile. */
+/** Các trường cấu hình mỗi phương thức sử dụng; `assumeRole` thêm `profileName` nếu nguồn là hồ sơ AWS CLI. */
 const CONFIG_KEYS: Partial<Record<AuthType, (keyof ConnectionInfo['authConfig'])[]>> = {
   sharedProfile: ['profileName', 'configFile', 'credentialsFile'],
   sso: ['profileName', 'configFile'],
@@ -272,13 +272,13 @@ const CONFIG_KEYS: Partial<Record<AuthType, (keyof ConnectionInfo['authConfig'])
   minioCert: ['certFile', 'keyFile', 'keyEncrypted'],
 };
 
-/** Trims strings; a list (buckets) is trimmed and de-duplicated without empty items. */
+/** Trim chuỗi; danh sách (bucket) được trim và loại mục rỗng/trùng lặp. */
 const cleanValue = (value: unknown) => {
   if (Array.isArray(value)) return [...new Set(value.map(item => String(item).trim()).filter(Boolean))];
   return typeof value === 'string' ? value.trim() : value;
 };
 
-/** Secrets of the method besides the secret key; an empty one means "keep the saved value" to the backend. */
+/** Các secret của phương thức ngoài secret key; giá trị rỗng có nghĩa là "giữ lại giá trị đã lưu" ở backend. */
 const toAuthSecret = ({ authType, authSecret }: ConnectionInfo): ConnectionProfileInput['authSecret'] => {
   if (authType === 'static') return { sessionToken: authSecret.sessionToken.trim() };
   if (authType === 'minioLdap') return { ldapPassword: authSecret.ldapPassword };
@@ -286,7 +286,7 @@ const toAuthSecret = ({ authType, authSecret }: ConnectionInfo): ConnectionProfi
   return {};
 };
 
-/** Converts the form values to the backend input, keeping only the fields of the selected method. */
+/** Chuyển giá trị biểu mẫu thành dữ liệu đầu vào backend, chỉ giữ các trường của phương thức được chọn. */
 export const toConnectionInput = (
   values: ConnectionInfo,
   id: string,
@@ -296,7 +296,7 @@ export const toConnectionInput = (
   const { authType, authConfig } = values;
   const keys = [...(CONFIG_KEYS[authType] ?? [])];
   if (authType === 'assumeRole' && authConfig.sourceType === 'profile') keys.push('profileName');
-  // The extra CA belongs to the MinIO connection whatever the method.
+  // CA bổ sung thuộc về kết nối MinIO bất kể phương thức nào.
   if (values.provider === 'minio') keys.push('caFile');
 
   const config = Object.fromEntries(
@@ -321,7 +321,7 @@ export const toConnectionInput = (
     authConfig: config,
     authSecret: toAuthSecret(values),
     mfaCode: withMfaCode && needsMfa({ authType, authConfig }) ? values.mfaCode : '',
-    // Only a connect/test carries the sign-in (withMfaCode is false when saving a profile).
+    // Chỉ thao tác kết nối/kiểm tra mới mang dữ liệu đăng nhập (withMfaCode là false khi lưu hồ sơ).
     oidcSessionId: withMfaCode && authType === 'minioOidc' ? values.oidcSessionId : '',
   };
 };

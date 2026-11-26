@@ -1,5 +1,5 @@
-// Package handlers exposes the modules to the frontend as Wails services. Handlers stay thin:
-// they only forward to the module, which owns the logic.
+// Package handlers cung cấp các module cho frontend dưới dạng service Wails. Handler chỉ đóng vai trò chuyển tiếp
+// lời gọi đến module, nơi xử lý logic.
 package handlers
 
 import (
@@ -7,24 +7,24 @@ import (
 	"S3Browser/models"
 )
 
-// MasterHandler is the Wails service for master data.
+// MasterHandler là service Wails cung cấp dữ liệu danh mục.
 type MasterHandler struct {
 	master *master.Module
 }
 
-// NewMasterHandler creates the master handler.
+// NewMasterHandler tạo handler danh mục.
 func NewMasterHandler(master *master.Module) *MasterHandler {
 	return &MasterHandler{
 		master: master,
 	}
 }
 
-// GetMasterData returns the master items of the given codes.
+// GetMasterData trả về các mục danh mục ứng với những code đã cho.
 func (h *MasterHandler) GetMasterData(codes []string) models.Output[models.GetMasterDataOutput] {
 	return h.master.GetMasterData(codes)
 }
 
-// GetRegionData returns the regions grouped by provider.
+// GetRegionData trả về các region được nhóm theo provider.
 func (h *MasterHandler) GetRegionData() models.Output[models.RegionOutput] {
 	return h.master.GetRegion()
 }

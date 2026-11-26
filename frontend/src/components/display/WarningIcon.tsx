@@ -4,11 +4,11 @@ import { WARNING_COLOR } from '@/components/modals/modalColors';
 
 type WarningIconProps = {
   label: string;
-  /** Size in px at the medium size; drawn in rem so it follows the interface size. */
+  /** Kích thước theo px ở cỡ trung bình; vẽ bằng rem để co giãn theo cỡ giao diện. */
   size?: number;
 };
 
-/** Warning triangle that explains itself in a tooltip; never shrinks inside a flex row. */
+/** Tam giác cảnh báo có tooltip giải thích; không bị co nhỏ trong hàng flex. */
 function WarningIcon({ label, size = 16 }: WarningIconProps) {
   return (
     <Tooltip label={label}>

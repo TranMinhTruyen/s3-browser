@@ -19,10 +19,10 @@ import { ConnectionProfile, useProfileStore } from '@/pages/s3/stores/profileSto
 import { useTabListStore } from '@/pages/s3/stores/tabListStore';
 import { needsManualInput } from '@/pages/s3/utils/authUtils';
 
-// Gap between cards only (none after the last one), so the list has the same 8px space at the top and bottom.
+// Chỉ chừa khoảng cách giữa các thẻ (không chừa sau thẻ cuối) để đầu và cuối danh sách đều cách 8px.
 const ROW_GAP = 8;
 
-// The delete only needs the identity of the profile.
+// Thao tác xóa chỉ cần định danh của profile.
 const toDeleteInput = ({ id, name, version, authConfig }: ConnectionProfile): ConnectionProfileInput => ({
   id,
   name,
@@ -43,7 +43,7 @@ function ConnectionProfiles() {
         .map(e => e[0])
     )
   );
-  // Only the connected flag of the profile owning the shared menu is needed (undefined = no menu / deleted).
+  // Chỉ cần trạng thái kết nối của profile sở hữu menu dùng chung (undefined = không có menu / đã xóa).
   const menuConnected = useProfileStore(s => (menuKey ? s.connectionProfiles[menuKey]?.isConnected : undefined));
   const loaded = useProfileStore(s => s.loaded);
   const autoConnectDoneRef = useRef(false);
@@ -58,7 +58,7 @@ function ConnectionProfiles() {
   const resetViewByProfile = useTabListStore(s => s.resetViewByProfile);
   const clearProfile = useTabListStore(s => s.clearProfile);
 
-  // Marks a profile as (not) connecting; the ref guards re-entry, the state drives the spinner.
+  // Đánh dấu profile đang (hoặc không còn) kết nối; ref ngăn gọi lặp, state điều khiển spinner.
   const setConnecting = useCallback((key: string, connecting: boolean) => {
     if (connecting) connectingRef.current.add(key);
     else connectingRef.current.delete(key);
@@ -72,7 +72,7 @@ function ConnectionProfiles() {
     });
   }, []);
 
-  // Handlers take the key and read the latest profile from the store, so they stay stable for memoized items.
+  // Handler nhận key rồi đọc profile mới nhất từ store để giữ ổn định khi dùng với các mục được memo.
   const onClickConnect = useCallback(
     async (key: string) => {
       const value = getConnectionProfileById(key);
@@ -122,8 +122,8 @@ function ConnectionProfiles() {
       const value = getConnectionProfileById(key);
       if (!value?.id || connectingRef.current.has(key)) return;
 
-      // The backend disconnects before deleting and refuses while transfers are running,
-      // so the connection is kept if the delete is rejected.
+      // Backend ngắt kết nối trước khi xóa và từ chối xóa khi đang truyền file,
+      // nên kết nối vẫn được giữ nếu yêu cầu xóa bị từ chối.
       if (value.isConnected) {
         const confirmDisconnect = await ConfirmModal.show({
           type: 'warning',
@@ -145,7 +145,7 @@ function ConnectionProfiles() {
         return;
       }
 
-      // Rejected for running transfers keeps the connection; a DB failure has already disconnected it.
+      // Nếu bị từ chối do đang truyền file thì kết nối vẫn còn; lỗi DB xảy ra sau khi đã ngắt kết nối.
       await loadConnectionProfiles();
       if (value.isConnected && !getConnectionProfileById(key)?.isConnected) {
         resetViewByProfile(key);
@@ -154,7 +154,7 @@ function ConnectionProfiles() {
     [deleteConnectionProfiles, clearProfile, loadConnectionProfiles, getConnectionProfileById, resetViewByProfile]
   );
 
-  // Auto-connects once after the first profiles arrive (and again after a profile is saved).
+  // Tự động kết nối một lần sau khi nhận được các profile đầu tiên (và kết nối lại sau khi lưu profile).
   const runAutoConnect = useCallback(() => {
     if (autoConnectDoneRef.current) return;
 
@@ -171,7 +171,7 @@ function ConnectionProfiles() {
   }, [onClickConnect]);
 
   useEffect(() => {
-    // Events.On returns the unsubscribe function.
+    // Events.On trả về hàm hủy đăng ký.
     return Events.On('bucket:connect-save-profile', e => {
       if (!e.data.id) return;
       autoConnectDoneRef.current = false;
@@ -182,8 +182,8 @@ function ConnectionProfiles() {
 
   useEffect(runAutoConnect, [keys, runAutoConnect]);
 
-  // One shared context menu for all rows (a Menu per row is costly with hundreds of profiles).
-  // Right click resolves the row from the DOM; the menu is positioned by Mantine at the mouse.
+  // Dùng chung một menu ngữ cảnh cho mọi hàng (tạo một Menu mỗi hàng sẽ tốn kém khi có hàng trăm profile).
+  // Khi nhấn chuột phải, tìm hàng từ DOM; Mantine đặt menu tại vị trí con trỏ.
   const onContextMenuRows = useCallback((e: MouseEvent<HTMLElement>) => {
     const key = (e.target as HTMLElement).closest<HTMLElement>('[data-profile-key]')?.dataset.profileKey;
     if (key) setMenuKey(key);
@@ -208,12 +208,12 @@ function ConnectionProfiles() {
 
   const scale = useUiScale();
 
-  // React Compiler is disabled, so this compiler-only lint does not apply.
+  // React Compiler đang tắt nên quy tắc lint chỉ dành cho compiler này không áp dụng.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
     count: keys.length,
     getScrollElement: () => scrollRef.current,
-    // Fixed card height: the virtualizer never measures, so the scroll size stays stable while scrolling.
+    // Chiều cao thẻ cố định: virtualizer không cần đo nên kích thước vùng cuộn ổn định khi cuộn.
     estimateSize: () => CARD_HEIGHT * scale,
     gap: ROW_GAP * scale,
     getItemKey: idx => keys[idx],
@@ -225,7 +225,7 @@ function ConnectionProfiles() {
   const virtualItems = virtualizer.getVirtualItems();
   const menuOpened = menuKey !== null && menuConnected !== undefined;
 
-  // The menu is anchored to the mouse point, so close it when the list scrolls (listener only while open).
+  // Menu neo tại vị trí con trỏ nên đóng menu khi danh sách cuộn (chỉ đăng ký listener lúc menu mở).
   useEffect(() => {
     const el = scrollRef.current;
     if (!menuOpened || !el) return;

@@ -4,12 +4,12 @@ const HOVER_PERCENT = 38;
 const mix = (color: string, percent: number) => `color-mix(in srgb, ${color} ${percent}%, transparent)`;
 
 /**
- * Props for a Mantine `light` ActionIcon/Button in a theme color, with a denser background than Mantine's fixed
- * 10% tint (too pale on the title bar). Only theme variables are used: `-light-color` is the scheme-aware shade
- * (darker in light theme, lighter in dark theme), so one value works for both.
+ * Props cho ActionIcon/Button biến thể `light` của Mantine theo màu theme, với nền đậm hơn sắc độ 10% cố định của Mantine
+ * (quá nhạt trên thanh tiêu đề). Chỉ dùng biến theme: `-light-color` tự đổi sắc độ theo scheme
+ * (đậm hơn ở theme sáng, nhạt hơn ở theme tối) nên một giá trị dùng được cho cả hai.
  *
- * @param name - Mantine color name, e.g. `red`.
- * @param component - CSS variable prefix of the component: `ai` (ActionIcon) or `button`.
+ * @param name - tên màu Mantine, ví dụ `red`.
+ * @param component - tiền tố biến CSS của component: `ai` (ActionIcon) hoặc `button`.
  */
 export const tintedColor = (name: string, component: 'ai' | 'button') => {
   const color = `var(--mantine-color-${name}-light-color)`;

@@ -10,7 +10,7 @@ const DATA: (string | null)[][] = [
 ];
 const COLUMNS = ['id', 'name', 'note'];
 
-/** A cell inside its own row element; `col` -1 is the row number cell. */
+/** Một ô bên trong phần tử hàng; `col` -1 là ô số thứ tự hàng. */
 const cell = (row: number, col: number) => {
   const rowEl = document.createElement('div');
   rowEl.dataset.row = String(row);
@@ -49,7 +49,7 @@ const mouse = (target: EventTarget | null, mods: Mods = {}) =>
   }) as unknown as MouseEvent<HTMLDivElement> & { preventDefault: ReturnType<typeof vi.fn> };
 
 type KeyMods = Partial<{ shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }>;
-/** A key pressed on the grid itself (target = currentTarget), or on a child when `onChild` is set. */
+/** Phím nhấn trực tiếp trên grid (target = currentTarget), hoặc trên phần tử con khi đặt `onChild`. */
 const keyEvent = (key: string, mods: KeyMods = {}, onChild = false) => {
   const root = document.createElement('div');
   return {
@@ -95,7 +95,7 @@ type Setup = ReturnType<typeof setup>;
 const down = (s: Setup, target: EventTarget | null, mods: Mods = {}) =>
   act(() => s.result.current.onMouseDownGrid(mouse(target, mods)));
 const up = () => act(() => void window.dispatchEvent(new MouseEvent('mouseup')));
-/** A click as the user makes it: the selection starts on mouse down, a drag ends on mouse up. */
+/** Mô phỏng thao tác click: vùng chọn bắt đầu khi nhấn chuột, thao tác kéo kết thúc khi thả chuột. */
 const pick = (s: Setup, target: EventTarget | null, mods: Mods = {}) => {
   down(s, target, mods);
   up();

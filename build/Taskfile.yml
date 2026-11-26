@@ -4,8 +4,8 @@ tasks:
   go:mod:tidy:
     summary: Runs `go mod tidy`
     internal: true
-    # Universal/multi-arch builds invoke this concurrently from parallel deps;
-    # two `go mod tidy` processes racing on go.mod can corrupt it (#4637).
+    # Các build universal/đa kiến trúc có thể gọi bước này đồng thời từ các dependency song song;
+    # hai tiến trình `go mod tidy` cùng sửa go.mod có thể làm hỏng file (#4637).
     run: once
     cmds:
       - go mod tidy
@@ -141,7 +141,7 @@ tasks:
       - |
         set -euo pipefail
         mkdir -p frontend/public/puppertino
-        # If bundled Puppertino exists, prefer it. Otherwise, try to fetch, but don't fail build on error.
+        # Nếu đã có Puppertino đóng gói sẵn thì ưu tiên dùng. Nếu không, thử tải nhưng không làm build thất bại khi có lỗi.
         if [ ! -f frontend/public/puppertino/puppertino.css ]; then
           echo "No bundled Puppertino found. Attempting to fetch from GitHub..."
           if curl -fsSL https://raw.githubusercontent.com/codedgar/Puppertino/main/dist/css/full.css -o frontend/public/puppertino/puppertino.css; then
@@ -153,16 +153,16 @@ tasks:
         else
           echo "Using bundled Puppertino at frontend/public/puppertino/puppertino.css"
         fi
-        # Ensure index.html includes Puppertino CSS and button classes
+        # Đảm bảo index.html có CSS Puppertino và các class nút.
         INDEX_HTML=frontend/index.html
         if [ -f "$INDEX_HTML" ]; then
           if ! grep -q 'href="/puppertino/puppertino.css"' "$INDEX_HTML"; then
-            # Insert Puppertino link tag after style.css link
+            # Chèn thẻ link Puppertino sau link style.css.
             awk '
               /href="\/style.css"\/?/ && !x { print; print "    <link rel=\"stylesheet\" href=\"/puppertino/puppertino.css\"/>"; x=1; next }1
             ' "$INDEX_HTML" > "$INDEX_HTML.tmp" && mv "$INDEX_HTML.tmp" "$INDEX_HTML"
           fi
-          # Replace default .btn with Puppertino primary button classes if present
+          # Thay .btn mặc định bằng class nút chính của Puppertino nếu có.
           sed -E -i'' 's/class=\"btn\"/class=\"p-btn p-prim-col\"/g' "$INDEX_HTML" || true
         fi
 
@@ -190,7 +190,7 @@ tasks:
     internal: true
     deps:
       - task: build:dll
-    # Skipped while the DLL is unchanged: a running app keeps the copy locked, and overwriting it would fail.
+    # Bỏ qua khi DLL không đổi: ứng dụng đang chạy giữ khóa bản sao nên không thể ghi đè.
     sources:
       - rust/target/x86_64-pc-windows-msvc/release/s3b_db.dll
     generates:
@@ -212,8 +212,8 @@ tasks:
       - go.mod
       - go.sum
     vars:
-      # Only the generator gets the tag wailsgen: it hides MarshalJSON of the db result models, which the
-      # generator would render as `any`. The app build (BUILD_FLAGS) stays without it.
+      # Chỉ dùng tag wailsgen cho bước sinh bindings: tag này ẩn MarshalJSON của model kết quả DB, nếu không
+      # generator sẽ tạo kiểu `any`. Build ứng dụng (BUILD_FLAGS) không dùng tag này.
       GEN_FLAGS: '{{if contains "-tags " .BUILD_FLAGS}}{{replace "-tags " "-tags wailsgen," .BUILD_FLAGS}}{{else}}{{.BUILD_FLAGS}} -tags wailsgen{{end}}'
     generates:
       - frontend/bindings/**/*
@@ -312,10 +312,10 @@ tasks:
       For CGO apps, set CGO_ENABLED=1 with libc-compatible builder/runtime images, e.g.:
         task build:docker CGO_ENABLED=1 GO_IMAGE=golang:bookworm RUNTIME_IMAGE=gcr.io/distroless/base-debian12
     deps:
-      # Build the production frontend so frontend/dist (embedded by the Go build
-      # inside the image) is present and current in the Docker build context.
-      # Pass the server,production tags so binding generation analyses the same
-      # build the Docker image compiles, not the default-tag build.
+      # Tạo frontend ở chế độ production vào frontend/dist (được Go nhúng
+      # trong image) có mặt và mới nhất trong Docker build context.
+      # Truyền tag server,production để bước sinh bindings phân tích cùng bản build
+      # mà Docker image sẽ biên dịch, không dùng bản build tag mặc định.
       - task: build:frontend
         vars:
           BUILD_FLAGS: "-tags server,production"

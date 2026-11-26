@@ -7,20 +7,20 @@ type AnyStore = UseBoundStore<StoreApi<unknown>>;
 
 declare global {
   interface Window {
-    /** Dev-only registry of every store created through {@link createAppStore}, keyed by store name. */
+/** Registry chỉ dùng khi phát triển, chứa mọi store được tạo qua {@link createAppStore}, lập chỉ mục theo tên store. */
     __stores?: Record<string, AnyStore>;
-    /** Dev-only snapshot of every registered store, keyed by store name. */
+/** Ảnh chụp chỉ dùng khi phát triển của mọi store đã đăng ký, lập chỉ mục theo tên store. */
     __storeState?: () => Record<string, unknown>;
   }
 }
 
 /**
- * Creates a zustand store with devtools (dev only) and immer.
- * In dev the store is also exposed on `window.__stores[name]`.
+ * Tạo zustand store có devtools (chỉ trong môi trường phát triển) và immer.
+ * Trong môi trường phát triển, store cũng được đưa ra `window.__stores[name]`.
  *
- * @param storeCreator - state and actions; actions call `set(update, undefined, 'scope/action')`.
- * @param name - unique store name used by devtools and `window.__stores`.
- * @returns the bound store hook.
+ * @param storeCreator - state và action; action gọi `set(update, undefined, 'scope/action')`.
+ * @param name - tên store duy nhất, dùng cho devtools và `window.__stores`.
+ * @returns hook đã liên kết với store.
  */
 export function createAppStore<T>(
   storeCreator: StateCreator<T, [['zustand/devtools', never], ['zustand/immer', never]], [], T>,
@@ -34,8 +34,8 @@ export function createAppStore<T>(
   );
 
   if (import.meta.env.DEV) {
-    // The WebView2 inspector carries no Redux DevTools extension, so the devtools
-    // middleware above has nothing to talk to. Expose the store on `window` instead:
+    // Inspector của WebView2 không có tiện ích Redux DevTools nên middleware devtools ở trên không có nơi kết nối.
+    // Thay vào đó, đưa store ra `window`:
     //   __stores.MasterData.getState()
     //   __stores.MasterData.subscribe(console.log)
     //   __storeState()

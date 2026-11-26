@@ -7,7 +7,7 @@ import DbProfileModal from '@/pages/sql/modals/dbProfile/DbProfileModal';
 import { useDbProfileStore } from '@/pages/sql/stores/dbProfileStore';
 import { notifyNoBackend } from '@/pages/sql/utils/sqlToast';
 
-/** Button group on top of the SQL navbar; create and refresh work; connect and import still need the DB backend. */
+/** Nhóm nút phía trên thanh điều hướng SQL; tạo mới và làm mới đã hoạt động, còn kết nối và nhập dữ liệu vẫn cần backend DB. */
 function SqlHeaderButtonGroup() {
   const { t } = useTranslation('sqlNavbar');
   const loadDbProfiles = useDbProfileStore(s => s.loadDbProfiles);

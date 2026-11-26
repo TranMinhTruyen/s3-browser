@@ -24,16 +24,16 @@ import { useTabListStore } from '@/pages/s3/stores/tabListStore';
 import { isAnonymous } from '@/pages/s3/utils/authUtils';
 import { onTabGone } from '@/pages/s3/utils/tabUtils';
 
-// Buckets fetched per page.
+// Số bucket lấy trong mỗi trang.
 const BUCKET_PAGE_SIZE = 1000;
-// Wait for the visible range to settle before checking access of the buckets on screen.
+// Chờ vùng hiển thị ổn định rồi mới kiểm tra quyền truy cập của các bucket trên màn hình.
 const ACCESS_CHECK_DELAY_MS = 150;
-// Load the next page once only this many rows are left below the viewport.
+// Tải trang tiếp theo khi còn không quá số hàng này bên dưới viewport.
 const PREFETCH_ROWS = 2;
 
 export type BucketListViewRef = {
   onRefresh?: () => Promise<void>;
-  // Patches the policy mode of one bucket, e.g. right after the user saved its policy.
+  // Cập nhật policy mode của một bucket, ví dụ ngay sau khi người dùng lưu policy.
   setPolicyMode?: (bucket: string, mode: string) => void;
 };
 
@@ -42,7 +42,7 @@ type BucketListViewProps = {
   profile?: ConnectionProfileOutput | null;
   active: boolean;
   scrollRef: RefObject<HTMLElement | null>;
-  // Applied search keyword; empty means the normal lazy-loaded list.
+  // Từ khóa tìm kiếm đang áp dụng; rỗng nghĩa là danh sách lazy-load thông thường.
   keyword?: string;
   onSelectBucket?: (bucketName: string | undefined) => void;
   onEditPolicy?: (bucketName: string | undefined) => void;
@@ -50,13 +50,13 @@ type BucketListViewProps = {
   ref?: Ref<BucketListViewRef>;
 };
 
-/** Virtualized bucket list of the active connection; exposes imperative actions via `BucketListViewRef`. */
+/** Danh sách bucket virtualized của kết nối đang hoạt động; cung cấp các thao tác bắt buộc qua `BucketListViewRef`. */
 function BucketListView(props: BucketListViewProps) {
   const { tabId, profile, active, scrollRef, keyword = '', onSelectBucket, onEditPolicy, onDeleteBucket, ref } = props;
 
   const { t } = useTranslation('bucket', { keyPrefix: 'page' });
 
-  // Rows get their texts from here, so they do not subscribe to i18n themselves.
+  // Hàng lấy nội dung chữ từ đây nên không tự đăng ký i18n.
   const labels = useMemo<BucketItemLabels>(
     () => ({
       inaccessible: t('tooltip.inaccessible'),
@@ -73,11 +73,11 @@ function BucketListView(props: BucketListViewProps) {
   const [nextCursor, setNextCursor] = useState('');
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
-  // The list the cursor belongs to. Right after the source changes, nextCursor still holds the old list's
-  // cursor until the new first page lands, and sending it to the new source would break the request.
+  // Danh sách mà cursor thuộc về. Ngay sau khi source thay đổi, nextCursor vẫn giữ cursor của danh sách cũ
+  // cho đến khi nhận được trang đầu mới; gửi cursor đó sang source mới sẽ làm hỏng yêu cầu.
   const [cursorKey, setCursorKey] = useState('');
   const [isLoadingFirst, setIsLoadingFirst] = useState(false);
-  // True once the first page of the current list has loaded, so an empty search result can be told from loading.
+  // Là true khi đã tải trang đầu của danh sách hiện tại, để phân biệt kết quả tìm kiếm rỗng với trạng thái đang tải.
   const [isLoaded, setIsLoaded] = useState(false);
   const [scrollMargin, setScrollMargin] = useState(0);
   const scale = useUiScale();
@@ -89,13 +89,13 @@ function BucketListView(props: BucketListViewProps) {
   const profileName = profile?.name;
   const listKey = `${connectionId}|${keyword}`;
   const requestCtrl = useRef<AbortController>(null);
-  // The loadFirstPage the list was last loaded for: showing a hidden tab again must not reload it.
+  // Lần loadFirstPage gần nhất của danh sách: hiển thị lại tab đã ẩn không được tải lại danh sách.
   const loadedFor = useRef<unknown>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  // Access check of the visible buckets: own controller, and names already sent for the current list.
+  // Kiểm tra quyền truy cập của bucket đang hiển thị: controller riêng và tên đã gửi trong danh sách hiện tại.
   const checkCtrl = useRef<AbortController>(null);
   const checkedNames = useRef(new Set<string>());
-  // Buckets whose policy mode was patched by hand (setPolicyMode): a stale access response must not overwrite it.
+  // Các bucket được cập nhật policy mode thủ công (setPolicyMode): phản hồi quyền truy cập cũ không được ghi đè giá trị đó.
   const patchedNames = useRef(new Set<string>());
 
   const resetAccessCheck = useCallback(() => {
@@ -112,7 +112,7 @@ function BucketListView(props: BucketListViewProps) {
     return ctrl;
   }, []);
 
-  // Lists the buckets, or searches them when a keyword is applied. Both return the same shape.
+  // Liệt kê bucket hoặc tìm kiếm nếu có từ khóa. Cả hai đều trả về cùng cấu trúc dữ liệu.
   const handleGetListBucket = useCallback(
     (cursor: string, signal?: AbortSignal) => {
       if (!connectionId) return Promise.resolve(undefined);
@@ -138,7 +138,7 @@ function BucketListView(props: BucketListViewProps) {
     setLoadMoreError(false);
     setIsLoaded(false);
     setIsLoadingFirst(true);
-    // Aborting cancels the request on the Go side too, not only the state update.
+    // Hủy thao tác cũng hủy yêu cầu ở phía Go, không chỉ bỏ cập nhật state.
     const output = await handleGetListBucket('', ctrl.signal);
     if (ctrl.signal.aborted) return;
     if (output) {
@@ -157,14 +157,14 @@ function BucketListView(props: BucketListViewProps) {
     const output = await handleGetListBucket(nextCursor, ctrl.signal);
     if (ctrl.signal.aborted) return;
     if (output) {
-      // A search cursor can overlap the previous page, so drop names already shown.
+      // Trang tìm kiếm có thể trùng kết quả với trang trước nên bỏ tên đã hiển thị.
       setBucketDatas(prev => {
         const seen = new Set(prev.map(item => item.name));
         const added = (output.bucketList ?? []).filter(item => !seen.has(item.name));
-        // Nothing new: keep the same array so the list does not re-render.
+        // Không có dữ liệu mới: giữ nguyên mảng để danh sách không render lại.
         return added.length > 0 ? [...prev, ...added] : prev;
       });
-      // A cursor equal to the one just sent would make auto-load repeat forever: treat it as the end.
+      // Cursor trùng với cursor vừa gửi sẽ khiến tự động tải lặp vô hạn: xem như đã đến cuối.
       setNextCursor(output.nextCursor === nextCursor ? '' : (output.nextCursor ?? ''));
     } else {
       setLoadMoreError(true);
@@ -172,10 +172,10 @@ function BucketListView(props: BucketListViewProps) {
     setIsLoadingMore(false);
   }, [nextCursor, handleGetListBucket, startRequest]);
 
-  // Also runs when the keyword changes, because loadFirstPage depends on it.
+  // Cũng chạy khi từ khóa đổi vì loadFirstPage phụ thuộc vào giá trị này.
   useEffect(() => {
     if (!connectionId) {
-      // Disconnected: reconnecting to the same profile must load the list again.
+      // Đã ngắt kết nối: khi kết nối lại cùng hồ sơ phải tải lại danh sách.
       loadedFor.current = null;
       return;
     }
@@ -185,7 +185,7 @@ function BucketListView(props: BucketListViewProps) {
     loadFirstPage();
   }, [connectionId, loadFirstPage]);
 
-  // Cancel any running request when the view unmounts. A hidden tab (Activity) keeps its request and list.
+  // Hủy mọi yêu cầu đang chạy khi view unmount. Tab bị ẩn (Activity) vẫn giữ yêu cầu và danh sách.
   useEffect(
     () =>
       onTabGone(tabId, () => {
@@ -222,14 +222,14 @@ function BucketListView(props: BucketListViewProps) {
 
   const bucketList = connectionId ? bucketDatas : [];
 
-  // The list sits below the scroll container's padding, so the virtualizer needs that offset.
-  // Re-measure when the view is shown again, since offsetTop is 0 while it is hidden.
+  // Danh sách nằm dưới padding của vùng cuộn nên virtualizer cần biết độ lệch đó.
+  // Đo lại khi view được hiển thị vì offsetTop bằng 0 trong lúc bị ẩn.
   useLayoutEffect(() => {
     if (active) setScrollMargin(listRef.current?.offsetTop ?? 0);
-    // The padding above the list is rem, so its offset changes with the size too.
+    // Padding phía trên danh sách dùng rem nên độ lệch cũng đổi theo kích thước.
   }, [active, scale]);
 
-  // React Compiler is disabled, so this compiler-only lint does not apply.
+  // React Compiler đang tắt nên quy tắc lint chỉ dành cho compiler này không áp dụng.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
     count: bucketList.length,
@@ -248,7 +248,7 @@ function BucketListView(props: BucketListViewProps) {
   const lastVisibleIndex = virtualizer.range?.endIndex ?? -1;
   const firstVisibleIndex = virtualizer.range?.startIndex ?? 0;
 
-  // Merges checked buckets by name; untouched buckets keep their reference so memoized rows do not re-render.
+  // Gộp bucket đã kiểm tra theo tên; giữ nguyên tham chiếu của bucket không đổi để hàng đã memo không render lại.
   const mergeAccess = useCallback((checked: Bucket[]) => {
     const byName = new Map(checked.map(item => [item.name ?? '', item]));
     setBucketDatas(prev => {
@@ -272,7 +272,7 @@ function BucketListView(props: BucketListViewProps) {
     });
   }, []);
 
-  // Check failed: hide the badge skeleton of the buckets sent, so it does not show forever.
+  // Kiểm tra thất bại: ẩn skeleton huy hiệu của các bucket đã gửi để nó không hiển thị mãi.
   const markPolicyUnknown = useCallback((names: string[]) => {
     const failed = new Set(names);
     setBucketDatas(prev =>
@@ -280,8 +280,8 @@ function BucketListView(props: BucketListViewProps) {
     );
   }, []);
 
-  // Checks access (and policy mode, unless anonymous) of the visible buckets still unknown,
-  // once the range stops moving. Each name is sent once per list.
+  // Kiểm tra quyền truy cập (và policy mode nếu không ẩn danh) của các bucket đang hiển thị nhưng chưa rõ trạng thái,
+  // sau khi vùng hiển thị ngừng dịch chuyển. Mỗi tên chỉ gửi một lần cho mỗi danh sách.
   useEffect(() => {
     if (!active || !connectionId) return;
     const timer = setTimeout(async () => {
@@ -319,9 +319,9 @@ function BucketListView(props: BucketListViewProps) {
   ]);
 
   useEffect(() => {
-    // After a failed page, wait for Refresh instead of retrying in a loop.
+    // Sau khi tải trang thất bại, chờ người dùng nhấn Refresh thay vì tự thử lại liên tục.
     if (!active || !nextCursor || isLoadingMore || loadMoreError || cursorKey !== listKey) return;
-    // An empty search has nothing to scroll: the user continues it with the "load more" button.
+    // Tìm kiếm rỗng không có nội dung để cuộn: người dùng tiếp tục bằng nút "load more".
     if (keyword && bucketList.length === 0) return;
     if (lastVisibleIndex >= bucketList.length - 1 - PREFETCH_ROWS) {
       loadNextPage();
@@ -340,11 +340,11 @@ function BucketListView(props: BucketListViewProps) {
   ]);
 
   const isEmpty = bucketList.length === 0;
-  // Only once this very list has loaded (not while loading, after an error, or on a stale previous list).
+  // Chỉ bật sau khi chính danh sách này tải xong (không bật khi đang tải, sau lỗi hoặc khi còn dữ liệu cũ).
   const showEmpty = !!connectionId && isLoaded && cursorKey === listKey && isEmpty && !nextCursor;
-  // Retry after a failed page, or continue a search that found nothing yet.
+  // Thử lại sau khi tải trang thất bại hoặc tiếp tục tìm kiếm khi chưa tìm thấy kết quả.
   const showLoadMore = !!keyword && !!nextCursor && !isLoadingMore && (isEmpty || loadMoreError);
-  // With no rows the list has no height, so the footer flows normally instead of hanging below the rows.
+  // Khi không có hàng, danh sách không có chiều cao nên footer nằm đúng luồng thay vì bị đẩy xuống dưới các hàng.
   const footerStyle = isEmpty ? { width: '100%' } : { position: 'absolute' as const, top: '100%', width: '100%' };
 
   return (

@@ -29,7 +29,7 @@ function S3HeaderButtonGroup() {
     [updateConnectionProfiles]
   );
 
-  // Picks a profile file and adds it to the list as a new profile; never connects (even with autoConnect).
+  // Chọn file hồ sơ và thêm vào danh sách như một hồ sơ mới; không kết nối (kể cả khi bật autoConnect).
   const importProfileFromFile = useCallback(async () => {
     const file = await callIPC(ChooseImportFile, []);
     if (!file?.path) return null;

@@ -8,16 +8,16 @@ import TruncatedText from '@/components/display/TruncatedText';
 import { canLoadMore } from '@/pages/sql/hooks/useSqlRunner';
 import { truncateSql } from '@/pages/sql/utils/sqlToast';
 
-// Row height at the medium interface size, scaled by `useUiScale`; rows are measured, this is only the first guess.
+// Chiều cao hàng ở cỡ giao diện trung bình, co giãn theo `useUiScale`; hàng được đo lại nên đây chỉ là ước lượng đầu.
 const ESTIMATED_ROW_HEIGHT = 56;
 
 type SqlMessageListProps = {
   statements: StatementResult[];
-  /** The run was canceled before it finished. */
+  /** Lượt chạy bị hủy trước khi hoàn tất. */
   cancelled: boolean;
 };
 
-/** Messages of a run: per statement its text, the outcome and the time; a failed statement shows the error. */
+/** Thông báo của một lượt chạy: văn bản, kết quả và thời gian của từng câu lệnh; câu lệnh thất bại sẽ hiện lỗi. */
 function SqlMessageList({ statements, cancelled }: SqlMessageListProps) {
   const { t, i18n } = useTranslation('sqlTab');
   const secondsFormat = useMemo(
@@ -27,7 +27,7 @@ function SqlMessageList({ statements, cancelled }: SqlMessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const scale = useUiScale();
 
-  // React Compiler is disabled, so this compiler-only lint does not apply.
+  // React Compiler đang tắt nên quy tắc lint chỉ dành cho compiler này không áp dụng.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
     count: statements.length + (cancelled ? 1 : 0),

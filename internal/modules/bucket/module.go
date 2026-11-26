@@ -1,5 +1,5 @@
-// Package bucket is the S3 module: connections, buckets, objects, search, upload and download.
-// Module is the public API called by the handlers; the work is done by the submodule_*.go files.
+// Package bucket là module S3, xử lý kết nối, bucket, object, tìm kiếm, tải lên và tải xuống.
+// Module là API công khai để các handler gọi; phần xử lý nằm trong những file submodule_*.go.
 package bucket
 
 import (
@@ -13,261 +13,261 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// Message codes returned to the frontend by the bucket module.
-// Naming convention: S3S = success, S3E = error, S3W = warning.
+// Mã thông báo mà module bucket trả về cho frontend.
+// Quy ước đặt tên: S3S = thành công, S3E = lỗi, S3W = cảnh báo.
 var (
-	// ---- Success ----
+	// ---- Thành công ----
 
-	// Test connection profile {name} to S3 success.
+	// Kiểm tra kết nối S3 của hồ sơ {name} thành công.
 	S3S001 = "S3S001"
 
-	// Profile: {name} is connected.
+	// Đã kết nối hồ sơ: {name}.
 	S3S002 = "S3S002"
 
-	// Profile: {name} disconnect success.
+	// Ngắt kết nối hồ sơ {name} thành công.
 	S3S003 = "S3S003"
 
-	// Download file {object} success, destination {dest}
+	// Tải file {object} thành công đến {dest}.
 	S3S004 = "S3S004"
 
-	// Upload file {name} success, key {key}.
+	// Tải file {name} lên thành công với key {key}.
 	S3S006 = "S3S006"
 
-	// Bucket {bucket} created.
+	// Đã tạo bucket {bucket}.
 	S3S007 = "S3S007"
 
-	// Permission of bucket {bucket} saved.
+	// Đã lưu quyền truy cập của bucket {bucket}.
 	S3S008 = "S3S008"
 
-	// Bucket {bucket} deleted.
+	// Đã xóa bucket {bucket}.
 	S3S009 = "S3S009"
 
-	// ---- Error ----
+	// ---- Lỗi ----
 
-	// Access key or secret key is not valid for this endpoint.
+	// Access key hoặc secret key không hợp lệ với endpoint này.
 	S3E001 = "S3E001"
 
-	// The endpoint rejected.
+	// Endpoint từ chối yêu cầu.
 	S3E002 = "S3E002"
 
-	// Timed out reaching the endpoint, check the address and whether the server is running.
+	// Hết thời gian kết nối đến endpoint; hãy kiểm tra địa chỉ và trạng thái máy chủ.
 	S3E003 = "S3E003"
 
-	// Error while connect to S3 bucket.
+	// Lỗi khi kết nối đến bucket S3.
 	S3E004 = "S3E004"
 
-	// Error while disconnect S3 bucket.
+	// Lỗi khi ngắt kết nối khỏi bucket S3.
 	S3E005 = "S3E005"
 
-	// Profile: {name} is not connected.
+	// Hồ sơ {name} chưa được kết nối.
 	S3E006 = "S3E006"
 
-	// Get list bucket error, profile: {name}.
+	// Lỗi khi lấy danh sách bucket của hồ sơ {name}.
 	S3E007 = "S3E007"
 
-	// Get list object error, profile: {name}, bucket: {bucket}.
+	// Lỗi khi lấy danh sách object của hồ sơ {name}, bucket {bucket}.
 	S3E008 = "S3E008"
 
-	// Destination {path} not exists.
+	// Thư mục đích {path} không tồn tại.
 	S3E009 = "S3E009"
 
-	// Get download history error.
+	// Lỗi khi lấy lịch sử tải xuống.
 	S3E011 = "S3E011"
 
-	// Download object: {object} error.
+	// Lỗi khi tải object {object} xuống.
 	S3E012 = "S3E012"
 
-	// File {name} not exist.
+	// File {name} không tồn tại.
 	S3E014 = "S3E014"
 
-	// File {name} can't access.
+	// Không thể truy cập file {name}.
 	S3E015 = "S3E015"
 
-	// File {name} can't open.
+	// Không thể mở file {name}.
 	S3E016 = "S3E016"
 
-	// Upload file {name} error.
+	// Lỗi khi tải file {name} lên.
 	S3E017 = "S3E017"
 
-	// Folder {folder} has more than {max} files to upload.
+	// Thư mục {folder} có hơn {max} file cần tải lên.
 	S3E018 = "S3E018"
 
-	// Invalid upload path for file {name}.
+	// Đường dẫn tải lên của file {name} không hợp lệ.
 	S3E019 = "S3E019"
 
-	// Invalid folder {prefix}, it can't be deleted.
+	// Thư mục {prefix} không hợp lệ nên không thể xóa.
 	S3E020 = "S3E020"
 
-	// Folder {folder} has more than {max} files over {size} GiB to upload.
+	// Thư mục {folder} có hơn {max} file vượt quá {size} GiB cần tải lên.
 	S3E022 = "S3E022"
 
-	// Upload at most {max} files at a time.
+	// Mỗi lần chỉ được tải lên tối đa {max} file.
 	S3E023 = "S3E023"
 
-	// Get object {key} detail error, profile: {name}, bucket: {bucket}.
+	// Lỗi khi lấy chi tiết object {key} của hồ sơ {name}, bucket {bucket}.
 	S3E024 = "S3E024"
 
-	// Invalid object key {key}.
+	// Key của object {key} không hợp lệ.
 	S3E025 = "S3E025"
 
-	// Search object error, profile: {name}, bucket: {bucket}.
+	// Lỗi khi tìm object trong hồ sơ {name}, bucket {bucket}.
 	S3E026 = "S3E026"
 
-	// Search bucket error, profile: {name}.
+	// Lỗi khi tìm bucket trong hồ sơ {name}.
 	S3E027 = "S3E027"
 
-	// Search keyword must not be empty.
+	// Từ khóa tìm kiếm không được để trống.
 	S3E028 = "S3E028"
 
-	// Choose files error.
+	// Lỗi khi chọn file.
 	S3E029 = "S3E029"
 
-	// Credentials of profile {name} expired, please connect again.
+	// Thông tin xác thực của hồ sơ {name} đã hết hạn; hãy kết nối lại.
 	S3E030 = "S3E030"
 
-	// Assume role {roleArn} failed: role not found or not allowed (sts:AssumeRole).
+	// Không thể AssumeRole {roleArn}: không tìm thấy role hoặc không được phép (sts:AssumeRole).
 	S3E031 = "S3E031"
 
-	// MFA code is invalid or expired.
+	// Mã MFA không hợp lệ hoặc đã hết hạn.
 	S3E032 = "S3E032"
 
-	// AWS CLI profile {profile} not found or invalid.
+	// Không tìm thấy hồ sơ AWS CLI {profile} hoặc hồ sơ không hợp lệ.
 	S3E033 = "S3E033"
 
-	// SSO session of profile {profile} expired, run: aws sso login --profile {profile}
+	// Phiên SSO của hồ sơ {profile} đã hết hạn; chạy: aws sso login --profile {profile}
 	S3E034 = "S3E034"
 
-	// No credentials found in the environment (default chain).
+	// Không tìm thấy thông tin xác thực trong môi trường (chuỗi mặc định).
 	S3E035 = "S3E035"
 
-	// credential_process of profile {profile} failed.
+	// credential_process của hồ sơ {profile} thất bại.
 	S3E036 = "S3E036"
 
-	// MinIO STS request failed.
+	// Yêu cầu STS đến MinIO thất bại.
 	S3E037 = "S3E037"
 
-	// LDAP username or password is incorrect.
+	// Tên người dùng hoặc mật khẩu LDAP không chính xác.
 	S3E038 = "S3E038"
 
-	// OIDC login was canceled or timed out.
+	// Đăng nhập OIDC đã bị hủy hoặc hết thời gian chờ.
 	S3E039 = "S3E039"
 
-	// Callback port {port} is in use, choose another port.
+	// Cổng callback {port} đang được sử dụng; hãy chọn cổng khác.
 	S3E040 = "S3E040"
 
-	// OIDC login failed: {detail}.
+	// Đăng nhập OIDC thất bại: {detail}.
 	S3E041 = "S3E041"
 
-	// Certificate or key file {path} not found, please choose it again.
+	// Không tìm thấy file chứng chỉ hoặc khóa {path}; hãy chọn lại.
 	S3E042 = "S3E042"
 
-	// Certificate or key is invalid or does not match.
+	// Chứng chỉ hoặc khóa không hợp lệ hay không khớp.
 	S3E043 = "S3E043"
 
-	// None of the entered buckets can be accessed anonymously.
+	// Không thể truy cập ẩn danh bất kỳ bucket nào đã nhập.
 	S3E044 = "S3E044"
 
-	// Read AWS config files error.
+	// Lỗi khi đọc các file cấu hình AWS.
 	S3E045 = "S3E045"
 
-	// {secret} is required to renew the credentials of profile {name} (it is not saved).
-	// Param secret is a stable key: mfaCode, secretKey, ldapPassword, oidcSession or keyPassword.
+	// Cần cung cấp {secret} để gia hạn thông tin xác thực của hồ sơ {name} (giá trị này không được lưu).
+	// Tham số secret dùng một trong các key cố định: mfaCode, secretKey, ldapPassword, oidcSession hoặc keyPassword.
 	S3E046 = "S3E046"
 
-	// OIDC sign-in session was not found or has expired, sign in again.
+	// Không tìm thấy phiên đăng nhập OIDC hoặc phiên đã hết hạn; hãy đăng nhập lại.
 	S3E047 = "S3E047"
 
-	// The private key {path} is password protected, enter its password.
+	// Khóa riêng tư {path} được bảo vệ bằng mật khẩu; hãy nhập mật khẩu của khóa.
 	S3E048 = "S3E048"
 
-	// CA certificate file {path} not found or has no valid certificate.
+	// Không tìm thấy file chứng chỉ CA {path} hoặc file không chứa chứng chỉ hợp lệ.
 	S3E049 = "S3E049"
 
-	// Bucket name {bucket} is already taken.
+	// Tên bucket {bucket} đã được sử dụng.
 	S3E050 = "S3E050"
 
-	// Bucket name {bucket} is invalid.
+	// Tên bucket {bucket} không hợp lệ.
 	S3E051 = "S3E051"
 
-	// You do not have permission to change bucket {bucket}.
+	// Bạn không có quyền thay đổi bucket {bucket}.
 	S3E052 = "S3E052"
 
-	// Create bucket {bucket} error.
+	// Lỗi khi tạo bucket {bucket}.
 	S3E053 = "S3E053"
 
-	// An anonymous connection can't create, change or delete buckets.
+	// Kết nối ẩn danh không thể tạo, thay đổi hoặc xóa bucket.
 	S3E054 = "S3E054"
 
-	// Get permission of bucket {bucket} error.
+	// Lỗi khi lấy quyền truy cập của bucket {bucket}.
 	S3E055 = "S3E055"
 
-	// Save permission of bucket {bucket} error.
+	// Lỗi khi lưu quyền truy cập của bucket {bucket}.
 	S3E056 = "S3E056"
 
-	// The bucket policy is invalid.
+	// Policy của bucket không hợp lệ.
 	S3E057 = "S3E057"
 
-	// Block Public Access of bucket {bucket} does not allow a public policy.
+	// Block Public Access của bucket {bucket} không cho phép policy công khai.
 	S3E058 = "S3E058"
 
-	// Bucket {bucket} does not exist.
+	// Bucket {bucket} không tồn tại.
 	S3E059 = "S3E059"
 
-	// Delete bucket {bucket} error.
+	// Lỗi khi xóa bucket {bucket}.
 	S3E060 = "S3E060"
 
-	// Bucket {bucket} is not empty (new objects were added), it was not deleted.
+	// Bucket {bucket} không trống vì có object mới được thêm vào nên chưa bị xóa.
 	S3E061 = "S3E061"
 
-	// Bucket {bucket} was not deleted: {failed} object(s) could not be deleted.
+	// Chưa xóa bucket {bucket}: không thể xóa {failed} object.
 	S3E062 = "S3E062"
 
-	// Bucket {bucket} has Object Lock and is not empty, it can't be deleted.
+	// Bucket {bucket} đang bật Object Lock và không trống nên không thể xóa.
 	S3E063 = "S3E063"
 
-	// Bucket {bucket} still has old versions that this server can't list, it was not deleted.
+	// Chưa xóa bucket {bucket}: bucket còn phiên bản cũ mà máy chủ này không thể liệt kê.
 	S3E064 = "S3E064"
 
-	// ---- Warning ----
+	// ---- Cảnh báo ----
 
-	// Access bucket is limited.
+	// Quyền truy cập bucket bị giới hạn.
 	S3W001 = "S3W001"
 
-	// Download object: {object} is canceled.
+	// Đã hủy tải object {object} xuống.
 	S3W002 = "S3W002"
 
-	// Upload file {name} is canceled.
+	// Đã hủy tải file {name} lên.
 	S3W004 = "S3W004"
 
-	// Another upload is running, please wait until it finishes.
+	// Một tiến trình tải lên khác đang chạy; hãy chờ tiến trình hoàn tất.
 	S3W005 = "S3W005"
 
-	// Used by the frontend only.
-	// Skipped {count} item(s) that can't be uploaded (unreadable, symbolic link or not a regular file).
+	// Chỉ dùng ở frontend.
+	// Đã bỏ qua {count} mục không thể tải lên (không đọc được, là liên kết tượng trưng hoặc không phải file thông thường).
 	S3W006 = "S3W006"
 
-	// Used by the frontend only.
-	// The drop holds more than {max} files, the files after the first {max} are ignored.
+	// Chỉ dùng ở frontend.
+	// Số file được thả vượt quá {max}; các file sau {max} file đầu tiên sẽ bị bỏ qua.
 	S3W007 = "S3W007"
 
-	// Credentials of profile {name} expire in {minutes} minute(s) and cannot be renewed automatically.
+	// Thông tin xác thực của hồ sơ {name} sẽ hết hạn sau {minutes} phút và không thể tự động gia hạn.
 	S3W008 = "S3W008"
 
-	// Bucket {bucket} cannot be accessed anonymously.
+	// Không thể truy cập ẩn danh vào bucket {bucket}.
 	S3W009 = "S3W009"
 
-	// Used by the frontend only.
-	// Credentials of profile {name} expire soon, enter a new MFA code to keep the connection.
+	// Chỉ dùng ở frontend.
+	// Thông tin xác thực của hồ sơ {name} sắp hết hạn; hãy nhập mã MFA mới để duy trì kết nối.
 	S3W010 = "S3W010"
 
-	// Bucket {bucket} was created, but its permission could not be set. You can change it later with Access permission.
+	// Đã tạo bucket {bucket} nhưng không thể đặt quyền truy cập. Bạn có thể đổi quyền sau trong mục Access permission.
 	S3W011 = "S3W011"
 
-	// Bucket {bucket} was created, but Block Public Access does not allow a public policy, so it stays private.
+	// Đã tạo bucket {bucket}, nhưng Block Public Access không cho phép policy công khai nên bucket vẫn ở chế độ riêng tư.
 	S3W012 = "S3W012"
 )
 
-// Module is the public API of the bucket module.
+// Module là API công khai của module bucket.
 type Module struct {
 	logger  *slog.Logger
 	app     *application.App
@@ -287,7 +287,7 @@ type Module struct {
 	submoduleAuthFilesMng       *submoduleAuthFilesMng
 }
 
-// NewModule creates the bucket module and its submodules.
+// NewModule tạo module bucket cùng các submodule.
 func NewModule(
 	app *application.App,
 	logger *slog.Logger,
@@ -328,13 +328,11 @@ func NewModule(
 	}
 }
 
-// Connect opens a connection to an S3-compatible endpoint using the given input.
-// If isExistingProfile is true, input is an already saved profile (the user typed the
-// secret key themselves): it connects with input.Id and creates no profile.
-// If false, input is a new connection: a profile is created from it, and if that fails
-// the connection is dropped.
-// On success, the connection is kept for subsequent bucket/object operations.
-// ctx is the call context: canceling it aborts the connect without a message.
+// Connect kết nối đến endpoint tương thích S3 bằng input đã cho.
+// Nếu isExistingProfile là true, input là hồ sơ đã lưu (người dùng tự nhập secret key): hàm kết nối bằng input.Id và không tạo hồ sơ mới.
+// Nếu là false, input là kết nối mới: hàm tạo hồ sơ từ input; nếu tạo hồ sơ thất bại thì ngắt kết nối.
+// Khi thành công, kết nối được giữ lại để dùng cho các thao tác bucket/object tiếp theo.
+// ctx là context của lời gọi; hủy context sẽ dừng kết nối mà không gửi thông báo.
 func (m *Module) Connect(
 	ctx context.Context,
 	input models.ConnectionProfileInput,
@@ -343,9 +341,8 @@ func (m *Module) Connect(
 	return m.submoduleConnMng.connectAction(ctx, input, isExistingProfile)
 }
 
-// TestConnection checks whether the given credentials and endpoint are valid
-// without keeping the connection open. Useful for validating a profile
-// before saving it. ctx is the call context: canceling it aborts the test without a message.
+// TestConnection kiểm tra thông tin xác thực và endpoint đã cho có hợp lệ không mà không giữ kết nối mở.
+// Có thể dùng để xác thực hồ sơ trước khi lưu. ctx là context của lời gọi; hủy context sẽ dừng kiểm tra mà không gửi thông báo.
 func (m *Module) TestConnection(
 	ctx context.Context,
 	input models.ConnectionProfileInput,
@@ -353,19 +350,17 @@ func (m *Module) TestConnection(
 	return m.submoduleConnMng.testAction(ctx, input)
 }
 
-// ConnectByProfile connects using a saved profile identified by connectionId,
-// loading its connection settings from the profile module. ctx is the call context: canceling it aborts the
-// connect without a message.
+// ConnectByProfile kết nối bằng hồ sơ đã lưu có connectionId tương ứng, đồng thời lấy cấu hình kết nối từ module profile.
+// ctx là context của lời gọi; hủy context sẽ dừng kết nối mà không gửi thông báo.
 func (m *Module) ConnectByProfile(ctx context.Context, connectionId string) models.Output[models.ConnectOutput] {
 	return m.submoduleConnMng.profileConnectAction(ctx, connectionId)
 }
 
-// ReauthConnection renews the credentials of the live connection connectionId without dropping it: running
-// transfers continue. The settings and saved secrets come from the saved profile (every connection has one), and
-// no secret is kept in memory. input must carry what the profile does not save: mfaCode (assumeRole with MFA),
-// secretKey (assumeRole with key source, minioAssumeRole) and authSecret.ldapPassword (minioLdap). A missing one
-// fails with S3E046 (params name, secret). sso needs nothing: run aws sso login first. Anonymous: nothing to renew.
-// ctx is the call context.
+// ReauthConnection gia hạn thông tin xác thực của kết nối đang hoạt động connectionId mà không ngắt kết nối, nên các lượt truyền đang chạy vẫn tiếp tục.
+// Cấu hình và secret đã lưu được lấy từ hồ sơ tương ứng với kết nối; secret không được giữ trong bộ nhớ.
+// input phải chứa các giá trị mà hồ sơ không lưu: mfaCode (assumeRole có MFA), secretKey (assumeRole dùng khóa hoặc minioAssumeRole) và authSecret.ldapPassword (minioLdap).
+// Thiếu giá trị cần thiết sẽ trả S3E046 (tham số name, secret). Với sso, trước tiên chạy aws sso login; kết nối ẩn danh không cần gia hạn.
+// ctx là context của lời gọi.
 func (m *Module) ReauthConnection(
 	ctx context.Context,
 	connectionId string,
@@ -374,38 +369,35 @@ func (m *Module) ReauthConnection(
 	return m.submoduleConnMng.reauthAction(ctx, connectionId, input)
 }
 
-// LoginMinioOidc signs the user in with the OpenID Connect settings in cfg: it opens the system browser, waits for
-// the redirect on 127.0.0.1:cfg.CallbackPort (48765 when 0) and returns the id of a session that holds the tokens in
-// memory. Pass that id as OidcSessionId to Connect, TestConnection or ReauthConnection. A session lasts until the
-// id_token expires or 10 minutes, and is dropped when a connect used it. Fails with S3E039 (timeout), S3E040
-// (port in use) or S3E041; canceling ctx aborts the sign-in without a message.
+// LoginMinioOidc đăng nhập người dùng bằng cấu hình OpenID Connect trong cfg: mở trình duyệt hệ thống, chờ chuyển hướng về
+// 127.0.0.1:cfg.CallbackPort (mặc định 48765 khi giá trị bằng 0), rồi trả về id của phiên giữ token trong bộ nhớ.
+// Truyền id đó làm OidcSessionId cho Connect, TestConnection hoặc ReauthConnection. Phiên kết thúc khi id_token hết hạn,
+// sau 10 phút hoặc ngay khi được dùng để kết nối. Hàm trả S3E039 khi hết thời gian, S3E040 khi cổng đang bận hoặc S3E041 khi đăng nhập lỗi;
+// hủy ctx sẽ dừng đăng nhập mà không gửi thông báo.
 func (m *Module) LoginMinioOidc(ctx context.Context, cfg models.AuthConfig) models.Output[models.OidcLoginOutput] {
 	return m.submoduleOidcMng.login(ctx, cfg)
 }
 
-// ChooseAuthFile opens the native dialog to choose a certificate (kind "cert"), private key ("key") or CA
-// certificate ("ca") file and returns its path. The body is empty if the user cancels.
+// ChooseAuthFile mở hộp thoại hệ thống để chọn file chứng chỉ (kind "cert"), khóa riêng tư ("key") hoặc chứng chỉ CA ("ca"), rồi trả về đường dẫn.
+// Body rỗng nếu người dùng hủy.
 func (m *Module) ChooseAuthFile(kind string) models.Output[string] {
 	return m.submoduleAuthFilesMng.chooseAuthFile(kind)
 }
 
-// ListAwsProfiles returns the profiles of the AWS CLI config and credentials files (empty paths mean the standard
-// files). It only parses the files, so it never runs a credential_process. Missing files give an empty list;
-// an unreadable file gives S3E045.
+// ListAwsProfiles trả về các hồ sơ trong file cấu hình và thông tin xác thực của AWS CLI (đường dẫn rỗng nghĩa là dùng file mặc định).
+// Hàm chỉ phân tích file, không chạy credential_process. File không tồn tại cho kết quả danh sách rỗng; file không đọc được trả S3E045.
 func (m *Module) ListAwsProfiles(configFile, credentialsFile string) models.Output[[]models.AwsProfileOutput] {
 	return m.submoduleAwsProfilesMng.list(configFile, credentialsFile)
 }
 
-// Disconnect closes the active connection identified by connectionId
-// and removes it from the shared connection store.
-// Returns true if the disconnect succeeded.
+// Disconnect đóng kết nối đang hoạt động có connectionId tương ứng và xóa kết nối đó khỏi kho kết nối dùng chung.
+// Trả về true nếu ngắt kết nối thành công.
 func (m *Module) Disconnect(connectionId string) models.Output[bool] {
 	return m.submoduleConnMng.disconnectAction(connectionId)
 }
 
-// DisconnectAll removes every active connection from the shared store and
-// closes their idle HTTP connections. Intended to be called on application
-// shutdown to release network resources.
+// DisconnectAll xóa mọi kết nối đang hoạt động khỏi kho dùng chung và đóng các kết nối HTTP đang rảnh.
+// Gọi hàm này khi ứng dụng tắt để giải phóng tài nguyên mạng.
 func (m *Module) DisconnectAll() {
 	m.submoduleOidcMng.clear()
 	for _, conn := range m.global.RemoveAllConn() {
@@ -413,8 +405,8 @@ func (m *Module) DisconnectAll() {
 	}
 }
 
-// GetListBucket returns the buckets accessible from the connection
-// specified in input. The connection must already be established.
+// GetListBucket trả về các bucket có thể truy cập bằng kết nối được chỉ định trong input.
+// Kết nối phải được thiết lập trước.
 func (m *Module) GetListBucket(
 	ctx context.Context,
 	input models.ListBucketInput,
@@ -422,10 +414,10 @@ func (m *Module) GetListBucket(
 	return m.submoduleBucketMng.listBucket(ctx, input)
 }
 
-// CheckBucketAccess returns the Inaccessible / ReadOnly flags of input.BucketNames, probing the buckets whose
-// access is not cached. A bucket the probe could not settle in time comes back with AccessPending. With
-// input.WithPolicy it also reads PolicyMode of the buckets not cached (ListBucket and SearchBucket only return the
-// cached ones). ctx is the call context.
+// CheckBucketAccess trả về cờ Inaccessible / ReadOnly cho input.BucketNames và kiểm tra các bucket chưa có quyền truy cập trong cache.
+// Nếu không thể hoàn tất kiểm tra kịp thời, bucket được trả về với AccessPending.
+// Khi input.WithPolicy được bật, hàm cũng đọc PolicyMode của các bucket chưa có trong cache (ListBucket và SearchBucket chỉ trả về dữ liệu đã cache).
+// ctx là context của lời gọi.
 func (m *Module) CheckBucketAccess(
 	ctx context.Context,
 	input models.CheckBucketAccessInput,
@@ -433,22 +425,20 @@ func (m *Module) CheckBucketAccess(
 	return m.submoduleBucketMng.checkBucketAccess(ctx, input)
 }
 
-// CreateBucket creates the bucket input.Bucket. On real AWS the region is input.Region, else the profile region,
-// else us-east-1; the request goes to that region and a region other than us-east-1 is sent as the
-// LocationConstraint. MinIO and custom endpoints ignore input.Region. Fails with S3E054 (anonymous), S3E050 (name
-// taken), S3E051 (name invalid), S3E052 (denied) or S3E053. The access cache is reset on success.
-// input.Mode (private, public or custom with input.Policy; empty means private) sets the access right after the
-// bucket is made. An unknown mode (S3E053) or a custom policy that is not JSON (S3E057) fails before the bucket is
-// created. If setting the access fails the bucket is kept: Result stays true with one warning, S3W012 when Block
-// Public Access refuses a public policy, else S3W011. ctx is the call context.
+// CreateBucket tạo bucket input.Bucket. Với AWS thật, region lấy từ input.Region, sau đó từ hồ sơ, nếu cả hai đều không có thì dùng us-east-1.
+// Yêu cầu được gửi đến region đó; nếu khác us-east-1 thì region được truyền dưới dạng LocationConstraint. MinIO và endpoint tùy chỉnh bỏ qua input.Region.
+// Có thể trả S3E054 (ẩn danh), S3E050 (tên đã dùng), S3E051 (tên không hợp lệ), S3E052 (bị từ chối) hoặc S3E053. Khi thành công, cache quyền truy cập được xóa.
+// input.Mode (private, public hoặc custom kèm input.Policy; rỗng nghĩa là private) đặt quyền truy cập sau khi tạo bucket.
+// Mode không xác định (S3E053) hoặc policy tùy chỉnh không phải JSON (S3E057) sẽ gây lỗi trước khi tạo bucket.
+// Nếu không đặt được quyền, bucket vẫn được giữ và Result vẫn là true kèm một cảnh báo: S3W012 khi Block Public Access từ chối policy công khai,
+// nếu không thì trả S3W011. ctx là context của lời gọi.
 func (m *Module) CreateBucket(ctx context.Context, input models.CreateBucketInput) models.Output[any] {
 	return m.submoduleBucketEditMng.createBucket(ctx, input)
 }
 
-// GetBucketPolicy returns the access mode of the bucket (private, public read-only or custom), its policy JSON,
-// whether Block Public Access forbids a public policy (real AWS) and whether the account is known not to be allowed
-// to change the policy (MinIO with credentials). Fails with S3E054 (anonymous), S3E052 (denied) or S3E055. ctx is
-// the call context.
+// GetBucketPolicy trả về chế độ truy cập của bucket (private, public read-only hoặc custom), JSON policy,
+// trạng thái Block Public Access có cấm policy công khai hay không (với AWS thật) và trạng thái tài khoản có bị chặn đổi policy không
+// (MinIO khi có thông tin xác thực). Có thể trả S3E054 (ẩn danh), S3E052 (bị từ chối) hoặc S3E055. ctx là context của lời gọi.
 func (m *Module) GetBucketPolicy(
 	ctx context.Context,
 	input models.BucketPolicyInput,
@@ -456,9 +446,9 @@ func (m *Module) GetBucketPolicy(
 	return m.submoduleBucketEditMng.getBucketPolicy(ctx, input)
 }
 
-// PutBucketPolicy sets the access mode of the bucket: private deletes the policy, public puts a read-only public
-// policy, custom puts input.Policy. It returns the state read back after saving. Fails with S3E054 (anonymous),
-// S3E057 (invalid policy), S3E058 (Block Public Access), S3E052 (denied) or S3E056. ctx is the call context.
+// PutBucketPolicy đặt chế độ truy cập của bucket: private xóa policy, public áp dụng policy công khai chỉ đọc, còn custom dùng input.Policy.
+// Hàm trả về trạng thái đọc lại sau khi lưu. Có thể trả S3E054 (ẩn danh), S3E057 (policy không hợp lệ),
+// S3E058 (Block Public Access), S3E052 (bị từ chối) hoặc S3E056. ctx là context của lời gọi.
 func (m *Module) PutBucketPolicy(
 	ctx context.Context,
 	input models.PutBucketPolicyInput,
@@ -466,9 +456,9 @@ func (m *Module) PutBucketPolicy(
 	return m.submoduleBucketEditMng.putBucketPolicy(ctx, input)
 }
 
-// GetBucketDetail returns the read-only detail of the bucket. An item that can't be read (denied, not supported,
-// timeout) is nil in the body. It works for anonymous connections too. Fails with S3E006, S3E030 or S3E059.
-// ctx is the call context: canceling it aborts the call without a message.
+// GetBucketDetail trả về thông tin chỉ đọc của bucket. Mục không đọc được (bị từ chối, không hỗ trợ hoặc hết thời gian) sẽ là nil trong body.
+// Hàm cũng hoạt động với kết nối ẩn danh. Có thể trả S3E006, S3E030 hoặc S3E059.
+// ctx là context của lời gọi; hủy context sẽ dừng thao tác mà không gửi thông báo.
 func (m *Module) GetBucketDetail(
 	ctx context.Context,
 	input models.BucketDetailInput,
@@ -476,9 +466,9 @@ func (m *Module) GetBucketDetail(
 	return m.submoduleBucketEditMng.getBucketDetail(ctx, input)
 }
 
-// GetBucketDeleteInfo returns what the delete dialog needs: whether the bucket is empty (nil when unknown), its
-// versioning ("Enabled", "Suspended", "Off", empty when unknown) and whether Object Lock is enabled. Fails with
-// S3E006, S3E030, S3E054 (anonymous) or S3E059. ctx is the call context.
+// GetBucketDeleteInfo trả về thông tin hộp thoại xóa cần: bucket có trống không (nil nếu chưa xác định), trạng thái versioning
+// ("Enabled", "Suspended", "Off", rỗng nếu chưa xác định) và Object Lock có bật không. Có thể trả S3E006, S3E030, S3E054 (ẩn danh) hoặc S3E059.
+// ctx là context của lời gọi.
 func (m *Module) GetBucketDeleteInfo(
 	ctx context.Context,
 	input models.DeleteBucketInput,
@@ -486,14 +476,13 @@ func (m *Module) GetBucketDeleteInfo(
 	return m.submoduleBucketEditMng.getBucketDeleteInfo(ctx, input)
 }
 
-// DeleteBucket deletes every object, version and delete marker of the bucket, then the bucket itself. It can't be
-// undone. A bucket that is not empty and has Object Lock is refused before any object is deleted (S3E063); so is
-// one whose Object Lock can't be read (S3E060). It stops at the first batch with a failed key (S3E062, the body lists
-// the failures) without deleting the bucket. The body counts what was deleted even when Result is false. Other
-// failures: S3E054 (anonymous), S3E052 (denied), S3E059 (not found), S3E061 (new objects arrived), S3E064 (old
-// versions left on a server that can't list them), S3E060 (also a timeout of 30 minutes). Closing the app stops it
-// without a message. The access cache is reset on success.
-// ctx is the call context.
+// DeleteBucket xóa mọi object, phiên bản và delete marker trong bucket, sau đó xóa chính bucket. Không thể hoàn tác thao tác này.
+// Nếu bucket không trống và bật Object Lock, hàm từ chối trước khi xóa object nào (S3E063); trường hợp không đọc được Object Lock cũng bị từ chối (S3E060).
+// Hàm dừng ở lô đầu tiên có key xóa thất bại (S3E062, body liệt kê các lỗi) và không xóa bucket.
+// Body thống kê số mục đã xóa kể cả khi Result là false. Các lỗi khác: S3E054 (ẩn danh), S3E052 (bị từ chối), S3E059 (không tìm thấy),
+// S3E061 (có object mới được thêm), S3E064 (còn phiên bản cũ trên máy chủ không thể liệt kê), S3E060 (cũng dùng khi hết thời gian chờ 30 phút).
+// Khi ứng dụng đóng, thao tác dừng mà không gửi thông báo. Cache quyền truy cập được xóa khi thành công.
+// ctx là context của lời gọi.
 func (m *Module) DeleteBucket(
 	ctx context.Context,
 	input models.DeleteBucketInput,
@@ -501,8 +490,7 @@ func (m *Module) DeleteBucket(
 	return m.submoduleBucketEditMng.deleteBucket(ctx, input)
 }
 
-// GetListObject returns the objects in the bucket specified in input,
-// using an already-established connection.
+// GetListObject trả về các object trong bucket được chỉ định ở input, bằng một kết nối đã được thiết lập.
 func (m *Module) GetListObject(
 	ctx context.Context,
 	input models.ListObjectInput,
@@ -510,10 +498,10 @@ func (m *Module) GetListObject(
 	return m.submoduleObjMng.listObject(ctx, input)
 }
 
-// SearchObject scans the folder input.Prefix (no recursion) for keys containing input.Keyword
-// (case-insensitive) and returns at most 100 matches per call, scanning at most 20 pages.
-// Pass the returned NextCursor back in input.NextCursor to continue; an empty NextCursor means
-// nothing is left to scan. An empty keyword is rejected. ctx is the call context.
+// SearchObject quét thư mục input.Prefix (không đệ quy) để tìm key chứa input.Keyword (không phân biệt hoa thường),
+// trả tối đa 100 kết quả mỗi lần gọi và quét nhiều nhất 20 trang.
+// Để tiếp tục, truyền NextCursor nhận được vào input.NextCursor; NextCursor rỗng nghĩa là đã quét hết.
+// Từ khóa rỗng sẽ bị từ chối. ctx là context của lời gọi.
 func (m *Module) SearchObject(
 	ctx context.Context,
 	input models.SearchObjectInput,
@@ -521,10 +509,10 @@ func (m *Module) SearchObject(
 	return m.submoduleSearchMng.searchObject(ctx, input)
 }
 
-// SearchBucket scans the buckets of the connection for names containing input.Keyword
-// (case-insensitive) and returns at most 100 matches per call, scanning at most 20 pages.
-// Pass the returned NextCursor (opaque) back in input.NextCursor to continue; an empty NextCursor
-// means nothing is left to scan. An empty keyword or an invalid cursor is rejected. ctx is the call context.
+// SearchBucket quét các bucket của kết nối để tìm tên chứa input.Keyword (không phân biệt hoa thường),
+// trả tối đa 100 kết quả mỗi lần gọi và quét nhiều nhất 20 trang.
+// Để tiếp tục, truyền NextCursor (giá trị opaque) nhận được vào input.NextCursor; NextCursor rỗng nghĩa là đã quét hết.
+// Từ khóa rỗng hoặc cursor không hợp lệ sẽ bị từ chối. ctx là context của lời gọi.
 func (m *Module) SearchBucket(
 	ctx context.Context,
 	input models.SearchBucketInput,
@@ -532,8 +520,8 @@ func (m *Module) SearchBucket(
 	return m.submoduleSearchMng.searchBucket(ctx, input)
 }
 
-// GetObjectDetail returns the content type, storage class and user metadata of the object
-// input.Key (HeadObject). A folder key or an empty key is rejected. ctx is the call context.
+// GetObjectDetail trả về content type, storage class và metadata do người dùng đặt của object input.Key (HeadObject).
+// Key của thư mục hoặc key rỗng sẽ bị từ chối. ctx là context của lời gọi.
 func (m *Module) GetObjectDetail(
 	ctx context.Context,
 	input models.ObjectDetailInput,
@@ -541,35 +529,35 @@ func (m *Module) GetObjectDetail(
 	return m.submoduleObjMng.getObjectDetail(ctx, input)
 }
 
-// DownloadObject starts downloading input.Objects from input.Bucket; progress is reported
-// by EventDownloadProgressBatch and each file is saved to the download history.
+// DownloadObject bắt đầu tải input.Objects từ input.Bucket; tiến độ được gửi qua EventDownloadProgressBatch
+// và từng file được lưu vào lịch sử tải xuống.
 func (m *Module) DownloadObject(input models.DownloadObjInput) models.Output[any] {
 	return m.submoduleDownloaderMng.downloadObject(input)
 }
 
-// CancelDownloadOne cancels the running download with the given ID.
+// CancelDownloadOne hủy lượt tải xuống đang chạy có ID đã cho.
 func (m *Module) CancelDownloadOne(id string) models.Output[any] {
 	return m.submoduleDownloaderMng.cancelDownloadOne(id)
 }
 
-// CancelAllDownloads cancels every running download.
+// CancelAllDownloads hủy tất cả lượt tải xuống đang chạy.
 func (m *Module) CancelAllDownloads() models.Output[any] {
 	return m.submoduleDownloaderMng.cancelAllDownloads()
 }
 
-// CancelUploadOne cancels the running upload with the given ID.
-// Unknown or already finished IDs are ignored.
+// CancelUploadOne hủy lượt tải lên đang chạy có ID đã cho.
+// ID không xác định hoặc lượt tải đã hoàn tất sẽ bị bỏ qua.
 func (m *Module) CancelUploadOne(id string) models.Output[any] {
 	return m.submoduleUploaderMng.cancelUploadOne(id)
 }
 
-// CancelAllUploads cancels every running upload.
+// CancelAllUploads hủy tất cả lượt tải lên đang chạy.
 func (m *Module) CancelAllUploads() models.Output[any] {
 	return m.submoduleUploaderMng.cancelAllUploads()
 }
 
-// DeleteObject deletes the objects in input.Objects in batches. A key that fails is listed in the body
-// and doesn't make Result false. ctx is the call context.
+// DeleteObject xóa các object trong input.Objects theo từng lô. Key xóa thất bại sẽ được liệt kê trong body nhưng không làm Result thành false.
+// ctx là context của lời gọi.
 func (m *Module) DeleteObject(
 	ctx context.Context,
 	input models.DeleteObjInput,
@@ -577,10 +565,10 @@ func (m *Module) DeleteObject(
 	return m.submoduleObjMng.deleteObject(ctx, input)
 }
 
-// DeletePrefix deletes every object under input.Prefix (the folder, its sub folders
-// and the folder marker). Only current versions are deleted. An empty prefix or "/"
-// is rejected so a whole bucket can't be deleted. A key that fails is counted and its detail kept (up to
-// maxFailureDetails); it doesn't make Result false. ctx is the call context.
+// DeletePrefix xóa mọi object dưới input.Prefix (thư mục, thư mục con và folder marker). Chỉ xóa phiên bản hiện tại.
+// Prefix rỗng hoặc "/" sẽ bị từ chối để tránh xóa toàn bộ bucket.
+// Key xóa thất bại được tính vào kết quả và giữ lại chi tiết (tối đa maxFailureDetails), nhưng không làm Result thành false.
+// ctx là context của lời gọi.
 func (m *Module) DeletePrefix(
 	ctx context.Context,
 	input models.DeletePrefixInput,
@@ -588,30 +576,28 @@ func (m *Module) DeletePrefix(
 	return m.submoduleObjMng.deletePrefix(ctx, input)
 }
 
-// GetDownloadHistory returns the saved download history for input.
+// GetDownloadHistory trả về lịch sử tải xuống đã lưu theo input.
 func (m *Module) GetDownloadHistory(input models.DownloadHistoryInput) models.Output[models.DownloadHistoryOutput] {
 	return m.submoduleDownloadHistoryMng.getDownloadHistory(input)
 }
 
-// OpenDownloadDest reveals the downloaded file at path in the system file manager.
+// OpenDownloadDest mở vị trí file đã tải xuống tại path bằng trình quản lý file của hệ thống.
 func (m *Module) OpenDownloadDest(fileName, path string) models.Output[any] {
 	return m.submoduleDownloadHistoryMng.openDownloadDest(fileName, path)
 }
 
-// UploadObject starts uploading input.ObjList into input.Prefix; progress is reported by
-// EventUploadProgressBatch.
+// UploadObject bắt đầu tải input.ObjList lên input.Prefix; tiến độ được gửi qua EventUploadProgressBatch.
 func (m *Module) UploadObject(input models.UploadObjInput) models.Output[any] {
 	return m.submoduleUploaderMng.uploadObject(input)
 }
 
-// PickFiles opens the native dialog to choose files to upload and returns them as groups
-// with the upload limits. If the user cancels, the body has no groups.
+// PickFiles mở hộp thoại hệ thống để chọn file tải lên và trả về các nhóm cùng giới hạn tải lên.
+// Nếu người dùng hủy, body không có nhóm nào.
 func (m *Module) PickFiles(ctx context.Context) models.Output[models.FilesDroppedOutput] {
 	return m.submoduleUploaderMng.pickFiles(ctx)
 }
 
-// HandleFilesDropped is the window's WindowFilesDropped listener. It forwards the
-// dropped files to the frontend tab they were dropped on.
+// HandleFilesDropped là listener WindowFilesDropped của cửa sổ. Hàm chuyển tiếp các file được thả đến tab frontend nhận thao tác thả.
 func (m *Module) HandleFilesDropped(event *application.WindowEvent) {
 	m.submoduleUploaderMng.handleFilesDropped(event)
 }

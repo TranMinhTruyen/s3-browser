@@ -1,15 +1,14 @@
 package bucket
 
-// SearchBucketInput searches bucket names by Keyword, continuing from NextCursor.
+// SearchBucketInput tìm tên bucket theo Keyword và tiếp tục từ NextCursor.
 type SearchBucketInput struct {
 	ConnectionId string `json:"connectionId"`
 	ProfileName  string `json:"profileName,omitempty"`
 	Keyword      string `json:"keyword"`
 	NextCursor   string `json:"nextCursor,omitempty"`
-	// CheckWrite asks to flag read-only buckets. Only the upload bucket picker sets it, the check costs extra
-	// requests.
+	// CheckWrite yêu cầu đánh dấu bucket chỉ đọc. Chỉ bộ chọn bucket để tải lên bật tùy chọn này vì việc kiểm tra cần thêm yêu cầu.
 	CheckWrite bool `json:"checkWrite,omitempty"`
-	// LazyAccess is set by the bucket list screen: a bucket that needs its own probe (HeadBucket / write probe) with
-	// no cached result is not probed but returned with AccessPending, so the frontend checks it once it is shown.
+	// Màn hình danh sách bucket bật LazyAccess: bucket cần phép thử riêng (HeadBucket / thử quyền ghi) nhưng chưa có kết quả
+	// cache sẽ không được thăm dò, thay vào đó trả về với AccessPending để frontend kiểm tra khi hiển thị bucket.
 	LazyAccess bool `json:"lazyAccess,omitempty"`
 }

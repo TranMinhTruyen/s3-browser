@@ -62,7 +62,7 @@ describe('formatFieldError', () => {
   });
 
   it('defaults to the global i18n', () => {
-    // The default namespace has no such key, so the code itself is the fallback template.
+    // Namespace mặc định không có khóa này, nên chính mã lỗi được dùng làm mẫu dự phòng.
     expect(formatFieldError('{0}-{1}:5', 'Name')).toBe('Name-5');
   });
 });

@@ -35,11 +35,11 @@ vi.mock('@wailsio/runtime', () => ({
   },
 }));
 
-// The workspace cache is module-level, so every test loads a fresh MainLayout.
+// Bộ nhớ đệm workspace ở cấp module nên mỗi test cần tải MainLayout mới.
 const renderLayout = async (failures: number) => {
   vi.resetModules();
   ctl.s3Mounts = 0;
-  // Re-registered per test: the mock registry (and a cached successful factory result) survives resetModules.
+  // Đăng ký lại ở mỗi test: registry mock (và kết quả factory thành công đã cache) vẫn tồn tại qua resetModules.
   let failuresLeft = failures;
   vi.doMock('@/pages/sql/SqlWorkspace', () => {
     if (failuresLeft > 0) {

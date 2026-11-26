@@ -1,6 +1,6 @@
 package cnst
 
-// ASCIIFolds maps lower-case accented Latin letters (precomposed, incl. Vietnamese) to their ASCII letter.
+// ASCIIFolds ánh xạ chữ Latin thường có dấu (dạng dựng sẵn, gồm cả tiếng Việt) sang chữ ASCII tương ứng.
 var ASCIIFolds = func() map[rune]rune {
 	folds := map[rune]rune{'ð': 'd', 'ø': 'o', 'ł': 'l', 'ß': 's', 'æ': 'a', 'œ': 'o'}
 	for base, accented := range map[rune]string{
@@ -27,7 +27,7 @@ var ASCIIFolds = func() map[rune]rune {
 	return folds
 }()
 
-// WindowsReservedNames are the lower-case device names Windows does not allow as a file name stem.
+// WindowsReservedNames chứa tên thiết bị viết thường mà Windows không cho phép dùng làm phần tên file.
 var WindowsReservedNames = map[string]bool{
 	"con": true, "prn": true, "aux": true, "nul": true,
 	"com1": true, "com2": true, "com3": true, "com4": true, "com5": true,

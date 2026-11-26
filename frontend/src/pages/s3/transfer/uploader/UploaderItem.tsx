@@ -12,7 +12,7 @@ type UploaderItemProps = {
   id: string;
 };
 
-/** One upload row; shows a loader while the backend finalizes the object. */
+/** Một hàng tải lên; hiển thị loader trong khi backend hoàn tất lưu object. */
 function UploaderItem(props: UploaderItemProps) {
   const { id } = props;
 

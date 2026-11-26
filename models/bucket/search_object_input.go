@@ -1,6 +1,6 @@
 package bucket
 
-// SearchObjectInput searches object keys under Prefix by Keyword, continuing from NextCursor.
+// SearchObjectInput tìm key object dưới Prefix theo Keyword và tiếp tục từ NextCursor.
 type SearchObjectInput struct {
 	ConnectionId string `json:"connectionId"`
 	ProfileName  string `json:"profileName,omitempty"`

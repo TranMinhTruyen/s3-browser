@@ -1,4 +1,4 @@
-// Package internal wires the modules and handlers of the app together.
+// Package internal kết nối các module và handler của ứng dụng với nhau.
 package internal
 
 import (
@@ -18,7 +18,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// App owns the handlers registered as Wails services and the resources released on shutdown.
+// App quản lý các handler được đăng ký thành service Wails và tài nguyên cần giải phóng khi tắt ứng dụng.
 type App struct {
 	logger *slog.Logger
 	sqlDb  *sql.DB
@@ -35,9 +35,9 @@ type App struct {
 	updateModule *update.Module
 }
 
-// NewApp opens and migrates the database, builds the modules, then the handlers on top of them.
-// A failed migration is returned as an error (the message holds the backup path) so main can tell the user;
-// it panics when the encryption key is unusable, because the app cannot run without it.
+// NewApp mở và migration cơ sở dữ liệu, tạo các module rồi tạo handler phía trên chúng.
+// Migration thất bại sẽ được trả về dưới dạng lỗi (thông báo có đường dẫn bản sao lưu) để main báo cho người dùng;
+// hàm panic nếu khóa mã hóa không dùng được vì ứng dụng không thể hoạt động khi thiếu khóa.
 func NewApp(app *application.App, cfg Config, logger *slog.Logger) (*App, error) {
 	log := logger.With("component", "app")
 
@@ -87,12 +87,12 @@ func NewApp(app *application.App, cfg Config, logger *slog.Logger) (*App, error)
 	}, nil
 }
 
-// NativeLoaded reports whether the native database library is loaded (read by the memory probe).
+// NativeLoaded cho biết thư viện cơ sở dữ liệu native đã được nạp hay chưa (được memory probe đọc).
 func (a *App) NativeLoaded() bool {
 	return a.dbModule.Loaded()
 }
 
-// Shutdown cancels running transfers and the update check, closes every connection and the database.
+// Shutdown hủy các lượt truyền đang chạy và thao tác kiểm tra cập nhật, đóng mọi kết nối và cơ sở dữ liệu.
 func (a *App) Shutdown() {
 	a.updateModule.Close()
 	a.BucketHandler.CancelAllDownloads()

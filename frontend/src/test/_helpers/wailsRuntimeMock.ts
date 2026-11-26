@@ -1,8 +1,8 @@
 import { vi } from 'vitest';
 
 /**
- * Stand-in for `@wailsio/runtime` for tests that must define their own members (e.g. `Browser`, `Events`) and still
- * let the generated bindings load: they only need `Create`, `Call` and `CancellablePromise` at import time.
+ * Thay thế `@wailsio/runtime` trong các test cần tự định nghĩa thành viên riêng (ví dụ `Browser`, `Events`), đồng thời
+ * cho phép bindings được sinh tự động tải: lúc import chúng chỉ cần `Create`, `Call` và `CancellablePromise`.
  */
 export function wailsRuntimeMock<T extends Record<string, unknown>>(extra: T) {
   const any = (source: unknown) => source;

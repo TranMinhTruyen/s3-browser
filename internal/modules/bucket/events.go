@@ -6,33 +6,32 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
-// Event names emitted to the frontend, in the form domain:kebab-name.
+// Tên sự kiện gửi đến frontend, theo định dạng domain:kebab-name.
 const (
-	// Emitted after a new connection profile is saved; payload is the created profile
+	// Phát sau khi lưu hồ sơ kết nối mới; payload là hồ sơ vừa tạo.
 	EventConnectSaveProfile = "bucket:connect-save-profile"
-	// Emitted shortly before credentials that can't be renewed automatically expire; payload is
-	// CredentialExpiringOutput
+	// Phát ngay trước khi thông tin xác thực không thể tự gia hạn hết hạn; payload là CredentialExpiringOutput.
 	EventCredentialExpiring = "bucket:credential-expiring"
-	// Emitted every 200 ms while downloads run, and once more when one ends; payload is
-	// DownloadProgressBatchOutput (the progress of every running download)
+	// Phát mỗi 200 ms khi đang tải xuống và thêm một lần khi một lượt tải kết thúc; payload là DownloadProgressBatchOutput
+	// (tiến độ của mọi lượt tải xuống đang chạy).
 	EventDownloadProgressBatch = "downloader:download-progress-batch"
-	// Emitted when a history record is created or updated; payload is DownloadHistoryItem
+	// Phát khi tạo hoặc cập nhật bản ghi lịch sử; payload là DownloadHistoryItem.
 	EventLoadDownloadHistory = "downloader:load-download-history"
-	// Emitted every 200 ms while uploads run, and once more when one ends; payload is
-	// UploadProgressBatchOutput (the progress of every running upload)
+	// Phát mỗi 200 ms khi đang tải lên và thêm một lần khi một lượt tải kết thúc; payload là UploadProgressBatchOutput
+	// (tiến độ của mọi lượt tải lên đang chạy).
 	EventUploadProgressBatch = "uploader:upload-progress-batch"
-	// Emitted when files are dropped on a tab's object list; payload is FilesDroppedOutput
+	// Phát khi thả file vào danh sách object của tab; payload là FilesDroppedOutput.
 	EventFilesDropped = "uploader:files-dropped"
-	// Emitted when files are dropped on the upload picker modal; payload is FilesDroppedOutput
+	// Phát khi thả file vào hộp thoại chọn file tải lên; payload là FilesDroppedOutput.
 	EventPickerFilesDropped = "uploader:picker-files-dropped"
-	// Emitted before a file starts uploading; payload is UploadStartedOutput
+	// Phát trước khi bắt đầu tải file lên; payload là UploadStartedOutput.
 	EventUploadObjectStarted = "uploader:upload-started"
-	// Emitted when a file's upload ends; payload is UploadFinishedOutput
+	// Phát khi kết thúc tải file lên; payload là UploadFinishedOutput.
 	EventUploadObjectFinished = "uploader:upload-finished"
 )
 
-// RegisterEvent must be called directly from init so the binding generator can
-// emit the TypeScript payload type for Events.On / Events.Emit on the frontend.
+// Phải gọi RegisterEvent trực tiếp từ init để bộ sinh binding tạo kiểu payload TypeScript
+// cho Events.On / Events.Emit ở frontend.
 func init() {
 	application.RegisterEvent[models.ConnectionProfileOutput](EventConnectSaveProfile)
 	application.RegisterEvent[models.CredentialExpiringOutput](EventCredentialExpiring)

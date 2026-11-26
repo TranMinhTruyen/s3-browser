@@ -32,7 +32,7 @@ const dark = {
   betaUpdate: true,
 } as const;
 
-/** Resolves each backend call by binding. */
+/** Giải quyết từng lời gọi backend theo binding tương ứng. */
 const backend = (results: { settings: unknown; tabs: unknown }) =>
   callIPCMock.mockImplementation((async (binding: unknown) =>
     binding === GetSettings ? results.settings : results.tabs) as never);

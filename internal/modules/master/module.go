@@ -1,4 +1,4 @@
-// Package master serves read-only master data (lookup lists, regions) from the database.
+// Package master cung cấp dữ liệu danh mục chỉ đọc (danh sách tra cứu, region) từ cơ sở dữ liệu.
 package master
 
 import (
@@ -12,18 +12,18 @@ import (
 )
 
 var (
-	// MTE001 - Error while loading master data
+	// MTE001 - Lỗi khi tải dữ liệu danh mục
 	MTE001 = "MTE001"
 )
 
-// Module reads master data from the database.
+// Module đọc dữ liệu danh mục từ cơ sở dữ liệu.
 type Module struct {
 	logger *slog.Logger
 	app    *application.App
 	q      *sqlc.Queries
 }
 
-// NewModule creates the master module.
+// NewModule tạo module master.
 func NewModule(app *application.App, logger *slog.Logger, db *sql.DB) *Module {
 	return &Module{
 		logger: logger.With("component", "master_module"),
@@ -32,7 +32,7 @@ func NewModule(app *application.App, logger *slog.Logger, db *sql.DB) *Module {
 	}
 }
 
-// toMasterOutput maps a master row (nullable columns become empty strings).
+// toMasterOutput ánh xạ một hàng danh mục (cột nullable được chuyển thành chuỗi rỗng).
 func toMasterOutput(row sqlc.SelectMasterByCodeRow) models.MasterOutput {
 	return models.MasterOutput{
 		Code:      row.Code,
@@ -51,8 +51,8 @@ func toMasterOutput(row sqlc.SelectMasterByCodeRow) models.MasterOutput {
 	}
 }
 
-// GetMasterData returns the master items of each requested code, keyed by code. A code that
-// fails to load is reported with MTE001 and skipped, so the other codes are still returned.
+// GetMasterData trả các mục danh mục theo từng code được yêu cầu, dùng code làm khóa. Code nào tải thất bại sẽ được
+// báo bằng MTE001 và bỏ qua để vẫn trả về dữ liệu của các code khác.
 func (m *Module) GetMasterData(codes []string) models.Output[models.GetMasterDataOutput] {
 	output := models.NewOutput[models.GetMasterDataOutput]()
 	output.Body.MasterData = make(map[string][]models.MasterOutput, len(codes))
@@ -80,7 +80,7 @@ func (m *Module) GetMasterData(codes []string) models.Output[models.GetMasterDat
 	return output
 }
 
-// GetRegion returns all regions grouped by provider (the value2 column).
+// GetRegion trả tất cả region, được nhóm theo provider (cột value2).
 func (m *Module) GetRegion() models.Output[models.RegionOutput] {
 	output := models.NewOutput[models.RegionOutput]()
 
@@ -92,7 +92,7 @@ func (m *Module) GetRegion() models.Output[models.RegionOutput] {
 
 	output.Body.RegionData = make(map[string][]models.MasterOutput)
 	for _, row := range rows {
-		// Region rows have exactly the same columns as master rows.
+		// Các hàng region có đúng các cột như hàng danh mục.
 		provider := row.Value2.String
 		output.Body.RegionData[provider] = append(
 			output.Body.RegionData[provider],

@@ -2,12 +2,12 @@
 
 package setting
 
-// autostartSupported is false: launch on startup is only implemented for Windows.
+// autostartSupported là false: hiện chỉ hỗ trợ khởi chạy cùng hệ thống trên Windows.
 func autostartSupported() bool {
 	return false
 }
 
-// setAutostart does nothing on this OS.
+// setAutostart không làm gì trên hệ điều hành này.
 func setAutostart(_ string, _ bool) error {
 	return nil
 }

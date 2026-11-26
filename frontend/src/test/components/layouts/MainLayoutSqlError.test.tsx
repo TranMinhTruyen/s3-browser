@@ -55,7 +55,7 @@ describe('MainLayout SQL mode load failure', () => {
     expect(screen.getByText('s3 workspace')).toBeVisible();
     expect(screen.queryByText('sql workspace')).not.toBeInTheDocument();
 
-    // The failed mode is un-visited and its cache dropped, so selecting it again loads the chunk again.
+    // Mode bị lỗi chưa được truy cập và cache đã bị xóa, nên chọn lại sẽ tải chunk lần nữa.
     await userEvent.click(mode('SQL'));
     expect(await screen.findByText('sql workspace')).toBeVisible();
     expect(toast.error).toHaveBeenCalledTimes(1);

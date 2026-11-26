@@ -7,18 +7,18 @@ import (
 	miniocredentials "github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-// adminCreds gives madmin the credentials of a connection by reading its SwapCreds on every request, so
-// credentials renewed by ReauthConnection (SwapCreds.Store) apply to madmin at once, without a new admin client.
+// adminCreds cung cấp cho madmin thông tin xác thực của kết nối bằng cách đọc SwapCreds ở mỗi yêu cầu,
+// nhờ đó thông tin xác thực được ReauthConnection gia hạn (SwapCreds.Store) áp dụng ngay mà không cần tạo admin client mới.
 type adminCreds struct {
 	creds *global.SwapCreds
 }
 
-// newAdminCreds returns the madmin credentials that follow creds.
+// newAdminCreds trả về thông tin xác thực madmin được đồng bộ với creds.
 func newAdminCreds(creds *global.SwapCreds) *miniocredentials.Credentials {
 	return miniocredentials.New(&adminCreds{creds: creds})
 }
 
-// RetrieveWithCredContext reads the current credentials; SwapCreds and its providers cache them.
+// RetrieveWithCredContext đọc thông tin xác thực hiện tại; SwapCreds và các provider của nó lưu cache giá trị này.
 func (p *adminCreds) RetrieveWithCredContext(cc *miniocredentials.CredContext) (miniocredentials.Value, error) {
 	ctx := context.Background()
 	if cc != nil && cc.Context != nil {
@@ -37,10 +37,10 @@ func (p *adminCreds) RetrieveWithCredContext(cc *miniocredentials.CredContext) (
 	}, nil
 }
 
-// Retrieve is the deprecated form of RetrieveWithCredContext.
+// Retrieve là phiên bản cũ của RetrieveWithCredContext.
 func (p *adminCreds) Retrieve() (miniocredentials.Value, error) {
 	return p.RetrieveWithCredContext(nil)
 }
 
-// IsExpired is always true: madmin caches what it gets, and a swapped provider must be seen on the next request.
+// IsExpired luôn trả true: madmin lưu cache dữ liệu nhận được nên provider đã thay thế phải được đọc lại ở yêu cầu sau.
 func (p *adminCreds) IsExpired() bool { return true }

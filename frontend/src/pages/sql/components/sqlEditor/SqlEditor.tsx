@@ -11,28 +11,39 @@ import { sqlEditorTheme } from '@/pages/sql/components/sqlEditor/sqlEditorTheme'
 export type SqlDialect = 'postgresql' | 'sqlite' | null;
 
 type SqlEditorProps = {
-  /** Filled with the `EditorView` while the editor is mounted. */
+  /** Được gán `EditorView` khi editor đã mount. */
   viewRef: RefObject<EditorView | null>;
-  /** SQL dialect for highlighting; null means standard SQL. */
+  /** Nội dung khởi tạo của tài liệu. */
+  initialDoc?: string;
+  /** Phương ngữ SQL dùng để tô sáng; null nghĩa là SQL chuẩn. */
   dialect: SqlDialect;
-  /** Tables and columns offered by autocomplete; undefined means keywords only. */
+  /** Các bảng và cột được gợi ý tự động; undefined nghĩa là chỉ gợi ý từ khóa. */
   schema?: SQLNamespace;
   onFormat?: () => void;
   onFind?: () => void;
   onExecute?: () => void;
-  /** Called after every change of the text (typing, undo, paste, autocomplete...). */
-  onDocChange?: () => void;
+  /** Được gọi sau mỗi lần văn bản thay đổi (nhập, hoàn tác, dán, gợi ý tự động...). */
+  onDocChange?: (doc: string) => void;
 };
 
 const DIALECTS = { postgresql: PostgreSQL, sqlite: SQLite };
 const getLanguage = (dialect: SqlDialect, schema?: SQLNamespace) =>
   sql({ dialect: dialect ? DIALECTS[dialect] : StandardSQL, schema });
 
-/** SQL editor (CodeMirror 6). The view is created once; dialect/schema changes only reconfigure the language. */
-function SqlEditor({ viewRef, dialect, schema, onFormat, onFind, onExecute, onDocChange }: SqlEditorProps) {
+/** Trình soạn thảo SQL (CodeMirror 6). View chỉ tạo một lần; đổi phương ngữ/schema chỉ cấu hình lại ngôn ngữ. */
+function SqlEditor({
+  viewRef,
+  initialDoc = '',
+  dialect,
+  schema,
+  onFormat,
+  onFind,
+  onExecute,
+  onDocChange,
+}: SqlEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const languageRef = useRef(new Compartment());
-  // Latest callbacks, read by the keymap so the view never has to be rebuilt.
+  // Các callback mới nhất để keymap sử dụng, nhờ đó không cần tạo lại view.
   const handlersRef = useRef({ onFormat, onFind, onExecute, onDocChange });
   const languageOptionsRef = useRef({ dialect, schema });
 
@@ -48,6 +59,7 @@ function SqlEditor({ viewRef, dialect, schema, onFormat, onFind, onExecute, onDo
     const view = new EditorView({
       parent: containerRef.current as HTMLDivElement,
       state: EditorState.create({
+        doc: initialDoc,
         extensions: [
           lineNumbers(),
           history(),
@@ -56,7 +68,7 @@ function SqlEditor({ viewRef, dialect, schema, onFormat, onFind, onExecute, onDo
           bracketMatching(),
           indentOnInput(),
           languageRef.current.of(getLanguage(languageOptionsRef.current.dialect, languageOptionsRef.current.schema)),
-          // preventDefault keeps the WebView from handling these keys itself (find, address bar...).
+          // preventDefault ngăn WebView tự xử lý các phím này (tìm kiếm, thanh địa chỉ...).
           Prec.highest(
             keymap.of([
               { key: 'Ctrl-q', mac: 'Cmd-q', run: run('onFormat'), preventDefault: true },
@@ -64,16 +76,16 @@ function SqlEditor({ viewRef, dialect, schema, onFormat, onFind, onExecute, onDo
               { key: 'Ctrl-e', mac: 'Cmd-e', run: run('onExecute'), preventDefault: true },
             ])
           ),
-          // historyKeymap has no Ctrl-Shift-z on Windows; without it the WebView redoes natively and corrupts the doc.
+          // historyKeymap không có Ctrl-Shift-z trên Windows; nếu thiếu phím này, WebView tự redo và làm hỏng tài liệu.
           keymap.of([{ key: 'Mod-Shift-z', run: redo, preventDefault: true }, ...defaultKeymap, ...historyKeymap]),
-          // Popup is attached to body: the tab frame has overflow hidden and would clip it.
+          // Popup được gắn vào body vì khung tab có overflow hidden và sẽ cắt popup.
           tooltips({ parent: document.body }),
-          // Default completion keymap (Enter, Esc, arrows, Ctrl-Space) only acts while the popup is open,
-          // so Enter still inserts a newline and Esc does nothing otherwise. Tab also accepts.
+          // Keymap gợi ý mặc định (Enter, Esc, phím mũi tên, Ctrl-Space) chỉ hoạt động khi popup mở,
+          // nên Enter vẫn xuống dòng và Esc không làm gì khi popup đóng. Tab cũng chấp nhận gợi ý.
           autocompletion({ activateOnTyping: true }),
           Prec.high(keymap.of([{ key: 'Tab', run: acceptCompletion }])),
           EditorView.updateListener.of(update => {
-            if (update.docChanged) handlersRef.current.onDocChange?.();
+            if (update.docChanged) handlersRef.current.onDocChange?.(update.state.doc.toString());
           }),
           sqlEditorTheme,
         ],
@@ -88,13 +100,13 @@ function SqlEditor({ viewRef, dialect, schema, onFormat, onFind, onExecute, onDo
 
   useEffect(() => {
     const prev = languageOptionsRef.current;
-    // On mount the view was already built with these values.
+    // Khi mount, view đã được tạo với các giá trị này.
     if (prev.dialect === dialect && prev.schema === schema) return;
     languageOptionsRef.current = { dialect, schema };
     viewRef.current?.dispatch({ effects: languageRef.current.reconfigure(getLanguage(dialect, schema)) });
   }, [dialect, schema, viewRef]);
 
-  // CodeMirror caches line height and character width: measure again when the root font-size changes.
+  // CodeMirror lưu đệm chiều cao dòng và độ rộng ký tự: đo lại khi cỡ phông gốc thay đổi.
   const scale = useUiScale();
   const measurer = useMemo(() => ({ measure: () => viewRef.current?.requestMeasure() }), [viewRef]);
   useRemeasureOnScale(measurer, scale);

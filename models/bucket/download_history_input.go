@@ -1,6 +1,6 @@
 package bucket
 
-// DownloadHistoryInput is a keyset page request: AfterID is the last ID of the previous page.
+// DownloadHistoryInput là yêu cầu phân trang keyset: AfterID là ID cuối cùng của trang trước.
 type DownloadHistoryInput struct {
 	AfterID  string `json:"afterID"`
 	PageSize int64  `json:"pageSize"`

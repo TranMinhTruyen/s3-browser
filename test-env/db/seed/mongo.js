@@ -1,6 +1,6 @@
-// Sample data for MongoDB (database demo), loaded by `sh scripts/test-env.sh seed` through mongosh.
-// Same content as the SQL seeds, document style: order items are embedded in each order.
-// Values are generated, deterministic and not real.
+// Dữ liệu mẫu cho MongoDB (database demo), nạp bằng `sh scripts/test-env.sh seed` qua mongosh.
+// Cùng nội dung với dữ liệu SQL nhưng theo cấu trúc document: sản phẩm được nhúng trong từng đơn hàng.
+// Các giá trị được tạo có thể lặp lại và không phải dữ liệu thật.
 const d = db.getSiblingDB('demo');
 const pick = (list, i) => list[i % list.length];
 const hours = h => new Date(Date.UTC(2025, 0, 1) + h * 3600e3);
@@ -40,7 +40,7 @@ d.products.insertMany(products.map(({ _price, ...p }) => p));
 d.orders.insertMany(
   Array.from({ length: 2000 }, (_, k) => {
     const i = k + 1;
-    // 1 to 3 different products per order, same choice as the SQL seeds.
+    // Mỗi đơn hàng có từ 1 đến 3 sản phẩm khác nhau, giống cách chọn trong dữ liệu SQL.
     const items = Array.from({ length: 1 + (i % 3) }, (_, j) => {
       const p = products[(i + (j + 1) * 17) % 50];
       return { productId: p._id, qty: 1 + ((i + j + 1) % 5), unitPrice: p.price, _line: (1 + ((i + j + 1) % 5)) * p._price };

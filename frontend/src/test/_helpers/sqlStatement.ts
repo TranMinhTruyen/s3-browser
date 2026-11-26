@@ -1,6 +1,6 @@
 import type { StatementResult } from '@wails/S3Browser/models';
 
-/** A finished SELECT; override fields for other kinds of statement. */
+/** Một câu SELECT hoàn chỉnh; ghi đè các trường để tạo loại câu lệnh khác. */
 export const statement = (extra: Partial<StatementResult> = {}): StatementResult =>
   ({
     index: 0,

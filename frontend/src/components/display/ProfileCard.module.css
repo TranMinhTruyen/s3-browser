@@ -11,12 +11,12 @@
   border-color: light-dark(var(--mantine-color-black), var(--mantine-color-dark-2));
 }
 
-/* Secondary line follows the card's contrast color (set on Card via `c`), slightly muted */
+/* Dòng phụ dùng màu tương phản của thẻ (được đặt trên Card qua `c`) với sắc độ dịu hơn một chút */
 .provider {
   opacity: 0.8;
 }
 
-/* Outline badge: Mantine sets --badge-* inline, so set the properties directly (higher specificity) */
+/* Badge dạng outline: Mantine đặt --badge-* inline nên gán trực tiếp các thuộc tính này (độ ưu tiên cao hơn) */
 .card .badge {
   color: inherit;
   background: transparent;

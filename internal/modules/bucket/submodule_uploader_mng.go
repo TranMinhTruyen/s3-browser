@@ -19,26 +19,25 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// submoduleUploaderMng uploads files. State is shared by all tabs: one uploadObject call at
-// a time (busy), and every file in flight is a cancelable job (jobs) so the user can stop
-// one file or the whole batch.
+// submoduleUploaderMng tải file lên. Trạng thái được dùng chung giữa các tab: mỗi lần chỉ chạy một lời gọi uploadObject
+// (busy); mỗi file đang truyền là một job có thể hủy (jobs), để người dùng dừng riêng một file hoặc cả lô.
 type submoduleUploaderMng struct {
 	logger *slog.Logger
 	app    *application.App
 	global *global.Module
-	// progress batches the progress of all running uploads into one event.
+	// progress gom tiến độ của mọi lượt tải lên đang chạy vào một sự kiện.
 	progress *utils.BatchReporter[models.UploadProgressOutput]
-	// jobs holds the cancelable files in flight.
+	// jobs lưu các file đang truyền có thể hủy.
 	jobs jobRegistry
-	// busy is set while an uploadObject call runs; only one runs at a time, across all tabs.
+	// busy được bật trong khi uploadObject chạy; chỉ một lời gọi được chạy tại một thời điểm trên mọi tab.
 	busy atomic.Bool
-	// batchCancel cancels the running uploadObject call, including its key check;
-	// nil when no call runs.
+	// batchCancel hủy lời gọi uploadObject đang chạy, bao gồm cả bước kiểm tra key;
+	// có giá trị nil khi không có lời gọi nào chạy.
 	batchMu     sync.Mutex
 	batchCancel context.CancelFunc
 }
 
-// newSubmoduleUploaderMng wires the uploader to the Wails app and the shared connections.
+// newSubmoduleUploaderMng kết nối uploader với ứng dụng Wails và kho kết nối dùng chung.
 func newSubmoduleUploaderMng(
 	app *application.App,
 	logger *slog.Logger,
@@ -54,10 +53,10 @@ func newSubmoduleUploaderMng(
 	}
 }
 
-// pickPaths opens the native dialog to choose files; empty paths means the user canceled.
+// pickPaths mở hộp thoại của hệ điều hành để chọn file; paths rỗng nghĩa là người dùng đã hủy.
 func (m *submoduleUploaderMng) pickPaths() ([]string, error) {
 	dialog := m.app.Dialog.OpenFile().CanChooseFiles(true).CanChooseDirectories(false)
-	// The app has one window; attach to it so the dialog is modal (Current may be nil).
+	// Ứng dụng chỉ có một cửa sổ; gắn hộp thoại vào cửa sổ này để hộp thoại ở chế độ modal (Current có thể là nil).
 	if window := m.app.Window.Current(); window != nil {
 		dialog.AttachToWindow(window)
 	}
@@ -65,38 +64,38 @@ func (m *submoduleUploaderMng) pickPaths() ([]string, error) {
 }
 
 const (
-	// uploadFileConcurrency is the most files uploaded at the same time, across all groups.
+	// uploadFileConcurrency là số file tối đa được tải lên đồng thời trên mọi nhóm.
 	uploadFileConcurrency = 5
-	// maxFilesPerFolder is the most files uploaded from one folder (group).
+	// maxFilesPerFolder là số file tối đa được tải lên từ một thư mục (nhóm).
 	maxFilesPerFolder = 50
-	// largeFileMaxCount is the most large files uploaded from one folder (group).
+	// largeFileMaxCount là số file lớn tối đa được tải lên từ một thư mục (nhóm).
 	largeFileMaxCount = 4
-	// maxTotalFiles is the most files one drop or one uploadObject call holds.
+	// maxTotalFiles là tổng số file tối đa trong một lần thả hoặc một lời gọi uploadObject.
 	maxTotalFiles = 1000
 )
 
-// largeFileSize is the size above which a file is "large" (10 GiB).
+// largeFileSize là ngưỡng để một file được xem là "file lớn" (10 GiB).
 const largeFileSize int64 = 10 << 30
 
-// uploadResult is the outcome of one file, turned into a message after all files finish.
+// uploadResult là kết quả của một file, được chuyển thành thông báo sau khi mọi file xử lý xong.
 type uploadResult struct {
 	path string
 	key  string
 	err  error
 }
 
-// uploadObject uploads every item to bucket, uploadFileConcurrency files at a time.
-// It blocks until all uploads finish and returns one message per item: success,
-// canceled or error. A failed or canceled file doesn't stop the others.
-// Only one call runs at a time; a call made while another runs is rejected.
+// uploadObject tải từng mục lên bucket, tối đa uploadFileConcurrency file cùng lúc.
+// Hàm chờ đến khi mọi lượt tải lên hoàn tất rồi trả một thông báo cho mỗi mục: thành công,
+// đã hủy hoặc lỗi. File lỗi hoặc bị hủy không làm dừng các file còn lại.
+// Mỗi lần chỉ chạy một lời gọi; lời gọi mới sẽ bị từ chối nếu đang có lời gọi khác.
 //
-// The limits are enforced here and not only in the frontend. The items are grouped by the
-// folder of their RelKey, and the call is rejected if:
-//   - a RelKey could leave the prefix;
-//   - it holds more than maxTotalFiles items;
-//   - a group holds more than maxFilesPerFolder items;
-//   - a group holds more than largeFileMaxCount files over largeFileSize
-//     (sizes are read from disk, not from the caller).
+// Các giới hạn được áp dụng tại đây, không chỉ ở frontend. Các mục được nhóm theo thư mục trong RelKey,
+// và lời gọi bị từ chối nếu:
+//   - RelKey có thể thoát khỏi prefix;
+//   - có nhiều hơn maxTotalFiles mục;
+//   - một nhóm có nhiều hơn maxFilesPerFolder mục;
+//   - một nhóm có nhiều hơn largeFileMaxCount file lớn hơn largeFileSize
+//     (kích thước được đọc từ đĩa, không lấy từ bên gọi).
 func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.Output[any] {
 	output := models.NewOutput[any]()
 
@@ -132,8 +131,8 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 	}
 	defer m.busy.Store(false)
 
-	// Counts this call as a running transfer, so the profile can't be deleted meanwhile.
-	// All uploads finish inside this call (g.Wait below), so the release goes here.
+	// Ghi nhận lời gọi này là một lượt truyền đang chạy để hồ sơ không bị xóa giữa chừng.
+	// Mọi lượt tải lên kết thúc bên trong lời gọi này (g.Wait bên dưới), nên giải phóng tại đây.
 	conn, releaseConn, ok := m.global.AcquireConn(input.ConnectionId)
 	if !ok {
 		m.logger.Error("get connection profile failed")
@@ -141,25 +140,25 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 	}
 	defer releaseConn()
 
-	// Credentials that can't be renewed and run out soon may end the transfer midway: warn, but go on.
+	// Thông tin xác thực sắp hết hạn và không thể gia hạn có thể làm gián đoạn lượt truyền: gửi cảnh báo nhưng vẫn tiếp tục.
 	output.AddMessage(transferExpiryWarning(conn, input.ProfileName)...)
 
-	// One context for the whole call, so cancelAllUploads also stops the key check
-	// below and the files that haven't started yet. It is not a Wails call context: this
-	// call blocks while the user works, so it only ends on cancelAllUploads or app shutdown.
+	// Dùng một context cho toàn bộ lời gọi để cancelAllUploads cũng dừng bước kiểm tra key bên dưới
+	// và các file chưa bắt đầu. Đây không phải context của lời gọi Wails: lời gọi này chờ trong lúc người dùng thao tác,
+	// nên chỉ kết thúc khi cancelAllUploads được gọi hoặc ứng dụng tắt.
 	ctx, cancel := context.WithCancel(m.app.Context())
 	m.setBatchCancel(cancel)
 	defer func() { m.setBatchCancel(nil); cancel() }()
 
 	prefix := normalizePrefix(input.Prefix)
-	// Find which keys (relative to prefix) are already used, before any upload starts,
-	// so the keys can be picked below without a lock.
+	// Tìm các key (tính tương đối với prefix) đã được dùng trước khi bắt đầu tải lên,
+	// nhờ đó có thể chọn key bên dưới mà không cần khóa.
 	used := existingKeys(ctx, conn.Client, input.Bucket, prefix, items)
 
-	// Pick the ID and key of every item first, in order, so no lock is needed.
+	// Chọn trước ID và key cho từng mục theo thứ tự để không cần khóa.
 	ids := make([]string, len(items))
 	for i := range items {
-		// The same ID is used for the job, the progress events and a renamed key.
+		// Dùng cùng ID cho job, sự kiện tiến độ và key được đổi tên.
 		ids[i] = utils.GenerateUUID()
 		items[i].Key = prefix + items[i].RelKey
 		if _, taken := used[items[i].RelKey]; taken {
@@ -168,12 +167,12 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 		used[items[i].RelKey] = struct{}{}
 	}
 
-	// Each goroutine writes only its own index, so no lock is needed. Results are read
-	// after g.Wait(), which waits for every group (and each group waits for its files).
+	// Mỗi goroutine chỉ ghi vào vị trí riêng nên không cần khóa. Đọc kết quả sau g.Wait(), hàm này chờ mọi nhóm
+	// hoàn tất (và từng nhóm chờ các file của mình).
 	results := make([]uploadResult, len(items))
-	// One goroutine per group hands its files out, but all groups share one semaphore, so at
-	// most uploadFileConcurrency files upload at a time. A plain errgroup.Group (no shared
-	// context): one failed file must not cancel the others.
+	// Mỗi nhóm có một goroutine phân phối file, nhưng mọi nhóm dùng chung một semaphore nên tối đa
+	// uploadFileConcurrency file được tải lên cùng lúc. Dùng errgroup.Group thường (không dùng context chung)
+	// để lỗi của một file không hủy các file khác.
 	sem := make(chan struct{}, uploadFileConcurrency)
 	var g errgroup.Group
 	for _, indexes := range groups {
@@ -184,7 +183,7 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 				select {
 				case sem <- struct{}{}:
 				case <-ctx.Done():
-					// Canceled while waiting: uploadOne reports it without uploading.
+					// Bị hủy trong lúc chờ: uploadOne tự báo lỗi mà không tải file lên.
 					results[i] = m.uploadOne(ctx, ids[i], conn.Client, input.Bucket, items[i])
 					continue
 				}
@@ -199,7 +198,7 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 	}
 	_ = g.Wait()
 
-	// Turn each result into a message for the frontend.
+	// Chuyển từng kết quả thành thông báo cho frontend.
 	for _, r := range results {
 		name := filepath.Base(r.path)
 		switch {
@@ -234,10 +233,9 @@ func (m *submoduleUploaderMng) uploadObject(input models.UploadObjInput) models.
 	return output
 }
 
-// uploadOne uploads a single file. It registers a cancelable job (so cancelUploadOne can
-// stop just this file) and emits progress events while uploading. The job is removed and
-// its context released on return, so nothing leaks. If the job was canceled, the result's error
-// is context.Canceled.
+// uploadOne tải một file. Hàm đăng ký job có thể hủy (để cancelUploadOne chỉ dừng file này) và gửi sự kiện tiến độ
+// trong khi tải. Khi hàm kết thúc, job được gỡ và context được giải phóng để tránh rò rỉ. Nếu job bị hủy,
+// lỗi trong kết quả là context.Canceled.
 func (m *submoduleUploaderMng) uploadOne(
 	parent context.Context,
 	id string,
@@ -245,13 +243,13 @@ func (m *submoduleUploaderMng) uploadOne(
 	bucket string,
 	item models.UploadObj,
 ) uploadResult {
-	// Register the job so it can be canceled; remove it when the upload ends.
+	// Đăng ký job để có thể hủy; gỡ job khi lượt tải lên kết thúc.
 	ctx, done := m.jobs.start(parent, id)
 	defer done()
 
-	// This stats the file again (groupUploadItems did it too): one cheap call per file, and
-	// keeping it here avoids passing sizes around. The size is for the UI only (uploadFile reads it
-	// again from the open file); a stat error is not fatal here because uploadFile reports it.
+	// Đọc lại thông tin file (groupUploadItems cũng đã làm): mỗi file chỉ tốn một lần gọi nhẹ,
+	// đồng thời tránh phải truyền kích thước qua nhiều chỗ. Kích thước chỉ dùng cho UI (uploadFile đọc lại từ file đang mở);
+	// lỗi stat không làm dừng tại đây vì uploadFile sẽ báo lỗi đó.
 	var total int64
 	if info, statErr := os.Stat(item.Path); statErr == nil {
 		total = info.Size()
@@ -264,14 +262,13 @@ func (m *submoduleUploaderMng) uploadOne(
 		Total:    total,
 	})
 
-	// A batch canceled before this file started (e.g. during the key check) sends nothing.
+	// Nếu lô bị hủy trước khi file này bắt đầu (ví dụ trong lúc kiểm tra key), không gửi gì.
 	err := ctx.Err()
 	if err == nil {
 		_, err = uploadFile(ctx, client, bucket, item.Key, item.Path, id, m.progress)
 	}
 
-	// If the context was canceled, report context.Canceled instead of whatever error
-	// the S3 call returned.
+	// Nếu context đã bị hủy, trả context.Canceled thay cho lỗi mà lời gọi S3 trả về.
 	if err != nil && ctx.Err() != nil {
 		err = context.Canceled
 	}
@@ -288,8 +285,8 @@ func (m *submoduleUploaderMng) uploadOne(
 	return uploadResult{path: item.Path, key: item.Key, err: err}
 }
 
-// cancelUploadOne cancels the running upload with the given ID.
-// Unknown or already finished IDs are ignored.
+// cancelUploadOne hủy lượt tải lên đang chạy có ID đã cho.
+// ID không xác định hoặc lượt tải đã hoàn tất sẽ bị bỏ qua.
 func (m *submoduleUploaderMng) cancelUploadOne(id string) models.Output[any] {
 	if m.jobs.cancel(id) {
 		m.logger.Info(fmt.Sprintf("upload %s is canceled", id))
@@ -297,15 +294,14 @@ func (m *submoduleUploaderMng) cancelUploadOne(id string) models.Output[any] {
 	return models.NewOutput[any]()
 }
 
-// setBatchCancel stores the cancel func of the running uploadObject call (nil when it ends).
+// setBatchCancel lưu hàm cancel của lời gọi uploadObject đang chạy (nil khi lời gọi kết thúc).
 func (m *submoduleUploaderMng) setBatchCancel(cancel context.CancelFunc) {
 	m.batchMu.Lock()
 	m.batchCancel = cancel
 	m.batchMu.Unlock()
 }
 
-// cancelAllUploads cancels every running upload, and the running uploadObject call
-// (its key check and the files not started yet).
+// cancelAllUploads hủy mọi lượt tải lên đang chạy và lời gọi uploadObject (bước kiểm tra key cùng các file chưa bắt đầu).
 func (m *submoduleUploaderMng) cancelAllUploads() models.Output[any] {
 	m.batchMu.Lock()
 	if m.batchCancel != nil {

@@ -27,9 +27,9 @@ import ObjectItem, { ObjectItemLabels } from '@/pages/s3/object/ObjectItem';
 import { useTabListStore } from '@/pages/s3/stores/tabListStore';
 import { onTabGone } from '@/pages/s3/utils/tabUtils';
 
-// Download is refused above this many objects at once (delete has no limit).
+// Từ chối tải xuống nếu số object cùng lúc vượt quá giới hạn này (xóa không giới hạn).
 const MAX_DOWNLOAD_OBJECTS = 5;
-// Load the next page once this many screens of rows are left below the viewport (at least PREFETCH_MIN_ROWS rows).
+// Tải trang tiếp theo khi còn số màn hình hàng này bên dưới viewport (ít nhất PREFETCH_MIN_ROWS hàng).
 const PREFETCH_SCREENS = 2;
 const PREFETCH_MIN_ROWS = 2;
 
@@ -43,18 +43,18 @@ type ObjectListViewProps = {
   bucket?: string;
   profile?: ConnectionProfileOutput | null;
   scrollRef: RefObject<HTMLElement | null>;
-  // Applied search keyword; empty means the normal lazy-loaded list.
+  // Từ khóa tìm kiếm đang áp dụng; rỗng nghĩa là danh sách lazy-load thông thường.
   keyword?: string;
   ref?: Ref<ObjectListViewRef>;
 };
 
-/** Virtualized, lazily paged list of the objects (or search results) of the current folder. */
+/** Danh sách object (hoặc kết quả tìm kiếm) của thư mục hiện tại, được virtualize và tải theo trang. */
 function ObjectListView(props: ObjectListViewProps) {
   const { tabId, bucket, profile, scrollRef, keyword = '', ref } = props;
 
   const { t } = useTranslation('object', { keyPrefix: 'page' });
 
-  // Rows get their texts from here, so they do not subscribe to i18n themselves.
+  // Hàng lấy nội dung chữ từ đây nên không tự đăng ký i18n.
   const labels = useMemo<ObjectItemLabels>(
     () => ({
       moreActions: t('tooltip.moreActions'),
@@ -85,7 +85,7 @@ function ObjectListView(props: ObjectListViewProps) {
     onRefresh,
     onClickLoadMore,
   } = useObjectPaging({ tabId, connectionId, profileName, bucket, prefix, keyword, listKey, scrollRef });
-  // Read at click time, so the menu handler keeps its identity when pages load.
+  // Đọc giá trị tại thời điểm click để handler menu giữ nguyên identity khi tải trang.
   const objectDatasRef = useRef(objectDatas);
   objectDatasRef.current = objectDatas;
   const changePrefix = useTabListStore(s => s.changePrefix);
@@ -96,7 +96,7 @@ function ObjectListView(props: ObjectListViewProps) {
   const closeDetail = useTabListStore(s => s.closeDetail);
   const setDeleting = useTabListStore(s => s.setDeleting);
 
-  // Closes the drawer when the object it shows is one of the deleted keys or inside a deleted folder.
+  // Đóng drawer nếu object đang hiển thị nằm trong các key bị xóa hoặc bên trong thư mục bị xóa.
   const closeDetailIfDeleted = useCallback(
     (deletedKeys: string[]) => {
       const detailKey = useTabListStore.getState().tabList[tabId]?.detailItem?.key;
@@ -107,14 +107,14 @@ function ObjectListView(props: ObjectListViewProps) {
     [closeDetail, tabId]
   );
 
-  // The selection does not outlive the view, but survives the tab being hidden (Activity).
+  // Lựa chọn không tồn tại lâu hơn view nhưng vẫn được giữ khi tab bị ẩn (Activity).
   useEffect(() => onTabGone(tabId, () => clearSelectItem(tabId)), [clearSelectItem, tabId]);
 
   const onClickMenuButton = useCallback(
     async (keys: string[], action: 'download' | 'delete') => {
       if (!connectionId || !bucket) return;
-      // Folder keys end with "/". Downloading one fails, and deleting one would remove only
-      // the folder marker, not the files in it, so they are never sent.
+      // Key thư mục kết thúc bằng "/". Tải thư mục sẽ thất bại; xóa thư mục chỉ xóa folder marker chứ không xóa file bên trong,
+      // vì vậy không gửi các key này.
       const objects = keys.filter(key => !key.endsWith('/'));
       if (objects.length === 0) return;
       if (action === 'download' && objects.length > MAX_DOWNLOAD_OBJECTS) {
@@ -129,22 +129,22 @@ function ObjectListView(props: ObjectListViewProps) {
           await callIPC(DownloadObject, [{ connectionId, profileName, bucket, objects }]);
           break;
         case 'delete': {
-          // Sizes are looked up only for the picked keys, from the list as it is now.
+          // Chỉ tra kích thước của các key đã chọn, từ danh sách hiện tại.
           const selectedKeys = new Set(objects);
           const sizes = new Map<string, number>();
           for (const o of objectDatasRef.current) if (selectedKeys.has(o.key)) sizes.set(o.key, o.size);
           const toDelete = await showDeleteConfirmModal({
             files: objects.map(key => ({ key, size: sizes.get(key) ?? 0 })),
           });
-          // Canceled, or every file unticked.
+          // Đã hủy hoặc bỏ chọn tất cả file.
           if (toDelete?.length) {
             setDeleting(tabId, toDelete, true);
             try {
               const body = await callIPC(DeleteObject, [{ connectionId, profileName, bucket, objects: toDelete }]);
               if (body) {
                 closeDetailIfDeleted(body.deleted ?? []);
-                // Opened before the refresh, so a failing refresh cannot hide the result. Not awaited: the
-                // selection is cleared and the list is usable while the dialog is open.
+                // Mở trước khi refresh để refresh thất bại không che mất kết quả. Không await: xóa lựa chọn và cho phép
+                // tiếp tục dùng danh sách trong lúc hộp thoại đang mở.
                 void showDeleteResultModal({
                   deleted: body.deleted?.length ?? 0,
                   failed: body.failed?.length ?? 0,
@@ -168,7 +168,7 @@ function ObjectListView(props: ObjectListViewProps) {
   const onClickDeleteFolder = useCallback(
     async (folderKey: string, name: string) => {
       if (!connectionId || !bucket) return;
-      // Already being deleted: ignore a repeated click.
+      // Đang được xóa: bỏ qua lần click lặp lại.
       if (useTabListStore.getState().tabList[tabId]?.deletingItems[folderKey] === true) return;
       const confirmed = await ConfirmModal.show({
         type: 'warning',
@@ -182,12 +182,12 @@ function ObjectListView(props: ObjectListViewProps) {
       setDeleting(tabId, [folderKey], true);
       try {
         const body = await callIPC(DeletePrefix, [{ connectionId, profileName, bucket, prefix: folderKey }]);
-        // Keep the drawer on failure (even a partial one); the object it shows may still exist.
+        // Giữ drawer nếu thất bại (kể cả khi chỉ xóa được một phần); object đang hiển thị có thể vẫn tồn tại.
         if (body?.failed === 0) closeDetailIfDeleted([folderKey]);
-        // Opened before the refresh, so a failing refresh cannot hide the result.
+        // Mở trước khi refresh để refresh thất bại không che mất kết quả.
         if (body)
           void showDeleteResultModal({ deleted: body.deleted, failed: body.failed, failures: body.failures ?? [] });
-        // Refresh even on failure or cancel: part of the folder may already be deleted.
+        // Refresh ngay cả khi thất bại hoặc bị hủy vì một phần thư mục có thể đã bị xóa.
         await onRefresh();
       } finally {
         setDeleting(tabId, [folderKey], false);
@@ -222,13 +222,13 @@ function ObjectListView(props: ObjectListViewProps) {
 
   const objectList = connectionId ? objectDatas : [];
 
-  // The list sits below the scroll container's padding, so the virtualizer needs that offset.
+  // Danh sách nằm dưới padding của vùng cuộn nên virtualizer cần biết độ lệch đó.
   useLayoutEffect(() => {
     setScrollMargin(listRef.current?.offsetTop ?? 0);
-    // The padding above the list is rem, so its offset changes with the size too.
+    // Padding phía trên danh sách dùng rem nên độ lệch cũng đổi theo kích thước.
   }, [scale]);
 
-  // React Compiler is disabled, so this compiler-only lint does not apply.
+  // React Compiler đang tắt nên quy tắc lint chỉ dành cho compiler này không áp dụng.
   // oxlint-disable-next-line react/incompatible-library
   const virtualizer = useVirtualizer({
     count: objectList.length,
@@ -250,9 +250,9 @@ function ObjectListView(props: ObjectListViewProps) {
   );
 
   useEffect(() => {
-    // After a failed page, wait for Refresh instead of retrying in a loop.
+    // Sau khi tải trang thất bại, chờ người dùng nhấn Refresh thay vì tự thử lại liên tục.
     if (!nextCursor || isLoadingMore || loadMoreError || cursorKey !== listKey) return;
-    // An empty search has nothing to scroll: the user continues it with the "load more" button.
+    // Tìm kiếm rỗng không có nội dung để cuộn: người dùng tiếp tục bằng nút "load more".
     if (keyword && objectList.length === 0) return;
     if (lastVisibleIndex >= objectList.length - 1 - prefetchRows) {
       loadNextPage();
@@ -271,11 +271,11 @@ function ObjectListView(props: ObjectListViewProps) {
   ]);
 
   const isEmpty = objectList.length === 0;
-  // Only once this very list has loaded (not while loading, after an error, or on a stale previous list).
+  // Chỉ bật sau khi chính danh sách này tải xong (không bật khi đang tải, sau lỗi hoặc khi còn dữ liệu cũ).
   const showEmpty = !!connectionId && !!bucket && isLoaded && cursorKey === listKey && isEmpty && !nextCursor;
-  // Retry after a failed page, or continue a search that found nothing yet.
+  // Thử lại sau khi tải trang thất bại hoặc tiếp tục tìm kiếm khi chưa tìm thấy kết quả.
   const showLoadMore = !!keyword && !!nextCursor && !isLoadingMore && (isEmpty || loadMoreError);
-  // With no rows the list has no height, so the footer flows normally instead of hanging below the rows.
+  // Khi không có hàng, danh sách không có chiều cao nên footer nằm đúng luồng thay vì bị đẩy xuống dưới các hàng.
   const footerStyle = isEmpty ? { width: '100%' } : { position: 'absolute' as const, top: '100%', width: '100%' };
 
   return (

@@ -258,7 +258,7 @@ fn is_done_follows_the_rows_taken() {
     assert_eq!(one.next_row(), None);
 }
 
-// ---- map: key / value ----
+// ---- map: khóa / giá trị ----
 
 #[test]
 fn resp3_map_is_a_key_value_table() {
@@ -404,7 +404,7 @@ fn zrange_withscores_in_resp3_is_a_grid_of_member_and_score() {
 
 #[test]
 fn nested_json_covers_every_kind() {
-    // Set để reply luôn đi dạng một cột (mảng chứa đúng một mảng 2..32 phần tử là bảng).
+    // Lệnh Set để phản hồi luôn có dạng một cột (mảng chứa đúng một mảng 2..32 phần tử là bảng).
     let nested = Value::Set(vec![Value::Array(vec![
         Value::Nil,
         int(-1),

@@ -12,10 +12,10 @@ import ActionIcon from '@/components/buttons/ActionIcon';
 import DownloaderItem from '@/pages/s3/transfer/downloader/DownloaderItem';
 import TransferPanel from '@/pages/s3/transfer/TransferPanel';
 
-// Same as the former Stack gap="xs" (10px), so rows keep their spacing.
+// Bằng Stack gap="xs" trước đây (10px) để giữ nguyên khoảng cách giữa các hàng.
 const ITEM_GAP = 10;
 
-/** Floating download progress window (or a button when closed); publishes its size for the uploader. */
+/** Cửa sổ nổi hiển thị tiến độ tải xuống (hoặc một nút khi đóng); gửi kích thước cho uploader. */
 function DownloaderWindow() {
   const { t } = useTranslation('downloaderWindow');
 
@@ -56,7 +56,7 @@ function DownloaderWindow() {
     };
   }, [setDownloadProgressBatch]);
 
-  // Publish the measured size for UploaderWindow; reset to 0 when nothing is rendered.
+  // Gửi kích thước đã đo cho UploaderWindow; đặt về 0 khi không render gì.
   useEffect(() => {
     setWindowSize(rendered ? { width, height } : { width: 0, height: 0 });
   }, [rendered, width, height, setWindowSize]);

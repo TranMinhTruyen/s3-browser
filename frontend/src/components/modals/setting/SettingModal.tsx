@@ -28,17 +28,17 @@ import { showUnsavedSettingModal } from '@/components/modals/lazyModals';
 import { INFO_BG_COLOR } from '@/components/modals/modalColors';
 import UpdateSection from '@/components/modals/setting/UpdateSection';
 
-/** Resolves true when the settings were saved, false/null when dismissed. */
+/** Trả về true khi đã lưu thiết lập, false/null khi đóng modal. */
 export default createMantineModal<{}, boolean>(props => {
   const { mantine, ...restProps } = props;
 
   const { t } = useTranslation('settingModal');
-  // While saving, every button and every way of closing the modal is locked.
+  // Trong lúc lưu, khóa mọi nút và mọi cách đóng modal.
   const [saving, setSaving] = useState(false);
-  // Same lock while Apply is pending, so Cancel/Save/close cannot race with its result.
+  // Giữ khóa tương tự khi Apply đang chờ để Cancel/Save/đóng modal không chạy đua với kết quả.
   const [applying, setApplying] = useState(false);
   const busy = saving || applying;
-  // Dragging only moves the thumb; the size is applied on release (keys apply at once).
+  // Khi kéo chỉ di chuyển nút trượt; áp dụng cỡ khi thả chuột (nhấn phím thì áp dụng ngay).
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   const draft = useSettingStore(useShallow(s => s.draft));
@@ -99,7 +99,7 @@ export default createMantineModal<{}, boolean>(props => {
     [setDraft]
   );
 
-  // Each font option is previewed in its own font.
+  // Mỗi tùy chọn phông chữ được xem trước bằng chính phông đó.
   const renderFontOption = useCallback(
     ({ option }: { option: { value: string; label: string } }) => (
       <span style={{ fontFamily: getFontFamily(option.value as FontKey, draft.language) }}>{option.label}</span>
@@ -115,7 +115,7 @@ export default createMantineModal<{}, boolean>(props => {
 
   const onClickReset = useCallback(() => resetDraft(), [resetDraft]);
 
-  // Apply keeps the current values for this session only; the modal stays open.
+  // Apply chỉ giữ các giá trị hiện tại trong phiên này; modal vẫn mở.
   const onClickApply = useCallback(async () => {
     setApplying(true);
     try {
@@ -127,10 +127,10 @@ export default createMantineModal<{}, boolean>(props => {
     }
   }, [apply, t]);
 
-  // After a successful save the lock stays until the modal is hidden, so no second save can start.
+  // Sau khi lưu thành công, giữ khóa đến khi modal ẩn để không thể bắt đầu lượt lưu thứ hai.
   const onClickSave = useCallback(async () => {
     setSaving(true);
-    // callIPC already reported any failure to the user, so a rejection is treated like a failed save.
+    // callIPC đã báo lỗi cho người dùng nên xem rejection như một lần lưu thất bại.
     const ok = await save().catch(() => false);
     if (!ok) {
       setSaving(false);
@@ -141,7 +141,7 @@ export default createMantineModal<{}, boolean>(props => {
     mantine.handler.hide();
   }, [save, t, mantine.handler]);
 
-  // X, Esc and click outside: close at once when nothing changed, otherwise ask what to do with the changes.
+  // Nút X, Esc và click bên ngoài: đóng ngay nếu không có thay đổi, nếu có thì hỏi cách xử lý các thay đổi.
   const onCloseModal = useCallback(async () => {
     if (!isSettingDirty(draft, applied)) {
       revert();

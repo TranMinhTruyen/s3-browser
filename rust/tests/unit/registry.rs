@@ -50,7 +50,7 @@ fn poll_once<F: Future>(
     fut.as_mut().poll(&mut Context::from_waker(&waker))
 }
 
-// ---- Registry: cancel và interrupt (B4) ----
+// ---- Bộ đăng ký: hủy và ngắt (B4) ----
 
 #[test]
 fn cancel_interrupts_when_the_request_is_the_running_one() {
@@ -199,7 +199,7 @@ fn cancel_from_another_thread_while_running() {
     assert_eq!(counting.calls(), 1);
 }
 
-// ---- Registry: connection ----
+// ---- Bộ đăng ký: kết nối ----
 
 #[test]
 fn set_running_on_unknown_connection_is_ignored() {

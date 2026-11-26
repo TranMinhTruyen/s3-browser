@@ -15,7 +15,7 @@ const MOTION_PROPS = new Set([
 
 const passThrough = ({ children }: { children?: ReactNode }) => <>{children}</>;
 
-/** Props received by every rendered `MotionConfig`, in render order. */
+/** Các prop mà từng `MotionConfig` được render nhận, theo thứ tự render. */
 export const motionConfigProps: Record<string, unknown>[] = [];
 
 const MotionConfig = ({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) => {
@@ -36,7 +36,7 @@ const makeComponent = (tag: string) => {
       tag,
       {
         ...domProps,
-        // Exposes motion props so tests can assert them without running animations.
+        // Hiển thị các prop chuyển động để test có thể kiểm tra mà không chạy animation.
         'data-animate': animate === undefined ? undefined : JSON.stringify(animate),
         'data-exit': typeof exit === 'string' ? exit : undefined,
         'data-while-tap': whileTap === undefined ? undefined : JSON.stringify(whileTap),
@@ -60,10 +60,10 @@ const createProxy = () => {
   );
 };
 
-/** Value returned by the mocked `useReducedMotion`; tests flip it and reset it to false afterwards. */
+/** Giá trị mock `useReducedMotion` trả về; test thay đổi giá trị này rồi đặt lại false sau đó. */
 export const motionState = { reducedMotion: false, isPresent: true };
 
-/** Drop-in replacement for the `motion/react` module: plain HTML elements, no animation. */
+/** Module thay thế trực tiếp cho `motion/react`: dùng phần tử HTML thuần, không chạy animation. */
 export const motionMock = {
   useReducedMotion: () => motionState.reducedMotion,
   useIsPresent: () => motionState.isPresent,

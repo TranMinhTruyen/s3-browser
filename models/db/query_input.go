@@ -1,20 +1,20 @@
 package db
 
-// TableInfoInput names a table of a connected profile.
+// TableInfoInput chỉ định một bảng trong hồ sơ đã kết nối.
 type TableInfoInput struct {
 	ProfileId string `json:"profileId"`
 	Schema    string `json:"schema"`
 	Table     string `json:"table"`
 }
 
-// ExecuteSqlInput runs Sql (one or more statements) on the connection of tab TabId.
+// ExecuteSqlInput chạy Sql (một hoặc nhiều câu lệnh) trên kết nối của tab TabId.
 type ExecuteSqlInput struct {
 	ProfileId string `json:"profileId"`
 	TabId     string `json:"tabId"`
 	Sql       string `json:"sql"`
 }
 
-// OpenTableRowsInput reads the rows of a table on the connection of tab TabId.
+// OpenTableRowsInput đọc các hàng trong bảng qua kết nối của tab TabId.
 type OpenTableRowsInput struct {
 	ProfileId string `json:"profileId"`
 	TabId     string `json:"tabId"`
@@ -22,15 +22,15 @@ type OpenTableRowsInput struct {
 	Table     string `json:"table"`
 }
 
-// FetchRowsInput loads the next page of the result cursor of tab TabId.
+// FetchRowsInput tải trang tiếp theo của cursor kết quả thuộc tab TabId.
 type FetchRowsInput struct {
 	TabId    string `json:"tabId"`
 	CursorId uint64 `json:"cursorId"`
-	// All reads every remaining row in one call, without the page limits, until done or canceled.
+	// All đọc mọi hàng còn lại trong một lần gọi, không giới hạn số trang, cho đến khi hoàn tất hoặc bị hủy.
 	All bool `json:"all"`
 }
 
-// CloseDbTabInput closes the connection of tab TabId.
+// CloseDbTabInput đóng kết nối của tab TabId.
 type CloseDbTabInput struct {
 	TabId string `json:"tabId"`
 }

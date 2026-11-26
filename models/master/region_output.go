@@ -1,6 +1,6 @@
 package master
 
-// RegionOutput groups region rows by their Value2 column (the provider).
+// RegionOutput nhóm các hàng region theo cột Value2 (provider).
 type RegionOutput struct {
 	RegionData map[string][]MasterOutput `json:"regionData,omitempty"`
 }

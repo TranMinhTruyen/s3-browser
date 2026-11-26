@@ -20,21 +20,21 @@ import (
 )
 
 const (
-	// uploadPartConcurrency is the parts of one file sent at once. With uploadFileConcurrency
-	// files in flight this bounds open requests to files x parts.
+	// uploadPartConcurrency là số part của một file được gửi cùng lúc. Kết hợp với uploadFileConcurrency file đang truyền,
+	// giá trị này giới hạn số yêu cầu đang mở ở mức số file nhân số part.
 	uploadPartConcurrency = 4
-	// minUploadPartSize is the smallest part size. Files smaller than this are sent in
-	// a single PutObject. S3 requires every part except the last to be at least 5 MiB.
+	// minUploadPartSize là kích thước part nhỏ nhất. File nhỏ hơn mức này được gửi bằng một yêu cầu PutObject.
+	// S3 yêu cầu mỗi part, trừ part cuối cùng, có kích thước ít nhất 5 MiB.
 	minUploadPartSize = 8 << 20
-	// maxUploadParts is the S3 limit on the number of parts in one multipart upload.
+	// maxUploadParts là giới hạn số part của một lượt tải lên nhiều phần trên S3.
 	maxUploadParts = 10000
 )
 
-// uploadFile uploads the file at path to bucket/key and returns its size.
-// Files smaller than minUploadPartSize are sent with one PutObject; larger files are
-// sent as a multipart upload with uploadPartConcurrency parts in flight.
-// Its progress is reported through tracker under id.
-// On failure or cancellation, no object is created and no parts are left on the server.
+// uploadFile tải file tại path lên bucket/key rồi trả về kích thước.
+// File nhỏ hơn minUploadPartSize được gửi bằng một yêu cầu PutObject; file lớn hơn được tải lên nhiều phần,
+// với tối đa uploadPartConcurrency part đang truyền cùng lúc.
+// Tiến độ được báo qua tracker theo id.
+// Nếu thất bại hoặc bị hủy, object không được tạo và không để lại part nào trên máy chủ.
 func uploadFile(
 	ctx context.Context,
 	client *s3.Client,
@@ -42,7 +42,7 @@ func uploadFile(
 	id string,
 	tracker *utils.BatchReporter[models.UploadProgressOutput],
 ) (int64, error) {
-	// Lstat first so a symlink is rejected instead of followed.
+	// Gọi Lstat trước để từ chối symbolic link thay vì đi theo liên kết.
 	if info, err := os.Lstat(path); err != nil {
 		return 0, err
 	} else if !info.Mode().IsRegular() {
@@ -65,8 +65,8 @@ func uploadFile(
 	size := info.Size()
 
 	var sent atomic.Int64
-	// The tracker samples the counter on a shared ticker instead of emitting an event per read,
-	// which would flood the frontend; done() emits the final value when the upload returns.
+	// Tracker đọc bộ đếm theo ticker dùng chung thay vì phát sự kiện sau mỗi lần đọc,
+	// tránh làm frontend quá tải; done() phát giá trị cuối cùng khi lượt tải lên kết thúc.
 	done := tracker.Track(id, func() (models.UploadProgressOutput, bool) {
 		return models.UploadProgressOutput{UploadId: id, Uploaded: min(sent.Load(), size), Total: size}, true
 	})
@@ -84,7 +84,7 @@ func uploadFile(
 	return size, nil
 }
 
-// putSingle uploads body as one object with a single PutObject request.
+// putSingle tải body lên thành một object bằng một yêu cầu PutObject duy nhất.
 func putSingle(
 	ctx context.Context,
 	client *s3.Client,
@@ -103,14 +103,14 @@ func putSingle(
 	return err
 }
 
-// putMultipart uploads f (size bytes) as a multipart upload:
-//  1. CreateMultipartUpload starts the upload and returns its ID.
-//  2. The parts are read straight from f (no buffering in memory) and sent in parallel.
-//     If one part fails, the others are canceled.
-//  3. CompleteMultipartUpload joins the parts into the object.
+// putMultipart tải f (size byte) lên theo nhiều phần:
+//  1. CreateMultipartUpload bắt đầu lượt tải và trả về ID.
+//  2. Đọc trực tiếp các part từ f (không đệm trong bộ nhớ) rồi gửi song song.
+//     Nếu một part thất bại, các part còn lại bị hủy.
+//  3. CompleteMultipartUpload ghép các part thành object.
 //
-// If any step fails or ctx is canceled, the upload is aborted so S3 deletes the parts
-// already stored (they take space, and are billed, until then).
+// Nếu bất kỳ bước nào thất bại hoặc ctx bị hủy, lượt tải sẽ bị hủy để S3 xóa các part đã lưu
+// (nếu không chúng vẫn chiếm dung lượng và bị tính phí).
 func putMultipart(
 	ctx context.Context,
 	client *s3.Client,
@@ -122,7 +122,7 @@ func putMultipart(
 	partSize := uploadPartSize(size)
 	partCount := int((size + partSize - 1) / partSize)
 
-	// Step 1: start the upload.
+	// Bước 1: bắt đầu lượt tải lên.
 	created, err := client.CreateMultipartUpload(ctx, &s3.CreateMultipartUploadInput{
 		Bucket:            &bucket,
 		Key:               &key,
@@ -138,7 +138,7 @@ func putMultipart(
 		if err == nil {
 			return
 		}
-		// ctx may already be canceled, so the abort gets its own short-lived context.
+		// ctx có thể đã bị hủy nên thao tác abort dùng context riêng với thời hạn ngắn.
 		abortCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 		defer cancel()
 		if _, abortErr := client.AbortMultipartUpload(abortCtx, &s3.AbortMultipartUploadInput{
@@ -150,13 +150,13 @@ func putMultipart(
 		}
 	}()
 
-	// Step 2: send the parts. Each goroutine writes only its own index in parts.
-	// io.SectionReader reads with ReadAt, so the parts can share f safely.
+	// Bước 2: gửi các part. Mỗi goroutine chỉ ghi vào vị trí riêng trong parts.
+	// io.SectionReader đọc bằng ReadAt nên các part có thể dùng chung f an toàn.
 	parts := make([]types.CompletedPart, partCount)
 	g, gctx := errgroup.WithContext(ctx)
 	g.SetLimit(uploadPartConcurrency)
 	for i := range partCount {
-		// A part failed or the upload was canceled: don't start the remaining parts.
+		// Một part thất bại hoặc lượt tải bị hủy: không bắt đầu các part còn lại.
 		if gctx.Err() != nil {
 			break
 		}
@@ -187,12 +187,12 @@ func putMultipart(
 	if err = g.Wait(); err != nil {
 		return err
 	}
-	// The loop may have stopped early without any part failing (ctx canceled).
+	// Vòng lặp có thể dừng sớm dù không có part nào thất bại (ctx bị hủy).
 	if err = ctx.Err(); err != nil {
 		return err
 	}
 
-	// Step 3: join the parts into the object.
+	// Bước 3: ghép các part thành object.
 	_, err = client.CompleteMultipartUpload(ctx, &s3.CompleteMultipartUploadInput{
 		Bucket:          &bucket,
 		Key:             &key,
@@ -202,9 +202,8 @@ func putMultipart(
 	return err
 }
 
-// uploadPartSize returns the part size for a file of the given size: minUploadPartSize,
-// or more when the file would otherwise need more than maxUploadParts parts
-// (above ~78 GiB), rounded up to a whole MiB.
+// uploadPartSize trả về kích thước part cho file có kích thước đã cho: minUploadPartSize,
+// hoặc lớn hơn nếu không thì file cần quá maxUploadParts part (trên khoảng 78 GiB); làm tròn lên MiB nguyên.
 func uploadPartSize(size int64) int64 {
 	partSize := int64(minUploadPartSize)
 	if need := (size + maxUploadParts - 1) / maxUploadParts; need > partSize {
@@ -213,17 +212,16 @@ func uploadPartSize(size int64) int64 {
 	return partSize
 }
 
-// progressReader reads from r and keeps sent up to date with how far into r it is.
-// The SDK may read a body more than once (to compute a checksum or signature, or on a
-// retry) and seeks back to the start before each pass, so the reader adds the bytes it
-// reads and takes them off again when it seeks back. This way sent never counts a byte twice.
+// progressReader đọc từ r và cập nhật sent theo lượng dữ liệu đã đọc.
+// SDK có thể đọc body nhiều lần (để tính checksum, chữ ký hoặc thử lại) và quay về đầu trước mỗi lần,
+// vì vậy reader cộng số byte đã đọc rồi trừ lại khi quay lại. Nhờ đó sent không đếm trùng byte.
 type progressReader struct {
 	r    io.ReadSeeker
 	sent *atomic.Int64
 	pos  int64
 }
 
-// Read implements io.Reader and counts the bytes read.
+// Read triển khai io.Reader và đếm số byte đã đọc.
 func (p *progressReader) Read(b []byte) (int, error) {
 	n, err := p.r.Read(b)
 	p.pos += int64(n)
@@ -231,7 +229,7 @@ func (p *progressReader) Read(b []byte) (int, error) {
 	return n, err
 }
 
-// Seek implements io.Seeker and corrects the count for bytes that will be read again.
+// Seek triển khai io.Seeker và điều chỉnh bộ đếm cho các byte sẽ được đọc lại.
 func (p *progressReader) Seek(offset int64, whence int) (int64, error) {
 	pos, err := p.r.Seek(offset, whence)
 	if err != nil {
@@ -242,7 +240,7 @@ func (p *progressReader) Seek(offset int64, whence int) (int64, error) {
 	return pos, nil
 }
 
-// nonEmpty returns nil for "", so an unknown content type isn't sent as an empty header.
+// nonEmpty trả nil nếu giá trị là "" để không gửi Content-Type chưa xác định dưới dạng header rỗng.
 func nonEmpty(s string) *string {
 	if s == "" {
 		return nil

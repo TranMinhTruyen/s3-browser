@@ -1,4 +1,4 @@
-// Command S3Browser is a desktop S3/MinIO browser built on Wails v3.
+// Command S3Browser là ứng dụng desktop duyệt S3/MinIO được xây dựng trên Wails v3.
 package main
 
 import (
@@ -17,22 +17,22 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-// assets is the built frontend served to the webview.
+// assets là frontend đã build, được phục vụ cho webview.
 //
 //go:embed all:frontend/dist
 var assets embed.FS
 
-// wailsConfigJSON is read back at runtime so wails.json stays the single source of the app name.
+// wailsConfigJSON được đọc lại lúc chạy để wails.json tiếp tục là nguồn duy nhất của tên ứng dụng.
 //
 //go:embed all:wails.json
 var wailsConfigJSON []byte
 
-// buildConfigYAML is read back at runtime so build/config.yml stays the single source of the app version.
+// buildConfigYAML được đọc lại lúc chạy để build/config.yml tiếp tục là nguồn duy nhất của phiên bản ứng dụng.
 //
 //go:embed build/config.yml
 var buildConfigYAML []byte
 
-// appVersion returns info.version of build/config.yml, or "" when it cannot be parsed.
+// appVersion trả info.version trong build/config.yml hoặc "" nếu không phân tích được file.
 func appVersion(raw []byte) string {
 	var cfg struct {
 		Info struct {
@@ -43,8 +43,8 @@ func appVersion(raw []byte) string {
 	return cfg.Info.Version
 }
 
-// portableWindowsOptions points WebView2 at the runtime shipped next to the exe and keeps its profile in data/,
-// so the app writes nothing to %APPDATA%.
+// portableWindowsOptions trỏ WebView2 đến runtime đi kèm exe và lưu hồ sơ trong data/,
+// nhờ đó ứng dụng không ghi dữ liệu vào %APPDATA%.
 func portableWindowsOptions(appName string) (application.WindowsOptions, error) {
 	webviewDir, err := portable.WebView2Dir()
 	if err != nil {
@@ -60,8 +60,8 @@ func portableWindowsOptions(appName string) (application.WindowsOptions, error) 
 	}, nil
 }
 
-// backgroundColour is the native window background for the saved theme, so the window does not flash the wrong
-// colour before the page renders. "auto" follows the OS scheme (osDark, see osDarkMode).
+// backgroundColour là màu nền native của cửa sổ theo giao diện đã lưu để cửa sổ không nháy sai màu trước khi trang hiển thị.
+// "auto" theo giao diện hệ điều hành (osDark, xem osDarkMode).
 func backgroundColour(theme string, osDark bool) application.RGBA {
 	if theme == "dark" || (theme == "auto" && osDark) {
 		return application.NewRGBA(36, 36, 36, 255)
@@ -69,8 +69,8 @@ func backgroundColour(theme string, osDark bool) application.RGBA {
 	return application.NewRGBA(255, 255, 255, 255)
 }
 
-// startupErrorMessage explains a database startup failure by stage: a failed backup left the database untouched,
-// a failed migration was rolled back and the error text names the backup file.
+// startupErrorMessage giải thích lỗi khởi động cơ sở dữ liệu theo từng giai đoạn: sao lưu thất bại thì cơ sở dữ liệu
+// chưa bị thay đổi; migration thất bại đã được rollback và nội dung lỗi nêu tên file sao lưu.
 func startupErrorMessage(err error) string {
 	switch {
 	case errors.Is(err, db.ErrBackupFailed):
@@ -83,7 +83,7 @@ func startupErrorMessage(err error) string {
 	return "The database could not be opened.\n\n" + err.Error()
 }
 
-// main wires logger, app, handlers and the main window, then runs the Wails event loop.
+// main kết nối logger, ứng dụng, handler và cửa sổ chính rồi chạy vòng lặp sự kiện Wails.
 func main() {
 	cfg := internal.ParseConfig(wailsConfigJSON)
 	cfg.Version = appVersion(buildConfigYAML)
@@ -116,7 +116,7 @@ func main() {
 
 	app, err := internal.NewApp(mainApp, cfg, appLogger)
 	if err != nil {
-		// Native dialogs only work once the app runs, so show the error from ApplicationStarted, then quit.
+		// Hộp thoại của hệ điều hành chỉ hoạt động sau khi ứng dụng chạy, vì vậy hiển thị lỗi từ ApplicationStarted rồi thoát.
 		mainApp.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
 			mainApp.Dialog.Error().SetTitle(cfg.Name).SetMessage(startupErrorMessage(err)).Show()
 			mainApp.Quit()
@@ -146,7 +146,7 @@ func main() {
 		OpenInspectorOnStartup: DevMode,
 		EnableFileDrop:         true,
 	})
-	// Files dropped on an element with data-file-drop-target arrive here, with their full paths.
+	// File được thả vào phần tử có data-file-drop-target sẽ được gửi đến đây kèm đường dẫn đầy đủ.
 	mainWindow.OnWindowEvent(events.Common.WindowFilesDropped, app.BucketHandler.FilesDropped)
 
 	if err := mainApp.Run(); err != nil {

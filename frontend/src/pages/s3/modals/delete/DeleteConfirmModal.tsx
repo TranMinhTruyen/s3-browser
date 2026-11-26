@@ -18,12 +18,12 @@ type DeleteConfirmModalProps = ModalProps & {
   files: DeleteFile[];
 };
 
-// The list follows the window height but never gets smaller than the minimum.
+// Danh sách co giãn theo chiều cao cửa sổ nhưng không nhỏ hơn mức tối thiểu.
 const LIST_HEIGHT = 'max(12.5rem, 35vh)';
 
 /**
- * Lists the files about to be deleted (all ticked) so the user can untick the ones to keep.
- * Resolves the ticked keys, or null when canceled.
+ * Liệt kê các file sắp bị xóa (mặc định đều được đánh dấu) để người dùng bỏ đánh dấu những file muốn giữ.
+ * Trả về các key đã đánh dấu hoặc null nếu người dùng hủy.
  */
 export default createMantineModal<DeleteConfirmModalProps, string[] | null>(props => {
   const { files, mantine, size = 'xl', centered = true, ...restProps } = props;
@@ -32,7 +32,7 @@ export default createMantineModal<DeleteConfirmModalProps, string[] | null>(prop
 
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set(files.map(file => file.key)));
 
-  // Reuses the upload list rows: the key stands in for the local path.
+  // Dùng lại các hàng của danh sách tải lên: key thay cho đường dẫn file cục bộ.
   const rows = useMemo<UploadRow[]>(
     () =>
       files.map(file => ({

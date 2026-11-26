@@ -32,7 +32,7 @@ const store = () => useDbProfileStore.getState();
 const profile = (id: string, extra: Partial<DbProfile> = {}): DbProfile => pgProfile(id, extra);
 const sqlite = (id: string, extra: Partial<DbProfile> = {}): DbProfile => sqliteProfile(id, extra);
 
-/** Puts profiles in the store the way a backend load does. */
+/** Đưa hồ sơ vào store theo cách backend tải dữ liệu. */
 const seed = (...profiles: DbProfile[]) =>
   useDbProfileStore.setState({ dbProfiles: Object.fromEntries(profiles.map(p => [p.id, p])) });
 
