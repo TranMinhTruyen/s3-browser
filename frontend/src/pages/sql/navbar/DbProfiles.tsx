@@ -20,16 +20,23 @@ import { notifyNoBackend } from '@/pages/sql/utils/sqlToast';
 
 // Tạo khoảng cách phía trên mọi thẻ trừ thẻ đầu tiên để danh sách có khoảng trống 8px bằng nhau ở trên và dưới.
 const CARD_GAP = 8;
+// Padding dọc bên trong khung cây.
+const TREE_PADDING = 8;
 
-/** Một hàng của danh sách phẳng: thẻ hồ sơ, một node trong cây đối tượng hoặc dòng trạng thái bên dưới thẻ. */
+/** Một hàng của danh sách phẳng: thẻ hồ sơ, khoảng đệm, node trong cây hoặc dòng trạng thái. */
 type ListRow =
   | { key: string; type: 'card'; profileKey: string }
+  | { key: string; type: 'spacer'; profileKey: string; kind: 'tree-start' | 'tree-end' }
   | { key: string; type: 'node'; profileKey: string; flat: FlattenedTreeNodeData }
   | { key: string; type: 'status'; profileKey: string; status: 'loading' | 'error' | 'empty' };
 
-/** Chiều cao hàng tính bằng px ở cỡ giao diện trung bình (thẻ cũng chứa khoảng cách phía trên). */
+/** Chiều cao hàng tính bằng px ở cỡ giao diện trung bình (gồm khoảng đệm của thẻ hoặc cây). */
 const getRowHeight = (row: ListRow, index: number) =>
-  row.type === 'card' ? CARD_HEIGHT + (index > 0 ? CARD_GAP : 0) : NODE_HEIGHT;
+  row.type === 'card'
+    ? CARD_HEIGHT + (index > 0 ? CARD_GAP : 0)
+    : row.type === 'spacer'
+      ? TREE_PADDING
+      : NODE_HEIGHT;
 
 /**
  * Danh sách hồ sơ cơ sở dữ liệu được virtualize, dùng chung menu click phải (cùng cách hoạt động với danh sách S3).
@@ -160,12 +167,24 @@ function DbProfiles() {
         const card: ListRow = { key, type: 'card', profileKey: key };
         const tree = openedTrees[key] ? trees[key] : undefined;
         if (!tree) return [card];
+        const treeStart: ListRow = {
+          key: `tree-start:${key}`,
+          type: 'spacer',
+          profileKey: key,
+          kind: 'tree-start',
+        };
+        const treeEnd: ListRow = { key: `tree-end:${key}`, type: 'spacer', profileKey: key, kind: 'tree-end' };
         if (tree.status !== 'ready' || tree.nodes.length === 0) {
           const status = tree.status === 'ready' ? 'empty' : tree.status;
-          return [card, { key: `status:${key}`, type: 'status', profileKey: key, status }];
+          return [card, treeStart, { key: `status:${key}`, type: 'status', profileKey: key, status }, treeEnd];
         }
         const nodes = flattenTreeData(tree.nodes, expanded);
-        return [card, ...nodes.map((flat): ListRow => ({ key: flat.node.value, type: 'node', profileKey: key, flat }))];
+        return [
+          card,
+          treeStart,
+          ...nodes.map((flat): ListRow => ({ key: flat.node.value, type: 'node', profileKey: key, flat })),
+          treeEnd,
+        ];
       }),
     [keys, openedTrees, trees, expanded]
   );
@@ -212,16 +231,19 @@ function DbProfiles() {
               const row = rows[item.index];
               // Một nhóm gồm thẻ và các hàng cây bên dưới; hàng trước thẻ tiếp theo (hoặc cuối danh sách) sẽ đóng nhóm.
               const hasTreeBelow = rows[item.index + 1] ? rows[item.index + 1].type !== 'card' : false;
+              const treeClassName = [
+                classes.inGroup,
+                row.type === 'spacer' && row.kind === 'tree-end' ? classes.groupEnd : '',
+              ]
+                .filter(Boolean)
+                .join(' ');
               const className =
-                row.type === 'card'
-                  ? hasTreeBelow
-                    ? classes.cardOpen
-                    : undefined
-                  : `${classes.inGroup}${hasTreeBelow ? '' : ` ${classes.groupEnd}`}`;
+                row.type === 'card' ? (hasTreeBelow ? classes.cardOpen : undefined) : treeClassName;
               return (
                 <div
                   key={item.key}
                   className={className}
+                  data-profile-key={row.type === 'spacer' ? row.profileKey : undefined}
                   style={{
                     position: 'absolute',
                     width: '100%',
@@ -247,9 +269,9 @@ function DbProfiles() {
                       onSelect={selectTreeNode}
                       onOpenTable={openTableTab}
                     />
-                  ) : (
+                  ) : row.type === 'status' ? (
                     <DbTreeStatusRow status={row.status} />
-                  )}
+                  ) : null}
                 </div>
               );
             })}

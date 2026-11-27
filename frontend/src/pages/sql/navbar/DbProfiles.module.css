@@ -1,16 +1,16 @@
 /* Khung quanh thẻ profile và cây đối tượng đang mở, tạo bằng viền các hàng (chiều cao hàng luôn cố định). */
 .inGroup {
-  padding-inline: 0.25rem;
+  padding-inline: 0.5rem;
   border-inline: 1px solid var(--mantine-color-default-border);
+}
+
+.cardOpen > * {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .groupEnd {
   border-bottom: 1px solid var(--mantine-color-default-border);
-  border-radius: 0 0 var(--mantine-radius-default) var(--mantine-radius-default);
-}
-
-/* Thẻ nối liền với khung phía dưới nên hai góc dưới được làm vuông. */
-.cardOpen > * {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
+  border-bottom-left-radius: var(--mantine-radius-default);
+  border-bottom-right-radius: var(--mantine-radius-default);
 }
