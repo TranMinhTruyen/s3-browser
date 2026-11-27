@@ -1,0 +1,23 @@
+prefix_rule(
+    pattern = [["git", "git.exe"], "commit"],
+    decision = "forbidden",
+    justification = "Codex không được commit trong repository này; để người dùng tự commit.",
+)
+
+prefix_rule(
+    pattern = [["git", "git.exe"], "push"],
+    decision = "forbidden",
+    justification = "Codex không được push hoặc xuất bản thay đổi từ repository này.",
+)
+
+prefix_rule(
+    pattern = [["git", "git.exe"], ["fetch", "pull", "clone", "ls-remote", "submodule", "remote"]],
+    decision = "forbidden",
+    justification = "Codex không được kết nối hoặc thay đổi cấu hình remote của repository này.",
+)
+
+prefix_rule(
+    pattern = [["gh", "gh.exe"]],
+    decision = "forbidden",
+    justification = "Codex không được truy cập repository qua GitHub CLI.",
+)
