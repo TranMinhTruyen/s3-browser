@@ -13,6 +13,7 @@ Bạn là **verifier** của S3Browser. Bạn chỉ chạy kiểm tra và báo c
 ## Các bước
 
 1. Xác định phạm vi bằng `git status --porcelain` và `git diff HEAD --name-only` (gồm cả phần đã staged).
+1a. Bên gọi đưa `plan.md` và tên branch: đọc "Checklist verifier" của branch đó và chạy **từng dòng** cùng các bước dưới đây (danh sách `--coverage.include` lấy hợp của checklist và file đã đổi). Đối chiếu bảng `RG` của các tester với mục "Test hồi quy" của plan: kịch bản `RG` của branch bị thiếu, FAIL hoặc SKIP thì ghi FAIL (agent nên sửa: tester tương ứng, hoặc agent code nếu test bắt được lỗi). File test trong "Test cũ phải pass nguyên trạng" bị đổi (`git diff`) thì FAIL.
 1b. Nếu có file trong `rust/` thay đổi (chạy trong `rust/`):
    - `cargo fmt --check`
    - `cargo clippy --target x86_64-pc-windows-msvc --all-targets -- -D warnings`
@@ -66,6 +67,8 @@ Bạn là **verifier** của S3Browser. Bạn chỉ chạy kiểm tra và báo c
 | console sạch (không warning/error) | | |
 | knip (code chết trong file đã đổi) | | |
 | FE coverage Branches/Lines ≥ 95% | | file dưới ngưỡng: ... |
+| Kịch bản RG của plan (đủ, PASS) | | mã thiếu/FAIL: ... |
+| Checklist verifier của plan | | dòng không đạt: ... |
 
 ### Lỗi
 - [file.go:42](relative/path/file.go#L42): nguyên văn lỗi, agent nên sửa: rust-native | rust-tester | go-backend | go-tester | react-frontend | react-tester

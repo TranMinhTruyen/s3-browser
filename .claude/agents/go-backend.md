@@ -17,6 +17,7 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task (ví dụ `B1, B
 ## Cách làm
 
 1. Đọc `plan.md` và các task được giao. Chỉ làm đúng các task đó, không mở rộng phạm vi.
+1b. Làm theo đúng mục "Bước thực hiện" của từng task và mục "Hợp đồng giữa các lớp" (tên, chữ ký, field, json tag, message code và nội dung `en`, event); giữ mọi mục "Hành vi cũ phải giữ", không đụng phần ghi ở "Không được làm". Bước nào thiếu thông tin để làm mà không phải đoán (nhánh lỗi chưa nói message nào, field chưa có kiểu...) là lỗ hổng của plan: dừng task đó, ghi vào "Báo cho planner" (xem bước dưới), không tự chọn.
 2. Đọc code xung quanh trước khi sửa, và viết theo đúng phong cách của file đó. Thứ tự thường gặp:
    - Model `models/<domain>/*_input.go|_output.go`, sau đó re-export trong `models/alias.go`
    - Message code ở đầu `module.go`, kèm key tương ứng trong `ipcMessage.json` của **cả 7 ngôn ngữ** (`frontend/src/locales/{en,vi,ja,zh-CN,zh-TW,ru,de}/messages/`)
@@ -35,7 +36,12 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task (ví dụ `B1, B
    - Mọi tài nguyên mở ra đều được đóng (`defer`), kể cả nhánh lỗi; không đóng connection bên trong lock; goroutine nào cũng có đường thoát.
    - Không thêm interface/generic/option cho code chỉ dùng một chỗ.
 7b. Tự kiểm tra bằng lệnh: `go vet ./...`, `go build ./...`, `go tool golangci-lint run ./...`.
-8. Gặp điểm chưa rõ trong plan thì dừng task đó, ghi vào mục "Cần hỏi người dùng" và trả về, không tự đoán.
+8. **Không thực hiện được theo plan** (bước thiếu thông tin, API/thư viện không làm được như plan, làm theo plan sẽ hỏng hành vi cũ hay vi phạm `CLAUDE.md`, plan mâu thuẫn với code thật): dừng task đó, làm tiếp các task không phụ thuộc nó, và ghi vào mục **"Báo cho planner"** để orchestrator chuyển cho `planner` phân tích lại và tìm hướng khác. Không tự chọn hướng khác, không hỏi người dùng trực tiếp: chỉ khi planner không giải quyết được thì planner mới tạo poll. Mỗi vướng mắc ghi:
+   - Mã task, số bước trong "Bước thực hiện".
+   - Vướng ở đâu: plan nói gì, code/thư viện thật thế nào (kèm `file:dòng`, nguyên văn lỗi nếu có), vì sao làm theo plan không được.
+   - Đã thử gì và kết quả.
+   - Hướng khác bạn thấy được (nếu có), mỗi hướng một dòng nêu hệ quả, để planner cân nhắc.
+   - Phần đã làm của task đó (file đã sửa dở) để planner biết trạng thái hiện tại.
 9. Không commit, không push, không chạy lệnh git làm thay đổi working tree.
 10. Bạn không tự viết test: test hồi quy Go là test tạm do `go-tester` viết và xoá. Không tạo, không commit file `*_test.go`. Trong kết quả, liệt kê rõ function đã sửa để `go-tester` kiểm.
 
@@ -48,4 +54,4 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task (ví dụ `B1, B
 - **API cho frontend**: tên binding, input, output, message code, event mới hoặc thay đổi.
 - **Bindings**: mục "Wails bindings" theo mẫu kết quả của skill `wails3-bindings` (bắt buộc), và `go tool sqlc generate` nếu có.
 - Kết quả `go vet` / `go build` / `golangci-lint` (nguyên văn lỗi nếu có).
-- **Cần hỏi người dùng**: các điểm chưa rõ (nếu có).
+- **Báo cho planner**: các vướng mắc theo mẫu ở bước trên (nếu có). Không có mục "Cần hỏi người dùng": mọi câu hỏi đi qua planner.

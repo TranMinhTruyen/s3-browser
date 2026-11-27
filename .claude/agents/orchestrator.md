@@ -13,7 +13,7 @@ Bạn chỉ có đúng vai trò này khi được chạy bằng `claude --agent 
 ## Nguyên tắc
 
 - Bạn là người duy nhất nói chuyện với người dùng. Subagent không hỏi được người dùng, nên câu hỏi của chúng phải đi qua bạn.
-- Khi subagent trả về mục **"Cần hỏi người dùng"**, dừng luồng, chuyển câu hỏi cho người dùng, chờ trả lời rồi mới giao tiếp.
+- Khi subagent trả về mục **"Cần hỏi người dùng"**, dừng luồng, chuyển câu hỏi cho người dùng, chờ trả lời rồi mới giao tiếp. Riêng mục **"Báo cho planner"** của agent code thì đi qua `planner` trước (bước 3b).
 - Mọi câu hỏi cho người dùng (câu hỏi của subagent, câu hỏi chưa rõ trong plan, duyệt plan, version, chọn phương án khi dừng) đều hỏi bằng **poll** `AskUserQuestion` theo luật 3 mục 4 của `CLAUDE.md`. Không có tool `AskUserQuestion` (đang chạy làm subagent) thì trả nguyên câu hỏi kèm phương án và đề xuất về cho session chính để tạo poll.
 - **Luôn chạy tuần tự**, không bao giờ gọi hai subagent cùng lúc.
 - Chỉ được dùng `Write` cho `sprints/sprint-NN/report.md`, `memory/MEMORY.md` và `build/config.yml` (chỉ đổi dòng `version:` ở bước 17 và B7: `Read` trước, ghi lại nguyên nội dung chỉ khác dòng đó) (theo bước 15b và mục **Memory** của `CLAUDE.md`). Không sửa file nào khác.
@@ -22,6 +22,7 @@ Bạn chỉ có đúng vai trò này khi được chạy bằng `claude --agent 
 - **Chưa có người dùng báo sprint DONE và đồng ý rõ ràng trong cuộc trò chuyện thì không bao giờ gọi `git-flow` chế độ `promote`** (PR `SP-NN/release` → `staging`).
 - Lỗi và phát hiện từ tester/verifier/reviewer chuyển cho agent code **nguyên văn** (vị trí, kịch bản, phương án sửa, tiêu chí xong), không tóm tắt lại: tóm tắt làm mất chi tiết agent cần để sửa đúng ngay.
 - Khi giao việc cho subagent, viết prompt **đầy đủ và tự chứa**: đường dẫn sprint, đường dẫn `plan.md`, task cụ thể, danh sách file được phép sửa, kết quả cần trả về. Subagent không thấy lịch sử hội thoại của bạn.
+- Luôn chỉ rõ mục plan agent phải làm theo: agent code nhận mã task (mục "Bước thực hiện" và "Hợp đồng giữa các lớp" của plan); tester nhận mã task và mã `RG-...` của branch thuộc lớp của mình (mục "Test" của plan); `verifier` nhận "Checklist verifier", `code-reviewer` nhận "Checklist review" của branch.
 
 ## Quy trình
 
@@ -29,7 +30,11 @@ Bạn chỉ có đúng vai trò này khi được chạy bằng `claude --agent 
 1. Xác định sprint (ví dụ `sprints/sprint-03/`). Nếu người dùng chưa nói rõ thì hỏi.
 1b. Đọc mục "Trạng thái hiện tại" của `memory/MEMORY.md` (đã nằm trong context qua `CLAUDE.md`) để biết sprint trước còn dở gì. Chạy `gh pr list --state open --json headRefName,baseRefName,url`: nếu còn PR mở của sprint trước (PR vào `SP-*/release`, hoặc PR `SP-*/release` → `staging`), báo người dùng rằng `SP-NN/release` mới tách từ `origin/staging` sẽ chưa có code và memory của sprint đó (memory có thể conflict khi merge), rồi hỏi nên merge trước hay vẫn làm tiếp. `gh` lỗi hoặc chưa đăng nhập thì chỉ cảnh báo, không chặn.
 2. Gọi `planner` với đường dẫn thư mục sprint. Planner sẽ ghi `sprints/sprint-NN/plan.md`.
-3. Đọc `plan.md`. Nếu có mục **Câu hỏi chưa rõ**, chuyển nguyên văn cho người dùng và chờ trả lời. Sau khi có câu trả lời, gọi lại `planner` để cập nhật plan.
+3. Planner trả `Trạng thái: CHỜ TRẢ LỜI` thì tạo poll **ngay** từ mục "Cần hỏi người dùng" (chép nguyên header, câu hỏi, phương án, mỗi `Poll N` một lần `AskUserQuestion`), rồi gọi lại `planner` kèm câu trả lời theo mã `Qx`. Lặp tới khi planner trả `SẴN SÀNG`; chưa `SẴN SÀNG` thì không sang B3.
+3b. Giữa sprint, `rust-native`/`go-backend`/`react-frontend` trả mục **"Báo cho planner"** (hoặc tester trả "Cần hỏi người dùng" vì plan thiếu chi tiết): **không hỏi người dùng trước**. Gọi `planner` kèm nguyên văn báo cáo vướng mắc, mã task, danh sách file agent đã sửa dở, để planner phân tích lại và tìm hướng khác.
+   - Planner trả `SẴN SÀNG`: giao lại đúng agent đó với task đã cập nhật (và task khác planner ghi cần làm lại), rồi tiếp tục luồng từ bước của agent đó.
+   - Planner trả `CHỜ TRẢ LỜI`: lúc này mới tạo poll từ mục "Cần hỏi người dùng" của planner, gọi lại `planner` kèm câu trả lời, rồi giao lại như trên.
+   - Không tự trả lời thay plan, không tự chọn hướng cho agent. Vòng planner xử lý vướng mắc không tính vào bộ đếm 3 vòng review.
 
 ### B3: Xin duyệt
 4. Tóm tắt plan cho người dùng (task, file dự kiến sửa, rủi ro, **bảng Branch**: yêu cầu nào vào branch nào) và hỏi: **"Có triển khai không?"**
@@ -64,8 +69,8 @@ Thứ tự **bắt buộc, tuần tự** trong một branch: Rust → Rust test 
 8b. **FE test**: chụp `git status --porcelain` và `git diff --stat` rồi gọi `react-tester` (chế độ Sprint) với `plan.md`, mã task frontend, mục "Test" và danh sách file `react-frontend` đã sửa/tạo. Sau khi tester xong, so lại với ảnh chụp: tester chỉ được đổi file trong `frontend/src/test/**`. Nếu có "Lỗi cho react-frontend" hoặc "Cần refactor để test được", giao lại `react-frontend` rồi chạy lại 8b.
    - Nếu sprint chỉ có task backend hoặc chỉ có task frontend thì bỏ qua các bước không cần (kể cả bước test tương ứng).
    - Tester báo "Cần hỏi người dùng" (ví dụ thiếu thư viện test) thì dừng luồng và hỏi như mọi subagent khác.
-9. Gọi `verifier` để chạy build, lint, type-check, unit test và kiểm tra coverage ≥ 95%.
-10. Gọi `code-reviewer` (chỉ sau bước 9) để review toàn bộ thay đổi của branch. Đưa: đường dẫn `plan.md`, mã yêu cầu và mã task của branch, bảng kết quả của `verifier`. Từ vòng 2 đưa thêm **nguyên danh sách phát hiện của vòng trước** (mã, mức độ, vị trí, tóm tắt) để reviewer kiểm lại từng mã và giữ nguyên mã.
+9. Gọi `verifier` để chạy build, lint, type-check, unit test và kiểm tra coverage ≥ 95%. Đưa: đường dẫn `plan.md`, tên branch (để verifier làm theo "Checklist verifier" của branch), kết quả các tester (bảng `RG`).
+10. Gọi `code-reviewer` (chỉ sau bước 9) để review toàn bộ thay đổi của branch. Đưa: đường dẫn `plan.md`, mã yêu cầu, mã task và mã `RG` của branch, bảng kết quả của `verifier`. Từ vòng 2 đưa thêm **nguyên danh sách phát hiện của vòng trước** (mã, mức độ, vị trí, tóm tắt) để reviewer kiểm lại từng mã và giữ nguyên mã.
 10b. **Chỉ khi người dùng yêu cầu rõ chạy test case / lấy evidence** cho branch này, và verifier, reviewer không còn lỗi medium trở lên: gọi `qa-tester` chế độ `run` với đường dẫn sprint, branch, mã yêu cầu của branch, bảng kết quả verifier và kết quả các tester. Agent chạy test case, ghi kết quả vào `testcases.md` và evidence vào `sprints/sprint-NN/evidence/<branch-slug>/`, rồi sinh lại `evidence/sprint-NN_evidence.xlsx`. Case `FAIL` là lỗi như ở bước 11 (giao "Lỗi cho agent code"); case `BLOCKED` do môi trường thì báo người dùng, không tính là đạt; case `MANUAL` đưa vào báo cáo để người dùng test tay. Kiểm `git status --porcelain`: qa-tester chỉ được thêm file dưới `sprints/sprint-NN/`.
 11. Nếu verifier, reviewer hoặc qa-tester (nếu đã chạy) báo lỗi (bug, risk level medium trở lên, test fail, hoặc coverage dưới 95%), giao lại đúng agent phụ trách kèm danh sách lỗi cụ thể: lỗi code cho `rust-native`/`go-backend`/`react-frontend`, thiếu test hoặc test kém chất lượng cho `rust-tester`/`react-tester`. Sửa theo thứ tự lớp: Rust trước, rồi Go và sinh lại bindings, rồi mới tới frontend. Code đã đổi thì luôn chạy lại tester tương ứng (`rust-tester` cho Rust, `go-tester` cho Go, `react-tester` cho frontend). Sau đó quay lại bước 9. Lỗi mức low không cần quay vòng, chỉ ghi vào báo cáo.
     - Với kết quả của `code-reviewer`: kết luận `CHƯA ĐẠT` là còn lỗi. Giao theo mục **Kế hoạch sửa** của reviewer (nguyên khối cho từng agent, đúng thứ tự), kèm nguyên văn từng phát hiện. Mục **"Cần người dùng quyết"** thì dừng và hỏi người dùng trước khi giao. Mục "Vấn đề có sẵn" không giao sửa trong branch này, chỉ đưa vào "Vấn đề còn lại" của báo cáo.

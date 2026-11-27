@@ -15,6 +15,7 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task (ví dụ `F1, F
 ## Cách làm
 
 1. Đọc `plan.md` và các task được giao. Chỉ làm đúng các task đó.
+1b. Làm theo đúng mục "Bước thực hiện" của từng task và mục "Hợp đồng giữa các lớp" (binding, model, event, key i18n và chữ `en`); giữ mọi mục "Hành vi cũ phải giữ", không đụng phần ghi ở "Không được làm". Bước nào thiếu thông tin để làm mà không phải đoán (vị trí UI, nhãn, trạng thái rỗng/lỗi chưa nói...) là lỗ hổng của plan: dừng task đó, ghi vào "Báo cho planner" (xem bước dưới), không tự chọn.
 2. Đọc component, store và page liên quan trước khi sửa; viết theo đúng phong cách xung quanh.
 3. Gọi backend qua binding trong `@wails/...` và **luôn** qua `callIPC` (`frontend/src/common/utils/ipcUtils.ts`). Truyền `signal` của `AbortController` khi có thể huỷ.
 4. Store: tạo bằng `createAppStore`, có `State`, `Action`, `SCOPE`, đặt tên action trong `set(...)`. Selector hẹp hoặc `useShallow`.
@@ -38,7 +39,12 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task (ví dụ `F1, F
    - Type-check: Windows `node_modules/.bin/tsc.exe --noEmit`, macOS/Linux `node_modules/.bin/tsc --noEmit`
    - `npx oxlint <các file đã sửa>`
    - Windows `node_modules/.bin/biome.exe check --write <các file đã sửa>`, macOS/Linux `node_modules/.bin/biome check --write <các file đã sửa>` (chỉ dùng biome để format, không dùng `npx biome`)
-10. Gặp điểm chưa rõ trong plan thì dừng task đó, ghi vào mục "Cần hỏi người dùng" và trả về, không tự đoán.
+10. **Không thực hiện được theo plan** (bước thiếu thông tin, API/thư viện không làm được như plan, làm theo plan sẽ hỏng hành vi cũ hay vi phạm `CLAUDE.md`, plan mâu thuẫn với code thật): dừng task đó, làm tiếp các task không phụ thuộc nó, và ghi vào mục **"Báo cho planner"** để orchestrator chuyển cho `planner` phân tích lại và tìm hướng khác. Không tự chọn hướng khác, không hỏi người dùng trực tiếp: chỉ khi planner không giải quyết được thì planner mới tạo poll. Mỗi vướng mắc ghi:
+   - Mã task, số bước trong "Bước thực hiện".
+   - Vướng ở đâu: plan nói gì, code/thư viện thật thế nào (kèm `file:dòng`, nguyên văn lỗi nếu có), vì sao làm theo plan không được.
+   - Đã thử gì và kết quả.
+   - Hướng khác bạn thấy được (nếu có), mỗi hướng một dòng nêu hệ quả, để planner cân nhắc.
+   - Phần đã làm của task đó (file đã sửa dở) để planner biết trạng thái hiện tại.
 11. Không commit, không push.
 12. Unit test do `react-tester` viết **sau** bạn. Bạn không cần viết test mới, nhưng phải viết code **test được**: tách logic ra store/util/hook thay vì nhét hết vào component, gọi backend chỉ qua `callIPC`. Bạn **không sửa file trong `frontend/src/test/**`**: nếu plan chủ ý đổi hành vi làm test cũ fail, ghi vào mục "Test cũ cần cập nhật theo plan" (file test, hành vi cũ → mới) để `react-tester` sửa; test cũ fail ngoài chủ ý của plan là lỗi hồi quy, sửa code. Khi được giao lại do "Lỗi cho react-frontend" hoặc "Cần refactor để test được", sửa code chứ không sửa test của `react-tester`.
 
@@ -51,4 +57,4 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task (ví dụ `F1, F
 - **Test cũ cần cập nhật theo plan** (nếu có).
 - Kết quả tsc / oxlint / biome (nguyên văn lỗi nếu có).
 - **Cỡ giao diện**: đã kiểm small/medium/large thế nào (xem trên app hay đo Playwright ở root 14/16/18px), hoặc ghi "chưa xem tay".
-- **Cần hỏi người dùng**: các điểm chưa rõ (nếu có).
+- **Báo cho planner**: các vướng mắc theo mẫu ở bước trên (nếu có). Không có mục "Cần hỏi người dùng": mọi câu hỏi đi qua planner.

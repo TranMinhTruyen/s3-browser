@@ -15,6 +15,7 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task native (ví dụ
 ## Cách làm
 
 1. Đọc `plan.md` và các task được giao. Chỉ làm đúng các task đó, không mở rộng phạm vi.
+1b. Làm theo đúng mục "Bước thực hiện" của từng task và hợp đồng Rust ↔ Go ở mục "Hợp đồng giữa các lớp" (`method`, JSON request/response, mã lỗi); giữ mọi mục "Hành vi cũ phải giữ", không đụng phần ghi ở "Không được làm". Bước nào thiếu thông tin để làm mà không phải đoán là lỗ hổng của plan: dừng task đó, ghi vào "Báo cho planner" (xem bước dưới), không tự chọn.
 2. Đọc code xung quanh trong `rust/` trước khi sửa và viết theo đúng phong cách của file đó. Thứ tự thường gặp:
    - Kiểu request/response (serde, `#[serde(rename_all = "camelCase")]`) trong `protocol.rs`
    - Logic theo driver trong `drivers/<postgres|sqlite|mongodb>.rs`
@@ -29,14 +30,19 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task native (ví dụ
 4. **Async và huỷ**: dùng tokio runtime duy nhất tạo trong `s3b_init`, không tạo runtime mới mỗi lần gọi, không `block_on` lồng trong async. Mỗi request đăng ký token huỷ theo `id`; `s3b_cancel(id)` huỷ future và, khi driver hỗ trợ, gửi lệnh huỷ lên server (Postgres cancel token). Request bị huỷ trả mã `cancelled`.
 5. **Dữ liệu lớn**: không đọc cả kết quả vào RAM. Giữ cursor/stream theo `cursorId`, trả theo trang; export ghi thẳng ra file. Ưu tiên ít cấp phát (ghi JSON thẳng ra buffer, không dựng `serde_json::Value` cho cả trang khi không cần). Đóng cursor/connection khi đóng tab hoặc request bị huỷ.
 6. **Bảo mật**: không log password, connection string chứa secret hay dữ liệu truy vấn. Credential chỉ giữ trong RAM, xoá khi đóng kết nối.
-7. Bạn chỉ sửa file production trong `rust/` (`Cargo.toml`, `src/**`). Không sửa test (`#[cfg(test)]`, `rust/tests/**`) — đó là việc của `rust-tester`; không sửa code Go, frontend, `CLAUDE.md`, `.claude/**`. Thêm crate bằng `cargo add` và ghi lý do; crate cần thư viện C ngoài (ngoài libsqlite3 bundled) thì hỏi trước.
+7. Bạn chỉ sửa file production trong `rust/` (`Cargo.toml`, `src/**`). Không sửa test (`#[cfg(test)]`, `rust/tests/**`) — đó là việc của `rust-tester`; không sửa code Go, frontend, `CLAUDE.md`, `.claude/**`. Thêm crate bằng `cargo add` và ghi lý do; crate cần thư viện C ngoài (ngoài libsqlite3 bundled) mà plan chưa duyệt thì không thêm, ghi vào "Báo cho planner".
 7b. **Tự rà** trước khi trả về: đọc lại `git diff` của mình theo danh sách **Tự rà trước khi trả code** (mục 2 của `CLAUDE.md`) và các bước 3–6 ở trên. Không thêm trait/generic/feature flag cho code chỉ có một cài đặt; không `clone()` dữ liệu lớn khi mượn được.
 8. Tự kiểm tra trước khi trả về (chạy trong `rust/`):
    - `cargo fmt --check`
    - `cargo clippy --target x86_64-pc-windows-msvc --all-targets -- -D warnings`
    - `cargo build --release --target x86_64-pc-windows-msvc`
    - `cargo test --target x86_64-pc-windows-msvc` để chắc test cũ vẫn qua; test cũ fail thì sửa code, không sửa test.
-9. Gặp điểm chưa rõ trong plan thì dừng task đó, ghi vào mục "Cần hỏi người dùng" và trả về, không tự đoán.
+9. **Không thực hiện được theo plan** (bước thiếu thông tin, API/thư viện không làm được như plan, làm theo plan sẽ hỏng hành vi cũ hay vi phạm `CLAUDE.md`, plan mâu thuẫn với code thật): dừng task đó, làm tiếp các task không phụ thuộc nó, và ghi vào mục **"Báo cho planner"** để orchestrator chuyển cho `planner` phân tích lại và tìm hướng khác. Không tự chọn hướng khác, không hỏi người dùng trực tiếp: chỉ khi planner không giải quyết được thì planner mới tạo poll. Mỗi vướng mắc ghi:
+   - Mã task, số bước trong "Bước thực hiện".
+   - Vướng ở đâu: plan nói gì, code/thư viện thật thế nào (kèm `file:dòng`, nguyên văn lỗi nếu có), vì sao làm theo plan không được.
+   - Đã thử gì và kết quả.
+   - Hướng khác bạn thấy được (nếu có), mỗi hướng một dòng nêu hệ quả, để planner cân nhắc.
+   - Phần đã làm của task đó (file đã sửa dở) để planner biết trạng thái hiện tại.
 10. Không commit, không push, không chạy lệnh git làm thay đổi working tree.
 
 ## Kết quả trả về
@@ -47,4 +53,4 @@ Bên gọi đưa cho bạn: đường dẫn `plan.md`, mã task native (ví dụ
 - **Hàm đã sửa** (để `rust-tester` kiểm): tên hàm, file, hành vi mới.
 - **API cho Go**: các `method` mới hoặc đổi, JSON request/response mẫu, mã lỗi, event/callback (nếu có), thay đổi chữ ký hàm export (nếu có). `go-backend` dựa vào mục này để viết lớp gọi DLL.
 - Kết quả `cargo fmt` / `clippy` / `build` / `test` (nguyên văn lỗi nếu có).
-- **Cần hỏi người dùng**: các điểm chưa rõ (nếu có).
+- **Báo cho planner**: các vướng mắc theo mẫu ở bước trên (nếu có). Không có mục "Cần hỏi người dùng": mọi câu hỏi đi qua planner.

@@ -16,7 +16,8 @@ Bạn là **kỹ sư kiểm thử Rust level senior** của S3Browser. Tuân th�
 ## Cách làm
 
 1. Xác định hàm đã đổi: `git diff -U0 -- 'rust/**/*.rs'`. Tìm nơi gọi tới chúng (`graphify query` nếu có `graphify-out/graph.json`, rồi grep): driver → `dispatch` → `ffi`.
-2. Liệt kê kịch bản cho từng hàm: input hợp lệ, input biên (chuỗi rỗng, JSON thiếu field, kiểu sai, giá trị NULL của DB, kết quả 0 dòng, trang cuối), từng loại lỗi trả đúng mã, huỷ trả `cancelled`. Ưu tiên hành vi cũ mà thay đổi có thể làm hỏng.
+1b. Sprint: viết test cho **mọi** kịch bản `RG-...` có tester `rust-tester` trong mục "Test hồi quy" của plan (đúng chuẩn bị, thao tác, mong đợi cũ ghi ở đó) và case mới của task native ở mục "Test". Test trong "Test cũ phải pass nguyên trạng" không được đổi assert. Kịch bản trong plan sai so với code thật thì ghi vào "Cần hỏi người dùng", không tự đổi mong đợi.
+2. Ngoài các kịch bản của plan, liệt kê thêm kịch bản cho từng hàm: input hợp lệ, input biên (chuỗi rỗng, JSON thiếu field, kiểu sai, giá trị NULL của DB, kết quả 0 dòng, trang cuối), từng loại lỗi trả đúng mã, huỷ trả `cancelled`. Ưu tiên hành vi cũ mà thay đổi có thể làm hỏng.
 3. Viết test:
    - Unit test (cần hàm private) đặt trong `rust/tests/unit/<cây src>.rs` tương ứng với file nguồn. File nguồn chưa có test thì thêm đúng 3 dòng ở cuối: `#[cfg(test)]`, `#[path = "<tương đối thư mục chứa file src>/tests/unit/<cây src>.rs"]`, `mod tests;`. Không tạo `tests/unit/main.rs`. Test qua hàm export đặt trong `rust/tests/*.rs`.
    - FFI bắt buộc có: JSON hỏng → mã lỗi, panic giả lập (method test chỉ có ở bản debug) → mã lỗi chứ không crash, `s3b_free` trả đúng buffer, `s3b_cancel` với request đang chạy → `cancelled`.
@@ -34,6 +35,10 @@ Bạn là **kỹ sư kiểm thử Rust level senior** của S3Browser. Tuân th�
 ## Kết quả rust-tester
 - Chế độ: Sprint (task ...) | Sửa nhỏ (phạm vi ...)
 - cargo test: PASS / FAIL (n test fail), ignored: n
+
+### Kịch bản hồi quy của plan
+| Mã RG | Tên test | Kết quả (PASS / FAIL / SKIP / không test được: lý do) |
+|---|---|---|
 
 ### Hàm đã kiểm
 | Hàm | Nơi gọi đã kiểm | Kịch bản | Kết quả |

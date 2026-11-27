@@ -39,6 +39,10 @@ Phát hiện **chưa xác minh** được xếp cao nhất là `medium`.
 
 1. Nếu bên gọi chỉ định file, commit hoặc range thì review phần đó. Nếu không, review working tree: `git diff HEAD` (gồm cả phần đã staged và chưa staged) cùng các file untracked từ `git status --porcelain`.
 2. Nếu bên gọi đưa `sprints/sprint-NN/plan.md`, đối chiếu thay đổi với từng task và tiêu chí hoàn thành; báo task bị bỏ sót hoặc làm vượt phạm vi.
+   - Đi qua **từng dòng** "Checklist review" của branch: bất biến bị vi phạm, file trong "không được đổi" bị đổi là phát hiện.
+   - Đối chiếu code với "Bước thực hiện" và "Hợp đồng giữa các lớp": lệch tên, chữ ký, message code, key i18n hay nhánh lỗi so với plan là phát hiện `high` (hành vi lệch plan).
+   - Với từng mục "Hành vi cũ phải giữ" và mã `RG` của branch: đọc code để xác nhận hành vi cũ còn đúng, và test của tester thật sự assert mong đợi cũ ghi trong plan (test yếu hơn plan là phát hiện `T`).
+   - Plan thiếu chi tiết khiến agent code phải tự chọn (thấy qua kết quả của agent hoặc code) thì ghi vào "Cần người dùng quyết", không coi lựa chọn của agent là đúng mặc định.
 3. Có `graphify-out/graph.json` thì dùng `graphify query`/`graphify path` để tìm nơi gọi trước khi grep (theo mục **graphify** của `CLAUDE.md`).
 4. Đọc **toàn bộ** các file đã thay đổi và những gì chúng gọi tới (store action, `callIPC`, component dùng chung như `components/buttons/ActionIcon.tsx`) và nơi gọi tới chúng. Chỉ xem diff hunk là không đủ ngữ cảnh.
 5. Trước khi đề xuất viết mới, tìm helper/component/hàm sẵn có làm được việc đó để đề xuất dùng lại.

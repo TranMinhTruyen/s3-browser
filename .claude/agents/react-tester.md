@@ -23,7 +23,8 @@ Bên gọi đưa cho bạn một trong hai chế độ:
 
 ## Cách làm
 
-1. **Hồi quy**: với mỗi function/hook/store action đã sửa, tìm nơi dùng nó (`graphify query` nếu có `graphify-out/graph.json`, rồi grep import) và test sẵn có của các nơi đó. Bổ sung case assert hành vi cũ vẫn đúng ở nơi gọi nếu chưa có. Test cũ fail sau thay đổi: không sửa assert để cho qua, ghi vào "Lỗi cho react-frontend"; chỉ sửa khi plan chủ ý đổi hành vi đó, và ghi rõ trong báo cáo.
+0. Sprint: viết test cho **mọi** kịch bản `RG-...` có tester `react-tester` trong mục "Test hồi quy" của plan (đúng chuẩn bị, thao tác, mong đợi cũ ghi ở đó) và case mới của task frontend ở mục "Test". Chỉ được sửa test cũ có tên trong "Test cũ được phép sửa theo plan"; test trong "Test cũ phải pass nguyên trạng" không được đổi assert. Kịch bản trong plan sai so với code thật thì ghi vào "Cần hỏi người dùng", không tự đổi mong đợi.
+1. **Hồi quy** (thêm ngoài plan): với mỗi function/hook/store action đã sửa, tìm nơi dùng nó (`graphify query` nếu có `graphify-out/graph.json`, rồi grep import) và test sẵn có của các nơi đó. Bổ sung case assert hành vi cũ vẫn đúng ở nơi gọi nếu chưa có. Test cũ fail sau thay đổi: không sửa assert để cho qua, ghi vào "Lỗi cho react-frontend"; chỉ sửa khi plan chủ ý đổi hành vi đó, và ghi rõ trong báo cáo.
 1b. Đọc toàn bộ file trong phạm vi, những gì chúng gọi tới (store, `callIPC`, component dùng chung) và test sẵn có trong `frontend/src/test/` cùng helper trong `frontend/src/test/_helpers/` (nếu có). Dùng lại helper sẵn có, không tạo bản trùng.
 2. Liệt kê nhánh cần phủ: mỗi `if`/ternary/`&&`/`??`/`?.`, `switch`, early return, `callIPC` trả `body` và trả `null`, request bị huỷ bằng `AbortController`, danh sách rỗng và có phần tử, trạng thái loading/disabled.
 3. Viết test, đặt trong folder `frontend/src/test/` theo đúng cây thư mục của `frontend/src`: `Xxx.test.tsx` / `xxx.test.ts` (ví dụ `src/pages/bucket/BucketPage.tsx` → `src/test/pages/bucket/BucketPage.test.tsx`). Import code cần test qua alias (`@/...`, `@components/...`, `@common/...`), không dùng đường dẫn tương đối `../../`. Import `describe`, `it`, `expect`, `vi` từ `'vitest'` (không dựa vào globals).
@@ -56,6 +57,10 @@ Bên gọi đưa cho bạn một trong hai chế độ:
 - Chế độ: Sprint (task ...) | Viết bù (phạm vi ...)
 - vitest: PASS / FAIL (n test fail)
 - Console: SẠCH / CÓ WARNING-ERROR (liệt kê test và nội dung)
+
+### Kịch bản hồi quy của plan
+| Mã RG | File test / tên test | Kết quả (PASS / FAIL / không test được: lý do) |
+|---|---|---|
 
 ### Coverage
 | File | Branches (C1) | Lines | Đạt ≥ 95% |
